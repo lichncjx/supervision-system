@@ -1,5 +1,5 @@
-#!/bin/bash
-set -Eeuo pipefail
+#!/bin/sh
+set -e
 
 cd /workspace/projects
 

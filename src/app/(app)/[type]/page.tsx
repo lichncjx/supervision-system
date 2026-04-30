@@ -34,8 +34,9 @@ export default function ItemListPage() {
   const isPriorityOrMain = type === '重点' || type === '主要';
   const isTodo = type === '待办';
 
-  const load = () => {
-    setItems(getVisibleWorks(user, type));
+  const load = async () => {
+    const data = await getVisibleWorks(user, type);
+    setItems(data);
   };
 
   useEffect(() => {
@@ -57,16 +58,18 @@ export default function ItemListPage() {
   const canCreate =
     type === '待办'
       ? (
-          user?.role === 'admin' ||
-          user?.role === 'department_manager' ||
-          user?.role === 'department_leader' ||
-          user?.role === 'vice_president' ||
-          user?.role === 'president'
+          user?.role === 'ADMIN' ||
+          user?.role === 'DEPARTMENT_MANAGER' ||
+          user?.role === 'DEPARTMENT_LEADER' ||
+          user?.role === 'VICE_PRESIDENT' ||
+          user?.role === 'PRESIDENT' ||
+          user?.role === 'SUPERVISOR'
         )
       : (
-          user?.role === 'admin' ||
-          user?.role === 'department_manager' ||
-          user?.role === 'department_leader'
+          user?.role === 'ADMIN' ||
+          user?.role === 'DEPARTMENT_MANAGER' ||
+          user?.role === 'DEPARTMENT_LEADER' ||
+          user?.role === 'SUPERVISOR'
         );
 
   const getWorkMonth = (work: any) => {
@@ -89,12 +92,20 @@ export default function ItemListPage() {
     )
   ).sort();
 
-  let list = queryWorks(user, {
-    type,
-    departmentId: companyLevel ? departmentFilter : user?.department_id,
-    status: statusFilter,
-    keyword,
-  });
+  const [list, setList] = useState<Work[]>([]);
+
+  useEffect(() => {
+    const fetchList = async () => {
+      const data = await queryWorks(user, {
+        type,
+        departmentId: companyLevel ? departmentFilter : user?.departmentId,
+        status: statusFilter,
+        keyword,
+      });
+      setList(data);
+    };
+    fetchList();
+  }, [user, type, departmentFilter, statusFilter, keyword]);
 
   if (monthFilter) {
     list = list.filter((work) => getWorkMonth(work) === monthFilter);

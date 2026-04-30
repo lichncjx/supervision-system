@@ -7,7 +7,15 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { LayoutDashboard, Clock, CheckCircle2, AlertCircle, Plus, Eye } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
-import { getStats, getVisibleWorks, canApproveWork, canHandleWork, isExpiringWork, sortWorksByDueDate } from '@/lib/work-store';
+import {
+  getStats,
+  getVisibleWorks,
+  canHandleWork,
+  isExpiringWork,
+  sortWorksByDueDate,
+  isSupervisorTrackingWork,
+  type Work,
+} from '@/lib/work-store';
 import { StatusBadge } from '@/components/common/badges';
 import { departments, isCompanyLevel } from '@/lib/auth';
 import { exportCompanyCompletionRate } from '@/lib/excel-utils';
@@ -17,12 +25,38 @@ export default function DashboardPage() {
   const [adminNotice, setAdminNotice] = useState('');
   const [noticeDraft, setNoticeDraft] = useState('');
   const [noticeEditing, setNoticeEditing] = useState(false);
+  const [stats, setStats] = useState({
+    total: 0,
+    pendingApproval: 0,
+    inProgress: 0,
+    completed: 0,
+    expired: 0,
+    expiring: 0,
+    priority: 0,
+    main: 0,
+    todo: 0,
+    pendingHandle: 0,
+  });
+  const [visibleWorks, setVisibleWorks] = useState<Work[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const saved = localStorage.getItem(NOTICE_KEY) || '';
     setAdminNotice(saved);
     setNoticeDraft(saved);
   }, []);
+
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      const newStats = await getStats(user);
+      const newWorks = await getVisibleWorks(user);
+      setStats(newStats);
+      setVisibleWorks(newWorks);
+      setLoading(false);
+    };
+    loadData();
+  }, [user]);
 
   const saveNotice = () => {
     localStorage.setItem(NOTICE_KEY, noticeDraft);
@@ -32,27 +66,30 @@ export default function DashboardPage() {
   };
 
   const { user } = useAuth();
-  const stats = getStats(user);
   const companyLevel = isCompanyLevel(user?.role, user?.department_id);
 
-  const canEditNotice = user?.role === 'admin' || user?.role === 'supervisor';
+  const canEditNotice = user?.role === 'ADMIN' || user?.role === 'SUPERVISOR';
 
   const canCreateWork =
-    user?.role === 'admin' ||
-    user?.role === 'department_manager' ||
-    user?.role === 'department_leader';
+    user?.role === 'ADMIN' ||
+    user?.role === 'DEPARTMENT_MANAGER' ||
+    user?.role === 'DEPARTMENT_LEADER' ||
+    user?.role === 'SUPERVISOR';
 
   const canCreateTodo =
-    user?.role === 'admin' ||
-    user?.role === 'department_manager' ||
-    user?.role === 'department_leader' ||
-    user?.role === 'vice_president' ||
-    user?.role === 'president';
-
-  const visibleWorks = getVisibleWorks(user);
+    user?.role === 'ADMIN' ||
+    user?.role === 'DEPARTMENT_MANAGER' ||
+    user?.role === 'DEPARTMENT_LEADER' ||
+    user?.role === 'VICE_PRESIDENT' ||
+    user?.role === 'PRESIDENT' ||
+    user?.role === 'SUPERVISOR';
 
   const pendingHandles = sortWorksByDueDate(
-    visibleWorks.filter((work) => canHandleWork(user, work))
+    visibleWorks.filter((work) =>
+      user?.role === 'SUPERVISOR'
+        ? isSupervisorTrackingWork(work)
+        : canHandleWork(user, work)
+    )
   ).slice(0, 5);
 
   const expiringWorks = visibleWorks.filter((work) => isExpiringWork(work)).slice(0, 5);
@@ -162,7 +199,7 @@ export default function DashboardPage() {
             <CardContent className="p-4 flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-500">待审批</p>
-                <p className="text-2xl font-bold text-yellow-600">{stats.pending}</p>
+                <p className="text-2xl font-bold text-yellow-600">{stats.pendingApproval}</p>
               </div>
               <Clock className="h-6 w-6 text-yellow-600" />
             </CardContent>
@@ -174,7 +211,7 @@ export default function DashboardPage() {
             <CardContent className="p-4 flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-500">待处理</p>
-                <p className="text-2xl font-bold text-orange-600">{stats.processing}</p>
+                <p className="text-2xl font-bold text-orange-600">{stats.pendingHandle}</p>
               </div>
               <Clock className="h-6 w-6 text-orange-600" />
             </CardContent>
@@ -210,7 +247,7 @@ export default function DashboardPage() {
             <CardContent className="p-4 flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-500">超期</p>
-                <p className="text-2xl font-bold text-red-600">{stats.overdue}</p>
+                <p className="text-2xl font-bold text-red-600">{stats.expired}</p>
               </div>
               <AlertCircle className="h-6 w-6 text-red-600" />
             </CardContent>
@@ -228,7 +265,7 @@ export default function DashboardPage() {
               </div>
             </div>
             <div className="flex gap-2">
-              {(user?.role === 'admin' || user?.role === 'supervisor') && (
+              {(user?.role === 'ADMIN' || user?.role === 'SUPERVISOR') && (
                 <Button
                   variant="outline"
                   onClick={() => exportCompanyCompletionRate(getVisibleWorks(user))}

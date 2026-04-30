@@ -11,8 +11,10 @@ import {
   canHandleWork,
   sortWorksByDueDate,
   getVisibleWorks,
+  isSupervisorTrackingWork,
   type WorkStatusFilter,
   type WorkType,
+  type Work,
 } from '@/lib/work-store';
 import { getDepartmentName, isCompanyLevel, departments } from '@/lib/auth';
 import { StatusBadge } from '@/components/common/badges';
@@ -72,6 +74,9 @@ export default function StatusFilterPage() {
   const [departmentFilter, setDepartmentFilter] = useState<number | '全部'>('全部');
   const [keyword, setKeyword] = useState('');
   const [monthFilter, setMonthFilter] = useState('');
+  const [monthOptions, setMonthOptions] = useState<string[]>([]);
+  const [list, setList] = useState<Work[]>([]);
+  const [loading, setLoading] = useState(true);
   const companyLevel = isCompanyLevel(user?.role, user?.department_id);
 
   const safeFilter: StatusPageFilter = allowedFilters.includes(filter as StatusPageFilter)
@@ -83,31 +88,47 @@ export default function StatusFilterPage() {
       ? (safeFilter as WorkStatusFilter)
       : 'all';
 
-  const visibleForMonthOptions = getVisibleWorks(user);
-  const monthOptions = Array.from(
-    new Set(
-      visibleForMonthOptions
-        .map((work) => getWorkMonth(work))
-        .filter(Boolean)
-    )
-  ).sort();
+  React.useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      const visibleForMonthOptions = await getVisibleWorks(user);
+      const newMonthOptions = Array.from(
+        new Set(
+          visibleForMonthOptions
+            .map((work) => getWorkMonth(work))
+            .filter(Boolean)
+        )
+      ).sort();
+      setMonthOptions(newMonthOptions);
 
-  let list = queryWorks(user, {
-    type: typeFilter,
-    departmentId: companyLevel ? departmentFilter : user?.department_id,
-    status: queryStatus,
-    keyword,
-  });
+      const newList = await queryWorks(user, {
+        type: typeFilter,
+        departmentId: companyLevel ? departmentFilter : user?.department_id,
+        status: queryStatus,
+        keyword,
+      });
 
-  if (monthFilter) {
-    list = list.filter((work) => getWorkMonth(work) === monthFilter);
-  }
+      let filteredList = newList;
+      if (monthFilter) {
+        filteredList = filteredList.filter((work) => getWorkMonth(work) === monthFilter);
+      }
 
-  if (safeFilter === 'processing') {
-    list = list.filter((w) => canHandleWork(user, w));
-  }
+      if (safeFilter === 'processing') {
+        filteredList = filteredList.filter((w) =>
+          user?.role === 'SUPERVISOR'
+            ? isSupervisorTrackingWork(w)
+            : canHandleWork(user, w)
+        );
+      }
 
-  const finalList = sortWorksByDueDate(list);
+      setList(sortWorksByDueDate(filteredList));
+      setLoading(false);
+    };
+
+    loadData();
+  }, [user, typeFilter, departmentFilter, keyword, monthFilter, safeFilter, queryStatus, companyLevel]);
+
+  const finalList = list;
 
   return (
     <div className="space-y-6">

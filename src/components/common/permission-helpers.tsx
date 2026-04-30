@@ -11,12 +11,12 @@ export function usePermission() {
   return {
     user,
     roleName: user ? getRoleName(user.role) : '',
-    canViewAll: user ? ['admin', 'vice_president', 'president'].includes(user.role) : false,
-    canCreate: user ? ['admin', 'department_manager', 'department_leader'].includes(user.role) : false,
-    canApprove: user ? ['admin', 'department_leader', 'vice_president', 'president'].includes(user.role) : false,
-    isAdmin: user?.role === 'admin',
-    isCompanyLeader: user ? ['vice_president', 'president'].includes(user.role) : false,
-    isDepartmentLevel: user ? ['department_manager', 'department_leader'].includes(user.role) : false,
+    canViewAll: user ? ['ADMIN', 'SUPERVISOR', 'VICE_PRESIDENT', 'PRESIDENT'].includes(user.role) : false,
+    canCreate: user ? ['ADMIN', 'SUPERVISOR', 'DEPARTMENT_MANAGER', 'DEPARTMENT_LEADER'].includes(user.role) : false,
+    canApprove: user ? ['ADMIN', 'DEPARTMENT_LEADER', 'VICE_PRESIDENT', 'PRESIDENT'].includes(user.role) : false,
+    isAdmin: user?.role === 'ADMIN',
+    isCompanyLeader: user ? ['VICE_PRESIDENT', 'PRESIDENT'].includes(user.role) : false,
+    isDepartmentLevel: user ? ['DEPARTMENT_MANAGER', 'DEPARTMENT_LEADER'].includes(user.role) : false,
   };
 }
 

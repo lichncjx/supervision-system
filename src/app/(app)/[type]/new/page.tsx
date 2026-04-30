@@ -42,16 +42,18 @@ export default function NewWorkPage() {
   const companyLeaders = getCompanyLeaders();
 
   const canCreateTodo =
-    user?.role === 'admin' ||
-    user?.role === 'department_manager' ||
-    user?.role === 'department_leader' ||
-    user?.role === 'vice_president' ||
-    user?.role === 'president';
+    user?.role === 'ADMIN' ||
+    user?.role === 'DEPARTMENT_MANAGER' ||
+    user?.role === 'DEPARTMENT_LEADER' ||
+    user?.role === 'VICE_PRESIDENT' ||
+    user?.role === 'PRESIDENT' ||
+    user?.role === 'SUPERVISOR';
 
   const canCreateWork =
-    user?.role === 'admin' ||
-    user?.role === 'department_manager' ||
-    user?.role === 'department_leader';
+    user?.role === 'ADMIN' ||
+    user?.role === 'DEPARTMENT_MANAGER' ||
+    user?.role === 'DEPARTMENT_LEADER' ||
+    user?.role === 'SUPERVISOR';
 
   const [isInnovation, setIsInnovation] = useState(false);
 
@@ -163,7 +165,7 @@ export default function NewWorkPage() {
   // 待办事项表单
   const [todoForm, setTodoForm] = useState({
     proposed_leader_id:
-      user?.role === 'vice_president' || user?.role === 'president'
+      user?.role === 'VICE_PRESIDENT' || user?.role === 'PRESIDENT'
         ? String(user.id)
         : '',
     proposed_scene: '',
@@ -181,17 +183,13 @@ export default function NewWorkPage() {
     progress: '',
   });
 
-  // 多选 checkbox 函数
-  function toggleNumber(list: number[], value: number) {
-    return list.includes(value)
-      ? list.filter((v) => v !== value)
-      : [...list, value];
+  // 多选下拉框取值函数
+  function getSelectedNumbers(options: HTMLCollectionOf<HTMLOptionElement>) {
+    return Array.from(options).map((option) => Number(option.value));
   }
 
-  function toggleString(list: string[], value: string) {
-    return list.includes(value)
-      ? list.filter((v) => v !== value)
-      : [...list, value];
+  function getSelectedStrings(options: HTMLCollectionOf<HTMLOptionElement>) {
+    return Array.from(options).map((option) => option.value);
   }
 
   if (type === '待办' && !canCreateTodo) {
@@ -308,7 +306,7 @@ export default function NewWorkPage() {
 
     if (
       isTodo &&
-      (user.role === 'department_manager' || user.role === 'department_leader')
+      (user.role === 'DEPARTMENT_MANAGER' || user.role === 'DEPARTMENT_LEADER')
     ) {
       if (validNodes.length === 0) {
         alert('请至少填写一个任务节点');
@@ -330,7 +328,7 @@ export default function NewWorkPage() {
         creator_role: user.role,
         creator_id: user.id,
         action: 'create',
-        status: user.role === 'department_manager' ? 'submitted' : 'dept_approved',
+        status: 'draft',
         need_ceo: type === '重点',
         is_innovation: type === '重点' ? isInnovation : false,
         nodes: nodes.filter((node) => node.title.trim()).map((node) => ({
@@ -355,12 +353,7 @@ export default function NewWorkPage() {
         creator_role: user.role,
         creator_id: user.id,
         action: 'todo_decompose',
-        status:
-          user.role === 'department_manager'
-            ? 'submitted'
-            : user.role === 'department_leader'
-              ? 'dept_approved'
-              : 'todo_pending_decompose',
+        status: 'draft',
         need_ceo: false,
         proposed_leader: selectedProposedLeader?.name || '',
         proposed_leader_id: selectedProposedLeader?.id,
@@ -640,7 +633,7 @@ export default function NewWorkPage() {
                   <label className="block text-sm font-medium mb-1">事项提出领导</label>
                   <select
                     value={todoForm.proposed_leader_id}
-                    disabled={user?.role === 'vice_president' || user?.role === 'president'}
+                    disabled={user?.role === 'VICE_PRESIDENT' || user?.role === 'PRESIDENT'}
                     onChange={(e) => setTodoForm({ ...todoForm, proposed_leader_id: e.target.value })}
                     className="w-full border rounded-md p-2"
                   >
@@ -682,91 +675,107 @@ export default function NewWorkPage() {
 
                 <div>
                   <label className="text-sm font-medium">责任部门</label>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2">
+                  <select
+                    multiple
+                    size={5}
+                    className="mt-2 w-full border rounded-md px-3 py-2 text-sm"
+                    value={todoForm.department_ids.map(String)}
+                    onChange={(e) => {
+                      const nextDepartmentIds = getSelectedNumbers(e.currentTarget.selectedOptions);
+
+                      setTodoForm((prev) => ({
+                        ...prev,
+                        department_ids: nextDepartmentIds,
+                        responsible_persons: [],
+                      }));
+                    }}
+                  >
                     {departments.filter((d) => d.id !== 1).map((dept) => (
-                      <label key={dept.id} className="flex items-center gap-2 text-sm border rounded p-2">
-                        <input
-                          type="checkbox"
-                          checked={todoForm.department_ids.includes(dept.id)}
-                          onChange={() =>
-                            setTodoForm((prev: any) => ({
-                              ...prev,
-                              department_ids: toggleNumber(prev.department_ids, dept.id),
-                              responsible_persons: [],
-                            }))
-                          }
-                        />
+                      <option key={dept.id} value={dept.id}>
                         {dept.name}
-                      </label>
+                      </option>
                     ))}
-                  </div>
+                  </select>
+                  <p className="mt-1 text-xs text-gray-500">可按住 Ctrl 多选</p>
                 </div>
 
                 <div>
                   <label className="text-sm font-medium">责任部门责任人</label>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2">
+                  <select
+                    multiple
+                    size={5}
+                    className="mt-2 w-full border rounded-md px-3 py-2 text-sm"
+                    value={todoForm.responsible_persons}
+                    onChange={(e) => {
+                      const nextPersons = getSelectedStrings(e.currentTarget.selectedOptions);
+
+                      setTodoForm((prev) => ({
+                        ...prev,
+                        responsible_persons: nextPersons,
+                      }));
+                    }}
+                  >
                     {responsiblePersonOptions.map((person) => (
-                      <label key={person.id} className="flex items-center gap-2 text-sm border rounded p-2">
-                        <input
-                          type="checkbox"
-                          checked={todoForm.responsible_persons.includes(person.name)}
-                          onChange={() =>
-                            setTodoForm((prev: any) => ({
-                              ...prev,
-                              responsible_persons: toggleString(prev.responsible_persons, person.name),
-                            }))
-                          }
-                        />
-                        {person.name}
-                      </label>
+                      <option key={person.id} value={person.name}>
+                        {person.name}（{departments.find((d) => d.id === person.department_id)?.name || '-'}）
+                      </option>
                     ))}
-                  </div>
+                  </select>
+                  <p className="mt-1 text-xs text-gray-500">先选择责任部门，再选择责任人，可按住 Ctrl 多选</p>
                 </div>
 
                 <div>
                   <label className="text-sm font-medium">配合部门（可不填）</label>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2">
+                  <select
+                    multiple
+                    size={5}
+                    className="mt-2 w-full border rounded-md px-3 py-2 text-sm"
+                    value={todoForm.cooperate_department_ids.map(String)}
+                    onChange={(e) => {
+                      const nextDepartmentIds = getSelectedNumbers(e.currentTarget.selectedOptions);
+
+                      setTodoForm((prev) => ({
+                        ...prev,
+                        cooperate_department_ids: nextDepartmentIds,
+                        cooperate_persons: [],
+                      }));
+                    }}
+                  >
                     {departments.filter((d) => d.id !== 1).map((dept) => (
-                      <label key={dept.id} className="flex items-center gap-2 text-sm border rounded p-2">
-                        <input
-                          type="checkbox"
-                          checked={todoForm.cooperate_department_ids.includes(dept.id)}
-                          onChange={() =>
-                            setTodoForm((prev: any) => ({
-                              ...prev,
-                              cooperate_department_ids: toggleNumber(prev.cooperate_department_ids, dept.id),
-                              cooperate_persons: [],
-                            }))
-                          }
-                        />
+                      <option key={dept.id} value={dept.id}>
                         {dept.name}
-                      </label>
+                      </option>
                     ))}
-                  </div>
+                  </select>
+                  <p className="mt-1 text-xs text-gray-500">可按住 Ctrl 多选</p>
                 </div>
 
                 <div>
                   <label className="text-sm font-medium">配合部门责任人（可不填）</label>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2">
+                  <select
+                    multiple
+                    size={5}
+                    className="mt-2 w-full border rounded-md px-3 py-2 text-sm"
+                    value={todoForm.cooperate_persons}
+                    onChange={(e) => {
+                      const nextPersons = getSelectedStrings(e.currentTarget.selectedOptions);
+
+                      setTodoForm((prev) => ({
+                        ...prev,
+                        cooperate_persons: nextPersons,
+                      }));
+                    }}
+                  >
                     {cooperatePersonOptions.map((person) => (
-                      <label key={person.id} className="flex items-center gap-2 text-sm border rounded p-2">
-                        <input
-                          type="checkbox"
-                          checked={todoForm.cooperate_persons.includes(person.name)}
-                          onChange={() =>
-                            setTodoForm((prev: any) => ({
-                              ...prev,
-                              cooperate_persons: toggleString(prev.cooperate_persons, person.name),
-                            }))
-                          }
-                        />
-                        {person.name}
-                      </label>
+                      <option key={person.id} value={person.name}>
+                        {person.name}（{departments.find((d) => d.id === person.department_id)?.name || '-'}）
+                      </option>
                     ))}
-                  </div>
+                  </select>
+                  <p className="mt-1 text-xs text-gray-500">先选择配合部门，再选择配合部门责任人，可按住 Ctrl 多选</p>
                 </div>
 
-                {(user.role === 'department_manager' || user.role === 'department_leader') && (
+                {user && (user.role === 'DEPARTMENT_MANAGER' || user.role === 'DEPARTMENT_LEADER') && (
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <label className="text-sm font-medium">任务节点</label>

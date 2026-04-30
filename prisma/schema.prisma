@@ -1,0 +1,202 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum WorkItemType {
+  PRIORITY  @map("priority")
+  MAIN      @map("main")
+  TODO      @map("todo")
+}
+
+enum WorkItemStatus {
+  DRAFT                        @map("draft")
+  PENDING_DEPT                 @map("pending_dept")
+  PENDING_COMPANY              @map("pending_company")
+  APPROVED                     @map("approved")
+  IN_PROGRESS                  @map("in_progress")
+  PENDING_DECOMPOSE            @map("pending_decompose")
+  PENDING_COMPLETE             @map("pending_complete")
+  PENDING_EVIDENCE_DEPT        @map("pending_evidence_dept")
+  PENDING_EVIDENCE_COMPANY     @map("pending_evidence_company")
+  PENDING_MAIN_LEADER_CANCEL   @map("pending_main_leader_cancel")
+  COMPLETED                    @map("completed")
+  REJECTED                     @map("rejected")
+  ADJUSTING                    @map("adjusting")
+  CANCELLING                   @map("cancelling")
+  CANCELLED                    @map("cancelled")
+}
+
+enum ActionType {
+  CREATE           @map("create")
+  COMPLETE         @map("complete")
+  ADJUST           @map("adjust")
+  CANCEL           @map("cancel")
+  TODO_DECOMPOSE   @map("todo_decompose")
+}
+
+enum Role {
+  ADMIN                  @map("admin")
+  SUPERVISOR             @map("supervisor")
+  DEPARTMENT_MANAGER     @map("department_manager")
+  DEPARTMENT_LEADER      @map("department_leader")
+  VICE_PRESIDENT         @map("vice_president")
+  PRESIDENT              @map("president")
+}
+
+model Department {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique @db.VarChar(50)
+  code        String   @unique @db.VarChar(20)
+  isBusiness  Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  users       User[]   @relation("UserDepartment")
+  workItems   WorkItem[] @relation("DepartmentWorkItems")
+  
+  @@map("departments")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique @db.VarChar(50)
+  passwordHash String @db.VarChar(255)
+  name      String   @db.VarChar(50)
+  role      Role
+  departmentId Int
+  isActive  Boolean  @default(true)
+  email     String?  @db.VarChar(100)
+  phone     String?  @db.VarChar(20)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  department           Department              @relation("UserDepartment", fields: [departmentId], references: [id])
+  createdWorkItems     WorkItem[]              @relation("CreatorWorkItems")
+  currentApprovalItems WorkItem[]              @relation("ApproverWorkItems")
+  approvalLeaderItems  WorkItem[]              @relation("ApprovalLeaderWorkItems")
+  proposedLeaderItems  WorkItem[]              @relation("ProposedLeaderWorkItems")
+  initiatedWorkflowRecords WorkflowRecord[]    @relation("WorkflowInitiator")
+  approvedWorkflowRecords  WorkflowRecord[]    @relation("WorkflowApprover")
+  operationLogs        OperationLog[]
+  attachments          Attachment[]
+  
+  @@map("users")
+}
+
+model WorkItem {
+  id                    Int             @id @default(autoincrement())
+  type                  WorkItemType
+  title                 String          @db.VarChar(200)
+  status                WorkItemStatus
+  action                ActionType?
+  needMainLeaderCancel  Boolean         @default(false)
+  
+  businessCategory      String?         @db.VarChar(100)
+  workItem              String?         @db.VarChar(500)
+  workNode              String?         @db.VarChar(200)
+  completeTime          DateTime?
+  completeForm          String?         @db.VarChar(200)
+  isInnovation          Boolean         @default(false)
+  
+  departmentId          Int?
+  departmentIds         Int[]           @default([])
+  cooperateDepartmentIds Int[]          @default([])
+  
+  creatorId             Int
+  currentApproverId     Int?
+  currentApproverRole   Role?
+  approvalLeaderId      Int?
+  proposedLeaderId      Int?
+  
+  responsibleLeader     String?         @db.VarChar(50)
+  supervisor            String?         @db.VarChar(50)
+  responsiblePersons    String[]        @default([])
+  cooperatePersons      String[]        @default([])
+  
+  proposedScene         String?         @db.VarChar(200)
+  formedTime            DateTime?
+  workPlan              String?         @db.Text
+  planCompleteTime      DateTime?
+  progress              String?         @db.Text
+  
+  proof                 String?         @db.Text
+  adjustReason          String?         @db.Text
+  cancelReason          String?         @db.Text
+  rejectReason          String?         @db.Text
+  rejectedFromStatus    WorkItemStatus?
+  
+  nodes                 Json?
+  adjustHistory         Json?           @default("[]")
+  
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+  
+  department            Department?     @relation("DepartmentWorkItems", fields: [departmentId], references: [id])
+  creator               User            @relation("CreatorWorkItems", fields: [creatorId], references: [id])
+  currentApprover       User?           @relation("ApproverWorkItems", fields: [currentApproverId], references: [id])
+  approvalLeader        User?           @relation("ApprovalLeaderWorkItems", fields: [approvalLeaderId], references: [id])
+  proposedLeader        User?           @relation("ProposedLeaderWorkItems", fields: [proposedLeaderId], references: [id])
+  
+  workflowRecords       WorkflowRecord[]
+  attachments           Attachment[]
+  
+  @@map("work_items")
+}
+
+model WorkflowRecord {
+  id              Int             @id @default(autoincrement())
+  workItemId      Int
+  actionType      String          @db.VarChar(50)
+  initiatorId     Int
+  approverId      Int?
+  approvalRole    Role?
+  statusBefore    WorkItemStatus
+  statusAfter     WorkItemStatus
+  comment         String?         @db.Text
+  createdAt       DateTime        @default(now())
+  
+  workItem        WorkItem        @relation(fields: [workItemId], references: [id], onDelete: Cascade)
+  initiator       User            @relation("WorkflowInitiator", fields: [initiatorId], references: [id])
+  approver        User?           @relation("WorkflowApprover", fields: [approverId], references: [id])
+  
+  @@map("workflow_records")
+}
+
+model Attachment {
+  id              Int             @id @default(autoincrement())
+  workItemId      Int?
+  userId          Int
+  fileName        String          @db.VarChar(200)
+  filePath        String          @db.VarChar(500)
+  fileSize        Int
+  fileType        String          @db.VarChar(50)
+  uploadedAt      DateTime        @default(now())
+  
+  workItem        WorkItem?       @relation(fields: [workItemId], references: [id], onDelete: Cascade)
+  user            User            @relation(fields: [userId], references: [id])
+  
+  @@map("attachments")
+}
+
+model OperationLog {
+  id              Int             @id @default(autoincrement())
+  userId          Int
+  userName        String          @db.VarChar(50)
+  userRole        Role
+  action          String          @db.VarChar(50)
+  module          String          @db.VarChar(50)
+  targetId        Int?
+  targetType      String?         @db.VarChar(50)
+  description     String          @db.VarChar(500)
+  ipAddress       String?         @db.VarChar(50)
+  createdAt       DateTime        @default(now())
+  
+  user            User            @relation(fields: [userId], references: [id])
+  
+  @@map("operation_logs")
+}

@@ -24,8 +24,9 @@ export default function ApprovalPage() {
   const [works, setWorks] = useState<Work[]>([]);
   const [tab, setTab] = useState<'pending' | 'all'>('pending');
 
-  const load = () => {
-    setWorks([...getVisibleWorks(user)]);
+  const load = async () => {
+    const worksData = await getVisibleWorks(user);
+    setWorks([...worksData]);
   };
 
   useEffect(() => {
@@ -43,19 +44,21 @@ export default function ApprovalPage() {
   const pending = sortWorksByDueDate(works.filter((w) => canHandleWork(user, w)));
   const list = tab === 'pending' ? pending : works;
 
-  const handleApprove = (work: Work) => {
+  const handleApprove = async (work: Work) => {
     if (!user) return;
-    approveWork(user, work);
-    setWorks([...getVisibleWorks(user)]);
+    await approveWork(user, work);
+    const worksData = await getVisibleWorks(user);
+    setWorks([...worksData]);
   };
 
-  const handleReject = (work: Work) => {
+  const handleReject = async (work: Work) => {
     const reason = prompt('请输入退回原因：');
     if (reason === null) return;
 
     try {
-      rejectWork(work, user, reason || '审批退回');
-      setWorks([...getVisibleWorks(user)]);
+      await rejectWork(work, user, reason || '审批退回');
+      const worksData = await getVisibleWorks(user);
+      setWorks([...worksData]);
       alert('已退回');
     } catch (error) {
       console.error(error);
@@ -99,54 +102,54 @@ export default function ApprovalPage() {
                       类型：{work.type}　
                       操作：{getActionName(work.action)}　
                       状态：<StatusBadge status={work.status} />　
-                      部门：{departments.find((d) => d.id === work.department_id)?.name || '-'}
+                      部门：{departments.find((d) => d.id === work.departmentId)?.name || '-'}
                     </div>
                     {work.type === '待办' && (
                       <div className="text-sm text-gray-500 mt-1">
-                        事项提出领导：{work.proposed_leader || '-'}
+                        事项提出领导：{work.proposedLeader || '-'}
                       </div>
                     )}
-                    {work.adjust_reason && <div className="text-sm text-purple-600 mt-1">调整原因：{work.adjust_reason}</div>}
-                    {work.adjust_new_time && (
+                    {work.adjustReason && <div className="text-sm text-purple-600 mt-1">调整原因：{work.adjustReason}</div>}
+                    {work.adjustNewTime && (
                       <div className="text-sm text-purple-600 mt-1">
-                        调整后时间：{work.adjust_new_time}
+                        调整后时间：{work.adjustNewTime}
                       </div>
                     )}
-                    {work.pending_adjustment_reason && (
+                    {work.pendingAdjustmentReason && (
                       <div className="text-sm text-purple-600 mt-1 break-words whitespace-pre-wrap">
-                        调整原因：{work.pending_adjustment_reason}
+                        调整原因：{work.pendingAdjustmentReason}
                       </div>
                     )}
 
-                    {work.pending_adjustment_from_time && (
+                    {work.pendingAdjustmentFromTime && (
                       <div className="text-sm text-purple-600 mt-1">
-                        原计划完成时间：{work.pending_adjustment_from_time}
+                        原计划完成时间：{work.pendingAdjustmentFromTime}
                       </div>
                     )}
 
-                    {work.pending_adjustment_to_time && (
+                    {work.pendingAdjustmentToTime && (
                       <div className="text-sm text-purple-600 mt-1">
-                        现计划完成时间：{work.pending_adjustment_to_time}
+                        现计划完成时间：{work.pendingAdjustmentToTime}
                       </div>
                     )}
 
-                    {work.approval_leader && (
+                    {work.approvalLeader && (
                       <div className="text-sm text-blue-600 mt-1">
-                        公司审批领导：{work.approval_leader}
+                        公司审批领导：{work.approvalLeader}
                       </div>
                     )}
 
-                    {work.reject_reason && (
+                    {work.rejectReason && (
                       <div className="text-sm text-red-600 mt-1 break-words whitespace-pre-wrap">
-                        上次退回原因：{work.reject_reason}
+                        上次退回原因：{work.rejectReason}
                       </div>
                     )}
-                    {work.pending_adjustment && (
+                    {work.pendingAdjustment && (
                       <div className="text-sm text-gray-600 mt-1">
                         本次申请包含调整内容，请进入详情查看。
                       </div>
                     )}
-                    {work.cancel_reason && <div className="text-sm text-gray-600 mt-1">取消原因：{work.cancel_reason}</div>}
+                    {work.cancelReason && <div className="text-sm text-gray-600 mt-1">取消原因：{work.cancelReason}</div>}
                   </div>
 
                   <div className="flex gap-2">

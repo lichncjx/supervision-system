@@ -207,7 +207,7 @@ export async function importWorksFromExcel(
                 creator_role: user.role,
                 creator_id: user.id,
                 action: 'create',
-                status: user.role === 'department_manager' ? 'submitted' : 'dept_approved',
+                status: user.role === 'DEPARTMENT_MANAGER' ? 'submitted' : 'dept_approved',
                 need_ceo: true,
                 is_innovation: row['是否为创新工作'] === '是',
                 nodes: [],
@@ -230,7 +230,7 @@ export async function importWorksFromExcel(
                 creator_role: user.role,
                 creator_id: user.id,
                 action: 'create',
-                status: user.role === 'department_manager' ? 'submitted' : 'dept_approved',
+                status: user.role === 'DEPARTMENT_MANAGER' ? 'submitted' : 'dept_approved',
                 need_ceo: false,
                 is_innovation: false,
                 nodes: [],
@@ -258,9 +258,9 @@ export async function importWorksFromExcel(
                 creator_id: user.id,
                 action: 'todo_decompose',
                 status:
-                  user.role === 'department_manager'
+                  user.role === 'DEPARTMENT_MANAGER'
                     ? 'submitted'
-                    : user.role === 'department_leader'
+                    : user.role === 'DEPARTMENT_LEADER'
                       ? 'dept_approved'
                       : 'todo_pending_decompose',
                 need_ceo: false,

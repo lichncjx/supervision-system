@@ -1,12 +1,12 @@
 import type { User } from '@/lib/auth';
 
 export const ROLES = {
-  ADMIN: 'admin',
-  SUPERVISOR: 'supervisor',
-  DEPARTMENT_MANAGER: 'department_manager',
-  DEPARTMENT_LEADER: 'department_leader',
-  VICE_PRESIDENT: 'vice_president',
-  PRESIDENT: 'president',
+  ADMIN: 'ADMIN',
+  SUPERVISOR: 'SUPERVISOR',
+  DEPARTMENT_MANAGER: 'DEPARTMENT_MANAGER',
+  DEPARTMENT_LEADER: 'DEPARTMENT_LEADER',
+  VICE_PRESIDENT: 'VICE_PRESIDENT',
+  PRESIDENT: 'PRESIDENT',
 } as const;
 
 export function hasPermission(user: User | null, requiredRoles: string[]) {
@@ -22,12 +22,12 @@ export function canAccessDepartment(user: User | null, departmentId: number) {
     user.role === ROLES.SUPERVISOR ||
     user.role === ROLES.VICE_PRESIDENT ||
     user.role === ROLES.PRESIDENT ||
-    user.department_id === 1
+    user.departmentId === 1
   ) {
     return true;
   }
 
-  return user.department_id === departmentId;
+  return user.departmentId === departmentId;
 }
 
 export function canApprove(user: User | null, approvalLevel: number) {
@@ -48,7 +48,6 @@ export function canApprove(user: User | null, approvalLevel: number) {
 export function canPerformAction(user: User | null, action: string) {
   if (!user) return false;
 
-  // 系统管理员最高权限，可以执行所有操作
   if (user.role === ROLES.ADMIN) {
     return true;
   }

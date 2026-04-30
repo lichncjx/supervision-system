@@ -84,142 +84,187 @@ export interface Work {
   title: string;
   description?: string;
   type: WorkType;
-  department_id: number;
-  creator_role: string;
-  creator_id?: number;
+  departmentId: number;
+  departmentName?: string;
+  creatorRole: string;
+  creatorId?: number;
+  creatorName?: string;
   status: Status;
   action: ActionType;
-  need_ceo: boolean;
+  needCeo: boolean;
   proof?: string;
-  proof_files?: ProofFile[];
-  adjust_reason?: string;
-  cancel_reason?: string;
-  adjust_new_time?: string;        // 调整后的时间
-  adjust_time_type?: 'complete_time' | 'plan_complete_time';  // 调整的是哪个时间字段
-  created_at: string;
-  updated_at: string;
-  due_date?: string;
-  // 新增字段
-  is_innovation?: boolean;        // 是否为创新工作
-  nodes?: WorkNode[];             // 工作节点，两层结构
-  business_category?: string;      // 业务类别
-  work_item?: string;              // 工作事项
-  work_node?: string;              // 工作节点
-  complete_time?: string;          // 完成时间
-  complete_form?: string;          // 完成形式
-  responsible_leader?: string;     // 责任领导
-  supervisor?: string;             // 主管人员
-  proposed_leader?: string;        // 事项提出领导
-  proposed_leader_id?: number;     // 事项提出领导用户ID
-  proposed_leader_role?: string;   // 事项提出领导角色
-  proposed_scene?: string;         // 事项提出场景
-  formed_time?: string;            // 形成时间
-  responsible_person?: string;     // 责任部门责任人
-  cooperate_department?: string;   // 配合部门
-  cooperate_person?: string;       // 配合部门责任人
-  
-  // 多选字段
-  department_ids?: number[];              // 多选责任部门
-  responsible_persons?: string[];         // 多选责任部门责任人
-  cooperate_department_ids?: number[];    // 多选配合部门
-  cooperate_departments?: string[];       // 多选配合部门名称
-  cooperate_persons?: string[];           // 多选配合部门责任人
-  
-  work_plan?: string;              // 工作计划
-  plan_complete_time?: string;     // 计划完成时间
-  progress?: string;               // 进展情况
-  reject_reason?: string;          // 退回原因
-  rejected_at?: string;            // 退回时间
-  rejected_from?: Status;          // 从哪个状态退回
-  rejected_by?: string;            // 退回人
-  rejected_by_role?: string;       // 退回人角色
-  pending_adjustment?: Partial<Work>; // 待审批的调整内容
-  pending_adjustment_reason?: string; // 调整原因
+  proofFiles?: ProofFile[];
+  adjustReason?: string;
+  cancelReason?: string;
+  adjustNewTime?: string;
+  adjustTimeType?: 'complete_time' | 'plan_complete_time';
+  createdAt: string;
+  updatedAt: string;
+  dueDate?: string;
+  isInnovation?: boolean;
+  nodes?: WorkNode[];
+  businessCategory?: string;
+  workItem?: string;
+  workNode?: string;
+  completeTime?: string;
+  completeForm?: string;
+  responsibleLeader?: string;
+  supervisor?: string;
+  proposedLeader?: string;
+  proposedLeaderId?: number;
+  proposedLeaderRole?: string;
+  proposedScene?: string;
+  formedTime?: string;
+  responsiblePerson?: string;
+  cooperateDepartment?: string;
+  cooperatePerson?: string;
+  departmentIds?: number[];
+  responsiblePersons?: string[];
+  cooperateDepartmentIds?: number[];
+  cooperateDepartments?: string[];
+  cooperatePersons?: string[];
+  workPlan?: string;
+  planCompleteTime?: string;
+  progress?: string;
+  rejectReason?: string;
+  rejectedAt?: string;
+  rejectedFrom?: Status;
+  rejectedBy?: string;
+  rejectedByRole?: string;
+  pendingAdjustment?: Partial<Work>;
+  pendingAdjustmentReason?: string;
+  pendingAdjustmentFromTime?: string;
+  pendingAdjustmentToTime?: string;
+  pendingAdjustmentTimeField?: 'complete_time' | 'plan_complete_time' | 'due_date';
+  adjustHistory?: AdjustHistory[];
+  approvalLeader?: string;
+  approvalLeaderId?: number;
+  approvalLeaderRole?: string;
 
-  //调整前后时间追溯
-  pending_adjustment_from_time?: string;
-  pending_adjustment_to_time?: string;
-  pending_adjustment_time_field?: 'complete_time' | 'plan_complete_time' | 'due_date';
-  adjust_history?: AdjustHistory[];
-
-  //调整/取消时选择的公司审批领导
-  approval_leader?: string;
-  approval_leader_id?: number;
-  approval_leader_role?: string;
+  department_id?: number;
+  is_innovation?: boolean;
+  complete_time?: string;
+  plan_complete_time?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
-export type WorkEditablePatch = Partial<Pick< 
-  Work, 
-  | 'title' 
-  | 'description' 
-  | 'business_category' 
-  | 'work_item' 
-  | 'work_node' 
-  | 'nodes' 
-  | 'is_innovation' 
-  | 'complete_time' 
-  | 'complete_form' 
-  | 'department_id' 
-  | 'department_ids' 
-  | 'responsible_leader' 
-  | 'supervisor' 
-  | 'proposed_leader' 
-  | 'proposed_leader_id' 
-  | 'proposed_leader_role' 
-  | 'proposed_scene' 
-  | 'formed_time' 
-  | 'responsible_person' 
-  | 'responsible_persons' 
-  | 'cooperate_department' 
-  | 'cooperate_person' 
-  | 'cooperate_department_ids' 
-  | 'cooperate_departments' 
-  | 'cooperate_persons' 
-  | 'work_plan' 
-  | 'plan_complete_time' 
-  | 'progress' 
-  | 'due_date' 
-  | 'approval_leader' 
-  | 'approval_leader_id' 
-  | 'approval_leader_role' 
+export type WorkEditablePatch = Partial<Pick<
+  Work,
+  | 'title'
+  | 'description'
+  | 'businessCategory'
+  | 'workItem'
+  | 'workNode'
+  | 'nodes'
+  | 'isInnovation'
+  | 'completeTime'
+  | 'completeForm'
+  | 'departmentId'
+  | 'departmentIds'
+  | 'responsibleLeader'
+  | 'supervisor'
+  | 'proposedLeader'
+  | 'proposedLeaderId'
+  | 'proposedLeaderRole'
+  | 'proposedScene'
+  | 'formedTime'
+  | 'responsiblePerson'
+  | 'responsiblePersons'
+  | 'cooperateDepartment'
+  | 'cooperatePerson'
+  | 'cooperateDepartmentIds'
+  | 'cooperateDepartments'
+  | 'cooperatePersons'
+  | 'workPlan'
+  | 'planCompleteTime'
+  | 'progress'
+  | 'dueDate'
+  | 'approvalLeader'
+  | 'approvalLeaderId'
+  | 'approvalLeaderRole'
 >>;
 
-const WORKS_KEY = 'supervision_works';
-
-let works: Work[] = [];
-
-function canUseStorage() {
-  return typeof window !== 'undefined' && typeof localStorage !== 'undefined';
+function transformWorkFromAPI(work: any): Work {
+  return {
+    id: work.id,
+    title: work.title,
+    type: work.type as WorkType,
+    departmentId: work.departmentId,
+    departmentName: work.departmentName,
+    creatorRole: work.creatorRole || work.creator_role || '',
+    creatorId: work.creatorId || work.creator_id,
+    creatorName: work.creatorName,
+    status: work.status.toLowerCase() as Status,
+    action: 'create',
+    needCeo: work.type === '重点',
+    isInnovation: work.isInnovation || work.is_innovation,
+    nodes: work.nodes || [],
+    businessCategory: work.businessCategory || work.business_category,
+    workItem: work.workItem || work.work_item,
+    workNode: work.workNode || work.work_node,
+    completeTime: work.completeTime || work.complete_time,
+    completeForm: work.completeForm || work.complete_form,
+    responsibleLeader: work.responsibleLeader || work.responsible_leader,
+    supervisor: work.supervisor,
+    proposedLeader: work.proposedLeader || work.proposed_leader,
+    proposedLeaderId: work.proposedLeaderId || work.proposed_leader_id,
+    proposedLeaderRole: work.proposedLeaderRole || work.proposed_leader_role,
+    proposedScene: work.proposedScene || work.proposed_scene,
+    formedTime: work.formedTime || work.formed_time,
+    responsiblePersons: work.responsiblePersons || work.responsible_persons || [],
+    cooperateDepartmentIds: work.cooperateDepartmentIds || work.cooperate_department_ids || [],
+    cooperatePersons: work.cooperatePersons || work.cooperate_persons || [],
+    workPlan: work.workPlan || work.work_plan,
+    planCompleteTime: work.planCompleteTime || work.plan_complete_time,
+    progress: work.progress,
+    approvalLeaderId: work.approvalLeaderId || work.approval_leader_id,
+    createdAt: work.createdAt || work.created_at,
+    updatedAt: work.updatedAt || work.updated_at,
+    department_id: work.departmentId,
+    is_innovation: work.isInnovation,
+    complete_time: work.completeTime,
+    plan_complete_time: work.planCompleteTime,
+    created_at: work.createdAt,
+    updated_at: work.updatedAt,
+  };
 }
 
-function loadWorks() {
-  if (!canUseStorage()) return;
-
-  const raw = localStorage.getItem(WORKS_KEY);
-  if (!raw) {
-    works = [];
-    return;
-  }
-
+export async function getWorks(): Promise<Work[]> {
   try {
-    works = JSON.parse(raw) as Work[];
+    const response = await fetch('/api/works', { credentials: 'include' });
+    if (!response.ok) {
+      return [];
+    }
+    const data = await response.json();
+    return data.map(transformWorkFromAPI);
   } catch {
-    works = [];
+    return [];
   }
 }
 
-function saveWorks() {
-  if (!canUseStorage()) return;
-  localStorage.setItem(WORKS_KEY, JSON.stringify(works));
+function isCompanyVisibleWork(work: Work) {
+  if (work.type !== '重点' && work.type !== '主要') {
+    return true;
+  }
+
+  const companyVisibleStatuses: Status[] = [
+    'dept_approved',
+    'company_approved',
+    'active',
+    'adjusting',
+    'canceling',
+    'ceo_pending_cancel',
+    'completed',
+    'rejected',
+    'cancelled',
+  ];
+
+  return companyVisibleStatuses.includes(work.status);
 }
 
-export function getWorks() {
-  loadWorks();
-  return works;
-}
-
-export function getVisibleWorks(user: User | null | undefined, type?: WorkType) {
-  loadWorks();
+export async function getVisibleWorks(user: User | null | undefined, type?: WorkType): Promise<Work[]> {
+  const works = await getWorks();
 
   let list = works;
 
@@ -229,22 +274,34 @@ export function getVisibleWorks(user: User | null | undefined, type?: WorkType) 
 
   if (!user) return [];
 
-  if (isCompanyLevel(user.role, user.department_id)) {
+  if (user.role === 'ADMIN' || user.role === 'SUPERVISOR') {
     return sortWorksByDueDate(list);
   }
 
+  if (isCompanyLevel(user.role, user.departmentId)) {
+    return sortWorksByDueDate(list.filter((w) => isCompanyVisibleWork(w)));
+  }
+
   return sortWorksByDueDate(
-    list.filter((w) => isWorkRelatedToDepartment(w, user.department_id))
+    list.filter((w) => isWorkRelatedToDepartment(w, user.departmentId))
   );
 }
 
-export function getWorkById(id: number) {
-  loadWorks();
-  return works.find((w) => w.id === id);
+export async function getWorkById(id: number): Promise<Work | undefined> {
+  try {
+    const response = await fetch(`/api/works/${id}`, { credentials: 'include' });
+    if (!response.ok) {
+      return undefined;
+    }
+    const data = await response.json();
+    return transformWorkFromAPI(data);
+  } catch {
+    return undefined;
+  }
 }
 
-export function queryWorks(user: User | null | undefined, query: WorkQuery) {
-  let list = getVisibleWorks(user);
+export async function queryWorks(user: User | null | undefined, query: WorkQuery): Promise<Work[]> {
+  let list = await getVisibleWorks(user);
 
   if (query.type && query.type !== '全部') {
     list = list.filter((w) => w.type === query.type);
@@ -286,16 +343,16 @@ export function queryWorks(user: User | null | undefined, query: WorkQuery) {
     list = list.filter((w) =>
       [
         w.title,
-        w.work_item,
+        w.workItem,
         w.description,
-        w.business_category,
-        w.proposed_leader,
-        w.proposed_scene,
-        w.responsible_leader,
+        w.businessCategory,
+        w.proposedLeader,
+        w.proposedScene,
+        w.responsibleLeader,
         w.supervisor,
-        w.responsible_person,
+        w.responsiblePerson,
         w.progress,
-        w.work_plan,
+        w.workPlan,
       ]
         .filter(Boolean)
         .some((v) => String(v).includes(keyword))
@@ -305,102 +362,157 @@ export function queryWorks(user: User | null | undefined, query: WorkQuery) {
   return sortWorksByDueDate(list);
 }
 
-export function addWork(work: Omit<Work, 'created_at' | 'updated_at'>) {
-  loadWorks();
-
-  const now = new Date().toISOString();
-  const full: Work = {
-    ...work,
-    created_at: now,
-    updated_at: now,
+export async function addWork(work: Omit<Work, 'createdAt' | 'updatedAt'>): Promise<Work> {
+  const data: any = {
+    type: work.type,
+    title: work.title,
+    departmentId: work.departmentId,
+    workItem: work.workItem,
+    workNode: work.workNode,
+    businessCategory: work.businessCategory,
+    completeTime: work.completeTime,
+    completeForm: work.completeForm,
+    isInnovation: work.isInnovation,
+    responsibleLeader: work.responsibleLeader,
+    supervisor: work.supervisor,
+    proposedLeader: work.proposedLeader,
+    proposedLeaderId: work.proposedLeaderId,
+    proposedScene: work.proposedScene,
+    formedTime: work.formedTime,
+    responsiblePersons: work.responsiblePersons,
+    cooperateDepartmentIds: work.cooperateDepartmentIds,
+    cooperatePersons: work.cooperatePersons,
+    workPlan: work.workPlan,
+    planCompleteTime: work.planCompleteTime,
+    progress: work.progress,
+    approvalLeaderId: work.approvalLeaderId,
+    nodes: work.nodes,
   };
 
-  works = [full, ...works];
-  saveWorks();
+  const response = await fetch('/api/works', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+    credentials: 'include',
+  });
 
-  return full;
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || '创建失败');
+  }
+
+  const result = await response.json();
+  return transformWorkFromAPI(result);
 }
 
-export function updateWork(id: number, patch: Partial<Work>) {
-  loadWorks();
+export async function updateWork(id: number, patch: Partial<Work>): Promise<Work | undefined> {
+  const data: any = {};
+  if (patch.title !== undefined) data.title = patch.title;
+  if (patch.workItem !== undefined) data.workItem = patch.workItem;
+  if (patch.workNode !== undefined) data.workNode = patch.workNode;
+  if (patch.businessCategory !== undefined) data.businessCategory = patch.businessCategory;
+  if (patch.completeTime !== undefined) data.completeTime = patch.completeTime;
+  if (patch.completeForm !== undefined) data.completeForm = patch.completeForm;
+  if (patch.isInnovation !== undefined) data.isInnovation = patch.isInnovation;
+  if (patch.responsibleLeader !== undefined) data.responsibleLeader = patch.responsibleLeader;
+  if (patch.supervisor !== undefined) data.supervisor = patch.supervisor;
+  if (patch.proposedLeader !== undefined) data.proposedLeader = patch.proposedLeader;
+  if (patch.proposedLeaderId !== undefined) data.proposedLeaderId = patch.proposedLeaderId;
+  if (patch.proposedScene !== undefined) data.proposedScene = patch.proposedScene;
+  if (patch.formedTime !== undefined) data.formedTime = patch.formedTime;
+  if (patch.responsiblePersons !== undefined) data.responsiblePersons = patch.responsiblePersons;
+  if (patch.cooperateDepartmentIds !== undefined) data.cooperateDepartmentIds = patch.cooperateDepartmentIds;
+  if (patch.cooperatePersons !== undefined) data.cooperatePersons = patch.cooperatePersons;
+  if (patch.workPlan !== undefined) data.workPlan = patch.workPlan;
+  if (patch.planCompleteTime !== undefined) data.planCompleteTime = patch.planCompleteTime;
+  if (patch.progress !== undefined) data.progress = patch.progress;
+  if (patch.approvalLeaderId !== undefined) data.approvalLeaderId = patch.approvalLeaderId;
+  if (patch.nodes !== undefined) data.nodes = patch.nodes;
 
-  works = works.map((w) =>
-    w.id === id
-      ? {
-          ...w,
-          ...patch,
-          updated_at: new Date().toISOString(),
-        }
-      : w
-  );
+  const response = await fetch(`/api/works/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+    credentials: 'include',
+  });
 
-  saveWorks();
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || '修改失败');
+  }
 
-  return getWorkById(id);
+  const result = await response.json();
+  return transformWorkFromAPI(result);
 }
 
-export function deleteWork(id: number) {
-  loadWorks();
-  works = works.filter((w) => w.id !== id);
-  saveWorks();
+export async function deleteWork(id: number): Promise<void> {
+  const response = await fetch(`/api/works/${id}`, {
+    method: 'DELETE',
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || '删除失败');
+  }
 }
 
-function getSubmitStatusByUserRole(user: User) {
-  if (user.role === 'department_manager') {
-    return 'submitted' as Status;
+function getSubmitStatusByUserRole(user: User): Status {
+  if (user.role === 'DEPARTMENT_MANAGER') {
+    return 'submitted';
   }
 
   if (
-    user.role === 'department_leader' ||
-    user.role === 'admin' ||
-    user.role === 'vice_president' ||
-    user.role === 'president'
+    user.role === 'DEPARTMENT_LEADER' ||
+    user.role === 'ADMIN' ||
+    user.role === 'VICE_PRESIDENT' ||
+    user.role === 'PRESIDENT'
   ) {
-    return 'dept_approved' as Status;
+    return 'dept_approved';
   }
 
-  return 'submitted' as Status;
+  return 'submitted';
 }
 
-export function resubmitRejectedWork(work: Work, user: User, patch: WorkEditablePatch) {
+export async function resubmitRejectedWork(work: Work, user: User, patch: WorkEditablePatch) {
   const nextStatus = getSubmitStatusByUserRole(user);
 
   return updateWork(work.id, {
     ...patch,
-    title: patch.title || patch.work_item || work.title,
+    title: patch.title || patch.workItem || work.title,
     status: nextStatus,
     action: work.action || 'create',
-    reject_reason: undefined,
-    rejected_at: undefined,
-    rejected_from: undefined,
-    rejected_by: undefined,
-    rejected_by_role: undefined,
+    rejectReason: undefined,
+    rejectedAt: undefined,
+    rejectedFrom: undefined,
+    rejectedBy: undefined,
+    rejectedByRole: undefined,
   });
 }
 
-export function resubmitReturnedWork(work: Work) {
+export async function resubmitReturnedWork(work: Work) {
   if (work.status !== 'returned_for_edit') {
     return work;
   }
 
-  if (work.creator_role === 'department_manager') {
+  if (work.creatorRole === 'department_manager') {
     return updateWork(work.id, {
       status: 'submitted',
-      reject_reason: undefined,
-      rejected_at: undefined,
-      rejected_from: undefined,
-      rejected_by: undefined,
-      rejected_by_role: undefined,
+      rejectReason: undefined,
+      rejectedAt: undefined,
+      rejectedFrom: undefined,
+      rejectedBy: undefined,
+      rejectedByRole: undefined,
     });
   }
 
   return updateWork(work.id, {
     status: 'dept_approved',
-    reject_reason: undefined,
-    rejected_at: undefined,
-    rejected_from: undefined,
-    rejected_by: undefined,
-    rejected_by_role: undefined,
+    rejectReason: undefined,
+    rejectedAt: undefined,
+    rejectedFrom: undefined,
+    rejectedBy: undefined,
+    rejectedByRole: undefined,
   });
 }
 
@@ -453,7 +565,7 @@ export function isInProgressStatus(status: Status) {
 }
 
 export function getWorkDueDate(work: Work) {
-  return work.complete_time || work.plan_complete_time || work.due_date || '';
+  return work.completeTime || work.complete_time || work.planCompleteTime || work.plan_complete_time || work.dueDate || '';
 }
 
 export function isOverdueWork(work: Work) {
@@ -494,12 +606,13 @@ function getWorkDepartmentIds(work: Work) {
       ids.add(id);
     }
   };
+  addId(work.departmentId);
   addId(work.department_id);
-  if (Array.isArray(work.department_ids)) {
-    work.department_ids.forEach(addId);
+  if (Array.isArray(work.departmentIds)) {
+    work.departmentIds.forEach(addId);
   }
-  if (Array.isArray(work.cooperate_department_ids)) {
-    work.cooperate_department_ids.forEach(addId);
+  if (Array.isArray(work.cooperateDepartmentIds)) {
+    work.cooperateDepartmentIds.forEach(addId);
   }
   return Array.from(ids);
 }
@@ -528,6 +641,24 @@ export function isPendingApprovalStatus(status: Status) {
   ].includes(status);
 }
 
+export function isSupervisorTrackingWork(work: Work) {
+  const trackingStatuses: Status[] = [
+    'submitted',
+    'dept_approved',
+    'todo_pending_decompose',
+    'material_submitted',
+    'returned_for_edit',
+    'material_returned',
+    'adjust_returned',
+    'cancel_returned',
+    'adjusting',
+    'canceling',
+    'ceo_pending_cancel',
+  ];
+
+  return trackingStatuses.includes(work.status);
+}
+
 export function isExpiringWork(work: Work) {
   const date = getWorkDueDate(work);
   if (!date) return false;
@@ -549,8 +680,8 @@ export function isExpiringWork(work: Work) {
 
 export type WorkFilter = 'all' | 'pending' | 'inProgress' | 'completed' | 'overdue';
 
-export function getFilteredWorks(user: User | null | undefined, filter: WorkFilter) {
-  const list = getVisibleWorks(user);
+export async function getFilteredWorks(user: User | null | undefined, filter: WorkFilter): Promise<Work[]> {
+  const list = await getVisibleWorks(user);
 
   if (filter === 'all') return list;
   if (filter === 'pending') return list.filter((w) => isPendingStatus(w.status));
@@ -561,94 +692,14 @@ export function getFilteredWorks(user: User | null | undefined, filter: WorkFilt
   return list;
 }
 
-function isCompanyApprovalUser(user: User | null | undefined) {
-  return !!user && (user.role === 'vice_president' || user.role === 'president');
-}
-
-function isPresidentUser(user: User | null | undefined) {
-  return !!user && user.role === 'president';
-}
-
-function getAdjustmentTimeField(work: Work): 'complete_time' | 'plan_complete_time' | 'due_date' {
-  if (work.type === '待办') return 'plan_complete_time';
-  if (work.complete_time !== undefined) return 'complete_time';
-  return 'due_date';
-}
-
-function getAdjustmentTimeValue(work: Partial<Work>, field: 'complete_time' | 'plan_complete_time' | 'due_date') {
-  return String(work[field] || '');
-}
-
-function buildAdjustHistory(work: Work, user: User): AdjustHistory {
-  const field = work.pending_adjustment_time_field || getAdjustmentTimeField(work);
-
-  return {
-    id: Date.now(),
-    reason: work.pending_adjustment_reason || work.adjust_reason || '',
-    field,
-    from_time: work.pending_adjustment_from_time || '',
-    to_time: work.pending_adjustment_to_time || '',
-    requested_at: work.updated_at || new Date().toISOString(),
-    approved_at: new Date().toISOString(),
-    approved_by: user.name,
-  };
-}
-
-function clearPendingFields() {
-  return {
-    pending_adjustment: undefined,
-    pending_adjustment_reason: undefined,
-    pending_adjustment_from_time: undefined,
-    pending_adjustment_to_time: undefined,
-    pending_adjustment_time_field: undefined,
-  };
-}
-
-function clearApprovalLeaderFields() {
-  return {
-    approval_leader: undefined,
-    approval_leader_id: undefined,
-    approval_leader_role: undefined,
-  };
-}
-
-function isSelectedCompanyApprover(user: User, work: Work) {
-  // 系统管理员最高权限，可以代办所有公司审批
-  if (user.role === 'admin') {
-    return true;
-  }
-
-  // 督办管理员只查看，不审批
-  if (user.role === 'supervisor') {
-    return false;
-  }
-
-  if (
-    (work.action === 'adjust' || work.action === 'cancel') &&
-    work.approval_leader_id
-  ) {
-    return work.approval_leader_id === user.id;
-  }
-
-  // 待办事项审批必须回到事项提出领导
-  if (work.type === '待办' && work.proposed_leader_id) {
-    return work.proposed_leader_id === user.id;
-  }
-
-  // 重点/主要工作默认由公司主管领导审批，一把手也具备主管领导权限
-  return isCompanyApprovalUser(user);
-}
-
 export function canHandleWork(user: User | null | undefined, work: Work) {
   if (!user) return false;
 
-  // 督办管理员只查看，不处理
-  if (user.role === 'supervisor') {
+  if (user.role === 'SUPERVISOR') {
     return false;
   }
 
-  // 系统管理员最高权限，所有待审批、待分解、退回事项都能处理
-  if (user.role === 'admin') {
+  if (user.role === 'ADMIN') {
     return (
       canApproveWork(user, work) ||
       work.status === 'todo_pending_decompose' ||
@@ -663,23 +714,23 @@ export function canHandleWork(user: User | null | undefined, work: Work) {
   if (
     work.type === '待办' &&
     work.status === 'todo_pending_decompose' &&
-    (user.role === 'department_manager' || user.role === 'department_leader') &&
-    isWorkRelatedToDepartment(work, user.department_id)
+    (user.role === 'DEPARTMENT_MANAGER' || user.role === 'DEPARTMENT_LEADER') &&
+    isWorkRelatedToDepartment(work, user.departmentId)
   ) {
     return true;
   }
 
   if (
     isReturnStatus(work.status) &&
-    (user.role === 'department_manager' || user.role === 'department_leader') &&
-    isWorkRelatedToDepartment(work, user.department_id)
+    (user.role === 'DEPARTMENT_MANAGER' || user.role === 'DEPARTMENT_LEADER') &&
+    isWorkRelatedToDepartment(work, user.departmentId)
   ) {
     return true;
   }
 
   if (
     isReturnStatus(work.status) &&
-    work.creator_id === user.id
+    work.creatorId === user.id
   ) {
     return true;
   }
@@ -702,19 +753,17 @@ export function canApproveWork(user: User | null | undefined, work: Work) {
     return false;
   }
 
-  // 系统管理员最高权限，可以审批所有待审批事项
-  if (user.role === 'admin') {
+  if (user.role === 'ADMIN') {
     return true;
   }
 
-  // 督办管理员只查看，不审批
-  if (user.role === 'supervisor') {
+  if (user.role === 'SUPERVISOR') {
     return false;
   }
 
-  if (user.role === 'department_leader') {
+  if (user.role === 'DEPARTMENT_LEADER') {
     return (
-      isWorkRelatedToDepartment(work, user.department_id) &&
+      isWorkRelatedToDepartment(work, user.departmentId) &&
       (
         work.status === 'submitted' ||
         work.status === 'material_submitted'
@@ -731,463 +780,169 @@ export function canApproveWork(user: User | null | undefined, work: Work) {
   }
 
   if (work.status === 'ceo_pending_cancel') {
-    return user.role === 'president';
+    return user.role === 'PRESIDENT';
   }
 
   return false;
 }
 
-export function approveWork(user: User, work: Work) {
-  // 一、部门领导审批
-  if (user.role === 'department_leader') {
-    if (work.status === 'submitted') {
-      // 部门领导通过取消申请后，进入公司取消审批
-      if (work.action === 'cancel') {
-        return updateWork(work.id, { status: 'canceling' });
-      }
-
-      // 部门领导通过新建、调整、待办分解后，进入公司审批
-      return updateWork(work.id, { status: 'dept_approved' });
-    }
-
-    if (work.status === 'material_submitted') {
-      return updateWork(work.id, { status: 'dept_approved' });
-    }
+function isSelectedCompanyApprover(user: User, work: Work) {
+  if (user.role === 'ADMIN') {
+    return true;
   }
 
-  // 二、待办事项：公司审批人原则上为事项提出领导；
-  // 如果调整/取消时单独选择了公司审批领导，则以 approval_leader_id 为准
-  if (work.type === '待办') {
-    if (isSelectedCompanyApprover(user, work)) {
-      if (work.action === 'complete') {
-        return updateWork(work.id, {
-          status: 'completed',
-          reject_reason: undefined,
-          rejected_at: undefined,
-          rejected_from: undefined,
-          rejected_by: undefined,
-          rejected_by_role: undefined,
-          ...clearApprovalLeaderFields(),
-        });
-      }
-
-      if (work.action === 'adjust') {
-        const history = buildAdjustHistory(work, user);
-
-        return updateWork(work.id, {
-          ...(work.pending_adjustment || {}),
-          status: 'active',
-          action: 'todo_decompose',
-          adjust_reason: work.pending_adjustment_reason || work.adjust_reason,
-          adjust_new_time: work.pending_adjustment_to_time || work.adjust_new_time,
-          adjust_history: [...(work.adjust_history || []), history],
-          ...clearPendingFields(),
-          ...clearApprovalLeaderFields(),
-          reject_reason: undefined,
-          rejected_at: undefined,
-          rejected_from: undefined,
-          rejected_by: undefined,
-          rejected_by_role: undefined,
-        });
-      }
-
-      if (work.action === 'cancel') {
-        return updateWork(work.id, {
-          status: 'cancelled',
-          reject_reason: undefined,
-          rejected_at: undefined,
-          rejected_from: undefined,
-          rejected_by: undefined,
-          rejected_by_role: undefined,
-          ...clearApprovalLeaderFields(),
-        });
-      }
-
-      // 待办事项分解审批通过后，正式进入进行中
-      return updateWork(work.id, {
-        status: 'active',
-        action: 'todo_decompose',
-        reject_reason: undefined,
-        rejected_at: undefined,
-        rejected_from: undefined,
-        rejected_by: undefined,
-        rejected_by_role: undefined,
-        ...clearApprovalLeaderFields(),
-      });
-    }
-
-    return work;
+  if (user.role === 'SUPERVISOR') {
+    return false;
   }
 
-  // 三、重点工作/主要工作：公司主管领导审批
-  // 一把手兼具主管领导权限，因此 president 也可以走这里
-  if (isCompanyApprovalUser(user) && isSelectedCompanyApprover(user, work)) {
-    if (work.action === 'cancel') {
-      // 重点工作取消：
-      // 如果审批人是副总，则还要到一把手；
-      // 如果审批人本身就是一把手，则直接取消，避免重复审批。
-      if (work.type === '重点') {
-        if (user.role === 'president') {
-          return updateWork(work.id, {
-            status: 'cancelled',
-            ...clearApprovalLeaderFields(),
-          });
-        }
-
-        return updateWork(work.id, { status: 'ceo_pending_cancel' });
-      }
-
-      return updateWork(work.id, {
-        status: 'cancelled',
-        ...clearApprovalLeaderFields(),
-      });
-    }
-
-    if (work.action === 'complete') {
-      return updateWork(work.id, {
-        status: 'completed',
-        ...clearApprovalLeaderFields(),
-      });
-    }
-
-    if (work.action === 'adjust') {
-      const history = buildAdjustHistory(work, user);
-
-      return updateWork(work.id, {
-        ...(work.pending_adjustment || {}),
-        status: 'active',
-        action: 'create',
-        adjust_reason: work.pending_adjustment_reason || work.adjust_reason,
-        adjust_new_time: work.pending_adjustment_to_time || work.adjust_new_time,
-        adjust_history: [...(work.adjust_history || []), history],
-        ...clearPendingFields(),
-        ...clearApprovalLeaderFields(),
-      });
-    }
-
-    return updateWork(work.id, {
-      status: 'active',
-      ...clearApprovalLeaderFields(),
-    });
-  }
-
-  // 四、重点工作取消：一把手最终审批
-  if (user.role === 'president') {
-    if (work.status === 'ceo_pending_cancel') {
-      return updateWork(work.id, {
-        status: 'cancelled',
-        ...clearApprovalLeaderFields(),
-      });
-    }
-  }
-
-  // 五、admin 代办逻辑
-  if (user.role === 'admin') {
-    if (work.status === 'submitted') {
-      if (work.action === 'cancel') {
-        return updateWork(work.id, { status: 'canceling' });
-      }
-
-      return updateWork(work.id, { 
-        status: 'dept_approved',
-        reject_reason: undefined,
-        rejected_at: undefined,
-        rejected_from: undefined,
-        rejected_by: undefined,
-        rejected_by_role: undefined,
-      });
-    }
-
-    if (work.status === 'material_submitted') {
-      return updateWork(work.id, { 
-        status: 'dept_approved',
-        reject_reason: undefined,
-        rejected_at: undefined,
-        rejected_from: undefined,
-        rejected_by: undefined,
-        rejected_by_role: undefined,
-      });
-    }
-
-    if (work.status === 'dept_approved') {
-      if (work.action === 'complete') {
-        return updateWork(work.id, { 
-          status: 'completed',
-          reject_reason: undefined,
-          rejected_at: undefined,
-          rejected_from: undefined,
-          rejected_by: undefined,
-          rejected_by_role: undefined,
-          ...clearApprovalLeaderFields(),
-        });
-      }
-
-      if (work.action === 'adjust') {
-        const history = buildAdjustHistory(work, user);
-
-        return updateWork(work.id, {
-          ...(work.pending_adjustment || {}),
-          status: 'active',
-          action: 'create',
-          adjust_reason: work.pending_adjustment_reason || work.adjust_reason,
-          adjust_new_time: work.pending_adjustment_to_time || work.adjust_new_time,
-          adjust_history: [...(work.adjust_history || []), history],
-          ...clearPendingFields(),
-          ...clearApprovalLeaderFields(),
-          reject_reason: undefined,
-          rejected_at: undefined,
-          rejected_from: undefined,
-          rejected_by: undefined,
-          rejected_by_role: undefined,
-        });
-      }
-
-      return updateWork(work.id, {
-      status: 'active',
-      action: work.action,
-      reject_reason: undefined,
-      rejected_at: undefined,
-      rejected_from: undefined,
-      rejected_by: undefined,
-      rejected_by_role: undefined,
-      ...clearApprovalLeaderFields(),
-    });
-  }
-
-  if (work.status === 'canceling') {
-      if (work.type === '重点') {
-        if (work.approval_leader_role === 'president') {
-          return updateWork(work.id, { 
-            status: 'cancelled',
-            ...clearApprovalLeaderFields(),
-          });
-        }
-
-        return updateWork(work.id, { status: 'ceo_pending_cancel' });
-      }
-
-      return updateWork(work.id, { 
-        status: 'cancelled',
-        ...clearApprovalLeaderFields(),
-      });
-    }
-
-    if (work.status === 'ceo_pending_cancel') {
-      return updateWork(work.id, { 
-        status: 'cancelled',
-        ...clearApprovalLeaderFields(),
-      });
-    }
-  }
-
-  return work;
-}
-
-export function rejectWork(work: Work, user: User, reason = '审批退回') {
-  const now = new Date().toISOString();
-
-  // 完成材料被退回：事项仍然进行中，只是材料退回待补充
-  if (work.action === 'complete' || work.status === 'material_submitted') {
-    return updateWork(work.id, {
-      status: 'material_returned',
-      reject_reason: reason,
-      rejected_at: now,
-      rejected_from: work.status,
-      rejected_by: user.name,
-      rejected_by_role: user.role,
-    });
-  }
-
-  // 调整申请被退回：事项继续进行中，调整申请退回
-  if (work.action === 'adjust' || work.status === 'adjusting') {
-    return updateWork(work.id, {
-      status: 'adjust_returned',
-      pending_adjustment: undefined,
-      pending_adjustment_reason: undefined,
-      pending_adjustment_from_time: undefined,
-      pending_adjustment_to_time: undefined,
-      pending_adjustment_time_field: undefined,
-      ...clearApprovalLeaderFields(),
-      reject_reason: reason,
-      rejected_at: now,
-      rejected_from: work.status,
-      rejected_by: user.name,
-      rejected_by_role: user.role,
-    });
-  }
-
-  // 取消申请被退回：事项继续进行中，取消申请退回
   if (
-    work.action === 'cancel' ||
-    work.status === 'canceling' ||
-    work.status === 'ceo_pending_cancel'
+    (work.action === 'adjust' || work.action === 'cancel') &&
+    work.approvalLeaderId
   ) {
-    return updateWork(work.id, {
-      status: 'cancel_returned',
-      cancel_reason: undefined,
-      ...clearApprovalLeaderFields(),
-      reject_reason: reason,
-      rejected_at: now,
-      rejected_from: work.status,
-      rejected_by: user.name,
-      rejected_by_role: user.role,
-    });
+    return work.approvalLeaderId === user.id;
   }
 
-  // 新建/分解审批被退回：退回待修改，允许修改后重新提交
-  if (
-    work.action === 'create' ||
-    work.action === 'todo_decompose' ||
-    work.status === 'submitted' ||
-    work.status === 'dept_approved'
-  ) {
-    return updateWork(work.id, {
-      status: 'returned_for_edit',
-      reject_reason: reason,
-      rejected_at: now,
-      rejected_from: work.status,
-      rejected_by: user.name,
-      rejected_by_role: user.role,
-    });
+  if (work.type === '待办' && work.proposedLeaderId) {
+    return work.proposedLeaderId === user.id;
   }
 
-  return updateWork(work.id, {
-    status: 'returned_for_edit',
-    reject_reason: reason,
-    rejected_at: now,
-    rejected_from: work.status,
-    rejected_by: user.name,
-    rejected_by_role: user.role,
-  });
+  return user.role === 'VICE_PRESIDENT' || user.role === 'PRESIDENT';
 }
 
-export function submitComplete(
-  work: Work,
-  user: User,
-  proof: string,
-  proofFiles?: ProofFile[]
-) {
-  const nextProofFiles = [
-    ...(work.proof_files || []),
-    ...(proofFiles || []),
-  ];
-
-  if (user.role === 'department_leader') {
-    return updateWork(work.id, {
-      action: 'complete',
-      status: 'dept_approved',
-      proof,
-      proof_files: nextProofFiles,
-      ...clearApprovalLeaderFields(),
+export async function approveWork(user: User, work: Work) {
+  try {
+    const response = await fetch(`/api/works/${work.id}/workflow`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ action: 'approve' }),
     });
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.error || '审批失败');
+    }
+    return await getWorkById(work.id);
+  } catch (error) {
+    console.error('Approve work error:', error);
+    throw error;
   }
-
-  return updateWork(work.id, {
-    action: 'complete',
-    status: 'material_submitted',
-    proof,
-    proof_files: nextProofFiles,
-    ...clearApprovalLeaderFields(),
-  });
 }
 
-export function submitAdjust(
-  work: Work,
-  user: User,
-  reason: string,
-  pendingAdjustment?: WorkEditablePatch,
-  approvalLeader?: User
-) {
-  const field = getAdjustmentTimeField(work);
-  const fromTime = getAdjustmentTimeValue(work, field);
-  const toTime = getAdjustmentTimeValue(pendingAdjustment || {}, field);
-
-  return updateWork(work.id, {
-    action: 'adjust',
-
-    // 部门主管提交调整，必须先到部门领导；
-    // 部门领导或管理员提交调整，直接进入公司审批。
-    status: user.role === 'department_manager' ? 'submitted' : 'dept_approved',
-
-    adjust_reason: reason,
-    pending_adjustment: pendingAdjustment,
-    pending_adjustment_reason: reason,
-    pending_adjustment_from_time: fromTime,
-    pending_adjustment_to_time: toTime,
-    pending_adjustment_time_field: field,
-    adjust_new_time: toTime,
-
-    approval_leader: approvalLeader?.name,
-    approval_leader_id: approvalLeader?.id,
-    approval_leader_role: approvalLeader?.role,
-
-    reject_reason: undefined,
-    rejected_at: undefined,
-    rejected_from: undefined,
-  });
+export async function rejectWork(work: Work, user: User, reason = '审批退回') {
+  try {
+    const response = await fetch(`/api/works/${work.id}/workflow`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ action: 'reject', rejectReason: reason }),
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.error || '退回失败');
+    }
+    return await getWorkById(work.id);
+  } catch (error) {
+    console.error('Reject work error:', error);
+    throw error;
+  }
 }
 
-export function submitCancel(
-  work: Work,
-  user: User,
-  reason: string,
-  approvalLeader?: User
-) {
-  return updateWork(work.id, {
-    action: 'cancel',
-
-    // 部门主管申请取消，必须先到部门领导；
-    // 部门领导或管理员申请取消，直接进入公司审批。
-    status: user.role === 'department_manager' ? 'submitted' : 'canceling',
-
-    cancel_reason: reason,
-
-    approval_leader: approvalLeader?.name,
-    approval_leader_id: approvalLeader?.id,
-    approval_leader_role: approvalLeader?.role,
-
-    reject_reason: undefined,
-    rejected_at: undefined,
-    rejected_from: undefined,
-  });
+export async function submitComplete(work: Work, user: User, proof: string, proofFiles?: ProofFile[]) {
+  try {
+    const response = await fetch(`/api/works/${work.id}/workflow`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ action: 'evidence', proof, comment: '提交完成' }),
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.error || '提交失败');
+    }
+    return await getWorkById(work.id);
+  } catch (error) {
+    console.error('Submit complete error:', error);
+    throw error;
+  }
 }
 
-export function submitTodoDecomposition(
-  work: Work,
-  user: User,
-  patch: WorkEditablePatch
-) {
-  return updateWork(work.id, {
-    ...patch,
-    title: patch.work_item || patch.title || work.title,
-    action: 'todo_decompose',
-
-    // 部门主管分解后，先给部门领导审批；
-    // 部门领导分解后，直接给事项提出领导审批。
-    status: user.role === 'department_manager' ? 'submitted' : 'dept_approved',
-
-    reject_reason: undefined,
-    rejected_at: undefined,
-    rejected_from: undefined,
-  });
+export async function submitAdjust(work: Work, user: User, reason: string, pendingAdjustment?: WorkEditablePatch, approvalLeader?: User) {
+  try {
+    const response = await fetch(`/api/works/${work.id}/workflow`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ action: 'adjust', adjustReason: reason, comment: '申请调整' }),
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.error || '申请调整失败');
+    }
+    return await getWorkById(work.id);
+  } catch (error) {
+    console.error('Submit adjust error:', error);
+    throw error;
+  }
 }
 
-export function getStats(user: User | null | undefined) {
-  const list = getVisibleWorks(user);
-  const pendingHandleList = list.filter((w) => canHandleWork(user, w));
+export async function submitCancel(work: Work, user: User, reason: string, approvalLeader?: User) {
+  try {
+    const response = await fetch(`/api/works/${work.id}/workflow`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ action: 'cancel', cancelReason: reason, comment: '申请取消' }),
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.error || '申请取消失败');
+    }
+    return await getWorkById(work.id);
+  } catch (error) {
+    console.error('Submit cancel error:', error);
+    throw error;
+  }
+}
+
+export async function submitTodoDecomposition(work: Work, user: User, patch: WorkEditablePatch) {
+  try {
+    const nodes = patch.nodes || [];
+    const response = await fetch(`/api/works/${work.id}/workflow`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ action: 'decompose', nodes, comment: '待办分解' }),
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.error || '分解失败');
+    }
+    return await getWorkById(work.id);
+  } catch (error) {
+    console.error('Submit todo decomposition error:', error);
+    throw error;
+  }
+}
+
+export async function getStats(user: User | null | undefined) {
+  const list = await getVisibleWorks(user);
+
+  const pendingHandleList =
+    user?.role === 'SUPERVISOR'
+      ? list.filter((w) => isSupervisorTrackingWork(w))
+      : list.filter((w) => canHandleWork(user, w));
 
   return {
     total: list.length,
-    pending: list.filter((w) => isPendingStatus(w.status)).length,
     pendingApproval: list.filter((w) => isPendingStatus(w.status)).length,
-    processing: pendingHandleList.length,
     inProgress: list.filter((w) => isInProgressStatus(w.status)).length,
     completed: list.filter((w) => w.status === 'completed').length,
-    overdue: list.filter((w) => isOverdueWork(w)).length,
+    expired: list.filter((w) => isOverdueWork(w)).length,
     expiring: list.filter((w) => isExpiringWork(w)).length,
     priority: list.filter((w) => w.type === '重点').length,
     main: list.filter((w) => w.type === '主要').length,
     todo: list.filter((w) => w.type === '待办').length,
+    pendingHandle: pendingHandleList.length,
   };
 }
 
@@ -1201,8 +956,8 @@ export function getWorkflowSteps(work: Work): WorkflowStep[] {
 
   if (work.type === '待办') {
     const companyCreated =
-      work.creator_role === 'vice_president' ||
-      work.creator_role === 'president';
+      work.creatorRole === 'VICE_PRESIDENT' ||
+      work.creatorRole === 'PRESIDENT';
 
     labels = companyCreated
       ? ['公司领导提出', '部门分解', '提出领导审批', '进行中', '完成审批', '已完成']
@@ -1237,4 +992,35 @@ export function getWorkflowSteps(work: Work): WorkflowStep[] {
 
     return { label, status: 'pending' };
   });
+}
+
+export interface WorkflowRecord {
+  id: number;
+  action: string;
+  initiatorId: number;
+  initiatorName: string;
+  initiatorRole: string;
+  previousStatus: string;
+  newStatus: string;
+  comment: string;
+  createdAt: string;
+}
+
+export async function getWorkflowRecords(workId: number): Promise<WorkflowRecord[]> {
+  try {
+    const response = await fetch(`/api/works/${workId}/workflow`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      throw new Error('获取审批记录失败');
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('获取审批记录失败:', error);
+    return [];
+  }
 }

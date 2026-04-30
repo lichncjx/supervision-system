@@ -18,14 +18,14 @@ export async function authMiddleware(request: NextRequest) {
 
 export function checkPermission(session: any, requiredRole?: string, departmentId?: number) {
   // 管理员拥有所有权限
-  if (session.role === 'admin') {
+  if (session.role === 'ADMIN') {
     return true;
   }
 
   // 检查角色权限
   if (requiredRole && session.role !== requiredRole) {
     // 公司领导拥有更高权限
-    if (session.role === 'vice_president' || session.role === 'president') {
+    if (session.role === 'VICE_PRESIDENT' || session.role === 'PRESIDENT') {
       return true;
     }
     return false;
@@ -34,7 +34,7 @@ export function checkPermission(session: any, requiredRole?: string, departmentI
   // 检查部门权限
   if (departmentId && session.departmentId && session.departmentId !== departmentId) {
     // 公司领导可以访问所有部门
-    if (session.role === 'vice_president' || session.role === 'president') {
+    if (session.role === 'VICE_PRESIDENT' || session.role === 'PRESIDENT') {
       return true;
     }
     return false;
