@@ -111,22 +111,22 @@ export async function submitForApproval(workItemId: number, user: UserSession, c
 
   if (workItem.type === WorkItemType.TODO) {
     if (user.role === Role.VICE_PRESIDENT || user.role === Role.PRESIDENT) {
-      if (!workItem.proposedLeaderId && !workItem.approvalLeaderId) {
-        return { success: false, error: '待办事项缺少提出领导或审批领导，请先指定' };
-      }
       newStatus = WorkItemStatus.PENDING_DECOMPOSE;
       newApproverRole = null;
       newApproverId = null;
     } else if (user.role === Role.DEPARTMENT_MANAGER) {
+      if (!workItem.proposedLeaderId) {
+        return { success: false, error: '部门发起待办事项必须填写提出领导' };
+      }
       newStatus = WorkItemStatus.PENDING_DEPT;
       newApproverRole = Role.DEPARTMENT_LEADER;
       newApproverId = null;
     } else if (user.role === Role.DEPARTMENT_LEADER) {
-      if (!workItem.proposedLeaderId && !workItem.approvalLeaderId) {
-        return { success: false, error: '待办事项缺少审批领导，无法提交公司审批' };
+      if (!workItem.proposedLeaderId) {
+        return { success: false, error: '部门发起待办事项必须填写提出领导' };
       }
       newStatus = WorkItemStatus.PENDING_COMPANY;
-      newApproverId = workItem.proposedLeaderId ?? workItem.approvalLeaderId ?? null;
+      newApproverId = workItem.proposedLeaderId;
       newApproverRole = null;
     } else {
       return { success: false, error: '无权提交待办事项' };
@@ -197,11 +197,11 @@ export async function approveWorkItem(workItemId: number, user: UserSession, com
 
   if (workItem.status === WorkItemStatus.PENDING_DEPT) {
     if (workItem.type === WorkItemType.TODO) {
-      if (!workItem.proposedLeaderId && !workItem.approvalLeaderId) {
-        return { success: false, error: '待办事项缺少审批领导，无法提交公司审批' };
+      if (!workItem.proposedLeaderId) {
+        return { success: false, error: '待办事项缺少提出领导，无法提交公司审批' };
       }
       newStatus = WorkItemStatus.PENDING_COMPANY;
-      newApproverId = workItem.proposedLeaderId ?? workItem.approvalLeaderId ?? null;
+      newApproverId = workItem.proposedLeaderId;
       newApproverRole = null;
     } else {
       newStatus = WorkItemStatus.PENDING_COMPANY;
@@ -243,7 +243,7 @@ export async function approveWorkItem(workItemId: number, user: UserSession, com
       if (user.role === Role.DEPARTMENT_LEADER && workItem.currentApproverRole === Role.DEPARTMENT_LEADER) {
         newStatus = WorkItemStatus.ADJUSTING;
         newApproverRole = null;
-        newApproverId = (workItem.proposedLeaderId ?? workItem.approvalLeaderId) ?? null;
+        newApproverId = workItem.proposedLeaderId;
       } else if ((user.role === Role.VICE_PRESIDENT || user.role === Role.PRESIDENT) &&
         (workItem.currentApproverId === user.userId || !workItem.currentApproverId)) {
         newStatus = WorkItemStatus.IN_PROGRESS;
@@ -270,7 +270,7 @@ export async function approveWorkItem(workItemId: number, user: UserSession, com
       if (user.role === Role.DEPARTMENT_LEADER && workItem.currentApproverRole === Role.DEPARTMENT_LEADER) {
         newStatus = WorkItemStatus.CANCELLING;
         newApproverRole = null;
-        newApproverId = (workItem.proposedLeaderId ?? workItem.approvalLeaderId) ?? null;
+        newApproverId = workItem.proposedLeaderId;
       } else if ((user.role === Role.VICE_PRESIDENT || user.role === Role.PRESIDENT) && workItem.currentApproverId === user.userId) {
         newStatus = WorkItemStatus.CANCELLED;
         newApproverRole = null;
@@ -443,10 +443,10 @@ export async function submitEvidence(workItemId: number, user: UserSession, proo
     if (workItem.status !== WorkItemStatus.IN_PROGRESS) {
       return { success: false, error: '当前状态不允许提交见证材料' };
     }
-    if (!workItem.proposedLeaderId && !workItem.approvalLeaderId) {
-      return { success: false, error: '待办事项缺少审批领导' };
+    if (!workItem.proposedLeaderId) {
+      return { success: false, error: '待办事项缺少提出领导' };
     }
-    const newApproverId = workItem.proposedLeaderId || workItem.approvalLeaderId;
+    const newApproverId = workItem.proposedLeaderId;
     const updated = await prisma.workItem.update({
       where: { id: workItemId },
       data: {
@@ -581,8 +581,11 @@ export async function submitAdjust(workItemId: number, user: UserSession, adjust
       newApproverRole = Role.DEPARTMENT_LEADER;
       newApproverId = null;
     } else if (user.role === Role.DEPARTMENT_LEADER) {
+      if (!workItem.proposedLeaderId) {
+        return { success: false, error: '待办事项缺少提出领导，无法申请调整' };
+      }
       newStatus = WorkItemStatus.ADJUSTING;
-      newApproverId = (workItem.proposedLeaderId ?? workItem.approvalLeaderId) ?? null;
+      newApproverId = workItem.proposedLeaderId;
       newApproverRole = null;
     } else {
       return { success: false, error: '无权申请调整' };
@@ -669,7 +672,7 @@ export async function submitCancel(workItemId: number, user: UserSession, cancel
 
   if (workItem.type === WorkItemType.TODO) {
     if (user.role === Role.VICE_PRESIDENT || user.role === Role.PRESIDENT) {
-      if (workItem.proposedLeaderId === user.userId || workItem.approvalLeaderId === user.userId) {
+      if (workItem.proposedLeaderId === user.userId) {
         newStatus = WorkItemStatus.CANCELLING;
         newApproverRole = Role.DEPARTMENT_LEADER;
         newApproverId = null;
@@ -681,11 +684,11 @@ export async function submitCancel(workItemId: number, user: UserSession, cancel
       newApproverRole = Role.DEPARTMENT_LEADER;
       newApproverId = null;
     } else if (user.role === Role.DEPARTMENT_LEADER) {
-      newStatus = WorkItemStatus.CANCELLING;
-      if (!workItem.proposedLeaderId && !workItem.approvalLeaderId) {
-        return { success: false, error: '待办事项缺少审批领导，无法申请取消' };
+      if (!workItem.proposedLeaderId) {
+        return { success: false, error: '待办事项缺少提出领导，无法申请取消' };
       }
-      newApproverId = (workItem.proposedLeaderId ?? workItem.approvalLeaderId) ?? null;
+      newStatus = WorkItemStatus.CANCELLING;
+      newApproverId = workItem.proposedLeaderId;
       newApproverRole = null;
     } else {
       return { success: false, error: '无权申请取消' };

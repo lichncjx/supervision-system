@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getUserFromToken } from '@/lib/server-auth';
-import { existsSync } from 'fs';
+import { existsSync, promises as fs } from 'fs';
 import path from 'path';
 
 function isCompanyLevelRole(role: string): boolean {
@@ -71,7 +71,7 @@ export async function GET(
       return NextResponse.json({ error: '文件不存在' }, { status: 404 });
     }
 
-    const fileBuffer = await import('fs').then(fs => fs.promises.readFile(filePath));
+    const fileBuffer = await fs.readFile(filePath);
 
     const contentTypes: Record<string, string> = {
       '.pdf': 'application/pdf',

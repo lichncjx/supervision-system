@@ -90,6 +90,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       planCompleteTime: work.planCompleteTime,
       progress: work.progress,
       approvalLeaderId: work.approvalLeaderId,
+      currentApproverId: work.currentApproverId,
       currentApproverRole: work.currentApproverRole,
       nodes: typeof work.nodes === 'string' ? JSON.parse(work.nodes) : [],
       attachments: work.attachments.map((a) => ({

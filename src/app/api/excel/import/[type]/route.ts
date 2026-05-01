@@ -401,14 +401,17 @@ export async function POST(
           updatedAt: now,
         };
       } else {
+        const finalProposedLeaderId = data.proposedLeaderId || data.approvalLeaderId;
+        const finalApprovalLeaderId = data.approvalLeaderId;
+        
         return {
           type: 'TODO' as WorkItemType,
           title: data.workItem,
           status: WorkItemStatus.DRAFT,
           creatorId: currentUser.id,
           departmentId: data.departmentIds[0] || currentUser.departmentId,
-          proposedLeaderId: data.proposedLeaderId || null,
-          approvalLeaderId: data.approvalLeaderId || null,
+          proposedLeaderId: finalProposedLeaderId,
+          approvalLeaderId: finalApprovalLeaderId,
           proposedScene: data.proposedScene || null,
           workItem: data.workItem,
           formedTime: data.formedTime ? new Date(data.formedTime) : null,
