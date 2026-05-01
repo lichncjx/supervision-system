@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, CheckCircle, RotateCcw, XCircle, Upload, Download } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
-import { departments, companyLeadersStatic } from '@/lib/auth';
+import { getCompanyLeaders, getDepartments } from '@/lib/auth';
 import {
   getWorkById,
   submitComplete,
@@ -25,6 +25,8 @@ import {
   type WorkEditablePatch,
   type Work,
   type WorkflowRecord,
+  type Attachment,
+  transformWorkFromAPI,
 } from '@/lib/work-store';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -41,6 +43,7 @@ export default function WorkDetailPage() {
   const { user } = useAuth();
   const router = useRouter();
   const [companyLeaders, setCompanyLeaders] = useState<Array<{ id: number; name: string; role: string }>>([]);
+  const [departments, setDepartments] = useState<Array<{ id: number; name: string; code: string; isBusiness: boolean }>>([]);
   const [proof, setProof] = useState('');
   const [proofFiles, setProofFiles] = useState<ProofFile[]>([]);
   const [adjustReason, setAdjustReason] = useState('');
@@ -57,14 +60,18 @@ export default function WorkDetailPage() {
   const [workflowRecords, setWorkflowRecords] = useState<WorkflowRecord[]>([]);
 
   useEffect(() => {
-    const fetchCompanyLeaders = () => {
-      const leaders = companyLeadersStatic;
+    const fetchData = async () => {
+      const [leaders, depts] = await Promise.all([
+        getCompanyLeaders(),
+        getDepartments(),
+      ]);
       setCompanyLeaders(leaders);
+      setDepartments(depts);
       if (leaders.length > 0 && !approvalLeaderId) {
         setApprovalLeaderId(String(leaders[0].id));
       }
     };
-    fetchCompanyLeaders();
+    fetchData();
   }, []);
 
   useEffect(() => {
@@ -178,6 +185,16 @@ export default function WorkDetailPage() {
     );
 
   const canApprove = user ? canApproveWork(user, work) : false;
+
+  const canEdit = user && (
+    user.role === 'ADMIN' ||
+    user.role === 'SUPERVISOR' ||
+    (
+      (user.role === 'DEPARTMENT_MANAGER' || user.role === 'DEPARTMENT_LEADER') &&
+      isCurrentUserRelatedDepartment() &&
+      !['completed', 'cancelled', 'rejected'].includes(work.status)
+    )
+  );
 
   const handleProofFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -321,19 +338,24 @@ export default function WorkDetailPage() {
     }));
   };
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
     if (!user) return;
     if (!proof.trim() && proofFiles.length === 0) {
       alert('请填写见证材料说明或上传附件');
       return;
     }
 
-    submitComplete(work, user, proof, proofFiles);
-    setRefresh(refresh + 1);
-    alert('已提交完成材料');
+    try {
+      await submitComplete(work, user, proof, proofFiles);
+      setRefresh(refresh + 1);
+      alert('已提交完成材料');
+    } catch (error) {
+      console.error(error);
+      alert('提交失败，请查看控制台错误');
+    }
   };
 
-  const handleAdjust = () => {
+  const handleAdjust = async () => {
     if (!user) return;
 
     if (!adjustReason.trim()) {
@@ -355,12 +377,17 @@ export default function WorkDetailPage() {
       return;
     }
 
-    submitAdjust(work, user, adjustReason, pendingAdjustment);
-    setRefresh((v) => v + 1);
-    alert('已提交调整申请，等待审批');
+    try {
+      await submitAdjust(work, user, adjustReason, pendingAdjustment);
+      setRefresh((v) => v + 1);
+      alert('已提交调整申请，等待审批');
+    } catch (error) {
+      console.error(error);
+      alert('提交失败，请查看控制台错误');
+    }
   };
 
-  const handleResubmit = () => {
+  const handleResubmit = async () => {
     if (!user) return;
 
     if (!editReason.trim()) {
@@ -389,13 +416,18 @@ export default function WorkDetailPage() {
       patch.proposedLeaderRole = selectedProposedLeader.role;
     }
 
-    resubmitRejectedWork(work, user, patch);
-    setEditMode(false);
-    setRefresh((v) => v + 1);
-    alert('已修改并重新提交审批');
+    try {
+      await resubmitRejectedWork(work, user, patch);
+      setEditMode(false);
+      setRefresh((v) => v + 1);
+      alert('已修改并重新提交审批');
+    } catch (error) {
+      console.error(error);
+      alert('提交失败，请查看控制台错误');
+    }
   };
 
-  const handleAdjustSubmit = () => {
+  const handleAdjustSubmit = async () => {
     if (!user) return;
 
     if (!adjustReason.trim()) {
@@ -417,14 +449,18 @@ export default function WorkDetailPage() {
       return;
     }
 
-    submitAdjust(work, user, adjustReason, pendingAdjustment);
-
-    setAdjustMode(false);
-    setRefresh((v) => v + 1);
-    alert('已提交调整申请，等待审批');
+    try {
+      await submitAdjust(work, user, adjustReason, pendingAdjustment);
+      setAdjustMode(false);
+      setRefresh((v) => v + 1);
+      alert('已提交调整申请，等待审批');
+    } catch (error) {
+      console.error(error);
+      alert('提交失败，请查看控制台错误');
+    }
   };
 
-  const handleCancel = () => {
+  const handleCancel = async () => {
     if (!user) return;
 
     if (!cancelReason.trim()) {
@@ -441,25 +477,35 @@ export default function WorkDetailPage() {
       return;
     }
 
-    submitCancel(work, user, cancelReason);
-    setRefresh((v) => v + 1);
-    alert('已提交取消申请');
+    try {
+      await submitCancel(work, user, cancelReason);
+      setRefresh((v) => v + 1);
+      alert('已提交取消申请');
+    } catch (error) {
+      console.error(error);
+      alert('提交失败，请查看控制台错误');
+    }
   };
 
-  const handleApprove = () => {
+  const handleApprove = async () => {
     if (!user) return;
-    approveWork(user, work);
-    setRefresh((v) => v + 1);
-    alert('审批已通过');
+    try {
+      await approveWork(user, work);
+      setRefresh((v) => v + 1);
+      alert('审批已通过');
+    } catch (error) {
+      console.error(error);
+      alert('审批失败，请查看控制台错误');
+    }
   };
 
-  const handleReject = () => {
+  const handleReject = async () => {
     const reason = prompt('请输入退回原因：');
     if (reason === null) return;
     if (!user) return;
 
     try {
-      rejectWork(work, user, reason || '审批退回');
+      await rejectWork(work, user, reason || '审批退回');
       setRefresh((v) => v + 1);
       alert('已退回');
     } catch (error) {
@@ -470,6 +516,12 @@ export default function WorkDetailPage() {
 
   const getDepartmentName = (id: number) => {
     return departments.find((d) => d.id === id)?.name || '-';
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   };
 
   const isPriorityOrMain = work.type === '重点' || work.type === '主要';
@@ -607,6 +659,112 @@ export default function WorkDetailPage() {
                   </div>
                 </div>
               )}
+
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium">附件列表：</span>
+                  {canEdit && (
+                    <label className="inline-flex items-center text-sm text-blue-600 cursor-pointer hover:text-blue-800">
+                      <Upload className="h-4 w-4 mr-1" />
+                      <span>上传附件</span>
+                      <input
+                        type="file"
+                        multiple
+                        className="hidden"
+                        onChange={async (e) => {
+                          const files = e.target.files;
+                          if (!files || files.length === 0) return;
+
+                          for (const file of Array.from(files)) {
+                            const formData = new FormData();
+                            formData.append('workItemId', String(work.id));
+                            formData.append('file', file);
+
+                            try {
+                              const res = await fetch('/api/upload', {
+                                method: 'POST',
+                                body: formData,
+                                credentials: 'include',
+                              });
+                              const data = await res.json();
+                              if (!res.ok || !data.success) {
+                                alert(data.error || '上传失败');
+                              }
+                            } catch (err) {
+                              console.error(err);
+                              alert('上传失败');
+                            }
+                          }
+
+                          const workRes = await fetch(`/api/works/${work.id}`, { credentials: 'include' });
+                          const workData = await workRes.json();
+                          if (workRes.ok) {
+                            setWork(transformWorkFromAPI(workData));
+                          }
+                          e.target.value = '';
+                        }}
+                      />
+                    </label>
+                  )}
+                </div>
+                {work.attachments && work.attachments.length > 0 ? (
+                  <div className="space-y-2">
+                    {work.attachments.map((att) => (
+                      <div key={att.id} className="flex items-center justify-between rounded border p-2 text-sm">
+                        <div className="min-w-0">
+                          <div className="font-medium break-words">{att.fileName}</div>
+                          <div className="text-xs text-gray-500">
+                            {att.userName || '-'}　
+                            {att.uploadedAt ? new Date(att.uploadedAt).toLocaleString() : '-'}　
+                            {formatFileSize(att.fileSize)}
+                          </div>
+                        </div>
+                        <div className="flex gap-2 ml-2">
+                          <a href={`/api/attachments/${att.id}/download`} target="_blank" rel="noopener noreferrer">
+                            <Button variant="outline" size="sm">
+                              <Download className="h-4 w-4 mr-1" />
+                              下载
+                            </Button>
+                          </a>
+                          {(canEdit || user?.id === att.userId || user?.role === 'ADMIN') && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={async () => {
+                                if (!confirm('确定要删除这个附件吗？')) return;
+                                try {
+                                  const res = await fetch(`/api/attachments/${att.id}`, {
+                                    method: 'DELETE',
+                                    credentials: 'include',
+                                  });
+                                  const data = await res.json();
+                                  if (!res.ok || !data.success) {
+                                    alert(data.error || '删除失败');
+                                    return;
+                                  }
+                                  const workRes = await fetch(`/api/works/${work.id}`, { credentials: 'include' });
+                                  const workData = await workRes.json();
+                                  if (workRes.ok) {
+                                    setWork(transformWorkFromAPI(workData));
+                                  }
+                                } catch (err) {
+                                  console.error(err);
+                                  alert('删除失败');
+                                }
+                              }}
+                            >
+                              删除
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 text-sm">暂无附件</p>
+                )}
+              </div>
+
               {work.adjustReason && (
                 <div>
                   <p className="break-words whitespace-pre-wrap overflow-hidden">
@@ -933,10 +1091,15 @@ export default function WorkDetailPage() {
 
           <Button
             variant="destructive"
-            onClick={() => {
+            onClick={async () => {
               if (!confirm('确认删除该退回事项？')) return;
-              deleteWork(work.id);
-              router.push(`/${type}`);
+              try {
+                await deleteWork(work.id);
+                router.push(`/${type}`);
+              } catch (error) {
+                console.error(error);
+                alert('删除失败，请查看控制台错误');
+              }
             }}
           >
             删除退回事项
@@ -1201,7 +1364,7 @@ export default function WorkDetailPage() {
             </div>
 
             <Button
-              onClick={() => {
+              onClick={async () => {
                 if (!user) return;
                 if (!editForm.workPlan?.trim()) {
                   alert('请填写工作计划');
@@ -1224,13 +1387,18 @@ export default function WorkDetailPage() {
                   return;
                 }
 
-                submitTodoDecomposition(work, user, {
-                  ...editForm,
-                  title: editForm.workItem || work.title,
-                });
+                try {
+                  await submitTodoDecomposition(work, user, {
+                    ...editForm,
+                    title: editForm.workItem || work.title,
+                  });
 
-                setRefresh((v) => v + 1);
-                alert('已提交待办事项分解，等待审批');
+                  setRefresh((v) => v + 1);
+                  alert('已提交待办事项分解，等待审批');
+                } catch (error) {
+                  console.error(error);
+                  alert('提交失败，请查看控制台错误');
+                }
               }}
             >
               提交分解结果

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { LayoutDashboard, Clock, CheckCircle2, AlertCircle, Plus, Eye } from 'lucide-react';
@@ -17,8 +17,7 @@ import {
   type Work,
 } from '@/lib/work-store';
 import { StatusBadge } from '@/components/common/badges';
-import { departments, isCompanyLevel } from '@/lib/auth';
-import { exportCompanyCompletionRate } from '@/lib/excel-utils';
+import { getDepartments, isCompanyLevel } from '@/lib/auth';
 
 export default function DashboardPage() {
   const NOTICE_KEY = 'supervision_admin_notice';
@@ -40,6 +39,7 @@ export default function DashboardPage() {
   });
   const [visibleWorks, setVisibleWorks] = useState<Work[]>([]);
   const [loading, setLoading] = useState(true);
+  const [departments, setDepartments] = useState<Array<{ id: number; name: string; code: string; isBusiness: boolean }>>([]);
 
   useEffect(() => {
     const saved = localStorage.getItem(NOTICE_KEY) || '';
@@ -48,13 +48,39 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
+    const loadDepartments = async () => {
+      const depts = await getDepartments();
+      setDepartments(depts);
+    };
+    loadDepartments();
+  }, []);
+
+  useEffect(() => {
     const loadData = async () => {
       if (!user) return;
       setLoading(true);
-      const newStats = await getStats(user);
-      const newWorks = await getVisibleWorks(user);
-      setStats(newStats);
-      setVisibleWorks(newWorks);
+      try {
+        const response = await fetch('/api/dashboard/summary', { credentials: 'include' });
+        if (response.ok) {
+          const data = await response.json();
+          setStats({
+            total: data.priorityTotal + data.mainTotal + data.todoTotal,
+            pendingApproval: data.pendingApprove,
+            inProgress: data.inProgress,
+            completed: data.completed,
+            expired: data.overdue,
+            expiring: 0,
+            priority: data.priorityTotal,
+            main: data.mainTotal,
+            todo: data.todoTotal,
+            pendingHandle: data.pendingApprove,
+          });
+        }
+        const newWorks = await getVisibleWorks(user);
+        setVisibleWorks(newWorks);
+      } catch (error) {
+        console.error('Failed to load stats:', error);
+      }
       setLoading(false);
     };
     loadData();
@@ -266,15 +292,14 @@ export default function DashboardPage() {
               </div>
             </div>
             <div className="flex gap-2">
-              {(user?.role === 'ADMIN' || user?.role === 'SUPERVISOR') && (
+              {(user?.role === 'ADMIN' || user?.role === 'SUPERVISOR' || user?.role === 'VICE_PRESIDENT' || user?.role === 'PRESIDENT') && (
                 <Button
                   variant="outline"
-                  onClick={async () => {
-                    const works = await getVisibleWorks(user);
-                    exportCompanyCompletionRate(works);
+                  onClick={() => {
+                    window.location.href = '/api/excel/completion-rate';
                   }}
                 >
-                  导出公司完成率（公开）
+                  导出完成率
                 </Button>
               )}
 

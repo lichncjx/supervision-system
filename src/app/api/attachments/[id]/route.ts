@@ -1,0 +1,109 @@
+import { NextRequest, NextResponse } from 'next/server';
+import prisma from '@/lib/prisma';
+import { getUserFromToken } from '@/lib/server-auth';
+import { existsSync } from 'fs';
+import path from 'path';
+
+function isCompanyLevelRole(role: string): boolean {
+  const companyRoles: string[] = ['ADMIN', 'SUPERVISOR', 'VICE_PRESIDENT', 'PRESIDENT'];
+  return companyRoles.includes(role);
+}
+
+async function canEditWork(
+  user: { id: number; role: string; departmentId: number },
+  workItem: { departmentId: number | null; status: string }
+): Promise<boolean> {
+  if (isCompanyLevelRole(user.role)) {
+    return true;
+  }
+
+  const isOwnDepartment = workItem.departmentId === user.departmentId;
+  if (!isOwnDepartment) {
+    return false;
+  }
+
+  const forbiddenStatuses = ['COMPLETED', 'CANCELLED', 'REJECTED'];
+  if (forbiddenStatuses.includes(workItem.status)) {
+    return false;
+  }
+
+  return user.role === 'DEPARTMENT_MANAGER' || user.role === 'DEPARTMENT_LEADER';
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const token = request.cookies.get('token')?.value;
+    if (!token) {
+      return NextResponse.json({ error: '未登录' }, { status: 401 });
+    }
+
+    const currentUser = await getUserFromToken(token);
+    if (!currentUser) {
+      return NextResponse.json({ error: '登录已过期' }, { status: 401 });
+    }
+
+    const { id } = await params;
+    const attachmentId = parseInt(id);
+
+    if (isNaN(attachmentId)) {
+      return NextResponse.json({ error: '无效的附件ID' }, { status: 400 });
+    }
+
+    const attachment = await prisma.attachment.findUnique({
+      where: { id: attachmentId },
+      include: {
+        workItem: {
+          select: { departmentId: true, status: true },
+        },
+      },
+    });
+
+    if (!attachment) {
+      return NextResponse.json({ error: '附件不存在' }, { status: 404 });
+    }
+
+    const isUploader = attachment.userId === currentUser.id;
+    const isAdmin = currentUser.role === 'ADMIN';
+    const canEdit = attachment.workItem
+      ? await canEditWork(currentUser, attachment.workItem)
+      : false;
+
+    if (!isUploader && !isAdmin && !canEdit) {
+      return NextResponse.json({ error: '无权删除该附件' }, { status: 403 });
+    }
+
+    await prisma.attachment.delete({
+      where: { id: attachmentId },
+    });
+
+    const filePath = path.join(process.cwd(), attachment.filePath);
+    if (existsSync(filePath)) {
+      try {
+        await import('fs/promises').then(fs => fs.unlink(filePath));
+      } catch {
+        console.warn('Failed to delete physical file:', filePath);
+      }
+    }
+
+    await prisma.operationLog.create({
+      data: {
+        userId: currentUser.id,
+        userName: currentUser.name,
+        userRole: currentUser.role,
+        action: 'delete',
+        module: 'attachment',
+        targetType: 'attachment',
+        targetId: attachmentId,
+        description: `删除附件：${attachment.fileName}`,
+      },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Delete attachment error:', error);
+    return NextResponse.json({ error: '删除失败' }, { status: 500 });
+  }
+}

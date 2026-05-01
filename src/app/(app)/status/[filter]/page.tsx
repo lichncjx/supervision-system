@@ -16,7 +16,7 @@ import {
   type WorkType,
   type Work,
 } from '@/lib/work-store';
-import { getDepartmentName, isCompanyLevel, departments } from '@/lib/auth';
+import { getDepartments, isCompanyLevel } from '@/lib/auth';
 import { StatusBadge } from '@/components/common/badges';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -77,6 +77,7 @@ export default function StatusFilterPage() {
   const [monthOptions, setMonthOptions] = useState<string[]>([]);
   const [list, setList] = useState<Work[]>([]);
   const [loading, setLoading] = useState(true);
+  const [departments, setDepartments] = useState<Array<{ id: number; name: string; code: string; isBusiness: boolean }>>([]);
   const companyLevel = isCompanyLevel(user?.role, user?.departmentId);
 
   const safeFilter: StatusPageFilter = allowedFilters.includes(filter as StatusPageFilter)
@@ -87,6 +88,18 @@ export default function StatusFilterPage() {
     ['all', 'pending', 'inProgress', 'completed', 'overdue'].includes(safeFilter)
       ? (safeFilter as WorkStatusFilter)
       : 'all';
+
+  const getDepartmentName = (id: number) => {
+    return departments.find((d) => d.id === id)?.name || '-';
+  };
+
+  React.useEffect(() => {
+    const loadDepartments = async () => {
+      const depts = await getDepartments();
+      setDepartments(depts);
+    };
+    loadDepartments();
+  }, []);
 
   React.useEffect(() => {
     const loadData = async () => {

@@ -45,6 +45,7 @@ export async function POST(
 
     const user: UserSession = {
       userId: currentUser.id,
+      userName: currentUser.name,
       role: currentUser.role,
       departmentId: currentUser.departmentId,
     };
@@ -128,12 +129,28 @@ export async function GET(
       return NextResponse.json({ error: '登录已过期' }, { status: 401 });
     }
 
+    const currentUser = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+    });
+
+    if (!currentUser) {
+      return NextResponse.json({ error: '用户不存在' }, { status: 401 });
+    }
+
     const workItem = await prisma.workItem.findUnique({
       where: { id: workItemId },
     });
 
     if (!workItem) {
       return NextResponse.json({ error: '事项不存在' }, { status: 404 });
+    }
+
+    const ROLES_CAN_VIEW_ALL = ['ADMIN', 'SUPERVISOR', 'VICE_PRESIDENT', 'PRESIDENT'];
+
+    if (!ROLES_CAN_VIEW_ALL.includes(currentUser.role)) {
+      if (workItem.departmentId !== currentUser.departmentId) {
+        return NextResponse.json({ error: '无权查看该事项审批记录' }, { status: 403 });
+      }
     }
 
     const records = await getWorkflowRecords(workItemId);

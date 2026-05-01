@@ -1,22 +1,16 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Save, Plus, Trash2, Upload, Download, FileDown } from 'lucide-react';
+import { ArrowLeft, Download, Upload, FileDown } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
-import { departments, departmentLeadersStatic, departmentManagersStatic, getUsersByDepartmentStatic, companyLeadersStatic } from '@/lib/auth';
-import { addWork, getVisibleWorks, type WorkType, type WorkNode } from '@/lib/work-store';
+import { getCompanyLeaders, getDepartments, getDepartmentLeaders, getDepartmentManagers, getUsersByDepartment } from '@/lib/auth';
+import { addWork, type WorkType, type WorkNode } from '@/lib/work-store';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  downloadExcelTemplate,
-  exportWorksToExcel,
-  importWorksFromExcel,
-  type ExcelRouteType,
-} from '@/lib/excel-utils';
 
 export default function NewWorkPage() {
   const params = useParams<{ type: string }>();
@@ -38,8 +32,12 @@ export default function NewWorkPage() {
     routeType === 'priority' || routeType === 'main' || routeType === 'todo'
       ? routeType
       : 'todo';
-  
-  const companyLeaders = companyLeadersStatic;
+
+  const [companyLeaders, setCompanyLeaders] = useState<Array<{ id: number; name: string; role: string }>>([]);
+  const [departments, setDepartments] = useState<Array<{ id: number; name: string; code: string; isBusiness: boolean }>>([]);
+  const [departmentLeaders, setDepartmentLeaders] = useState<Array<{ id: number; name: string; role: string; departmentId: number; departmentName?: string }>>([]);
+  const [departmentManagers, setDepartmentManagers] = useState<Array<{ id: number; name: string; role: string; departmentId: number; departmentName?: string }>>([]);
+  const [departmentUsers, setDepartmentUsers] = useState<Record<number, Array<{ id: number; name: string; role: string; departmentId: number; departmentName?: string }>>>({});
 
   const canCreateTodo =
     user?.role === 'ADMIN' ||
@@ -183,6 +181,49 @@ export default function NewWorkPage() {
     progress: '',
   });
 
+  useEffect(() => {
+    const fetchData = async () => {
+      const [leaders, depts] = await Promise.all([
+        getCompanyLeaders(),
+        getDepartments(),
+      ]);
+      setCompanyLeaders(leaders);
+      setDepartments(depts.filter((d: any) => d.isBusiness));
+    };
+    fetchData();
+  }, []);
+
+  useEffect(() => {
+    const departmentId = Number(priorityMainForm.departmentId);
+    if (departmentId && isPriorityOrMain) {
+      const fetchDepartmentUsers = async () => {
+        const [leaders, managers, users] = await Promise.all([
+          getDepartmentLeaders(departmentId),
+          getDepartmentManagers(departmentId),
+          getUsersByDepartment(departmentId),
+        ]);
+        setDepartmentLeaders(leaders);
+        setDepartmentManagers(managers);
+        setDepartmentUsers((prev) => ({ ...prev, [departmentId]: users }));
+      };
+      fetchDepartmentUsers();
+    }
+  }, [priorityMainForm.departmentId, isPriorityOrMain]);
+
+  useEffect(() => {
+    const fetchCoopDepartmentUsers = async () => {
+      for (const deptId of todoForm.cooperateDepartmentIds) {
+        if (!departmentUsers[deptId]) {
+          const users = await getUsersByDepartment(deptId);
+          setDepartmentUsers((prev) => ({ ...prev, [deptId]: users }));
+        }
+      }
+    };
+    if (todoForm.cooperateDepartmentIds.length > 0) {
+      fetchCoopDepartmentUsers();
+    }
+  }, [todoForm.cooperateDepartmentIds]);
+
   // 多选下拉框取值函数
   function getSelectedNumbers(options: HTMLCollectionOf<HTMLOptionElement>) {
     return Array.from(options).map((option) => Number(option.value));
@@ -209,54 +250,63 @@ export default function NewWorkPage() {
   }
 
   const handleDownloadTemplate = () => {
-    downloadExcelTemplate(excelRouteType);
+    window.location.href = `/api/excel/template/${excelRouteType}`;
   };
 
   const handleExportExcel = async () => {
-    if (!user) return;
-    const works = await getVisibleWorks(user, type);
-    exportWorksToExcel(excelRouteType, works);
+    const params = new URLSearchParams();
+    params.set('type', excelRouteType);
+    window.location.href = `/api/excel/export?${params.toString()}`;
   };
 
   const handleImportExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!user) {
-      alert('请先登录');
-      return;
-    }
-
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // 文件格式校验
-    const allowedExtensions = ['xlsx', 'xls', 'csv'];
+    const allowedExtensions = ['xlsx', 'xls'];
     const extension = file.name.split('.').pop()?.toLowerCase();
 
     if (!extension || !allowedExtensions.includes(extension)) {
-      alert('仅支持上传 .xlsx、.xls、.csv 文件。如使用 WPS 表格，请先另存为 Excel 工作簿后再上传。');
+      alert('仅支持上传 .xlsx、.xls 文件。如使用 WPS 表格，请先另存为 Excel 工作簿后再上传。');
+      e.target.value = '';
       return;
     }
 
-    try {
-      const importedWorks = await importWorksFromExcel(file, excelRouteType, user);
+    const formData = new FormData();
+    formData.append('file', file);
 
-      if (importedWorks.length === 0) {
-        alert('未读取到有效数据，请检查Excel表头和内容');
+    try {
+      const response = await fetch(`/api/excel/import/${excelRouteType}`, {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        if (data.details && data.details.length > 0) {
+          const errorMsg = data.details.map((d: any) =>
+            `第${d.row}行 [${d.field}]: ${d.reason}`
+          ).join('\n');
+          alert(`导入失败：\n${errorMsg}`);
+        } else {
+          alert(`导入失败：${data.error || '未知错误'}`);
+        }
         return;
       }
 
-      importedWorks.forEach((work) => addWork(work));
-
-      alert(`成功导入 ${importedWorks.length} 条数据`);
+      alert(data.message || `成功导入 ${data.imported} 条数据`);
       router.push(`/${routeType}`);
     } catch (error) {
       console.error(error);
-      alert('导入失败，请确认文件格式为 .xlsx，且表头正确');
+      alert('导入失败，请确认文件格式正确且表头匹配');
     } finally {
       e.target.value = '';
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!user) {
@@ -320,68 +370,79 @@ export default function NewWorkPage() {
       }
     }
 
-    if (isPriorityOrMain) {
-      addWork({
-        id: Date.now(),
-        title: priorityMainForm.workItem,
-        type,
-        departmentId: Number(priorityMainForm.departmentId),
-        creatorRole: user.role,
-        creatorId: user.id,
-        action: 'create',
-        status: 'draft',
-        needCeo: type === '重点',
-        isInnovation: type === '重点' ? isInnovation : false,
-        nodes: nodes.filter((node) => node.title.trim()).map((node) => ({
-          ...node,
-          children: node.children.filter((child) => child.title.trim()),
-        })),
-        businessCategory: priorityMainForm.businessCategory,
-        workItem: priorityMainForm.workItem,
-        workNode: priorityMainForm.workNode,
-        completeTime: priorityMainForm.completeTime,
-        completeForm: priorityMainForm.completeForm,
-        responsibleLeader: priorityMainForm.responsibleLeader,
-        supervisor: priorityMainForm.supervisor,
-      });
-    } else if (isTodo) {
-      addWork({
-        id: Date.now(),
-        title: todoForm.workItem,
-        type: '待办',
-        departmentId: todoForm.departmentIds[0] || 2,
-        departmentIds: todoForm.departmentIds,
-        creatorRole: user.role,
-        creatorId: user.id,
-        action: 'todo_decompose',
-        status: 'draft',
-        needCeo: false,
-        proposedLeader: selectedProposedLeader?.name || '',
-        proposedLeaderId: selectedProposedLeader?.id,
-        proposedLeaderRole: selectedProposedLeader?.role,
-        proposedScene: todoForm.proposedScene,
-        workItem: todoForm.workItem,
-        formedTime: todoForm.formedTime,
-        responsiblePersons: todoForm.responsiblePersons,
-        responsiblePerson: todoForm.responsiblePersons.join('、'),
-        cooperateDepartmentIds: todoForm.cooperateDepartmentIds,
-        cooperateDepartments: todoForm.cooperateDepartmentIds
-          .map((id) => departments.find((d) => d.id === id)?.name)
-          .filter(Boolean) as string[],
-        cooperateDepartment: todoForm.cooperateDepartmentIds
-          .map((id) => departments.find((d) => d.id === id)?.name)
-          .filter(Boolean)
-          .join('、'),
-        cooperatePersons: todoForm.cooperatePersons,
-        cooperatePerson: todoForm.cooperatePersons.join('、'),
-        workPlan: todoForm.workPlan,
-        planCompleteTime: todoForm.planCompleteTime,
-        progress: todoForm.progress,
-        nodes: validNodes,
-      });
-    }
+    try {
+      if (isPriorityOrMain) {
+        await addWork({
+          id: Date.now(),
+          title: priorityMainForm.workItem,
+          type,
+          departmentId: Number(priorityMainForm.departmentId),
+          creatorRole: user.role,
+          creatorId: user.id,
+          action: 'create',
+          status: 'draft',
+          needCeo: type === '重点',
+          isInnovation: type === '重点' ? isInnovation : false,
+          nodes: nodes.filter((node) => node.title.trim()).map((node) => ({
+            ...node,
+            children: node.children.filter((child) => child.title.trim()),
+          })),
+          businessCategory: priorityMainForm.businessCategory,
+          workItem: priorityMainForm.workItem,
+          workNode: priorityMainForm.workNode,
+          completeTime: priorityMainForm.completeTime,
+          completeForm: priorityMainForm.completeForm,
+          responsibleLeader: priorityMainForm.responsibleLeader,
+          supervisor: priorityMainForm.supervisor,
+        });
+      } else if (isTodo) {
+        await addWork({
+          id: Date.now(),
+          title: todoForm.workItem,
+          type: '待办',
+          departmentId: todoForm.departmentIds[0] || 2,
+          departmentIds: todoForm.departmentIds,
+          creatorRole: user.role,
+          creatorId: user.id,
+          action: 'todo_decompose',
+          status: 'draft',
+          needCeo: false,
+          proposedLeader: selectedProposedLeader?.name || '',
+          proposedLeaderId: selectedProposedLeader?.id,
+          proposedLeaderRole: selectedProposedLeader?.role,
+          proposedScene: todoForm.proposedScene,
+          workItem: todoForm.workItem,
+          formedTime: todoForm.formedTime,
+          responsiblePersons: todoForm.responsiblePersons,
+          responsiblePerson: todoForm.responsiblePersons.join('、'),
+          cooperateDepartmentIds: todoForm.cooperateDepartmentIds,
+          cooperateDepartments: todoForm.cooperateDepartmentIds
+            .map((id) => {
+              const dept = departments.find((d) => d.id === id);
+              return dept?.name;
+            })
+            .filter(Boolean) as string[],
+          cooperateDepartment: todoForm.cooperateDepartmentIds
+            .map((id) => {
+              const dept = departments.find((d) => d.id === id);
+              return dept?.name;
+            })
+            .filter(Boolean)
+            .join('、'),
+          cooperatePersons: todoForm.cooperatePersons,
+          cooperatePerson: todoForm.cooperatePersons.join('、'),
+          workPlan: todoForm.workPlan,
+          planCompleteTime: todoForm.planCompleteTime,
+          progress: todoForm.progress,
+          nodes: validNodes,
+        });
+      }
 
-    router.push(`/${routeType}`);
+      router.push(`/${routeType}`);
+    } catch (error) {
+      console.error(error);
+      alert('创建失败，请查看控制台错误');
+    }
   };
 
   const titleMap: Record<WorkType, string> = {
@@ -390,10 +451,12 @@ export default function NewWorkPage() {
     待办: '新建待办事项',
   };
 
-  const responsiblePersonOptions = todoForm.departmentIds
-    .flatMap((departmentId: number) => getUsersByDepartmentStatic(departmentId));
-  const cooperatePersonOptions = todoForm.cooperateDepartmentIds
-    .flatMap((departmentId: number) => getUsersByDepartmentStatic(departmentId));
+  const responsiblePersonOptions = todoForm.departmentIds.flatMap(
+    (departmentId: number) => departmentUsers[departmentId] || []
+  );
+  const cooperatePersonOptions = todoForm.cooperateDepartmentIds.flatMap(
+    (departmentId: number) => departmentUsers[departmentId] || []
+  );
 
   return (
     <div className="space-y-6">
@@ -581,12 +644,12 @@ export default function NewWorkPage() {
 
                 <div>
                   <label className="block text-sm font-medium mb-1">责任部门</label>
-                  <select 
-                    value={priorityMainForm.departmentId} 
-                    onChange={(e) => setPriorityMainForm({ ...priorityMainForm, departmentId: e.target.value, responsibleLeader: '', supervisor: '' })} 
+                  <select
+                    value={priorityMainForm.departmentId}
+                    onChange={(e) => setPriorityMainForm({ ...priorityMainForm, departmentId: e.target.value, responsibleLeader: '', supervisor: '' })}
                     className="w-full border rounded-md p-2"
                   >
-                    {departments.filter((d) => d.id !== 1).map((d) => (
+                    {departments.map((d) => (
                       <option key={d.id} value={d.id}>
                         {d.name}
                       </option>
@@ -596,13 +659,13 @@ export default function NewWorkPage() {
 
                 <div>
                   <label className="block text-sm font-medium mb-1">责任领导</label>
-                  <select 
-                    value={priorityMainForm.responsibleLeader} 
-                    onChange={(e) => setPriorityMainForm({ ...priorityMainForm, responsibleLeader: e.target.value })} 
+                  <select
+                    value={priorityMainForm.responsibleLeader}
+                    onChange={(e) => setPriorityMainForm({ ...priorityMainForm, responsibleLeader: e.target.value })}
                     className="w-full border rounded-md p-2"
                   >
                     <option value="">请选择责任领导</option>
-                    {departmentLeadersStatic.filter((u: any) => u.departmentId === Number(priorityMainForm.departmentId)).map((u) => (
+                    {departmentLeaders.map((u) => (
                       <option key={u.id} value={u.name}>
                         {u.name}
                       </option>
@@ -612,13 +675,13 @@ export default function NewWorkPage() {
 
                 <div>
                   <label className="block text-sm font-medium mb-1">主管人员</label>
-                  <select 
-                    value={priorityMainForm.supervisor} 
-                    onChange={(e) => setPriorityMainForm({ ...priorityMainForm, supervisor: e.target.value })} 
+                  <select
+                    value={priorityMainForm.supervisor}
+                    onChange={(e) => setPriorityMainForm({ ...priorityMainForm, supervisor: e.target.value })}
                     className="w-full border rounded-md p-2"
                   >
                     <option value="">请选择主管人员</option>
-                    {departmentManagersStatic.filter((u: any) => u.departmentId === Number(priorityMainForm.departmentId)).map((u) => (
+                    {departmentManagers.map((u) => (
                       <option key={u.id} value={u.name}>
                         {u.name}
                       </option>
@@ -691,7 +754,7 @@ export default function NewWorkPage() {
                       }));
                     }}
                   >
-                    {departments.filter((d) => d.id !== 1).map((dept) => (
+                    {departments.map((dept) => (
                       <option key={dept.id} value={dept.id}>
                         {dept.name}
                       </option>
@@ -718,7 +781,7 @@ export default function NewWorkPage() {
                   >
                     {responsiblePersonOptions.map((person) => (
                       <option key={person.id} value={person.name}>
-                        {person.name}（{departments.find((d) => d.id === person.departmentId)?.name || '-'}）
+                        {person.name}（{person.departmentName || '-'}）
                       </option>
                     ))}
                   </select>
@@ -742,7 +805,7 @@ export default function NewWorkPage() {
                       }));
                     }}
                   >
-                    {departments.filter((d) => d.id !== 1).map((dept) => (
+                    {departments.map((dept) => (
                       <option key={dept.id} value={dept.id}>
                         {dept.name}
                       </option>
@@ -769,7 +832,7 @@ export default function NewWorkPage() {
                   >
                     {cooperatePersonOptions.map((person) => (
                       <option key={person.id} value={person.name}>
-                        {person.name}（{departments.find((d) => d.id === person.departmentId)?.name || '-'}）
+                        {person.name}（{person.departmentName || '-'}）
                       </option>
                     ))}
                   </select>
@@ -897,7 +960,6 @@ export default function NewWorkPage() {
 
             <div className="flex gap-3">
               <Button type="submit">
-                <Save className="h-4 w-4 mr-2" />
                 保存并提交
               </Button>
               <Link href={`/${routeType}`}>

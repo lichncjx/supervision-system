@@ -42,6 +42,12 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         department: true,
         creator: { select: { name: true, role: true } },
         proposedLeader: { select: { id: true, name: true } },
+        attachments: {
+          include: {
+            user: { select: { name: true } },
+          },
+          orderBy: { uploadedAt: 'desc' },
+        },
       },
     });
 
@@ -84,7 +90,17 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       planCompleteTime: work.planCompleteTime,
       progress: work.progress,
       approvalLeaderId: work.approvalLeaderId,
+      currentApproverRole: work.currentApproverRole,
       nodes: typeof work.nodes === 'string' ? JSON.parse(work.nodes) : [],
+      attachments: work.attachments.map((a) => ({
+        id: a.id,
+        fileName: a.fileName,
+        fileSize: a.fileSize,
+        fileType: a.fileType,
+        uploadedAt: a.uploadedAt.toISOString(),
+        userId: a.userId,
+        userName: a.user.name,
+      })),
       createdAt: work.createdAt.toISOString(),
       updatedAt: work.updatedAt.toISOString(),
     };

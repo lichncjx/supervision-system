@@ -68,7 +68,10 @@ export async function GET(request: NextRequest) {
       where.OR = [
         { title: { contains: keyword, mode: 'insensitive' } },
         { workItem: { contains: keyword, mode: 'insensitive' } },
-        { description: { contains: keyword, mode: 'insensitive' } },
+        { businessCategory: { contains: keyword, mode: 'insensitive' } },
+        { proposedScene: { contains: keyword, mode: 'insensitive' } },
+        { progress: { contains: keyword, mode: 'insensitive' } },
+        { workPlan: { contains: keyword, mode: 'insensitive' } },
       ];
     }
 

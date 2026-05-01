@@ -66,6 +66,16 @@ export interface ProofFile {
   uploadedBy?: string;
 }
 
+export interface Attachment {
+  id: number;
+  fileName: string;
+  fileSize: number;
+  fileType: string;
+  uploadedAt: string;
+  userId: number;
+  userName?: string;
+}
+
 export interface AdjustHistory {
   id: number;
   reason: string;
@@ -137,6 +147,7 @@ export interface Work {
   pendingAdjustmentReason?: string;
   pendingAdjustmentFromTime?: string;
   pendingAdjustmentToTime?: string;
+  attachments?: Attachment[];
 }
 
 export type WorkEditablePatch = Partial<Pick<
@@ -174,7 +185,7 @@ export type WorkEditablePatch = Partial<Pick<
   | 'approvalLeaderRole'
 >>;
 
-function transformWorkFromAPI(work: any): Work {
+export function transformWorkFromAPI(work: any): Work {
   return {
     id: work.id,
     title: work.title,
@@ -217,6 +228,7 @@ function transformWorkFromAPI(work: any): Work {
     cancelReason: work.cancelReason || work.cancel_reason,
     currentApproverId: work.currentApproverId || work.current_approver_id,
     currentApproverRole: work.currentApproverRole || work.current_approver_role,
+    attachments: work.attachments || [],
   };
 }
 
@@ -724,17 +736,14 @@ export function canApproveWork(user: User | null | undefined, work: Work) {
     'pending_evidence_company',
     'cancelling',
     'pending_main_leader_cancel',
+    'adjusting',
   ];
 
   if (!pendingStatuses.includes(work.status)) {
     return false;
   }
 
-  if (user.role === 'ADMIN') {
-    return true;
-  }
-
-  if (user.role === 'SUPERVISOR') {
+  if (user.role === 'ADMIN' || user.role === 'SUPERVISOR') {
     return false;
   }
 
@@ -743,7 +752,9 @@ export function canApproveWork(user: User | null | undefined, work: Work) {
       isWorkRelatedToDepartment(work, user.departmentId) &&
       (
         work.status === 'pending_dept' ||
-        work.status === 'pending_evidence_dept'
+        work.status === 'pending_evidence_dept' ||
+        work.status === 'adjusting' ||
+        work.status === 'cancelling'
       )
     );
   }
@@ -752,7 +763,7 @@ export function canApproveWork(user: User | null | undefined, work: Work) {
     return isSelectedCompanyApprover(user, work);
   }
 
-  if (work.status === 'cancelling') {
+  if (work.status === 'cancelling' || work.status === 'adjusting') {
     return isSelectedCompanyApprover(user, work);
   }
 
@@ -764,11 +775,7 @@ export function canApproveWork(user: User | null | undefined, work: Work) {
 }
 
 function isSelectedCompanyApprover(user: User, work: Work) {
-  if (user.role === 'ADMIN') {
-    return true;
-  }
-
-  if (user.role === 'SUPERVISOR') {
+  if (user.role === 'ADMIN' || user.role === 'SUPERVISOR') {
     return false;
   }
 

@@ -19,6 +19,13 @@ export interface User {
   phone?: string;
 }
 
+export interface Department {
+  id: number;
+  name: string;
+  code: string;
+  isBusiness: boolean;
+}
+
 export interface LoginResult {
   success: boolean;
   error?: string;
@@ -182,135 +189,39 @@ export function canImportExport(role?: string): boolean {
   );
 }
 
-export const departments = [
-  { id: 1, name: '公司领导组', code: 'LD', isBusiness: false },
-  { id: 2, name: '综合处', code: 'ZH', isBusiness: true },
-  { id: 3, name: '计划生产处', code: 'JH', isBusiness: true },
-  { id: 4, name: '工艺技术处', code: 'GY', isBusiness: true },
-  { id: 5, name: '信息档案中心', code: 'XX', isBusiness: true },
-  { id: 6, name: '质量管理处', code: 'ZL', isBusiness: true },
-  { id: 7, name: '人力资源处', code: 'RL', isBusiness: true },
-  { id: 8, name: '综合财务处', code: 'CW', isBusiness: true },
-  { id: 9, name: '设备管理处', code: 'SB', isBusiness: true },
-  { id: 10, name: '行政保障处', code: 'XZ', isBusiness: true },
-  { id: 11, name: '保密处', code: 'BM', isBusiness: true },
-  { id: 12, name: '51车间', code: '51', isBusiness: true },
-  { id: 13, name: '53车间', code: '53', isBusiness: true },
-  { id: 14, name: '55车间', code: '55', isBusiness: true },
-  { id: 15, name: '56车间', code: '56', isBusiness: true },
-  { id: 16, name: '57车间', code: '57', isBusiness: true },
-  { id: 17, name: '58车间', code: '58', isBusiness: true },
-];
+let departmentsCache: Department[] | null = null;
 
-export function getDepartmentName(id: number): string {
-  return departments.find((d) => d.id === id)?.name || '-';
+export async function getDepartments(): Promise<Department[]> {
+  if (departmentsCache) {
+    return departmentsCache;
+  }
+
+  try {
+    const response = await fetch('/api/departments', {
+      method: 'GET',
+      credentials: 'include',
+    });
+    if (!response.ok) return [];
+    departmentsCache = await response.json();
+    return departmentsCache || [];
+  } catch {
+    return [];
+  }
 }
 
-export const companyLeadersStatic = [
-  { id: 1001, name: '公司主要领导', role: 'PRESIDENT' },
-  { id: 1002, name: '公司主管领导', role: 'VICE_PRESIDENT' },
-];
-
-export const departmentLeadersStatic = [
-  { id: 2001, name: '综合处领导', departmentId: 2 },
-  { id: 2002, name: '计划生产处领导', departmentId: 3 },
-  { id: 2003, name: '工艺技术处领导', departmentId: 4 },
-  { id: 2004, name: '信息档案中心领导', departmentId: 5 },
-  { id: 2005, name: '质量管理处领导', departmentId: 6 },
-  { id: 2006, name: '人力资源处领导', departmentId: 7 },
-  { id: 2007, name: '综合财务处领导', departmentId: 8 },
-  { id: 2008, name: '设备管理处领导', departmentId: 9 },
-  { id: 2009, name: '行政保障处领导', departmentId: 10 },
-  { id: 2010, name: '保密处领导', departmentId: 11 },
-  { id: 2011, name: '51车间领导', departmentId: 12 },
-  { id: 2012, name: '53车间领导', departmentId: 13 },
-  { id: 2013, name: '55车间领导', departmentId: 14 },
-  { id: 2014, name: '56车间领导', departmentId: 15 },
-  { id: 2015, name: '57车间领导', departmentId: 16 },
-  { id: 2016, name: '58车间领导', departmentId: 17 },
-];
-
-export const departmentManagersStatic = [
-  { id: 3001, name: '综合处主管', departmentId: 2 },
-  { id: 3002, name: '计划生产处主管', departmentId: 3 },
-  { id: 3003, name: '工艺技术处主管', departmentId: 4 },
-  { id: 3004, name: '信息档案中心主管', departmentId: 5 },
-  { id: 3005, name: '质量管理处主管', departmentId: 6 },
-  { id: 3006, name: '人力资源处主管', departmentId: 7 },
-  { id: 3007, name: '综合财务处主管', departmentId: 8 },
-  { id: 3008, name: '设备管理处主管', departmentId: 9 },
-  { id: 3009, name: '行政保障处主管', departmentId: 10 },
-  { id: 3010, name: '保密处主管', departmentId: 11 },
-  { id: 3011, name: '51车间主管', departmentId: 12 },
-  { id: 3012, name: '53车间主管', departmentId: 13 },
-  { id: 3013, name: '55车间主管', departmentId: 14 },
-  { id: 3014, name: '56车间主管', departmentId: 15 },
-  { id: 3015, name: '57车间主管', departmentId: 16 },
-  { id: 3016, name: '58车间主管', departmentId: 17 },
-];
-
-export function getUsersByDepartmentStatic(departmentId: number) {
-  return [
-    { id: 4000 + departmentId * 10 + 1, name: `${getDepartmentName(departmentId)}用户1`, departmentId },
-    { id: 4000 + departmentId * 10 + 2, name: `${getDepartmentName(departmentId)}用户2`, departmentId },
-  ];
+export async function getDepartmentName(departmentId: number): Promise<string> {
+  const depts = await getDepartments();
+  return depts.find((d) => d.id === departmentId)?.name || '-';
 }
 
 export async function getCompanyLeaders() {
   try {
-    const response = await fetch('/api/users', {
+    const response = await fetch('/api/users/company-leaders', {
       method: 'GET',
       credentials: 'include',
     });
     if (!response.ok) return [];
-    const users = await response.json();
-    return users
-      .filter((user: any) => ['VICE_PRESIDENT', 'PRESIDENT'].includes(user.role))
-      .map((user: any) => ({
-        id: user.id,
-        name: user.name,
-        role: user.role,
-      }));
-  } catch {
-    return [];
-  }
-}
-
-export async function getDepartmentLeaders() {
-  try {
-    const response = await fetch('/api/users', {
-      method: 'GET',
-      credentials: 'include',
-    });
-    if (!response.ok) return [];
-    const users = await response.json();
-    return users
-      .filter((user: any) => user.role === 'DEPARTMENT_LEADER')
-      .map((user: any) => ({
-        id: user.id,
-        name: user.name,
-        departmentId: user.departmentId,
-      }));
-  } catch {
-    return [];
-  }
-}
-
-export async function getDepartmentManagers() {
-  try {
-    const response = await fetch('/api/users', {
-      method: 'GET',
-      credentials: 'include',
-    });
-    if (!response.ok) return [];
-    const users = await response.json();
-    return users
-      .filter((user: any) => user.role === 'DEPARTMENT_MANAGER')
-      .map((user: any) => ({
-        id: user.id,
-        name: user.name,
-        departmentId: user.departmentId,
-      }));
+    return await response.json();
   } catch {
     return [];
   }
@@ -318,19 +229,43 @@ export async function getDepartmentManagers() {
 
 export async function getUsersByDepartment(departmentId: number) {
   try {
-    const response = await fetch('/api/users', {
+    const response = await fetch(`/api/users/by-department?departmentId=${departmentId}`, {
       method: 'GET',
       credentials: 'include',
     });
     if (!response.ok) return [];
-    const users = await response.json();
-    return users
-      .filter((user: any) => user.departmentId === departmentId)
-      .map((user: any) => ({
-        id: user.id,
-        name: user.name,
-      }));
+    return await response.json();
   } catch {
     return [];
   }
+}
+
+export async function getDepartmentLeaders(departmentId: number) {
+  try {
+    const response = await fetch(`/api/users/department-leaders?departmentId=${departmentId}`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+    if (!response.ok) return [];
+    return await response.json();
+  } catch {
+    return [];
+  }
+}
+
+export async function getDepartmentManagers(departmentId: number) {
+  try {
+    const response = await fetch(`/api/users/department-managers?departmentId=${departmentId}`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+    if (!response.ok) return [];
+    return await response.json();
+  } catch {
+    return [];
+  }
+}
+
+export function clearDepartmentsCache() {
+  departmentsCache = null;
 }

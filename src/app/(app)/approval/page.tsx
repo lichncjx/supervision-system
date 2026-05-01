@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ClipboardCheck, Eye, CheckCircle, XCircle } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
-import { departments } from '@/lib/auth';
+import { getDepartments } from '@/lib/auth';
 import {
   approveWork,
   canApproveWork,
@@ -23,6 +23,15 @@ export default function ApprovalPage() {
   const { user } = useAuth();
   const [works, setWorks] = useState<Work[]>([]);
   const [tab, setTab] = useState<'pending' | 'all'>('pending');
+  const [departments, setDepartments] = useState<Array<{ id: number; name: string; code: string; isBusiness: boolean }>>([]);
+
+  useEffect(() => {
+    const loadDepartments = async () => {
+      const depts = await getDepartments();
+      setDepartments(depts);
+    };
+    loadDepartments();
+  }, []);
 
   const load = async () => {
     const worksData = await getVisibleWorks(user);

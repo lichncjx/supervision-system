@@ -1,35 +1,45 @@
 import * as XLSX from 'xlsx';
 import type { Work } from './work-store';
 import type { User } from './auth';
-import { departments, companyLeadersStatic } from './auth';
 
 export type ExcelRouteType = 'priority' | 'main' | 'todo';
 
 type ImportedWork = Omit<Work, 'createdAt' | 'updatedAt'>;
 
-function parseDepartmentId(value: any) {
-  if (!value) return 2;
+let departmentsCache: Array<{ id: number; name: string; code: string; isBusiness: boolean }> | null = null;
+let companyLeadersCache: Array<{ id: number; name: string; role: string }> | null = null;
 
-  const text = String(value).trim();
-
-  const byId = departments.find((d) => String(d.id) === text);
-  if (byId) return byId.id;
-
-  const byName = departments.find((d) => d.name === text);
-  if (byName) return byName.id;
-
-  const byCode = departments.find((d) => d.code === text);
-  if (byCode) return byCode.id;
-
-  return 2;
+async function getDepartmentsForExcel() {
+  if (departmentsCache) return departmentsCache;
+  try {
+    const response = await fetch('/api/departments', { credentials: 'include' });
+    if (response.ok) {
+      departmentsCache = await response.json();
+    }
+  } catch {
+  }
+  return departmentsCache || [];
 }
 
-function getDepartmentNameForExcel(id?: number) {
+async function getCompanyLeadersForExcel() {
+  if (companyLeadersCache) return companyLeadersCache;
+  try {
+    const response = await fetch('/api/users/company-leaders', { credentials: 'include' });
+    if (response.ok) {
+      companyLeadersCache = await response.json();
+    }
+  } catch {
+  }
+  return companyLeadersCache || [];
+}
+
+async function getDepartmentNameForExcel(id?: number) {
   if (!id) return '';
+  const departments = await getDepartmentsForExcel();
   return departments.find((d) => d.id === id)?.name || '';
 }
 
-export function downloadExcelTemplate(type: ExcelRouteType) {
+export function getExcelTemplate(type: ExcelRouteType): { buffer: Buffer; fileName: string } {
   let headers: string[] = [];
   let fileName = '';
 
@@ -46,7 +56,7 @@ export function downloadExcelTemplate(type: ExcelRouteType) {
         '责任领导',
         '主管人员'
       ];
-      fileName = '重点工作模板.xlsx';
+      fileName = '重点工作导入模板.xlsx';
       break;
     case 'main':
       headers = [
@@ -59,11 +69,12 @@ export function downloadExcelTemplate(type: ExcelRouteType) {
         '责任领导',
         '主管人员'
       ];
-      fileName = '主要工作模板.xlsx';
+      fileName = '主要工作导入模板.xlsx';
       break;
     case 'todo':
       headers = [
         '事项提出领导',
+        '指定审批领导',
         '事项提出场景',
         '待办事项',
         '形成时间',
@@ -75,17 +86,18 @@ export function downloadExcelTemplate(type: ExcelRouteType) {
         '计划完成时间',
         '进展情况'
       ];
-      fileName = '待办事项模板.xlsx';
+      fileName = '待办事项导入模板.xlsx';
       break;
   }
 
   const worksheet = XLSX.utils.aoa_to_sheet([headers]);
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, '模板');
-  XLSX.writeFile(workbook, fileName);
+  const buffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'buffer' });
+  return { buffer, fileName };
 }
 
-export function exportWorksToExcel(type: ExcelRouteType, works: Work[]) {
+export async function exportWorksToExcel(type: ExcelRouteType, works: Work[]) {
   let headers: string[] = [];
   let rows: any[] = [];
   let fileName = '';
@@ -103,17 +115,17 @@ export function exportWorksToExcel(type: ExcelRouteType, works: Work[]) {
         '责任领导',
         '主管人员'
       ];
-      rows = works.map(work => [
+      rows = await Promise.all(works.map(async work => [
         work.businessCategory || '',
         work.workItem || '',
         work.isInnovation ? '是' : '否',
         work.workNode || '',
         work.completeTime || '',
         work.completeForm || '',
-        getDepartmentNameForExcel(work.departmentId),
+        await getDepartmentNameForExcel(work.departmentId),
         work.responsibleLeader || '',
         work.supervisor || ''
-      ]);
+      ]));
       fileName = '重点工作导出.xlsx';
       break;
     case 'main':
@@ -127,16 +139,16 @@ export function exportWorksToExcel(type: ExcelRouteType, works: Work[]) {
         '责任领导',
         '主管人员'
       ];
-      rows = works.map(work => [
+      rows = await Promise.all(works.map(async work => [
         work.businessCategory || '',
         work.workItem || '',
         work.workNode || '',
         work.completeTime || '',
         work.completeForm || '',
-        getDepartmentNameForExcel(work.departmentId),
+        await getDepartmentNameForExcel(work.departmentId),
         work.responsibleLeader || '',
         work.supervisor || ''
-      ]);
+      ]));
       fileName = '主要工作导出.xlsx';
       break;
     case 'todo':
@@ -153,19 +165,19 @@ export function exportWorksToExcel(type: ExcelRouteType, works: Work[]) {
         '计划完成时间',
         '进展情况'
       ];
-      rows = works.map(work => [
+      rows = await Promise.all(works.map(async work => [
         work.proposedLeader || '',
         work.proposedScene || '',
         work.workItem || '',
         work.formedTime || '',
-        getDepartmentNameForExcel(work.departmentId),
+        await getDepartmentNameForExcel(work.departmentId),
         work.responsiblePerson || '',
         work.cooperateDepartment || '',
         work.cooperatePerson || '',
         work.workPlan || '',
         work.planCompleteTime || '',
         work.progress || ''
-      ]);
+      ]));
       fileName = '待办事项导出.xlsx';
       break;
   }
@@ -181,10 +193,13 @@ export async function importWorksFromExcel(
   type: ExcelRouteType,
   user: User
 ): Promise<ImportedWork[]> {
+  const departments = await getDepartmentsForExcel();
+  const companyLeaders = await getCompanyLeadersForExcel();
+
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
 
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
         const data = e.target?.result;
         const workbook = XLSX.read(data, { type: 'binary' });
@@ -193,40 +208,41 @@ export async function importWorksFromExcel(
 
         const works: ImportedWork[] = [];
 
-        jsonData.forEach((row: any) => {
+        for (const row of jsonData) {
+          const r = row as any;
           let work: ImportedWork;
 
           switch (type) {
             case 'priority':
-              if (!row['工作事项']) return;
+              if (!r['工作事项']) continue;
               work = {
                 id: Date.now() + Math.random(),
-                title: row['工作事项'],
+                title: r['工作事项'],
                 type: '重点',
-                departmentId: parseDepartmentId(row['责任部门']),
+                departmentId: await parseDepartmentIdWithDepts(r['责任部门'], departments),
                 creatorRole: user.role,
                 creatorId: user.id,
                 action: 'create',
                 status: user.role === 'DEPARTMENT_MANAGER' ? 'pending_dept' : 'pending_company',
                 needCeo: true,
-                isInnovation: row['是否为创新工作'] === '是',
+                isInnovation: r['是否为创新工作'] === '是',
                 nodes: [],
-                businessCategory: row['业务类别'] || '',
-                workItem: row['工作事项'],
-                workNode: row['工作节点'] || '',
-                completeTime: row['完成时间'] || '',
-                completeForm: row['完成形式'] || '',
-                responsibleLeader: row['责任领导'] || '',
-                supervisor: row['主管人员'] || ''
+                businessCategory: r['业务类别'] || '',
+                workItem: r['工作事项'],
+                workNode: r['工作节点'] || '',
+                completeTime: r['完成时间'] || '',
+                completeForm: r['完成形式'] || '',
+                responsibleLeader: r['责任领导'] || '',
+                supervisor: r['主管人员'] || ''
               };
               break;
             case 'main':
-              if (!row['工作事项']) return;
+              if (!r['工作事项']) continue;
               work = {
                 id: Date.now() + Math.random(),
-                title: row['工作事项'],
+                title: r['工作事项'],
                 type: '主要',
-                departmentId: parseDepartmentId(row['责任部门']),
+                departmentId: await parseDepartmentIdWithDepts(r['责任部门'], departments),
                 creatorRole: user.role,
                 creatorId: user.id,
                 action: 'create',
@@ -234,26 +250,26 @@ export async function importWorksFromExcel(
                 needCeo: false,
                 isInnovation: false,
                 nodes: [],
-                businessCategory: row['业务类别'] || '',
-                workItem: row['工作事项'],
-                workNode: row['工作节点'] || '',
-                completeTime: row['完成时间'] || '',
-                completeForm: row['完成形式'] || '',
-                responsibleLeader: row['责任领导'] || '',
-                supervisor: row['主管人员'] || ''
+                businessCategory: r['业务类别'] || '',
+                workItem: r['工作事项'],
+                workNode: r['工作节点'] || '',
+                completeTime: r['完成时间'] || '',
+                completeForm: r['完成形式'] || '',
+                responsibleLeader: r['责任领导'] || '',
+                supervisor: r['主管人员'] || ''
               };
               break;
             case 'todo':
-              if (!row['待办事项']) return;
-              const proposedLeaderName = String(row['事项提出领导'] || '').trim();
-              const matchedProposedLeader = companyLeadersStatic.find(
+              if (!r['待办事项']) continue;
+              const proposedLeaderName = String(r['事项提出领导'] || '').trim();
+              const matchedProposedLeader = companyLeaders.find(
                 (leader) => leader.name === proposedLeaderName || String(leader.id) === proposedLeaderName
               );
               work = {
                 id: Date.now() + Math.random(),
-                title: row['待办事项'],
+                title: r['待办事项'],
                 type: '待办',
-                departmentId: parseDepartmentId(row['责任部门']),
+                departmentId: await parseDepartmentIdWithDepts(r['责任部门'], departments),
                 creatorRole: user.role,
                 creatorId: user.id,
                 action: 'todo_decompose',
@@ -267,23 +283,23 @@ export async function importWorksFromExcel(
                 proposedLeader: matchedProposedLeader?.name || proposedLeaderName,
                 proposedLeaderId: matchedProposedLeader?.id,
                 proposedLeaderRole: matchedProposedLeader?.role,
-                proposedScene: row['事项提出场景'] || '',
-                workItem: row['待办事项'],
-                formedTime: row['形成时间'] || '',
-                responsiblePerson: row['部门责任人'] || '',
-                cooperateDepartment: row['配合部门'] || '',
-                cooperatePerson: row['配合部门责任人'] || '',
-                workPlan: row['工作计划'] || '',
-                planCompleteTime: row['计划完成时间'] || '',
-                progress: row['进展情况'] || ''
+                proposedScene: r['事项提出场景'] || '',
+                workItem: r['待办事项'],
+                formedTime: r['形成时间'] || '',
+                responsiblePerson: r['部门责任人'] || '',
+                cooperateDepartment: r['配合部门'] || '',
+                cooperatePerson: r['配合部门责任人'] || '',
+                workPlan: r['工作计划'] || '',
+                planCompleteTime: r['计划完成时间'] || '',
+                progress: r['进展情况'] || ''
               };
               break;
             default:
-              return;
+              continue;
           }
 
           works.push(work);
-        });
+        }
 
         resolve(works);
       } catch (error) {
@@ -296,7 +312,21 @@ export async function importWorksFromExcel(
   });
 }
 
-export function exportCompanyCompletionRate(works: Work[]) {
+async function parseDepartmentIdWithDepts(value: any, departments: Array<{ id: number; name: string; code: string; isBusiness: boolean }>) {
+  if (!value) return 2;
+  const text = String(value).trim();
+  const byId = departments.find((d) => String(d.id) === text);
+  if (byId) return byId.id;
+  const byName = departments.find((d) => d.name === text);
+  if (byName) return byName.id;
+  const byCode = departments.find((d) => d.code === text);
+  if (byCode) return byCode.id;
+  return 2;
+}
+
+export async function exportCompanyCompletionRate(works: Work[]) {
+  const departments = await getDepartmentsForExcel();
+
   const getDepartmentNameForExcel = (id?: number) => {
     if (!id) return '';
     return departments.find((d) => d.id === id)?.name || '';
@@ -376,5 +406,5 @@ export function exportCompanyCompletionRate(works: Work[]) {
   const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, '公司完成率');
-  XLSX.writeFile(workbook, '公司完成率（公开）.xlsx');
+  XLSX.writeFile(workbook, '公司完成率.xlsx');
 }

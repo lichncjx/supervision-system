@@ -9,6 +9,7 @@ export interface WorkflowResult {
 
 export interface UserSession {
   userId: number;
+  userName: string;
   role: Role;
   departmentId: number;
 }
@@ -19,8 +20,8 @@ export async function createWorkflowRecord(
   initiatorId: number,
   statusBefore: WorkItemStatus,
   statusAfter: WorkItemStatus,
-  approverId?: number,
-  approverRole?: Role,
+  approverId?: number | null,
+  approverRole?: Role | null,
   comment?: string
 ) {
   return prisma.workflowRecord.create({
@@ -105,26 +106,28 @@ export async function submitForApproval(workItemId: number, user: UserSession, c
   }
 
   let newStatus: WorkItemStatus = workItem.status;
-  let newApproverRole: Role | undefined;
-  let newApproverId: number | undefined;
+  let newApproverRole: Role | null = null;
+  let newApproverId: number | null = null;
 
   if (workItem.type === WorkItemType.TODO) {
     if (user.role === Role.VICE_PRESIDENT || user.role === Role.PRESIDENT) {
+      if (!workItem.proposedLeaderId && !workItem.approvalLeaderId) {
+        return { success: false, error: '待办事项缺少提出领导或审批领导，请先指定' };
+      }
       newStatus = WorkItemStatus.PENDING_DECOMPOSE;
+      newApproverRole = null;
+      newApproverId = null;
     } else if (user.role === Role.DEPARTMENT_MANAGER) {
       newStatus = WorkItemStatus.PENDING_DEPT;
       newApproverRole = Role.DEPARTMENT_LEADER;
+      newApproverId = null;
     } else if (user.role === Role.DEPARTMENT_LEADER) {
-      newStatus = WorkItemStatus.PENDING_COMPANY;
-      newApproverId = workItem.approvalLeaderId || undefined;
-      if (!newApproverId) {
-        const leaders = await prisma.user.findMany({
-          where: { role: { in: [Role.VICE_PRESIDENT, Role.PRESIDENT] }, isActive: true },
-        });
-        if (leaders.length > 0) {
-          newApproverId = leaders[0].id;
-        }
+      if (!workItem.proposedLeaderId && !workItem.approvalLeaderId) {
+        return { success: false, error: '待办事项缺少审批领导，无法提交公司审批' };
       }
+      newStatus = WorkItemStatus.PENDING_COMPANY;
+      newApproverId = workItem.proposedLeaderId ?? workItem.approvalLeaderId ?? null;
+      newApproverRole = null;
     } else {
       return { success: false, error: '无权提交待办事项' };
     }
@@ -132,9 +135,11 @@ export async function submitForApproval(workItemId: number, user: UserSession, c
     if (user.role === Role.DEPARTMENT_MANAGER) {
       newStatus = WorkItemStatus.PENDING_DEPT;
       newApproverRole = Role.DEPARTMENT_LEADER;
+      newApproverId = null;
     } else if (user.role === Role.DEPARTMENT_LEADER) {
       newStatus = WorkItemStatus.PENDING_COMPANY;
       newApproverRole = Role.VICE_PRESIDENT;
+      newApproverId = null;
     } else {
       return { success: false, error: '无权提交此类型事项' };
     }
@@ -162,7 +167,7 @@ export async function submitForApproval(workItemId: number, user: UserSession, c
 
   await logOperation(
     user.userId,
-    workItem.creator.name,
+    user.userName,
     user.role,
     'submit',
     workItemId,
@@ -187,64 +192,101 @@ export async function approveWorkItem(workItemId: number, user: UserSession, com
   }
 
   let newStatus: WorkItemStatus = workItem.status;
-  let newApproverRole: Role | undefined;
-  let newApproverId: number | undefined;
+  let newApproverRole: Role | null = null;
+  let newApproverId: number | null = null;
 
   if (workItem.status === WorkItemStatus.PENDING_DEPT) {
     if (workItem.type === WorkItemType.TODO) {
+      if (!workItem.proposedLeaderId && !workItem.approvalLeaderId) {
+        return { success: false, error: '待办事项缺少审批领导，无法提交公司审批' };
+      }
       newStatus = WorkItemStatus.PENDING_COMPANY;
-      newApproverId = (workItem.proposedLeaderId ?? workItem.approvalLeaderId) ?? undefined;
+      newApproverId = workItem.proposedLeaderId ?? workItem.approvalLeaderId ?? null;
+      newApproverRole = null;
     } else {
       newStatus = WorkItemStatus.PENDING_COMPANY;
       newApproverRole = Role.VICE_PRESIDENT;
+      newApproverId = null;
     }
   } else if (workItem.status === WorkItemStatus.PENDING_COMPANY) {
     if (workItem.type === WorkItemType.TODO) {
       newStatus = WorkItemStatus.IN_PROGRESS;
-      newApproverRole = undefined;
-      newApproverId = undefined;
+      newApproverRole = null;
+      newApproverId = null;
     } else {
       newStatus = WorkItemStatus.APPROVED;
-      newApproverRole = undefined;
-      newApproverId = undefined;
+      newApproverRole = null;
+      newApproverId = null;
     }
   } else if (workItem.status === WorkItemStatus.PENDING_EVIDENCE_DEPT) {
     newStatus = WorkItemStatus.PENDING_EVIDENCE_COMPANY;
     newApproverRole = Role.VICE_PRESIDENT;
+    newApproverId = null;
   } else if (workItem.status === WorkItemStatus.PENDING_EVIDENCE_COMPANY) {
     newStatus = WorkItemStatus.COMPLETED;
-    newApproverRole = undefined;
-    newApproverId = undefined;
-  } else if (workItem.status === WorkItemStatus.ADJUSTING) {
-    if (user.role === Role.DEPARTMENT_LEADER) {
-      newStatus = WorkItemStatus.ADJUSTING;
-      newApproverRole = Role.VICE_PRESIDENT;
-      newApproverId = undefined;
-    } else if (user.role === Role.VICE_PRESIDENT) {
-      newStatus = WorkItemStatus.APPROVED;
-      newApproverRole = undefined;
-      newApproverId = undefined;
+    newApproverRole = null;
+    newApproverId = null;
+  } else if (workItem.status === WorkItemStatus.PENDING_COMPLETE) {
+    if (workItem.type === WorkItemType.TODO) {
+      if (workItem.currentApproverId === user.userId) {
+        newStatus = WorkItemStatus.COMPLETED;
+        newApproverRole = null;
+        newApproverId = null;
+      } else {
+        return { success: false, error: '无权审批完成申请' };
+      }
     } else {
-      return { success: false, error: '无权审批调整申请' };
+      return { success: false, error: '当前状态不允许审批' };
+    }
+  } else if (workItem.status === WorkItemStatus.ADJUSTING) {
+    if (workItem.type === WorkItemType.TODO) {
+      if (user.role === Role.DEPARTMENT_LEADER && workItem.currentApproverRole === Role.DEPARTMENT_LEADER) {
+        newStatus = WorkItemStatus.ADJUSTING;
+        newApproverRole = null;
+        newApproverId = (workItem.proposedLeaderId ?? workItem.approvalLeaderId) ?? null;
+      } else if ((user.role === Role.VICE_PRESIDENT || user.role === Role.PRESIDENT) &&
+        (workItem.currentApproverId === user.userId || !workItem.currentApproverId)) {
+        newStatus = WorkItemStatus.IN_PROGRESS;
+        newApproverRole = null;
+        newApproverId = null;
+      } else {
+        return { success: false, error: '无权审批调整申请' };
+      }
+    } else {
+      if (user.role === Role.DEPARTMENT_LEADER) {
+        newStatus = WorkItemStatus.ADJUSTING;
+        newApproverRole = Role.VICE_PRESIDENT;
+        newApproverId = null;
+      } else if (user.role === Role.VICE_PRESIDENT) {
+        newStatus = WorkItemStatus.APPROVED;
+        newApproverRole = null;
+        newApproverId = null;
+      } else {
+        return { success: false, error: '无权审批调整申请' };
+      }
     }
   } else if (workItem.status === WorkItemStatus.CANCELLING) {
     if (workItem.type === WorkItemType.TODO) {
       if (user.role === Role.DEPARTMENT_LEADER && workItem.currentApproverRole === Role.DEPARTMENT_LEADER) {
         newStatus = WorkItemStatus.CANCELLING;
-        newApproverRole = undefined;
-        newApproverId = (workItem.proposedLeaderId ?? workItem.approvalLeaderId) ?? undefined;
+        newApproverRole = null;
+        newApproverId = (workItem.proposedLeaderId ?? workItem.approvalLeaderId) ?? null;
       } else if ((user.role === Role.VICE_PRESIDENT || user.role === Role.PRESIDENT) && workItem.currentApproverId === user.userId) {
         newStatus = WorkItemStatus.CANCELLED;
-        newApproverRole = undefined;
-        newApproverId = undefined;
+        newApproverRole = null;
+        newApproverId = null;
       } else {
         return { success: false, error: '无权审批取消申请' };
       }
     } else if (workItem.type === WorkItemType.MAIN) {
-      if (user.role === Role.VICE_PRESIDENT) {
+      if (user.role === Role.DEPARTMENT_LEADER && workItem.currentApproverRole === Role.DEPARTMENT_LEADER) {
+        newStatus = WorkItemStatus.CANCELLING;
+        newApproverRole = Role.VICE_PRESIDENT;
+        newApproverId = null;
+      } else if (user.role === Role.VICE_PRESIDENT && workItem.currentApproverRole === Role.VICE_PRESIDENT) {
         newStatus = WorkItemStatus.CANCELLED;
-        newApproverRole = undefined;
-        newApproverId = undefined;
+        newApproverRole = null;
+        newApproverId = null;
       } else {
         return { success: false, error: '无权审批取消申请' };
       }
@@ -252,14 +294,15 @@ export async function approveWorkItem(workItemId: number, user: UserSession, com
       if (user.role === Role.DEPARTMENT_LEADER) {
         newStatus = WorkItemStatus.CANCELLING;
         newApproverRole = Role.VICE_PRESIDENT;
-        newApproverId = undefined;
+        newApproverId = null;
       } else if (user.role === Role.VICE_PRESIDENT) {
         newStatus = WorkItemStatus.PENDING_MAIN_LEADER_CANCEL;
         newApproverRole = Role.PRESIDENT;
+        newApproverId = null;
       } else if (user.role === Role.PRESIDENT) {
         newStatus = WorkItemStatus.CANCELLED;
-        newApproverRole = undefined;
-        newApproverId = undefined;
+        newApproverRole = null;
+        newApproverId = null;
       } else {
         return { success: false, error: '无权审批取消申请' };
       }
@@ -267,8 +310,8 @@ export async function approveWorkItem(workItemId: number, user: UserSession, com
   } else if (workItem.status === WorkItemStatus.PENDING_MAIN_LEADER_CANCEL) {
     if (user.role === Role.PRESIDENT) {
       newStatus = WorkItemStatus.CANCELLED;
-      newApproverRole = undefined;
-      newApproverId = undefined;
+      newApproverRole = null;
+      newApproverId = null;
     } else {
       return { success: false, error: '无权审批取消申请' };
     }
@@ -298,7 +341,7 @@ export async function approveWorkItem(workItemId: number, user: UserSession, com
 
   await logOperation(
     user.userId,
-    user.role,
+    user.userName,
     user.role,
     'approve',
     workItemId,
@@ -354,8 +397,8 @@ export async function rejectWorkItem(workItemId: number, user: UserSession, reje
       status: newStatus,
       rejectReason,
       rejectedFromStatus: workItem.status,
-      currentApproverRole: undefined,
-      currentApproverId: undefined,
+      currentApproverRole: null,
+      currentApproverId: null,
     },
   });
 
@@ -372,7 +415,7 @@ export async function rejectWorkItem(workItemId: number, user: UserSession, reje
 
   await logOperation(
     user.userId,
-    user.role,
+    user.userName,
     user.role,
     'reject',
     workItemId,
@@ -383,6 +426,10 @@ export async function rejectWorkItem(workItemId: number, user: UserSession, reje
 }
 
 export async function submitEvidence(workItemId: number, user: UserSession, proof: string, comment?: string): Promise<WorkflowResult> {
+  if (user.role === Role.ADMIN || user.role === Role.SUPERVISOR) {
+    return { success: false, error: '无权提交见证材料' };
+  }
+
   const workItem = await prisma.workItem.findUnique({
     where: { id: workItemId },
     include: { creator: true },
@@ -392,25 +439,70 @@ export async function submitEvidence(workItemId: number, user: UserSession, proo
     return { success: false, error: '事项不存在' };
   }
 
+  if (workItem.type === WorkItemType.TODO) {
+    if (workItem.status !== WorkItemStatus.IN_PROGRESS) {
+      return { success: false, error: '当前状态不允许提交见证材料' };
+    }
+    if (!workItem.proposedLeaderId && !workItem.approvalLeaderId) {
+      return { success: false, error: '待办事项缺少审批领导' };
+    }
+    const newApproverId = workItem.proposedLeaderId || workItem.approvalLeaderId;
+    const updated = await prisma.workItem.update({
+      where: { id: workItemId },
+      data: {
+        status: WorkItemStatus.PENDING_COMPLETE,
+        proof,
+        currentApproverId: newApproverId,
+        currentApproverRole: null,
+      },
+    });
+    await createWorkflowRecord(
+      workItemId,
+      'evidence',
+      user.userId,
+      workItem.status,
+      WorkItemStatus.PENDING_COMPLETE,
+      undefined,
+      null,
+      comment
+    );
+    await logOperation(
+      user.userId,
+      user.userName,
+      user.role,
+      'evidence',
+      workItemId,
+      `提交见证材料：${workItem.title}`
+    );
+    return { success: true, workItem: updated };
+  }
+
   if (workItem.status !== WorkItemStatus.APPROVED) {
     return { success: false, error: '当前状态不允许提交见证材料' };
   }
 
-  if (workItem.creatorId !== user.userId && user.role !== Role.DEPARTMENT_LEADER && user.role !== Role.VICE_PRESIDENT) {
-    return { success: false, error: '无权提交见证材料' };
+  if (user.role === Role.VICE_PRESIDENT || user.role === Role.PRESIDENT) {
+    return { success: false, error: '公司领导不允许提交部门见证材料' };
+  }
+
+  const isOwnDepartment = workItem.departmentId === user.departmentId;
+  if (user.role === Role.DEPARTMENT_LEADER && !isOwnDepartment) {
+    return { success: false, error: '无权操作其他部门事项' };
+  }
+
+  if (user.role === Role.DEPARTMENT_MANAGER) {
+    if (workItem.creatorId !== user.userId && !isOwnDepartment) {
+      return { success: false, error: '无权操作其他部门事项' };
+    }
   }
 
   let newStatus: WorkItemStatus;
-  let newApproverRole: Role | undefined;
+  let newApproverRole: Role | null;
 
-  if (workItem.type === WorkItemType.TODO) {
-    return { success: false, error: '待办事项不需要见证材料审批' };
-  }
-
-  if (user.role === Role.DEPARTMENT_MANAGER || user.role === Role.DEPARTMENT_LEADER) {
+  if (user.role === Role.DEPARTMENT_MANAGER) {
     newStatus = WorkItemStatus.PENDING_EVIDENCE_DEPT;
     newApproverRole = Role.DEPARTMENT_LEADER;
-  } else if (user.role === Role.VICE_PRESIDENT || user.role === Role.PRESIDENT) {
+  } else if (user.role === Role.DEPARTMENT_LEADER) {
     newStatus = WorkItemStatus.PENDING_EVIDENCE_COMPANY;
     newApproverRole = Role.VICE_PRESIDENT;
   } else {
@@ -423,7 +515,7 @@ export async function submitEvidence(workItemId: number, user: UserSession, proo
       status: newStatus,
       proof,
       currentApproverRole: newApproverRole,
-      currentApproverId: undefined,
+      currentApproverId: null,
     },
   });
 
@@ -440,7 +532,7 @@ export async function submitEvidence(workItemId: number, user: UserSession, proo
 
   await logOperation(
     user.userId,
-    user.role,
+    user.userName,
     user.role,
     'evidence',
     workItemId,
@@ -451,6 +543,10 @@ export async function submitEvidence(workItemId: number, user: UserSession, proo
 }
 
 export async function submitAdjust(workItemId: number, user: UserSession, adjustReason: string, comment?: string): Promise<WorkflowResult> {
+  if (user.role === Role.ADMIN || user.role === Role.SUPERVISOR) {
+    return { success: false, error: '无权申请调整' };
+  }
+
   const workItem = await prisma.workItem.findUnique({
     where: { id: workItemId },
     include: { creator: true },
@@ -460,24 +556,34 @@ export async function submitAdjust(workItemId: number, user: UserSession, adjust
     return { success: false, error: '事项不存在' };
   }
 
-  const canAdjust = (workItem.status === WorkItemStatus.APPROVED || workItem.status === WorkItemStatus.IN_PROGRESS) &&
-    (workItem.creatorId === user.userId || user.role === Role.DEPARTMENT_LEADER);
+  if (workItem.status !== WorkItemStatus.APPROVED && workItem.status !== WorkItemStatus.IN_PROGRESS) {
+    return { success: false, error: '当前状态不允许申请调整' };
+  }
 
-  if (!canAdjust) {
-    return { success: false, error: '无权申请调整' };
+  const isOwnDepartment = workItem.departmentId === user.departmentId;
+  if (user.role === Role.DEPARTMENT_LEADER && !isOwnDepartment) {
+    return { success: false, error: '无权操作其他部门事项' };
+  }
+
+  if (user.role === Role.DEPARTMENT_MANAGER) {
+    if (workItem.creatorId !== user.userId && !isOwnDepartment) {
+      return { success: false, error: '无权操作其他部门事项' };
+    }
   }
 
   let newStatus: WorkItemStatus;
-  let newApproverRole: Role | undefined;
-  let newApproverId: number | undefined;
+  let newApproverRole: Role | null;
+  let newApproverId: number | null;
 
   if (workItem.type === WorkItemType.TODO) {
     if (user.role === Role.DEPARTMENT_MANAGER) {
       newStatus = WorkItemStatus.ADJUSTING;
       newApproverRole = Role.DEPARTMENT_LEADER;
+      newApproverId = null;
     } else if (user.role === Role.DEPARTMENT_LEADER) {
       newStatus = WorkItemStatus.ADJUSTING;
-      newApproverId = (workItem.proposedLeaderId ?? workItem.approvalLeaderId) ?? undefined;
+      newApproverId = (workItem.proposedLeaderId ?? workItem.approvalLeaderId) ?? null;
+      newApproverRole = null;
     } else {
       return { success: false, error: '无权申请调整' };
     }
@@ -485,9 +591,11 @@ export async function submitAdjust(workItemId: number, user: UserSession, adjust
     if (user.role === Role.DEPARTMENT_MANAGER) {
       newStatus = WorkItemStatus.ADJUSTING;
       newApproverRole = Role.DEPARTMENT_LEADER;
+      newApproverId = null;
     } else if (user.role === Role.DEPARTMENT_LEADER) {
       newStatus = WorkItemStatus.ADJUSTING;
       newApproverRole = Role.VICE_PRESIDENT;
+      newApproverId = null;
     } else {
       return { success: false, error: '无权申请调整' };
     }
@@ -516,7 +624,7 @@ export async function submitAdjust(workItemId: number, user: UserSession, adjust
 
   await logOperation(
     user.userId,
-    user.role,
+    user.userName,
     user.role,
     'adjust',
     workItemId,
@@ -527,6 +635,10 @@ export async function submitAdjust(workItemId: number, user: UserSession, adjust
 }
 
 export async function submitCancel(workItemId: number, user: UserSession, cancelReason: string, comment?: string): Promise<WorkflowResult> {
+  if (user.role === Role.ADMIN || user.role === Role.SUPERVISOR) {
+    return { success: false, error: '无权申请取消' };
+  }
+
   const workItem = await prisma.workItem.findUnique({
     where: { id: workItemId },
     include: { creator: true },
@@ -536,24 +648,45 @@ export async function submitCancel(workItemId: number, user: UserSession, cancel
     return { success: false, error: '事项不存在' };
   }
 
-  const canCancel = (workItem.status === WorkItemStatus.APPROVED || workItem.status === WorkItemStatus.IN_PROGRESS) &&
-    (workItem.creatorId === user.userId || user.role === Role.DEPARTMENT_LEADER);
+  if (workItem.status !== WorkItemStatus.APPROVED && workItem.status !== WorkItemStatus.IN_PROGRESS) {
+    return { success: false, error: '当前状态不允许申请取消' };
+  }
 
-  if (!canCancel) {
-    return { success: false, error: '无权申请取消' };
+  const isOwnDepartment = workItem.departmentId === user.departmentId;
+  if (user.role === Role.DEPARTMENT_LEADER && !isOwnDepartment) {
+    return { success: false, error: '无权操作其他部门事项' };
+  }
+
+  if (user.role === Role.DEPARTMENT_MANAGER) {
+    if (workItem.creatorId !== user.userId && !isOwnDepartment) {
+      return { success: false, error: '无权操作其他部门事项' };
+    }
   }
 
   let newStatus: WorkItemStatus;
-  let newApproverRole: Role | undefined;
-  let newApproverId: number | undefined;
+  let newApproverRole: Role | null;
+  let newApproverId: number | null;
 
   if (workItem.type === WorkItemType.TODO) {
-    if (user.role === Role.DEPARTMENT_MANAGER) {
+    if (user.role === Role.VICE_PRESIDENT || user.role === Role.PRESIDENT) {
+      if (workItem.proposedLeaderId === user.userId || workItem.approvalLeaderId === user.userId) {
+        newStatus = WorkItemStatus.CANCELLING;
+        newApproverRole = Role.DEPARTMENT_LEADER;
+        newApproverId = null;
+      } else {
+        return { success: false, error: '无权申请取消' };
+      }
+    } else if (user.role === Role.DEPARTMENT_MANAGER) {
       newStatus = WorkItemStatus.CANCELLING;
       newApproverRole = Role.DEPARTMENT_LEADER;
+      newApproverId = null;
     } else if (user.role === Role.DEPARTMENT_LEADER) {
       newStatus = WorkItemStatus.CANCELLING;
-      newApproverId = (workItem.proposedLeaderId ?? workItem.approvalLeaderId) ?? undefined;
+      if (!workItem.proposedLeaderId && !workItem.approvalLeaderId) {
+        return { success: false, error: '待办事项缺少审批领导，无法申请取消' };
+      }
+      newApproverId = (workItem.proposedLeaderId ?? workItem.approvalLeaderId) ?? null;
+      newApproverRole = null;
     } else {
       return { success: false, error: '无权申请取消' };
     }
@@ -561,9 +694,11 @@ export async function submitCancel(workItemId: number, user: UserSession, cancel
     if (user.role === Role.DEPARTMENT_MANAGER) {
       newStatus = WorkItemStatus.CANCELLING;
       newApproverRole = Role.DEPARTMENT_LEADER;
+      newApproverId = null;
     } else if (user.role === Role.DEPARTMENT_LEADER) {
       newStatus = WorkItemStatus.CANCELLING;
       newApproverRole = Role.VICE_PRESIDENT;
+      newApproverId = null;
     } else {
       return { success: false, error: '无权申请取消' };
     }
@@ -575,7 +710,7 @@ export async function submitCancel(workItemId: number, user: UserSession, cancel
       status: newStatus,
       cancelReason,
       currentApproverRole: newApproverRole,
-      currentApproverId: undefined,
+      currentApproverId: newApproverId,
     },
   });
 
@@ -592,7 +727,7 @@ export async function submitCancel(workItemId: number, user: UserSession, cancel
 
   await logOperation(
     user.userId,
-    user.role,
+    user.userName,
     user.role,
     'cancel',
     workItemId,
@@ -603,6 +738,10 @@ export async function submitCancel(workItemId: number, user: UserSession, cancel
 }
 
 export async function decomposeTodo(workItemId: number, user: UserSession, nodes: any[], comment?: string): Promise<WorkflowResult> {
+  if (user.role === Role.ADMIN || user.role === Role.SUPERVISOR) {
+    return { success: false, error: '无权分解待办事项' };
+  }
+
   const workItem = await prisma.workItem.findUnique({
     where: { id: workItemId },
     include: { creator: true },
@@ -616,16 +755,32 @@ export async function decomposeTodo(workItemId: number, user: UserSession, nodes
     return { success: false, error: '当前状态不允许分解' };
   }
 
+  const isOwnDepartment = workItem.departmentId === user.departmentId;
+  if (user.role === Role.DEPARTMENT_LEADER && !isOwnDepartment) {
+    return { success: false, error: '无权操作其他部门事项' };
+  }
+
+  if (user.role === Role.DEPARTMENT_MANAGER) {
+    if (workItem.creatorId !== user.userId && !isOwnDepartment) {
+      return { success: false, error: '无权操作其他部门事项' };
+    }
+  }
+
   let newStatus: WorkItemStatus;
-  let newApproverRole: Role | undefined;
-  let newApproverId: number | undefined;
+  let newApproverRole: Role | null;
+  let newApproverId: number | null;
 
   if (user.role === Role.DEPARTMENT_MANAGER) {
     newStatus = WorkItemStatus.PENDING_DEPT;
     newApproverRole = Role.DEPARTMENT_LEADER;
+    newApproverId = null;
   } else if (user.role === Role.DEPARTMENT_LEADER) {
+    if (!workItem.proposedLeaderId) {
+      return { success: false, error: '待办事项缺少提出领导，无法提交公司审批' };
+    }
     newStatus = WorkItemStatus.PENDING_COMPANY;
-    newApproverId = workItem.proposedLeaderId || undefined;
+    newApproverId = workItem.proposedLeaderId || null;
+    newApproverRole = null;
   } else {
     return { success: false, error: '无权分解待办事项' };
   }
@@ -653,7 +808,7 @@ export async function decomposeTodo(workItemId: number, user: UserSession, nodes
 
   await logOperation(
     user.userId,
-    user.role,
+    user.userName,
     user.role,
     'decompose',
     workItemId,

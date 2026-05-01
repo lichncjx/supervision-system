@@ -32,6 +32,8 @@ const users = [
   { username: 'vice_president', name: '公司主管领导', role: Role.VICE_PRESIDENT, departmentCode: 'LD' },
   { username: 'dept_leader', name: '部门领导', role: Role.DEPARTMENT_LEADER, departmentCode: 'ZH' },
   { username: 'dept_manager', name: '部门主管', role: Role.DEPARTMENT_MANAGER, departmentCode: 'ZH' },
+  { username: 'dept_leader_2', name: '计划生产处领导', role: Role.DEPARTMENT_LEADER, departmentCode: 'JH' },
+  { username: 'dept_manager_2', name: '计划生产处主管', role: Role.DEPARTMENT_MANAGER, departmentCode: 'JH' },
 ]
 
 async function main() {

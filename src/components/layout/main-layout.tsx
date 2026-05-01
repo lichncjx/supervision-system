@@ -15,6 +15,7 @@ import {
   KeyRound,
   Eye,
   EyeOff,
+  FileText,
 } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { getRoleName, changePassword } from '@/lib/auth';
@@ -37,6 +38,7 @@ const navItems = [
   { href: '/todo', label: '待办事项', icon: CheckSquare, color: 'text-green-600' },
   { href: '/approval', label: '待我处理', icon: ClipboardCheck },
   { href: '/admin', label: '系统管理', icon: Settings, requireAdmin: true },
+  { href: '/logs', label: '操作日志', icon: FileText, requireSupervisor: true },
 ];
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
@@ -126,6 +128,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
   const visibleNavItems = navItems.filter((item) => {
     if (item.requireAdmin) return user?.role === 'ADMIN';
+    if (item.requireSupervisor) return user?.role === 'ADMIN' || user?.role === 'SUPERVISOR';
     return true;
   });
 

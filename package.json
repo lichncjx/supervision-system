@@ -13,7 +13,9 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
     "prisma:seed": "tsx prisma/seed.ts",
-    "db:init": "prisma generate && prisma migrate deploy && prisma db seed"
+    "db:init": "prisma generate && prisma migrate deploy && prisma db seed",
+    "test:regression": "node tests/regression-baseline.js",
+    "test:regression:prepare": "docker compose up -d db && pnpm prisma migrate deploy && pnpm prisma db seed && pnpm dev"
   },
   "prisma": {
     "seed": "node_modules/.bin/tsx prisma/seed.ts"
@@ -55,6 +57,7 @@
     "date-fns": "^4.1.0",
     "dotenv": "^17.2.3",
     "embla-carousel-react": "^8.6.0",
+    "form-data": "^4.0.5",
     "input-otp": "^1.4.2",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.468.0",

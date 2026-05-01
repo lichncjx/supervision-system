@@ -3,13 +3,13 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/components/providers/auth-provider';
-import { isCompanyLevel, departments } from '@/lib/auth';
+import { isCompanyLevel, getDepartments } from '@/lib/auth';
 import { getVisibleWorks, queryWorks, type Work, type WorkType, type WorkStatusFilter } from '@/lib/work-store';
-import { Eye, Plus, Search, RefreshCw } from 'lucide-react';
+import { Eye, Plus, Search, RefreshCw, Download } from 'lucide-react';
 import { StatusBadge } from '@/components/common/badges';
 import { ExpandableText } from '@/components/common/expandable-text';
 
@@ -22,7 +22,16 @@ export default function ItemListPage() {
   const [departmentFilter, setDepartmentFilter] = useState<number | '全部'>('全部');
   const [statusFilter, setStatusFilter] = useState<WorkStatusFilter>('all');
   const [monthFilter, setMonthFilter] = useState('');
+  const [departments, setDepartments] = useState<Array<{ id: number; name: string; code: string; isBusiness: boolean }>>([]);
   const companyLevel = isCompanyLevel(user?.role, user?.departmentId);
+
+  useEffect(() => {
+    const fetchDepartments = async () => {
+      const depts = await getDepartments();
+      setDepartments(depts);
+    };
+    fetchDepartments();
+  }, []);
 
   const typeMap: Record<string, WorkType> = {
     priority: '重点',
@@ -131,6 +140,26 @@ export default function ItemListPage() {
             </Button>
           </Link>
         )}
+        <a href={`/api/excel/template/${routeType}`}>
+          <Button variant="outline">
+            <Download className="h-4 w-4 mr-2" />
+            下载模板
+          </Button>
+        </a>
+        <Button
+          variant="outline"
+          onClick={() => {
+            const params = new URLSearchParams();
+            params.set('type', routeType);
+            if (keyword) params.set('keyword', keyword);
+            if (departmentFilter !== '全部') params.set('departmentId', String(departmentFilter));
+            if (statusFilter !== 'all') params.set('status', statusFilter);
+            window.location.href = `/api/excel/export?${params.toString()}`;
+          }}
+        >
+          <Download className="h-4 w-4 mr-2" />
+          导出
+        </Button>
       </div>
 
       <Card>
