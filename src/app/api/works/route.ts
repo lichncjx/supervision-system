@@ -111,7 +111,7 @@ export async function GET(request: NextRequest) {
       planCompleteTime: work.planCompleteTime,
       progress: work.progress,
       approvalLeaderId: work.approvalLeaderId,
-      nodes: work.nodes ? JSON.parse(work.nodes) : [],
+      nodes: work.nodes ? JSON.parse(String(work.nodes)) : [],
       createdAt: work.createdAt.toISOString(),
       updatedAt: work.updatedAt.toISOString(),
     }));

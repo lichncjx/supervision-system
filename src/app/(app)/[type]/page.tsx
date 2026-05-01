@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,7 +22,7 @@ export default function ItemListPage() {
   const [departmentFilter, setDepartmentFilter] = useState<number | '全部'>('全部');
   const [statusFilter, setStatusFilter] = useState<WorkStatusFilter>('all');
   const [monthFilter, setMonthFilter] = useState('');
-  const companyLevel = isCompanyLevel(user?.role, user?.department_id);
+  const companyLevel = isCompanyLevel(user?.role, user?.departmentId);
 
   const typeMap: Record<string, WorkType> = {
     priority: '重点',
@@ -73,7 +73,7 @@ export default function ItemListPage() {
         );
 
   const getWorkMonth = (work: any) => {
-    const date = work.complete_time || work.plan_complete_time || work.due_date || '';
+    const date = work.completeTime || work.planCompleteTime || '';
     if (!date) return '';
     return String(date).slice(0, 7);
   };
@@ -107,9 +107,12 @@ export default function ItemListPage() {
     fetchList();
   }, [user, type, departmentFilter, statusFilter, keyword]);
 
-  if (monthFilter) {
-    list = list.filter((work) => getWorkMonth(work) === monthFilter);
-  }
+  const filteredList = useMemo(() => {
+    if (monthFilter) {
+      return list.filter((work) => getWorkMonth(work) === monthFilter);
+    }
+    return list;
+  }, [list, monthFilter]);
 
   const getDepartmentName = (id: number) => {
     return departments.find((d) => d.id === id)?.name || '-';
@@ -203,22 +206,22 @@ export default function ItemListPage() {
       </Card>
 
       <div className="text-sm text-gray-500">
-        当前共筛选出 {list.length} 项{titleMap[type]}
+        当前共筛选出 {filteredList.length} 项{titleMap[type]}
       </div>
 
       <Card>
         <CardContent className="p-0">
-          {list.length === 0 ? (
+          {filteredList.length === 0 ? (
             <div className="py-16 text-center text-gray-500">暂无{titleMap[type]}</div>
           ) : (
             <div className="divide-y">
-              {list.map((item) => (
+              {filteredList.map((item) => (
                 <div key={item.id} className="p-4 hover:bg-gray-50">
                   {isPriorityOrMain ? (
                     <div className="space-y-2">
                       <div className="font-medium text-gray-900 break-words whitespace-pre-wrap overflow-hidden">
-                        {item.work_item || item.title}
-                        {item.type === '重点' && item.is_innovation && (
+                        {item.workItem || item.title}
+                        {item.type === '重点' && item.isInnovation && (
                           <span className="ml-2 inline-flex items-center rounded bg-purple-100 px-2 py-0.5 text-xs text-purple-700">
                             创新工作
                           </span>
@@ -227,23 +230,23 @@ export default function ItemListPage() {
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm text-gray-600">
                         <div className="break-words whitespace-pre-wrap overflow-hidden">
                           <span className="text-gray-500">工作节点：</span>
-                          {item.work_node || '-'}
+                          {item.workNode || '-'}
                         </div>
                         <div>
                           <span className="text-gray-500">完成时间：</span>
-                          {item.complete_time || '-'}
+                          {item.completeTime || '-'}
                         </div>
                         <div>
                           <span className="text-gray-500">完成形式：</span>
-                          {item.complete_form || '-'}
+                          {item.completeForm || '-'}
                         </div>
                         <div>
                           <span className="text-gray-500">责任部门：</span>
-                          {getDepartmentName(item.department_id)}
+                          {getDepartmentName(item.departmentId ?? 0)}
                         </div>
                         <div>
                           <span className="text-gray-500">责任领导：</span>
-                          {item.responsible_leader || '-'}
+                          {item.responsibleLeader || '-'}
                         </div>
                         <div>
                           <span className="text-gray-500">主管人员：</span>
@@ -253,10 +256,10 @@ export default function ItemListPage() {
                           <span className="text-gray-500">状态：</span>
                           <StatusBadge status={item.status} />
                         </div>
-                        {item.adjust_history && item.adjust_history.length > 0 && (
+                        {item.adjustHistory && item.adjustHistory.length > 0 && (
                           <div className="text-sm text-purple-600 break-words">
-                            原计划完成时间：{item.adjust_history[item.adjust_history.length - 1].from_time || '-'}；
-                            现计划完成时间：{item.adjust_history[item.adjust_history.length - 1].to_time || '-'}
+                            原计划完成时间：{item.adjustHistory[item.adjustHistory.length - 1].fromTime || '-'}；
+                            现计划完成时间：{item.adjustHistory[item.adjustHistory.length - 1].toTime || '-'}
                           </div>
                         )}
                       </div>
@@ -264,13 +267,13 @@ export default function ItemListPage() {
                         <div className="mt-2 text-sm text-gray-600 space-y-1">
                           {item.nodes.map((node: any) => (
                             <div key={node.id} className="break-words">
-                              <div>节点：{node.title}{node.complete_time ? `（节点完成时间：${node.complete_time}）` : ''}</div>
+                              <div>节点：{node.title}{node.completeTime ? `（节点完成时间：${node.completeTime}）` : ''}</div>
                               {node.children && node.children.length > 0 && (
                                 <div className="pl-4 text-gray-500">
                                   {node.children.map((child: any) => (
                                     <div key={child.id} className="break-words">
                                       - {child.title}
-                                      {child.complete_time ? `（完成日期：${child.complete_time}）` : ''}
+                                      {child.completeTime ? `（完成日期：${child.completeTime}）` : ''}
                                     </div>
                                   ))}
                                 </div>
@@ -290,31 +293,31 @@ export default function ItemListPage() {
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      <div className="font-medium text-gray-900 break-words whitespace-pre-wrap overflow-hidden">{item.work_item || item.title}</div>
+                      <div className="font-medium text-gray-900 break-words whitespace-pre-wrap overflow-hidden">{item.workItem || item.title}</div>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm text-gray-600">
                         <div className="break-words whitespace-pre-wrap overflow-hidden">
                           <span className="text-gray-500">事项提出领导：</span>
-                          {item.proposed_leader || '-'}
+                          {item.proposedLeader || '-'}
                         </div>
                         <div className="break-words whitespace-pre-wrap overflow-hidden">
                           <span className="text-gray-500">事项提出场景：</span>
-                          {item.proposed_scene || '-'}
+                          {item.proposedScene || '-'}
                         </div>
                         <div>
                           <span className="text-gray-500">责任部门：</span>
-                          {item.department_ids && item.department_ids.length > 0
-                            ? item.department_ids.map((id: number) => getDepartmentName(id)).join('、')
-                            : getDepartmentName(item.department_id)}
+                          {item.departmentIds && item.departmentIds.length > 0
+                            ? item.departmentIds.map((id: number) => getDepartmentName(id)).join('、')
+                            : getDepartmentName(item.departmentId ?? 0)}
                         </div>
                         <div>
                           <span className="text-gray-500">责任部门责任人：</span>
-                          {item.responsible_persons && item.responsible_persons.length > 0
-                            ? item.responsible_persons.join('、')
-                            : item.responsible_person || '-'}
+                          {item.responsiblePersons && item.responsiblePersons.length > 0
+                            ? item.responsiblePersons.join('、')
+                            : item.responsiblePerson || '-'}
                         </div>
                         <div>
                           <span className="text-gray-500">计划完成时间：</span>
-                          {item.plan_complete_time || '-'}
+                          {item.planCompleteTime || '-'}
                         </div>
                         <div className="break-words whitespace-pre-wrap overflow-hidden text-sm text-gray-600 max-w-full">
                           <span className="text-gray-500">进展情况：</span>
@@ -324,10 +327,10 @@ export default function ItemListPage() {
                           <span className="text-gray-500">状态：</span>
                           <StatusBadge status={item.status} />
                         </div>
-                        {item.adjust_history && item.adjust_history.length > 0 && (
+                        {item.adjustHistory && item.adjustHistory.length > 0 && (
                           <div className="text-sm text-purple-600 break-words">
-                            原计划完成时间：{item.adjust_history[item.adjust_history.length - 1].from_time || '-'}；
-                            现计划完成时间：{item.adjust_history[item.adjust_history.length - 1].to_time || '-'}
+                            原计划完成时间：{item.adjustHistory[item.adjustHistory.length - 1].fromTime || '-'}；
+                            现计划完成时间：{item.adjustHistory[item.adjustHistory.length - 1].toTime || '-'}
                           </div>
                         )}
                       </div>

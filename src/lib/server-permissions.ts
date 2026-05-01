@@ -1,19 +1,24 @@
+
 import { Role, User, WorkItem } from '@prisma/client'
 import prisma from './prisma'
+
+const COMPANY_ROLES: Role[] = [Role.ADMIN, Role.SUPERVISOR, Role.VICE_PRESIDENT, Role.PRESIDENT]
+const DEPT_ROLES: Role[] = [Role.DEPARTMENT_MANAGER, Role.DEPARTMENT_LEADER]
+const IMPORT_EXPORT_ROLES: Role[] = [Role.ADMIN, Role.SUPERVISOR, Role.DEPARTMENT_MANAGER, Role.DEPARTMENT_LEADER]
 
 export async function canAccessWorkItem(user: User, workItem: WorkItem): Promise<boolean> {
   if (isCompanyLevelRole(user.role)) {
     return true
   }
-  
+
   if (workItem.departmentId === user.departmentId) {
     return true
   }
-  
+
   if (workItem.departmentIds.includes(user.departmentId)) {
     return true
   }
-  
+
   return false
 }
 
@@ -21,15 +26,15 @@ export async function canEditWorkItem(user: User, workItem: WorkItem): Promise<b
   if (user.role === Role.ADMIN) {
     return true
   }
-  
+
   if (user.id === workItem.creatorId) {
     return true
   }
-  
+
   if (user.role === Role.DEPARTMENT_LEADER && workItem.departmentId === user.departmentId) {
     return true
   }
-  
+
   return false
 }
 
@@ -37,25 +42,25 @@ export async function canApproveWorkItem(user: User, workItem: WorkItem): Promis
   if (!workItem.currentApproverId && !workItem.currentApproverRole) {
     return false
   }
-  
+
   if (workItem.currentApproverId === user.id) {
     return true
   }
-  
+
   if (workItem.currentApproverRole === user.role) {
     if (workItem.currentApproverRole === Role.DEPARTMENT_LEADER) {
       return workItem.departmentId === user.departmentId
     }
-    
+
     if (workItem.currentApproverRole === Role.VICE_PRESIDENT) {
       return user.role === Role.VICE_PRESIDENT
     }
-    
+
     if (workItem.currentApproverRole === Role.PRESIDENT) {
       return user.role === Role.PRESIDENT
     }
   }
-  
+
   return false
 }
 
@@ -67,28 +72,28 @@ export async function getDepartmentIdsForUser(user: User): Promise<number[]> {
     })
     return departments.map(d => d.id)
   }
-  
+
   return [user.departmentId]
 }
 
 export function isCompanyLevelRole(role: Role): boolean {
-  return [Role.ADMIN, Role.SUPERVISOR, Role.VICE_PRESIDENT, Role.PRESIDENT].includes(role)
+  return COMPANY_ROLES.includes(role)
 }
 
 export function isDepartmentLevelRole(role: Role): boolean {
-  return [Role.DEPARTMENT_MANAGER, Role.DEPARTMENT_LEADER].includes(role)
+  return DEPT_ROLES.includes(role)
 }
 
 export function canImportData(user: User): boolean {
-  return [Role.ADMIN, Role.SUPERVISOR, Role.DEPARTMENT_MANAGER, Role.DEPARTMENT_LEADER].includes(user.role)
+  return IMPORT_EXPORT_ROLES.includes(user.role)
 }
 
 export function canExportData(user: User): boolean {
-  return [Role.ADMIN, Role.SUPERVISOR, Role.DEPARTMENT_MANAGER, Role.DEPARTMENT_LEADER].includes(user.role)
+  return IMPORT_EXPORT_ROLES.includes(user.role)
 }
 
 export function canCreateWork(user: User): boolean {
-  return ![Role.ADMIN].includes(user.role)
+  return IMPORT_EXPORT_ROLES.includes(user.role) && user.role !== Role.ADMIN
 }
 
 export function canDeleteWork(user: User): boolean {

@@ -22,6 +22,7 @@ import { exportCompanyCompletionRate } from '@/lib/excel-utils';
 
 export default function DashboardPage() {
   const NOTICE_KEY = 'supervision_admin_notice';
+  const { user } = useAuth();
   const [adminNotice, setAdminNotice] = useState('');
   const [noticeDraft, setNoticeDraft] = useState('');
   const [noticeEditing, setNoticeEditing] = useState(false);
@@ -48,6 +49,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const loadData = async () => {
+      if (!user) return;
       setLoading(true);
       const newStats = await getStats(user);
       const newWorks = await getVisibleWorks(user);
@@ -65,8 +67,7 @@ export default function DashboardPage() {
     alert('督办提示已保存');
   };
 
-  const { user } = useAuth();
-  const companyLevel = isCompanyLevel(user?.role, user?.department_id);
+  const companyLevel = isCompanyLevel(user?.role, user?.departmentId);
 
   const canEditNotice = user?.role === 'ADMIN' || user?.role === 'SUPERVISOR';
 
@@ -268,7 +269,10 @@ export default function DashboardPage() {
               {(user?.role === 'ADMIN' || user?.role === 'SUPERVISOR') && (
                 <Button
                   variant="outline"
-                  onClick={() => exportCompanyCompletionRate(getVisibleWorks(user))}
+                  onClick={async () => {
+                    const works = await getVisibleWorks(user);
+                    exportCompanyCompletionRate(works);
+                  }}
                 >
                   导出公司完成率（公开）
                 </Button>
@@ -326,7 +330,7 @@ export default function DashboardPage() {
             ) : (
               <div className="space-y-3">
                 {expiringWorks.slice(0, 5).map((work) => {
-                  const date = work.complete_time || work.plan_complete_time || work.due_date;
+                  const date = work.completeTime || work.planCompleteTime;
                   return (
                     <Link key={work.id} href={`/${work.type === '重点' ? 'priority' : work.type === '主要' ? 'main' : 'todo'}/${work.id}`}>
                       <div className="border rounded-lg p-3 hover:bg-gray-50 min-w-0">
@@ -366,9 +370,9 @@ export default function DashboardPage() {
                         <span>{work.type}工作</span>
                         <StatusBadge status={work.status} />
                       </div>
-                      {work.reject_reason && (
+                      {work.rejectReason && (
                         <div className="text-sm text-red-600 mt-1 break-words">
-                          退回人：{work.rejected_by || '-'}；退回原因：{work.reject_reason}
+                          退回人：{work.rejectedBy || '-'}；退回原因：{work.rejectReason}
                         </div>
                       )}
                     </div>

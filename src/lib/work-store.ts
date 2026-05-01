@@ -21,22 +21,20 @@ export interface WorkQuery {
 
 export type Status =
   | 'draft'
-  | 'submitted'
-  | 'dept_approved'
-  | 'company_approved'
-  | 'active'
-  | 'todo_pending_decompose'
-  | 'material_submitted'
+  | 'pending_dept'
+  | 'pending_company'
+  | 'approved'
+  | 'in_progress'
+  | 'pending_decompose'
+  | 'pending_complete'
+  | 'pending_evidence_dept'
+  | 'pending_evidence_company'
+  | 'pending_main_leader_cancel'
   | 'completed'
   | 'rejected'
   | 'adjusting'
-  | 'canceling'
-  | 'ceo_pending_cancel'
-  | 'cancelled'
-  | 'returned_for_edit'
-  | 'material_returned'
-  | 'adjust_returned'
-  | 'cancel_returned';
+  | 'cancelling'
+  | 'cancelled';
 
 export type ActionType =
   | 'create'
@@ -48,13 +46,13 @@ export type ActionType =
 export interface WorkSubNode {
   id: number;
   title: string;
-  complete_time?: string;
+  completeTime?: string;
 }
 
 export interface WorkNode {
   id: number;
   title: string;
-  complete_time?: string;
+  completeTime?: string;
   children: WorkSubNode[];
 }
 
@@ -64,19 +62,19 @@ export interface ProofFile {
   type: string;
   size: number;
   dataUrl: string;
-  uploaded_at: string;
-  uploaded_by?: string;
+  uploadedAt: string;
+  uploadedBy?: string;
 }
 
 export interface AdjustHistory {
   id: number;
   reason: string;
-  field: 'complete_time' | 'plan_complete_time' | 'due_date';
-  from_time?: string;
-  to_time?: string;
-  requested_at: string;
-  approved_at?: string;
-  approved_by?: string;
+  field: 'completeTime' | 'planCompleteTime';
+  fromTime?: string;
+  toTime?: string;
+  requestedAt: string;
+  approvedAt?: string;
+  approvedBy?: string;
 }
 
 export interface Work {
@@ -84,7 +82,7 @@ export interface Work {
   title: string;
   description?: string;
   type: WorkType;
-  departmentId: number;
+  departmentId?: number;
   departmentName?: string;
   creatorRole: string;
   creatorId?: number;
@@ -97,10 +95,9 @@ export interface Work {
   adjustReason?: string;
   cancelReason?: string;
   adjustNewTime?: string;
-  adjustTimeType?: 'complete_time' | 'plan_complete_time';
+  adjustTimeType?: 'completeTime' | 'planCompleteTime';
   createdAt: string;
   updatedAt: string;
-  dueDate?: string;
   isInnovation?: boolean;
   nodes?: WorkNode[];
   businessCategory?: string;
@@ -130,23 +127,16 @@ export interface Work {
   rejectedAt?: string;
   rejectedFrom?: Status;
   rejectedBy?: string;
-  rejectedByRole?: string;
-  pendingAdjustment?: Partial<Work>;
-  pendingAdjustmentReason?: string;
-  pendingAdjustmentFromTime?: string;
-  pendingAdjustmentToTime?: string;
-  pendingAdjustmentTimeField?: 'complete_time' | 'plan_complete_time' | 'due_date';
   adjustHistory?: AdjustHistory[];
   approvalLeader?: string;
   approvalLeaderId?: number;
   approvalLeaderRole?: string;
-
-  department_id?: number;
-  is_innovation?: boolean;
-  complete_time?: string;
-  plan_complete_time?: string;
-  created_at?: string;
-  updated_at?: string;
+  currentApproverId?: number;
+  currentApproverRole?: string;
+  pendingAdjustment?: WorkEditablePatch;
+  pendingAdjustmentReason?: string;
+  pendingAdjustmentFromTime?: string;
+  pendingAdjustmentToTime?: string;
 }
 
 export type WorkEditablePatch = Partial<Pick<
@@ -179,7 +169,6 @@ export type WorkEditablePatch = Partial<Pick<
   | 'workPlan'
   | 'planCompleteTime'
   | 'progress'
-  | 'dueDate'
   | 'approvalLeader'
   | 'approvalLeaderId'
   | 'approvalLeaderRole'
@@ -195,7 +184,7 @@ function transformWorkFromAPI(work: any): Work {
     creatorRole: work.creatorRole || work.creator_role || '',
     creatorId: work.creatorId || work.creator_id,
     creatorName: work.creatorName,
-    status: work.status.toLowerCase() as Status,
+    status: work.status?.toLowerCase() as Status || 'draft',
     action: 'create',
     needCeo: work.type === '重点',
     isInnovation: work.isInnovation || work.is_innovation,
@@ -221,12 +210,13 @@ function transformWorkFromAPI(work: any): Work {
     approvalLeaderId: work.approvalLeaderId || work.approval_leader_id,
     createdAt: work.createdAt || work.created_at,
     updatedAt: work.updatedAt || work.updated_at,
-    department_id: work.departmentId,
-    is_innovation: work.isInnovation,
-    complete_time: work.completeTime,
-    plan_complete_time: work.planCompleteTime,
-    created_at: work.createdAt,
-    updated_at: work.updatedAt,
+    rejectReason: work.rejectReason || work.reject_reason,
+    rejectedAt: work.rejectedAt || work.rejected_at,
+    rejectedFrom: work.rejectedFrom || work.rejected_from_status,
+    adjustReason: work.adjustReason || work.adjust_reason,
+    cancelReason: work.cancelReason || work.cancel_reason,
+    currentApproverId: work.currentApproverId || work.current_approver_id,
+    currentApproverRole: work.currentApproverRole || work.current_approver_role,
   };
 }
 
@@ -249,12 +239,12 @@ function isCompanyVisibleWork(work: Work) {
   }
 
   const companyVisibleStatuses: Status[] = [
-    'dept_approved',
-    'company_approved',
-    'active',
+    'pending_company',
+    'approved',
+    'in_progress',
     'adjusting',
-    'canceling',
-    'ceo_pending_cancel',
+    'cancelling',
+    'pending_main_leader_cancel',
     'completed',
     'rejected',
     'cancelled',
@@ -459,7 +449,7 @@ export async function deleteWork(id: number): Promise<void> {
 
 function getSubmitStatusByUserRole(user: User): Status {
   if (user.role === 'DEPARTMENT_MANAGER') {
-    return 'submitted';
+    return 'pending_dept';
   }
 
   if (
@@ -468,10 +458,10 @@ function getSubmitStatusByUserRole(user: User): Status {
     user.role === 'VICE_PRESIDENT' ||
     user.role === 'PRESIDENT'
   ) {
-    return 'dept_approved';
+    return 'pending_company';
   }
 
-  return 'submitted';
+  return 'pending_dept';
 }
 
 export async function resubmitRejectedWork(work: Work, user: User, patch: WorkEditablePatch) {
@@ -485,56 +475,48 @@ export async function resubmitRejectedWork(work: Work, user: User, patch: WorkEd
     rejectReason: undefined,
     rejectedAt: undefined,
     rejectedFrom: undefined,
-    rejectedBy: undefined,
-    rejectedByRole: undefined,
   });
 }
 
 export async function resubmitReturnedWork(work: Work) {
-  if (work.status !== 'returned_for_edit') {
+  if (work.status !== 'rejected') {
     return work;
   }
 
-  if (work.creatorRole === 'department_manager') {
+  if (work.creatorRole === 'DEPARTMENT_MANAGER') {
     return updateWork(work.id, {
-      status: 'submitted',
+      status: 'pending_dept',
       rejectReason: undefined,
       rejectedAt: undefined,
       rejectedFrom: undefined,
-      rejectedBy: undefined,
-      rejectedByRole: undefined,
     });
   }
 
   return updateWork(work.id, {
-    status: 'dept_approved',
+    status: 'pending_company',
     rejectReason: undefined,
     rejectedAt: undefined,
     rejectedFrom: undefined,
-    rejectedBy: undefined,
-    rejectedByRole: undefined,
   });
 }
 
 export function getStatusName(status: Status) {
   const map: Record<Status, string> = {
     draft: '草稿',
-    submitted: '待部门审批',
-    dept_approved: '待公司审批',
-    company_approved: '公司已审批',
-    active: '进行中',
-    todo_pending_decompose: '待部门分解',
-    material_submitted: '材料待部门审批',
+    pending_dept: '待部门审批',
+    pending_company: '待公司审批',
+    approved: '已审批',
+    in_progress: '进行中',
+    pending_decompose: '待分解',
+    pending_complete: '待完成',
+    pending_evidence_dept: '待部门见证审批',
+    pending_evidence_company: '待公司见证审批',
+    pending_main_leader_cancel: '待一把手审批取消',
     completed: '已完成',
     rejected: '已退回',
     adjusting: '调整审批中',
-    canceling: '取消待公司审批',
-    ceo_pending_cancel: '待一把手审批取消',
+    cancelling: '取消审批中',
     cancelled: '已取消',
-    returned_for_edit: '退回待修改',
-    material_returned: '材料退回待补充',
-    adjust_returned: '调整退回待修改',
-    cancel_returned: '取消申请退回',
   };
   return map[status] || status;
 }
@@ -556,16 +538,15 @@ export function isPendingStatus(status: Status) {
 
 export function isInProgressStatus(status: Status) {
   return [
-    'active',
-    'company_approved',
-    'material_returned',
-    'adjust_returned',
-    'cancel_returned',
+    'in_progress',
+    'approved',
+    'adjusting',
+    'cancelling',
   ].includes(status);
 }
 
 export function getWorkDueDate(work: Work) {
-  return work.completeTime || work.complete_time || work.planCompleteTime || work.plan_complete_time || work.dueDate || '';
+  return work.completeTime || work.planCompleteTime || '';
 }
 
 export function isOverdueWork(work: Work) {
@@ -607,7 +588,6 @@ function getWorkDepartmentIds(work: Work) {
     }
   };
   addId(work.departmentId);
-  addId(work.department_id);
   if (Array.isArray(work.departmentIds)) {
     work.departmentIds.forEach(addId);
   }
@@ -624,36 +604,32 @@ function isWorkRelatedToDepartment(work: Work, departmentId?: number) {
 
 export function isReturnStatus(status: Status) {
   return [
-    'returned_for_edit',
-    'material_returned',
-    'adjust_returned',
-    'cancel_returned',
+    'rejected',
   ].includes(status);
 }
 
 export function isPendingApprovalStatus(status: Status) {
   return [
-    'submitted',
-    'dept_approved',
-    'material_submitted',
-    'canceling',
-    'ceo_pending_cancel',
+    'pending_dept',
+    'pending_company',
+    'pending_evidence_dept',
+    'pending_evidence_company',
+    'cancelling',
+    'pending_main_leader_cancel',
   ].includes(status);
 }
 
 export function isSupervisorTrackingWork(work: Work) {
   const trackingStatuses: Status[] = [
-    'submitted',
-    'dept_approved',
-    'todo_pending_decompose',
-    'material_submitted',
-    'returned_for_edit',
-    'material_returned',
-    'adjust_returned',
-    'cancel_returned',
+    'pending_dept',
+    'pending_company',
+    'pending_decompose',
+    'pending_evidence_dept',
+    'pending_evidence_company',
+    'rejected',
     'adjusting',
-    'canceling',
-    'ceo_pending_cancel',
+    'cancelling',
+    'pending_main_leader_cancel',
   ];
 
   return trackingStatuses.includes(work.status);
@@ -702,7 +678,7 @@ export function canHandleWork(user: User | null | undefined, work: Work) {
   if (user.role === 'ADMIN') {
     return (
       canApproveWork(user, work) ||
-      work.status === 'todo_pending_decompose' ||
+      work.status === 'pending_decompose' ||
       isReturnStatus(work.status)
     );
   }
@@ -713,7 +689,7 @@ export function canHandleWork(user: User | null | undefined, work: Work) {
 
   if (
     work.type === '待办' &&
-    work.status === 'todo_pending_decompose' &&
+    work.status === 'pending_decompose' &&
     (user.role === 'DEPARTMENT_MANAGER' || user.role === 'DEPARTMENT_LEADER') &&
     isWorkRelatedToDepartment(work, user.departmentId)
   ) {
@@ -742,11 +718,12 @@ export function canApproveWork(user: User | null | undefined, work: Work) {
   if (!user) return false;
 
   const pendingStatuses: Status[] = [
-    'submitted',
-    'dept_approved',
-    'material_submitted',
-    'canceling',
-    'ceo_pending_cancel',
+    'pending_dept',
+    'pending_company',
+    'pending_evidence_dept',
+    'pending_evidence_company',
+    'cancelling',
+    'pending_main_leader_cancel',
   ];
 
   if (!pendingStatuses.includes(work.status)) {
@@ -765,21 +742,21 @@ export function canApproveWork(user: User | null | undefined, work: Work) {
     return (
       isWorkRelatedToDepartment(work, user.departmentId) &&
       (
-        work.status === 'submitted' ||
-        work.status === 'material_submitted'
+        work.status === 'pending_dept' ||
+        work.status === 'pending_evidence_dept'
       )
     );
   }
 
-  if (work.status === 'dept_approved') {
+  if (work.status === 'pending_company') {
     return isSelectedCompanyApprover(user, work);
   }
 
-  if (work.status === 'canceling') {
+  if (work.status === 'cancelling') {
     return isSelectedCompanyApprover(user, work);
   }
 
-  if (work.status === 'ceo_pending_cancel') {
+  if (work.status === 'pending_main_leader_cancel') {
     return user.role === 'PRESIDENT';
   }
 
@@ -866,7 +843,7 @@ export async function submitComplete(work: Work, user: User, proof: string, proo
   }
 }
 
-export async function submitAdjust(work: Work, user: User, reason: string, pendingAdjustment?: WorkEditablePatch, approvalLeader?: User) {
+export async function submitAdjust(work: Work, user: User, reason: string, pendingAdjustment?: WorkEditablePatch) {
   try {
     const response = await fetch(`/api/works/${work.id}/workflow`, {
       method: 'POST',
@@ -885,7 +862,7 @@ export async function submitAdjust(work: Work, user: User, reason: string, pendi
   }
 }
 
-export async function submitCancel(work: Work, user: User, reason: string, approvalLeader?: User) {
+export async function submitCancel(work: Work, user: User, reason: string) {
   try {
     const response = await fetch(`/api/works/${work.id}/workflow`, {
       method: 'POST',
@@ -968,11 +945,11 @@ export function getWorkflowSteps(work: Work): WorkflowStep[] {
 
   let currentIndex = 0;
 
-  if (work.status === 'submitted') currentIndex = 1;
-  else if (work.status === 'todo_pending_decompose') currentIndex = 1;
-  else if (work.status === 'dept_approved' || work.status === 'canceling' || work.status === 'ceo_pending_cancel') currentIndex = 2;
-  else if (work.status === 'active' || work.status === 'company_approved') currentIndex = 3;
-  else if (work.status === 'material_submitted') currentIndex = 4;
+  if (work.status === 'pending_dept') currentIndex = 1;
+  else if (work.status === 'pending_decompose') currentIndex = 1;
+  else if (work.status === 'pending_company' || work.status === 'cancelling' || work.status === 'pending_main_leader_cancel') currentIndex = 2;
+  else if (work.status === 'in_progress' || work.status === 'approved') currentIndex = 3;
+  else if (work.status === 'pending_evidence_dept' || work.status === 'pending_evidence_company') currentIndex = 4;
   else if (work.status === 'completed') currentIndex = labels.length - 1;
   else if (isReturnStatus(work.status)) currentIndex = Math.max(0, labels.length - 2);
   else if (work.status === 'cancelled') currentIndex = labels.length - 1;

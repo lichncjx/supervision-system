@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, CheckCircle, RotateCcw, XCircle, Upload, Download } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
-import { departments, getCompanyLeaders } from '@/lib/auth';
+import { departments, companyLeadersStatic } from '@/lib/auth';
 import {
   getWorkById,
   submitComplete,
@@ -57,8 +57,8 @@ export default function WorkDetailPage() {
   const [workflowRecords, setWorkflowRecords] = useState<WorkflowRecord[]>([]);
 
   useEffect(() => {
-    const fetchCompanyLeaders = async () => {
-      const leaders = await getCompanyLeaders();
+    const fetchCompanyLeaders = () => {
+      const leaders = companyLeadersStatic;
       setCompanyLeaders(leaders);
       if (leaders.length > 0 && !approvalLeaderId) {
         setApprovalLeaderId(String(leaders[0].id));
@@ -145,7 +145,7 @@ export default function WorkDetailPage() {
   const canDecomposeTodo =
     user &&
     work.type === '待办' &&
-    work.status === 'todo_pending_decompose' &&
+    work.status === 'pending_decompose' &&
     (
       user.role === 'ADMIN' ||
       (
@@ -163,11 +163,11 @@ export default function WorkDetailPage() {
         isCurrentUserRelatedDepartment()
       )
     ) &&
-    ['active', 'material_returned', 'adjust_returned', 'cancel_returned'].includes(work.status);
+    ['in_progress', 'rejected'].includes(work.status);
 
   const canHandleReturnedCreate =
     user &&
-    work.status === 'returned_for_edit' &&
+    work.status === 'rejected' &&
     (
       user.role === 'ADMIN' ||
       user.id === work.creatorId ||
@@ -195,8 +195,8 @@ export default function WorkDetailPage() {
             type: file.type,
             size: file.size,
             dataUrl: String(reader.result || ''),
-            uploaded_at: new Date().toISOString(),
-            uploaded_by: user?.name,
+            uploadedAt: new Date().toISOString(),
+            uploadedBy: user?.name,
           });
         };
 
@@ -206,16 +206,16 @@ export default function WorkDetailPage() {
     };
 
     const result = await Promise.all(files.map(readFile));
-    setProofFiles((prev) => [...prev, ...result]);
+    setProofFiles((prev: any) => [...prev, ...result]);
   };
 
   const removeProofFile = (id: number) => {
-    setProofFiles((prev) => prev.filter((file) => file.id !== id));
+    setProofFiles((prev: any) => prev.filter((file: any) => file.id !== id));
   };
 
   // 节点操作函数
   const updateNodeTitle = (nodeId: number, title: string) => {
-    setEditForm(prev => ({
+    setEditForm((prev: any) => ({
       ...prev,
       nodes: prev.nodes.map((node: any) =>
         node.id === nodeId ? { ...node, title } : node
@@ -224,14 +224,14 @@ export default function WorkDetailPage() {
   };
 
   const addNode = () => {
-    setEditForm(prev => ({
+    setEditForm((prev: any) => ({
       ...prev,
       nodes: [
         ...prev.nodes,
         {
           id: Date.now(),
           title: '',
-          complete_time: '',
+          completeTime: '',
           children: [],
         },
       ],
@@ -242,20 +242,20 @@ export default function WorkDetailPage() {
     setEditForm((prev: any) => ({
       ...prev,
       nodes: prev.nodes.map((node: any) =>
-        node.id === nodeId ? { ...node, complete_time: completeTime } : node
+        node.id === nodeId ? { ...node, completeTime: completeTime } : node
       ),
     }));
   };
 
   const deleteNode = (nodeId: number) => {
-    setEditForm(prev => ({
+    setEditForm((prev: any) => ({
       ...prev,
       nodes: prev.nodes.filter((node: any) => node.id !== nodeId),
     }));
   };
 
   const addSubNode = (nodeId: number) => {
-    setEditForm(prev => ({
+    setEditForm((prev: any) => ({
       ...prev,
       nodes: prev.nodes.map((node: any) =>
         node.id === nodeId
@@ -266,7 +266,7 @@ export default function WorkDetailPage() {
                 {
                   id: Date.now(),
                   title: '',
-                  complete_time: '',
+                  completeTime: '',
                 },
               ],
             }
@@ -276,7 +276,7 @@ export default function WorkDetailPage() {
   };
 
   const updateSubNodeTitle = (nodeId: number, subNodeId: number, title: string) => {
-    setEditForm(prev => ({
+    setEditForm((prev: any) => ({
       ...prev,
       nodes: prev.nodes.map((node: any) =>
         node.id === nodeId
@@ -292,14 +292,14 @@ export default function WorkDetailPage() {
   };
 
   const updateSubNodeCompleteTime = (nodeId: number, subNodeId: number, completeTime: string) => {
-    setEditForm(prev => ({
+    setEditForm((prev: any) => ({
       ...prev,
       nodes: prev.nodes.map((node: any) =>
         node.id === nodeId
           ? {
               ...node,
               children: node.children.map((child: any) =>
-                child.id === subNodeId ? { ...child, complete_time: completeTime } : child
+                child.id === subNodeId ? { ...child, completeTime: completeTime } : child
               ),
             }
           : node
@@ -308,7 +308,7 @@ export default function WorkDetailPage() {
   };
 
   const deleteSubNode = (nodeId: number, subNodeId: number) => {
-    setEditForm(prev => ({
+    setEditForm((prev: any) => ({
       ...prev,
       nodes: prev.nodes.map((node: any) =>
         node.id === nodeId
@@ -355,7 +355,7 @@ export default function WorkDetailPage() {
       return;
     }
 
-    submitAdjust(work, user, adjustReason, pendingAdjustment, selectedApprovalLeader);
+    submitAdjust(work, user, adjustReason, pendingAdjustment);
     setRefresh((v) => v + 1);
     alert('已提交调整申请，等待审批');
   };
@@ -417,7 +417,7 @@ export default function WorkDetailPage() {
       return;
     }
 
-    submitAdjust(work, user, adjustReason, pendingAdjustment, selectedApprovalLeader);
+    submitAdjust(work, user, adjustReason, pendingAdjustment);
 
     setAdjustMode(false);
     setRefresh((v) => v + 1);
@@ -441,7 +441,7 @@ export default function WorkDetailPage() {
       return;
     }
 
-    submitCancel(work, user, cancelReason, selectedApprovalLeader);
+    submitCancel(work, user, cancelReason);
     setRefresh((v) => v + 1);
     alert('已提交取消申请');
   };
@@ -517,7 +517,7 @@ export default function WorkDetailPage() {
                 </div>
                 <div>
                   <span className="text-sm text-gray-500">责任部门：</span>
-                  <span>{getDepartmentName(work.departmentId)}</span>
+                  <span>{getDepartmentName(work.departmentId ?? 0)}</span>
                 </div>
                 <div>
                   <span className="text-sm text-gray-500">责任领导：</span>
@@ -557,14 +557,14 @@ export default function WorkDetailPage() {
                       <div key={node.id} className="border rounded p-3 bg-gray-50">
                         <div className="font-medium break-words">
                           {index + 1}. {node.title}
-                          {node.complete_time ? `（节点完成时间：${node.complete_time}）` : ''}
+                          {node.completeTime ? `（节点完成时间：${node.completeTime}）` : ''}
                         </div>
                         {node.children && node.children.length > 0 && (
                           <div className="pl-5 mt-2 space-y-1 text-sm text-gray-600">
                             {node.children.map((child: any, childIndex: number) => (
                               <div key={child.id} className="break-words">
                                 {index + 1}.{childIndex + 1} {child.title}
-                                {child.complete_time ? `（完成日期：${child.complete_time}）` : ''}
+                                {child.completeTime ? `（完成日期：${child.completeTime}）` : ''}
                               </div>
                             ))}
                           </div>
@@ -587,13 +587,13 @@ export default function WorkDetailPage() {
                 <div>
                   <span className="text-sm text-gray-500">见证材料附件：</span>
                   <div className="mt-2 space-y-2">
-                    {work.proofFiles.map((file) => (
+                    {work.proofFiles.map((file: any) => (
                       <div key={file.id} className="flex items-center justify-between rounded border p-2 text-sm">
                         <div className="min-w-0">
                           <div className="font-medium break-words">{file.name}</div>
                           <div className="text-xs text-gray-500">
-                            上传人：{file.uploaded_by || '-'}　
-                            上传时间：{file.uploaded_at ? new Date(file.uploaded_at).toLocaleString() : '-'}
+                            上传人：{file.uploadedBy || '-'}　
+                            上传时间：{file.uploadedAt ? new Date(file.uploadedAt).toLocaleString() : '-'}
                           </div>
                         </div>
                         <a href={file.dataUrl} download={file.name}>
@@ -625,10 +625,10 @@ export default function WorkDetailPage() {
                   {work.adjustHistory.map((item) => (
                     <div key={item.id} className="border-t border-purple-100 pt-2 first:border-t-0 first:pt-0">
                       <div>调整原因：{item.reason || '-'}</div>
-                      <div>原计划完成时间：{item.from_time || '-'}</div>
-                      <div>现计划完成时间：{item.to_time || '-'}</div>
-                      <div>审批人：{item.approved_by || '-'}</div>
-                      <div>审批时间：{item.approved_at ? new Date(item.approved_at).toLocaleString() : '-'}</div>
+                      <div>原计划完成时间：{item.fromTime || '-'}</div>
+                      <div>现计划完成时间：{item.toTime || '-'}</div>
+                      <div>审批人：{item.approvedBy || '-'}</div>
+                      <div>审批时间：{item.approvedAt ? new Date(item.approvedAt).toLocaleString() : '-'}</div>
                     </div>
                   ))}
                 </div>
@@ -666,7 +666,7 @@ export default function WorkDetailPage() {
                   <span>
                     {work.departmentIds && work.departmentIds.length > 0
                       ? work.departmentIds.map((id: number) => getDepartmentName(id)).join('、')
-                      : getDepartmentName(work.departmentId)}
+                      : getDepartmentName(work.departmentId ?? 0)}
                   </span>
                 </div>
                 <div>
@@ -719,14 +719,14 @@ export default function WorkDetailPage() {
                       <div key={node.id} className="border rounded p-3 bg-gray-50">
                         <div className="font-medium break-words">
                           {index + 1}. {node.title}
-                          {node.complete_time ? `（节点完成时间：${node.complete_time}）` : ''}
+                          {node.completeTime ? `（节点完成时间：${node.completeTime}）` : ''}
                         </div>
                         {node.children && node.children.length > 0 && (
                           <div className="pl-5 mt-2 space-y-1 text-sm text-gray-600">
                             {node.children.map((child: any, childIndex: number) => (
                               <div key={child.id} className="break-words">
                                 {index + 1}.{childIndex + 1} {child.title}
-                                {child.complete_time ? `（完成日期：${child.complete_time}）` : ''}
+                                {child.completeTime ? `（完成日期：${child.completeTime}）` : ''}
                               </div>
                             ))}
                           </div>
@@ -757,13 +757,13 @@ export default function WorkDetailPage() {
                 <div>
                   <span className="text-sm text-gray-500">见证材料附件：</span>
                   <div className="mt-2 space-y-2">
-                    {work.proofFiles.map((file) => (
+                    {work.proofFiles.map((file: any) => (
                       <div key={file.id} className="flex items-center justify-between rounded border p-2 text-sm">
                         <div className="min-w-0">
                           <div className="font-medium break-words">{file.name}</div>
                           <div className="text-xs text-gray-500">
-                            上传人：{file.uploaded_by || '-'}　
-                            上传时间：{file.uploaded_at ? new Date(file.uploaded_at).toLocaleString() : '-'}
+                            上传人：{file.uploadedBy || '-'}　
+                            上传时间：{file.uploadedAt ? new Date(file.uploadedAt).toLocaleString() : '-'}
                           </div>
                         </div>
                         <a href={file.dataUrl} download={file.name}>
@@ -849,25 +849,25 @@ export default function WorkDetailPage() {
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
             <div className="text-purple-600 break-words whitespace-pre-wrap">
-              调整原因：{work.pendingAdjustment_reason || '-'}
+              调整原因：{work.pendingAdjustmentReason || '-'}
             </div>
             <div>
-              原计划完成时间：{work.pendingAdjustment_from_time || '-'}
+              原计划完成时间：{work.pendingAdjustmentFromTime || '-'}
             </div>
             <div>
-              现计划完成时间：{work.pendingAdjustment_to_time || '-'}
+              现计划完成时间：{work.pendingAdjustmentToTime || '-'}
             </div>
             <div>
               公司审批领导：{work.approvalLeader || '-'}
             </div>
             <div className="break-words whitespace-pre-wrap">
-              调整后事项：{work.pendingAdjustment.work_item || work.pendingAdjustment.title || '-'}
+              调整后事项：{work.pendingAdjustment.workItem || work.pendingAdjustment.title || '-'}
             </div>
             <div>
-              调整后完成时间：{work.pendingAdjustment.complete_time || work.pendingAdjustment.plan_complete_time || '-'}
+              调整后完成时间：{work.pendingAdjustment.completeTime || work.pendingAdjustment.planCompleteTime || '-'}
             </div>
             <div>
-              调整后完成形式：{work.pendingAdjustment.complete_form || '-'}
+              调整后完成形式：{work.pendingAdjustment.completeForm || '-'}
             </div>
             {work.pendingAdjustment.nodes && work.pendingAdjustment.nodes.length > 0 && (
               <div>
@@ -883,7 +883,7 @@ export default function WorkDetailPage() {
                           {node.children.map((child: any, childIndex: number) => (
                             <div key={child.id} className="break-words">
                               {index + 1}.{childIndex + 1} {child.title}
-                              {child.complete_time ? `（完成日期：${child.complete_time}）` : ''}
+                              {child.completeTime ? `（完成日期：${child.completeTime}）` : ''}
                             </div>
                           ))}
                         </div>
@@ -950,7 +950,7 @@ export default function WorkDetailPage() {
                 <label className="text-sm font-medium">工作事项</label>
                 <Input
                   value={editForm.workItem || ''}
-                  onChange={(e) => setEditForm((prev: any) => ({ ...prev, work_item: e.target.value }))}
+                  onChange={(e) => setEditForm((prev: any) => ({ ...prev, workItem: e.target.value }))}
                 />
               </div>
 
@@ -958,7 +958,7 @@ export default function WorkDetailPage() {
                 <label className="text-sm font-medium">业务类别</label>
                 <Input
                   value={editForm.businessCategory || ''}
-                  onChange={(e) => setEditForm((prev: any) => ({ ...prev, business_category: e.target.value }))}
+                  onChange={(e) => setEditForm((prev: any) => ({ ...prev, businessCategory: e.target.value }))}
                 />
               </div>
 
@@ -967,7 +967,7 @@ export default function WorkDetailPage() {
                 <Input
                   type="date"
                   value={editForm.completeTime || ''}
-                  onChange={(e) => setEditForm((prev: any) => ({ ...prev, complete_time: e.target.value }))}
+                  onChange={(e) => setEditForm((prev: any) => ({ ...prev, completeTime: e.target.value }))}
                 />
               </div>
 
@@ -975,7 +975,7 @@ export default function WorkDetailPage() {
                 <label className="text-sm font-medium">完成形式</label>
                 <Input
                   value={editForm.completeForm || ''}
-                  onChange={(e) => setEditForm((prev: any) => ({ ...prev, complete_form: e.target.value }))}
+                  onChange={(e) => setEditForm((prev: any) => ({ ...prev, completeForm: e.target.value }))}
                 />
               </div>
             </div>
@@ -987,7 +987,7 @@ export default function WorkDetailPage() {
                 <label className="text-sm font-medium">事项提出领导</label>
                 <select
                   value={editForm.proposedLeaderId || ''}
-                  onChange={(e) => setEditForm((prev: any) => ({ ...prev, proposed_leader_id: e.target.value }))}
+                  onChange={(e) => setEditForm((prev: any) => ({ ...prev, proposedLeaderId: e.target.value }))}
                   className="w-full border rounded-md p-2"
                 >
                   <option value="">请选择事项提出领导</option>
@@ -1003,7 +1003,7 @@ export default function WorkDetailPage() {
                 <label className="text-sm font-medium">待办事项</label>
                 <Input
                   value={editForm.workItem || ''}
-                  onChange={(e) => setEditForm((prev: any) => ({ ...prev, work_item: e.target.value }))}
+                  onChange={(e) => setEditForm((prev: any) => ({ ...prev, workItem: e.target.value }))}
                 />
               </div>
 
@@ -1011,7 +1011,7 @@ export default function WorkDetailPage() {
                 <label className="text-sm font-medium">事项提出场景</label>
                 <Input
                   value={editForm.proposedScene || ''}
-                  onChange={(e) => setEditForm((prev: any) => ({ ...prev, proposed_scene: e.target.value }))}
+                  onChange={(e) => setEditForm((prev: any) => ({ ...prev, proposedScene: e.target.value }))}
                 />
               </div>
 
@@ -1020,7 +1020,7 @@ export default function WorkDetailPage() {
                 <Input
                   type="date"
                   value={editForm.formedTime || ''}
-                  onChange={(e) => setEditForm((prev: any) => ({ ...prev, formed_time: e.target.value }))}
+                  onChange={(e) => setEditForm((prev: any) => ({ ...prev, formedTime: e.target.value }))}
                 />
               </div>
 
@@ -1028,7 +1028,7 @@ export default function WorkDetailPage() {
                 <label className="text-sm font-medium">责任部门</label>
                 <select
                   value={editForm.departmentId || ''}
-                  onChange={(e) => setEditForm((prev: any) => ({ ...prev, department_id: Number(e.target.value) }))}
+                  onChange={(e) => setEditForm((prev: any) => ({ ...prev, departmentId: Number(e.target.value) }))}
                   className="w-full border rounded-md p-2"
                 >
                   {departments.filter((d) => d.id !== 1).map((d) => (
@@ -1043,7 +1043,7 @@ export default function WorkDetailPage() {
                 <label className="text-sm font-medium">责任部门责任人</label>
                 <Input
                   value={editForm.responsiblePerson || ''}
-                  onChange={(e) => setEditForm((prev: any) => ({ ...prev, responsible_person: e.target.value }))}
+                  onChange={(e) => setEditForm((prev: any) => ({ ...prev, responsiblePerson: e.target.value }))}
                 />
               </div>
 
@@ -1051,7 +1051,7 @@ export default function WorkDetailPage() {
                 <label className="text-sm font-medium">配合部门</label>
                 <Input
                   value={editForm.cooperateDepartment || ''}
-                  onChange={(e) => setEditForm((prev: any) => ({ ...prev, cooperate_department: e.target.value }))}
+                  onChange={(e) => setEditForm((prev: any) => ({ ...prev, cooperateDepartment: e.target.value }))}
                 />
               </div>
 
@@ -1059,7 +1059,7 @@ export default function WorkDetailPage() {
                 <label className="text-sm font-medium">配合部门责任人</label>
                 <Input
                   value={editForm.cooperatePerson || ''}
-                  onChange={(e) => setEditForm((prev: any) => ({ ...prev, cooperate_person: e.target.value }))}
+                  onChange={(e) => setEditForm((prev: any) => ({ ...prev, cooperatePerson: e.target.value }))}
                 />
               </div>
 
@@ -1067,7 +1067,7 @@ export default function WorkDetailPage() {
                 <label className="text-sm font-medium">工作计划</label>
                 <Textarea
                   value={editForm.workPlan || ''}
-                  onChange={(e) => setEditForm((prev: any) => ({ ...prev, work_plan: e.target.value }))}
+                  onChange={(e) => setEditForm((prev: any) => ({ ...prev, workPlan: e.target.value }))}
                   rows={3}
                 />
               </div>
@@ -1077,7 +1077,7 @@ export default function WorkDetailPage() {
                 <Input
                   type="date"
                   value={editForm.planCompleteTime || ''}
-                  onChange={(e) => setEditForm((prev: any) => ({ ...prev, plan_complete_time: e.target.value }))}
+                  onChange={(e) => setEditForm((prev: any) => ({ ...prev, planCompleteTime: e.target.value }))}
                 />
               </div>
 
@@ -1130,7 +1130,7 @@ export default function WorkDetailPage() {
               <label className="text-sm font-medium">工作计划</label>
               <Textarea
                 value={editForm.workPlan || ''}
-                onChange={(e) => setEditForm((prev: any) => ({ ...prev, work_plan: e.target.value }))}
+                onChange={(e) => setEditForm((prev: any) => ({ ...prev, workPlan: e.target.value }))}
                 rows={3}
               />
             </div>
@@ -1140,7 +1140,7 @@ export default function WorkDetailPage() {
               <Input
                 type="date"
                 value={editForm.planCompleteTime || ''}
-                onChange={(e) => setEditForm((prev: any) => ({ ...prev, plan_complete_time: e.target.value }))}
+                onChange={(e) => setEditForm((prev: any) => ({ ...prev, planCompleteTime: e.target.value }))}
               />
             </div>
 
@@ -1158,7 +1158,7 @@ export default function WorkDetailPage() {
                       />
                       <Input
                         type="date"
-                        value={node.complete_time || ''}
+                        value={node.completeTime || ''}
                         onChange={(e) => updateNodeCompleteTime(node.id, e.target.value)}
                         className="w-40"
                       />
@@ -1181,7 +1181,7 @@ export default function WorkDetailPage() {
                           />
                           <Input
                             type="date"
-                            value={child.complete_time || ''}
+                            value={child.completeTime || ''}
                             onChange={(e) => updateSubNodeCompleteTime(node.id, child.id, e.target.value)}
                             className="w-40"
                           />
@@ -1219,7 +1219,7 @@ export default function WorkDetailPage() {
                   return;
                 }
 
-                if (validNodes.some((node: any) => !node.complete_time)) {
+                if (validNodes.some((node: any) => !node.completeTime)) {
                   alert('请填写每个任务节点的完成时间');
                   return;
                 }
@@ -1259,7 +1259,7 @@ export default function WorkDetailPage() {
 
                 {proofFiles.length > 0 && (
                   <div className="space-y-2">
-                    {proofFiles.map((file) => (
+                    {proofFiles.map((file: any) => (
                       <div key={file.id} className="flex items-center justify-between rounded border p-2 text-sm">
                         <span className="break-words">{file.name}</span>
                         <Button
@@ -1308,7 +1308,7 @@ export default function WorkDetailPage() {
                               <label className="text-sm font-medium">工作事项</label>
                               <Input
                                 value={editForm.workItem || ''}
-                                onChange={(e) => setEditForm(prev => ({ ...prev, work_item: e.target.value }))}
+                                onChange={(e) => setEditForm((prev: any) => ({ ...prev, workItem: e.target.value }))}
                                 placeholder="请输入工作事项"
                               />
                             </div>
@@ -1316,7 +1316,7 @@ export default function WorkDetailPage() {
                               <label className="text-sm font-medium">业务类别</label>
                               <Input
                                 value={editForm.businessCategory || ''}
-                                onChange={(e) => setEditForm(prev => ({ ...prev, business_category: e.target.value }))}
+                                onChange={(e) => setEditForm((prev: any) => ({ ...prev, businessCategory: e.target.value }))}
                                 placeholder="请输入业务类别"
                               />
                             </div>
@@ -1325,14 +1325,14 @@ export default function WorkDetailPage() {
                               <Input
                                 type="date"
                                 value={editForm.completeTime || ''}
-                                onChange={(e) => setEditForm(prev => ({ ...prev, complete_time: e.target.value }))}
+                                onChange={(e) => setEditForm((prev: any) => ({ ...prev, completeTime: e.target.value }))}
                               />
                             </div>
                             <div>
                               <label className="text-sm font-medium">完成形式</label>
                               <Input
                                 value={editForm.completeForm || ''}
-                                onChange={(e) => setEditForm(prev => ({ ...prev, complete_form: e.target.value }))}
+                                onChange={(e) => setEditForm((prev: any) => ({ ...prev, completeForm: e.target.value }))}
                                 placeholder="请输入完成形式"
                               />
                             </div>
@@ -1340,7 +1340,7 @@ export default function WorkDetailPage() {
                               <label className="text-sm font-medium">责任部门</label>
                               <select
                                 value={editForm.departmentId || ''}
-                                onChange={(e) => setEditForm(prev => ({ ...prev, department_id: Number(e.target.value) }))}
+                                onChange={(e) => setEditForm((prev: any) => ({ ...prev, departmentId: Number(e.target.value) }))}
                                 className="w-full border rounded-md p-2"
                               >
                                 {departments.map((d) => (
@@ -1354,7 +1354,7 @@ export default function WorkDetailPage() {
                               <label className="text-sm font-medium">责任领导</label>
                               <Input
                                 value={editForm.responsibleLeader || ''}
-                                onChange={(e) => setEditForm(prev => ({ ...prev, responsible_leader: e.target.value }))}
+                                onChange={(e) => setEditForm((prev: any) => ({ ...prev, responsibleLeader: e.target.value }))}
                                 placeholder="请输入责任领导"
                               />
                             </div>
@@ -1362,7 +1362,7 @@ export default function WorkDetailPage() {
                               <label className="text-sm font-medium">主管人员</label>
                               <Input
                                 value={editForm.supervisor || ''}
-                                onChange={(e) => setEditForm(prev => ({ ...prev, supervisor: e.target.value }))}
+                                onChange={(e) => setEditForm((prev: any) => ({ ...prev, supervisor: e.target.value }))}
                                 placeholder="请输入主管人员"
                               />
                             </div>
@@ -1371,7 +1371,7 @@ export default function WorkDetailPage() {
                                 <input
                                   type="checkbox"
                                   checked={editForm.isInnovation || false}
-                                  onChange={(e) => setEditForm(prev => ({ ...prev, is_innovation: e.target.checked }))}
+                                  onChange={(e) => setEditForm((prev: any) => ({ ...prev, isInnovation: e.target.checked }))}
                                   className="h-4 w-4"
                                 />
                                 <span>是否为创新工作</span>
@@ -1419,7 +1419,7 @@ export default function WorkDetailPage() {
                                           />
                                           <Input
                                             type="date"
-                                            value={child.complete_time || ''}
+                                            value={child.completeTime || ''}
                                             onChange={(e) => updateSubNodeCompleteTime(node.id, child.id, e.target.value)}
                                             className="w-40"
                                           />
@@ -1452,7 +1452,7 @@ export default function WorkDetailPage() {
                               <label className="text-sm font-medium">待办事项</label>
                               <Input
                                 value={editForm.workItem || ''}
-                                onChange={(e) => setEditForm(prev => ({ ...prev, work_item: e.target.value }))}
+                                onChange={(e) => setEditForm((prev: any) => ({ ...prev, workItem: e.target.value }))}
                                 placeholder="请输入待办事项"
                               />
                             </div>
@@ -1462,11 +1462,11 @@ export default function WorkDetailPage() {
                                 value={editForm.proposedLeaderId || ''}
                                 onChange={(e) => {
                                   const selected = companyLeaders.find((leader) => leader.id === Number(e.target.value));
-                                  setEditForm(prev => ({
+                                  setEditForm((prev: any) => ({
                                     ...prev,
-                                    proposed_leader_id: e.target.value,
-                                    proposed_leader: selected?.name || '',
-                                    proposed_leader_role: selected?.role || '',
+                                    proposedLeaderId: e.target.value,
+                                    proposedLeader: selected?.name || '',
+                                    proposedLeaderRole: selected?.role || '',
                                   }));
                                 }}
                                 className="w-full border rounded-md p-2"
@@ -1483,7 +1483,7 @@ export default function WorkDetailPage() {
                               <label className="text-sm font-medium">事项提出场景</label>
                               <Input
                                 value={editForm.proposedScene || ''}
-                                onChange={(e) => setEditForm(prev => ({ ...prev, proposed_scene: e.target.value }))}
+                                onChange={(e) => setEditForm((prev: any) => ({ ...prev, proposedScene: e.target.value }))}
                                 placeholder="请输入事项提出场景"
                               />
                             </div>
@@ -1492,14 +1492,14 @@ export default function WorkDetailPage() {
                               <Input
                                 type="date"
                                 value={editForm.formedTime || ''}
-                                onChange={(e) => setEditForm(prev => ({ ...prev, formed_time: e.target.value }))}
+                                onChange={(e) => setEditForm((prev: any) => ({ ...prev, formedTime: e.target.value }))}
                               />
                             </div>
                             <div>
                               <label className="text-sm font-medium">责任部门</label>
                               <select
                                 value={editForm.departmentId || ''}
-                                onChange={(e) => setEditForm(prev => ({ ...prev, department_id: Number(e.target.value) }))}
+                                onChange={(e) => setEditForm((prev: any) => ({ ...prev, departmentId: Number(e.target.value) }))}
                                 className="w-full border rounded-md p-2"
                               >
                                 {departments.map((d) => (
@@ -1513,7 +1513,7 @@ export default function WorkDetailPage() {
                               <label className="text-sm font-medium">责任部门责任人</label>
                               <Input
                                 value={editForm.responsiblePerson || ''}
-                                onChange={(e) => setEditForm(prev => ({ ...prev, responsible_person: e.target.value }))}
+                                onChange={(e) => setEditForm((prev: any) => ({ ...prev, responsiblePerson: e.target.value }))}
                                 placeholder="请输入责任部门责任人"
                               />
                             </div>
@@ -1521,7 +1521,7 @@ export default function WorkDetailPage() {
                               <label className="text-sm font-medium">配合部门</label>
                               <Input
                                 value={editForm.cooperateDepartment || ''}
-                                onChange={(e) => setEditForm(prev => ({ ...prev, cooperate_department: e.target.value }))}
+                                onChange={(e) => setEditForm((prev: any) => ({ ...prev, cooperateDepartment: e.target.value }))}
                                 placeholder="请输入配合部门"
                               />
                             </div>
@@ -1529,7 +1529,7 @@ export default function WorkDetailPage() {
                               <label className="text-sm font-medium">配合部门责任人</label>
                               <Input
                                 value={editForm.cooperatePerson || ''}
-                                onChange={(e) => setEditForm(prev => ({ ...prev, cooperate_person: e.target.value }))}
+                                onChange={(e) => setEditForm((prev: any) => ({ ...prev, cooperatePerson: e.target.value }))}
                                 placeholder="请输入配合部门责任人"
                               />
                             </div>
@@ -1537,7 +1537,7 @@ export default function WorkDetailPage() {
                               <label className="text-sm font-medium">工作计划</label>
                               <Input
                                 value={editForm.workPlan || ''}
-                                onChange={(e) => setEditForm(prev => ({ ...prev, work_plan: e.target.value }))}
+                                onChange={(e) => setEditForm((prev: any) => ({ ...prev, workPlan: e.target.value }))}
                                 placeholder="请输入工作计划"
                               />
                             </div>
@@ -1546,14 +1546,14 @@ export default function WorkDetailPage() {
                               <Input
                                 type="date"
                                 value={editForm.planCompleteTime || ''}
-                                onChange={(e) => setEditForm(prev => ({ ...prev, plan_complete_time: e.target.value }))}
+                                onChange={(e) => setEditForm((prev: any) => ({ ...prev, planCompleteTime: e.target.value }))}
                               />
                             </div>
                             <div className="md:col-span-2">
                               <label className="text-sm font-medium">进展情况</label>
                               <Textarea
                                 value={editForm.progress || ''}
-                                onChange={(e) => setEditForm(prev => ({ ...prev, progress: e.target.value }))}
+                                onChange={(e) => setEditForm((prev: any) => ({ ...prev, progress: e.target.value }))}
                                 rows={3}
                                 placeholder="请输入进展情况"
                               />
@@ -1605,7 +1605,7 @@ export default function WorkDetailPage() {
                                 <label className="text-sm font-medium">工作事项</label>
                                 <Input
                                   value={editForm.workItem || ''}
-                                  onChange={(e) => setEditForm(prev => ({ ...prev, work_item: e.target.value }))}
+                                  onChange={(e) => setEditForm((prev: any) => ({ ...prev, workItem: e.target.value }))}
                                   placeholder="请输入工作事项"
                                 />
                               </div>
@@ -1613,7 +1613,7 @@ export default function WorkDetailPage() {
                                 <label className="text-sm font-medium">业务类别</label>
                                 <Input
                                   value={editForm.businessCategory || ''}
-                                  onChange={(e) => setEditForm(prev => ({ ...prev, business_category: e.target.value }))}
+                                  onChange={(e) => setEditForm((prev: any) => ({ ...prev, businessCategory: e.target.value }))}
                                   placeholder="请输入业务类别"
                                 />
                               </div>
@@ -1622,14 +1622,14 @@ export default function WorkDetailPage() {
                                 <Input
                                   type="date"
                                   value={editForm.completeTime || ''}
-                                  onChange={(e) => setEditForm(prev => ({ ...prev, complete_time: e.target.value }))}
+                                  onChange={(e) => setEditForm((prev: any) => ({ ...prev, completeTime: e.target.value }))}
                                 />
                               </div>
                               <div>
                                 <label className="text-sm font-medium">完成形式</label>
                                 <Input
                                   value={editForm.completeForm || ''}
-                                  onChange={(e) => setEditForm(prev => ({ ...prev, complete_form: e.target.value }))}
+                                  onChange={(e) => setEditForm((prev: any) => ({ ...prev, completeForm: e.target.value }))}
                                   placeholder="请输入完成形式"
                                 />
                               </div>
@@ -1637,7 +1637,7 @@ export default function WorkDetailPage() {
                                 <label className="text-sm font-medium">责任部门</label>
                                 <select
                                   value={editForm.departmentId || ''}
-                                  onChange={(e) => setEditForm(prev => ({ ...prev, department_id: Number(e.target.value) }))}
+                                  onChange={(e) => setEditForm((prev: any) => ({ ...prev, departmentId: Number(e.target.value) }))}
                                   className="w-full border rounded-md p-2"
                                 >
                                   {departments.map((d) => (
@@ -1651,7 +1651,7 @@ export default function WorkDetailPage() {
                                 <label className="text-sm font-medium">责任领导</label>
                                 <Input
                                   value={editForm.responsibleLeader || ''}
-                                  onChange={(e) => setEditForm(prev => ({ ...prev, responsible_leader: e.target.value }))}
+                                  onChange={(e) => setEditForm((prev: any) => ({ ...prev, responsibleLeader: e.target.value }))}
                                   placeholder="请输入责任领导"
                                 />
                               </div>
@@ -1659,7 +1659,7 @@ export default function WorkDetailPage() {
                                 <label className="text-sm font-medium">主管人员</label>
                                 <Input
                                   value={editForm.supervisor || ''}
-                                  onChange={(e) => setEditForm(prev => ({ ...prev, supervisor: e.target.value }))}
+                                  onChange={(e) => setEditForm((prev: any) => ({ ...prev, supervisor: e.target.value }))}
                                   placeholder="请输入主管人员"
                                 />
                               </div>
@@ -1668,7 +1668,7 @@ export default function WorkDetailPage() {
                                   <input
                                     type="checkbox"
                                     checked={editForm.isInnovation || false}
-                                    onChange={(e) => setEditForm(prev => ({ ...prev, is_innovation: e.target.checked }))}
+                                    onChange={(e) => setEditForm((prev: any) => ({ ...prev, isInnovation: e.target.checked }))}
                                     className="h-4 w-4"
                                   />
                                   <span>是否为创新工作</span>
@@ -1716,7 +1716,7 @@ export default function WorkDetailPage() {
                                             />
                                             <Input
                                               type="date"
-                                              value={child.complete_time || ''}
+                                              value={child.completeTime || ''}
                                               onChange={(e) => updateSubNodeCompleteTime(node.id, child.id, e.target.value)}
                                               className="w-40"
                                             />
@@ -1749,7 +1749,7 @@ export default function WorkDetailPage() {
                                 <label className="text-sm font-medium">待办事项</label>
                                 <Input
                                   value={editForm.workItem || ''}
-                                  onChange={(e) => setEditForm(prev => ({ ...prev, work_item: e.target.value }))}
+                                  onChange={(e) => setEditForm((prev: any) => ({ ...prev, workItem: e.target.value }))}
                                   placeholder="请输入待办事项"
                                 />
                               </div>
@@ -1759,11 +1759,11 @@ export default function WorkDetailPage() {
                                   value={editForm.proposedLeaderId || ''}
                                   onChange={(e) => {
                                     const selected = companyLeaders.find((leader) => leader.id === Number(e.target.value));
-                                    setEditForm(prev => ({
+                                    setEditForm((prev: any) => ({
                                       ...prev,
-                                      proposed_leader_id: e.target.value,
-                                      proposed_leader: selected?.name || '',
-                                      proposed_leader_role: selected?.role || '',
+                                      proposedLeaderId: e.target.value,
+                                      proposedLeader: selected?.name || '',
+                                      proposedLeaderRole: selected?.role || '',
                                     }));
                                   }}
                                   className="w-full border rounded-md p-2"
@@ -1780,7 +1780,7 @@ export default function WorkDetailPage() {
                                 <label className="text-sm font-medium">事项提出场景</label>
                                 <Input
                                   value={editForm.proposedScene || ''}
-                                  onChange={(e) => setEditForm(prev => ({ ...prev, proposed_scene: e.target.value }))}
+                                  onChange={(e) => setEditForm((prev: any) => ({ ...prev, proposedScene: e.target.value }))}
                                   placeholder="请输入事项提出场景"
                                 />
                               </div>
@@ -1789,14 +1789,14 @@ export default function WorkDetailPage() {
                                 <Input
                                   type="date"
                                   value={editForm.formedTime || ''}
-                                  onChange={(e) => setEditForm(prev => ({ ...prev, formed_time: e.target.value }))}
+                                  onChange={(e) => setEditForm((prev: any) => ({ ...prev, formedTime: e.target.value }))}
                                 />
                               </div>
                               <div>
                                 <label className="text-sm font-medium">责任部门</label>
                                 <select
                                   value={editForm.departmentId || ''}
-                                  onChange={(e) => setEditForm(prev => ({ ...prev, department_id: Number(e.target.value) }))}
+                                  onChange={(e) => setEditForm((prev: any) => ({ ...prev, departmentId: Number(e.target.value) }))}
                                   className="w-full border rounded-md p-2"
                                 >
                                   {departments.map((d) => (
@@ -1810,7 +1810,7 @@ export default function WorkDetailPage() {
                                 <label className="text-sm font-medium">责任部门责任人</label>
                                 <Input
                                   value={editForm.responsiblePerson || ''}
-                                  onChange={(e) => setEditForm(prev => ({ ...prev, responsible_person: e.target.value }))}
+                                  onChange={(e) => setEditForm((prev: any) => ({ ...prev, responsiblePerson: e.target.value }))}
                                   placeholder="请输入责任部门责任人"
                                 />
                               </div>
@@ -1818,7 +1818,7 @@ export default function WorkDetailPage() {
                                 <label className="text-sm font-medium">配合部门</label>
                                 <Input
                                   value={editForm.cooperateDepartment || ''}
-                                  onChange={(e) => setEditForm(prev => ({ ...prev, cooperate_department: e.target.value }))}
+                                  onChange={(e) => setEditForm((prev: any) => ({ ...prev, cooperateDepartment: e.target.value }))}
                                   placeholder="请输入配合部门"
                                 />
                               </div>
@@ -1826,7 +1826,7 @@ export default function WorkDetailPage() {
                                 <label className="text-sm font-medium">配合部门责任人</label>
                                 <Input
                                   value={editForm.cooperatePerson || ''}
-                                  onChange={(e) => setEditForm(prev => ({ ...prev, cooperate_person: e.target.value }))}
+                                  onChange={(e) => setEditForm((prev: any) => ({ ...prev, cooperatePerson: e.target.value }))}
                                   placeholder="请输入配合部门责任人"
                                 />
                               </div>
@@ -1834,7 +1834,7 @@ export default function WorkDetailPage() {
                                 <label className="text-sm font-medium">工作计划</label>
                                 <Input
                                   value={editForm.workPlan || ''}
-                                  onChange={(e) => setEditForm(prev => ({ ...prev, work_plan: e.target.value }))}
+                                  onChange={(e) => setEditForm((prev: any) => ({ ...prev, workPlan: e.target.value }))}
                                   placeholder="请输入工作计划"
                                 />
                               </div>
@@ -1843,14 +1843,14 @@ export default function WorkDetailPage() {
                                 <Input
                                   type="date"
                                   value={editForm.planCompleteTime || ''}
-                                  onChange={(e) => setEditForm(prev => ({ ...prev, plan_complete_time: e.target.value }))}
+                                  onChange={(e) => setEditForm((prev: any) => ({ ...prev, planCompleteTime: e.target.value }))}
                                 />
                               </div>
                               <div className="md:col-span-2">
                                 <label className="text-sm font-medium">进展情况</label>
                                 <Textarea
                                   value={editForm.progress || ''}
-                                  onChange={(e) => setEditForm(prev => ({ ...prev, progress: e.target.value }))}
+                                  onChange={(e) => setEditForm((prev: any) => ({ ...prev, progress: e.target.value }))}
                                   rows={3}
                                   placeholder="请输入进展情况"
                                 />

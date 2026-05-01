@@ -1,3 +1,4 @@
+
 export type Role =
   | 'ADMIN'
   | 'SUPERVISOR'
@@ -205,7 +206,57 @@ export function getDepartmentName(id: number): string {
   return departments.find((d) => d.id === id)?.name || '-';
 }
 
-export async function getCompanyLeaders(): Promise<Array<{ id: number; name: string; role: string }>> {
+export const companyLeadersStatic = [
+  { id: 1001, name: '公司主要领导', role: 'PRESIDENT' },
+  { id: 1002, name: '公司主管领导', role: 'VICE_PRESIDENT' },
+];
+
+export const departmentLeadersStatic = [
+  { id: 2001, name: '综合处领导', departmentId: 2 },
+  { id: 2002, name: '计划生产处领导', departmentId: 3 },
+  { id: 2003, name: '工艺技术处领导', departmentId: 4 },
+  { id: 2004, name: '信息档案中心领导', departmentId: 5 },
+  { id: 2005, name: '质量管理处领导', departmentId: 6 },
+  { id: 2006, name: '人力资源处领导', departmentId: 7 },
+  { id: 2007, name: '综合财务处领导', departmentId: 8 },
+  { id: 2008, name: '设备管理处领导', departmentId: 9 },
+  { id: 2009, name: '行政保障处领导', departmentId: 10 },
+  { id: 2010, name: '保密处领导', departmentId: 11 },
+  { id: 2011, name: '51车间领导', departmentId: 12 },
+  { id: 2012, name: '53车间领导', departmentId: 13 },
+  { id: 2013, name: '55车间领导', departmentId: 14 },
+  { id: 2014, name: '56车间领导', departmentId: 15 },
+  { id: 2015, name: '57车间领导', departmentId: 16 },
+  { id: 2016, name: '58车间领导', departmentId: 17 },
+];
+
+export const departmentManagersStatic = [
+  { id: 3001, name: '综合处主管', departmentId: 2 },
+  { id: 3002, name: '计划生产处主管', departmentId: 3 },
+  { id: 3003, name: '工艺技术处主管', departmentId: 4 },
+  { id: 3004, name: '信息档案中心主管', departmentId: 5 },
+  { id: 3005, name: '质量管理处主管', departmentId: 6 },
+  { id: 3006, name: '人力资源处主管', departmentId: 7 },
+  { id: 3007, name: '综合财务处主管', departmentId: 8 },
+  { id: 3008, name: '设备管理处主管', departmentId: 9 },
+  { id: 3009, name: '行政保障处主管', departmentId: 10 },
+  { id: 3010, name: '保密处主管', departmentId: 11 },
+  { id: 3011, name: '51车间主管', departmentId: 12 },
+  { id: 3012, name: '53车间主管', departmentId: 13 },
+  { id: 3013, name: '55车间主管', departmentId: 14 },
+  { id: 3014, name: '56车间主管', departmentId: 15 },
+  { id: 3015, name: '57车间主管', departmentId: 16 },
+  { id: 3016, name: '58车间主管', departmentId: 17 },
+];
+
+export function getUsersByDepartmentStatic(departmentId: number) {
+  return [
+    { id: 4000 + departmentId * 10 + 1, name: `${getDepartmentName(departmentId)}用户1`, departmentId },
+    { id: 4000 + departmentId * 10 + 2, name: `${getDepartmentName(departmentId)}用户2`, departmentId },
+  ];
+}
+
+export async function getCompanyLeaders() {
   try {
     const response = await fetch('/api/users', {
       method: 'GET',
@@ -225,7 +276,7 @@ export async function getCompanyLeaders(): Promise<Array<{ id: number; name: str
   }
 }
 
-export async function getDepartmentLeaders(): Promise<Array<{ id: number; name: string; departmentId: number }>> {
+export async function getDepartmentLeaders() {
   try {
     const response = await fetch('/api/users', {
       method: 'GET',
@@ -245,7 +296,7 @@ export async function getDepartmentLeaders(): Promise<Array<{ id: number; name: 
   }
 }
 
-export async function getDepartmentManagers(): Promise<Array<{ id: number; name: string; departmentId: number }>> {
+export async function getDepartmentManagers() {
   try {
     const response = await fetch('/api/users', {
       method: 'GET',
@@ -265,7 +316,7 @@ export async function getDepartmentManagers(): Promise<Array<{ id: number; name:
   }
 }
 
-export async function getUsersByDepartment(departmentId: number): Promise<Array<{ id: number; name: string }>> {
+export async function getUsersByDepartment(departmentId: number) {
   try {
     const response = await fetch('/api/users', {
       method: 'GET',

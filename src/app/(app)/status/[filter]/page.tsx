@@ -55,7 +55,7 @@ function getRouteType(type: string) {
 }
 
 const getWorkMonth = (work: any) => {
-  const date = work.complete_time || work.plan_complete_time || work.due_date || '';
+  const date = work.completeTime || work.planCompleteTime || work.due_date || '';
   if (!date) return '';
   return String(date).slice(0, 7);
 };
@@ -77,7 +77,7 @@ export default function StatusFilterPage() {
   const [monthOptions, setMonthOptions] = useState<string[]>([]);
   const [list, setList] = useState<Work[]>([]);
   const [loading, setLoading] = useState(true);
-  const companyLevel = isCompanyLevel(user?.role, user?.department_id);
+  const companyLevel = isCompanyLevel(user?.role, user?.departmentId);
 
   const safeFilter: StatusPageFilter = allowedFilters.includes(filter as StatusPageFilter)
     ? (filter as StatusPageFilter)
@@ -103,7 +103,7 @@ export default function StatusFilterPage() {
 
       const newList = await queryWorks(user, {
         type: typeFilter,
-        departmentId: companyLevel ? departmentFilter : user?.department_id,
+        departmentId: companyLevel ? departmentFilter : user?.departmentId,
         status: queryStatus,
         keyword,
       });
@@ -226,7 +226,7 @@ export default function StatusFilterPage() {
                   <div className="min-w-0">
                     <div className="font-medium break-words">
                       {work.title}
-                      {work.is_innovation && (
+                      {work.isInnovation && (
                         <span className="ml-2 inline-flex items-center rounded bg-purple-100 px-2 py-0.5 text-xs text-purple-700">
                           创新工作
                         </span>
@@ -236,9 +236,9 @@ export default function StatusFilterPage() {
                     <div className="text-sm text-gray-500 mt-1 break-words">
                       类型：{work.type}　
                       状态：<StatusBadge status={work.status} />　
-                      责任部门：{work.department_ids && work.department_ids.length > 0
-                          ? work.department_ids.map((id: number) => getDepartmentName(id)).join('、')
-                          : getDepartmentName(work.department_id)}　
+                      责任部门：{work.departmentIds && work.departmentIds.length > 0
+                          ? work.departmentIds.map((id: number) => getDepartmentName(id)).join('、')
+                          : getDepartmentName(work.departmentId ?? 0)}　
                       计划/完成时间：{getWorkDueDate(work) || '-'}
                     </div>
 

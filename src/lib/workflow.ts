@@ -53,7 +53,7 @@ export async function logOperation(
       action,
       module: 'works',
       targetId,
-      targetType: 'work_item',
+      targetType: 'workItem',
       description,
     },
   });
@@ -104,7 +104,7 @@ export async function submitForApproval(workItemId: number, user: UserSession, c
     return { success: false, error: '无权提交此事项' };
   }
 
-  let newStatus: WorkItemStatus;
+  let newStatus: WorkItemStatus = workItem.status;
   let newApproverRole: Role | undefined;
   let newApproverId: number | undefined;
 
@@ -186,7 +186,7 @@ export async function approveWorkItem(workItemId: number, user: UserSession, com
     return { success: false, error: '无权审批此事项' };
   }
 
-  let newStatus: WorkItemStatus;
+  let newStatus: WorkItemStatus = workItem.status;
   let newApproverRole: Role | undefined;
   let newApproverId: number | undefined;
 
@@ -228,7 +228,19 @@ export async function approveWorkItem(workItemId: number, user: UserSession, com
       return { success: false, error: '无权审批调整申请' };
     }
   } else if (workItem.status === WorkItemStatus.CANCELLING) {
-    if (workItem.type === WorkItemType.MAIN) {
+    if (workItem.type === WorkItemType.TODO) {
+      if (user.role === Role.DEPARTMENT_LEADER && workItem.currentApproverRole === Role.DEPARTMENT_LEADER) {
+        newStatus = WorkItemStatus.CANCELLING;
+        newApproverRole = undefined;
+        newApproverId = (workItem.proposedLeaderId ?? workItem.approvalLeaderId) ?? undefined;
+      } else if ((user.role === Role.VICE_PRESIDENT || user.role === Role.PRESIDENT) && workItem.currentApproverId === user.userId) {
+        newStatus = WorkItemStatus.CANCELLED;
+        newApproverRole = undefined;
+        newApproverId = undefined;
+      } else {
+        return { success: false, error: '无权审批取消申请' };
+      }
+    } else if (workItem.type === WorkItemType.MAIN) {
       if (user.role === Role.VICE_PRESIDENT) {
         newStatus = WorkItemStatus.CANCELLED;
         newApproverRole = undefined;
@@ -240,6 +252,7 @@ export async function approveWorkItem(workItemId: number, user: UserSession, com
       if (user.role === Role.DEPARTMENT_LEADER) {
         newStatus = WorkItemStatus.CANCELLING;
         newApproverRole = Role.VICE_PRESIDENT;
+        newApproverId = undefined;
       } else if (user.role === Role.VICE_PRESIDENT) {
         newStatus = WorkItemStatus.PENDING_MAIN_LEADER_CANCEL;
         newApproverRole = Role.PRESIDENT;
@@ -250,8 +263,6 @@ export async function approveWorkItem(workItemId: number, user: UserSession, com
       } else {
         return { success: false, error: '无权审批取消申请' };
       }
-    } else {
-      return { success: false, error: '待办事项取消流程未实现' };
     }
   } else if (workItem.status === WorkItemStatus.PENDING_MAIN_LEADER_CANCEL) {
     if (user.role === Role.PRESIDENT) {

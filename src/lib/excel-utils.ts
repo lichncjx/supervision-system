@@ -1,11 +1,11 @@
 import * as XLSX from 'xlsx';
 import type { Work } from './work-store';
 import type { User } from './auth';
-import { departments, getCompanyLeaders } from './auth';
+import { departments, companyLeadersStatic } from './auth';
 
 export type ExcelRouteType = 'priority' | 'main' | 'todo';
 
-type ImportedWork = Omit<Work, 'created_at' | 'updated_at'>;
+type ImportedWork = Omit<Work, 'createdAt' | 'updatedAt'>;
 
 function parseDepartmentId(value: any) {
   if (!value) return 2;
@@ -104,14 +104,14 @@ export function exportWorksToExcel(type: ExcelRouteType, works: Work[]) {
         '主管人员'
       ];
       rows = works.map(work => [
-        work.business_category || '',
-        work.work_item || '',
-        work.is_innovation ? '是' : '否',
-        work.work_node || '',
-        work.complete_time || '',
-        work.complete_form || '',
-        getDepartmentNameForExcel(work.department_id),
-        work.responsible_leader || '',
+        work.businessCategory || '',
+        work.workItem || '',
+        work.isInnovation ? '是' : '否',
+        work.workNode || '',
+        work.completeTime || '',
+        work.completeForm || '',
+        getDepartmentNameForExcel(work.departmentId),
+        work.responsibleLeader || '',
         work.supervisor || ''
       ]);
       fileName = '重点工作导出.xlsx';
@@ -128,13 +128,13 @@ export function exportWorksToExcel(type: ExcelRouteType, works: Work[]) {
         '主管人员'
       ];
       rows = works.map(work => [
-        work.business_category || '',
-        work.work_item || '',
-        work.work_node || '',
-        work.complete_time || '',
-        work.complete_form || '',
-        getDepartmentNameForExcel(work.department_id),
-        work.responsible_leader || '',
+        work.businessCategory || '',
+        work.workItem || '',
+        work.workNode || '',
+        work.completeTime || '',
+        work.completeForm || '',
+        getDepartmentNameForExcel(work.departmentId),
+        work.responsibleLeader || '',
         work.supervisor || ''
       ]);
       fileName = '主要工作导出.xlsx';
@@ -154,16 +154,16 @@ export function exportWorksToExcel(type: ExcelRouteType, works: Work[]) {
         '进展情况'
       ];
       rows = works.map(work => [
-        work.proposed_leader || '',
-        work.proposed_scene || '',
-        work.work_item || '',
-        work.formed_time || '',
-        getDepartmentNameForExcel(work.department_id),
-        work.responsible_person || '',
-        work.cooperate_department || '',
-        work.cooperate_person || '',
-        work.work_plan || '',
-        work.plan_complete_time || '',
+        work.proposedLeader || '',
+        work.proposedScene || '',
+        work.workItem || '',
+        work.formedTime || '',
+        getDepartmentNameForExcel(work.departmentId),
+        work.responsiblePerson || '',
+        work.cooperateDepartment || '',
+        work.cooperatePerson || '',
+        work.workPlan || '',
+        work.planCompleteTime || '',
         work.progress || ''
       ]);
       fileName = '待办事项导出.xlsx';
@@ -203,20 +203,20 @@ export async function importWorksFromExcel(
                 id: Date.now() + Math.random(),
                 title: row['工作事项'],
                 type: '重点',
-                department_id: parseDepartmentId(row['责任部门']),
-                creator_role: user.role,
-                creator_id: user.id,
+                departmentId: parseDepartmentId(row['责任部门']),
+                creatorRole: user.role,
+                creatorId: user.id,
                 action: 'create',
-                status: user.role === 'DEPARTMENT_MANAGER' ? 'submitted' : 'dept_approved',
-                need_ceo: true,
-                is_innovation: row['是否为创新工作'] === '是',
+                status: user.role === 'DEPARTMENT_MANAGER' ? 'pending_dept' : 'pending_company',
+                needCeo: true,
+                isInnovation: row['是否为创新工作'] === '是',
                 nodes: [],
-                business_category: row['业务类别'] || '',
-                work_item: row['工作事项'],
-                work_node: row['工作节点'] || '',
-                complete_time: row['完成时间'] || '',
-                complete_form: row['完成形式'] || '',
-                responsible_leader: row['责任领导'] || '',
+                businessCategory: row['业务类别'] || '',
+                workItem: row['工作事项'],
+                workNode: row['工作节点'] || '',
+                completeTime: row['完成时间'] || '',
+                completeForm: row['完成形式'] || '',
+                responsibleLeader: row['责任领导'] || '',
                 supervisor: row['主管人员'] || ''
               };
               break;
@@ -226,55 +226,55 @@ export async function importWorksFromExcel(
                 id: Date.now() + Math.random(),
                 title: row['工作事项'],
                 type: '主要',
-                department_id: parseDepartmentId(row['责任部门']),
-                creator_role: user.role,
-                creator_id: user.id,
+                departmentId: parseDepartmentId(row['责任部门']),
+                creatorRole: user.role,
+                creatorId: user.id,
                 action: 'create',
-                status: user.role === 'DEPARTMENT_MANAGER' ? 'submitted' : 'dept_approved',
-                need_ceo: false,
-                is_innovation: false,
+                status: user.role === 'DEPARTMENT_MANAGER' ? 'pending_dept' : 'pending_company',
+                needCeo: false,
+                isInnovation: false,
                 nodes: [],
-                business_category: row['业务类别'] || '',
-                work_item: row['工作事项'],
-                work_node: row['工作节点'] || '',
-                complete_time: row['完成时间'] || '',
-                complete_form: row['完成形式'] || '',
-                responsible_leader: row['责任领导'] || '',
+                businessCategory: row['业务类别'] || '',
+                workItem: row['工作事项'],
+                workNode: row['工作节点'] || '',
+                completeTime: row['完成时间'] || '',
+                completeForm: row['完成形式'] || '',
+                responsibleLeader: row['责任领导'] || '',
                 supervisor: row['主管人员'] || ''
               };
               break;
             case 'todo':
               if (!row['待办事项']) return;
               const proposedLeaderName = String(row['事项提出领导'] || '').trim();
-              const matchedProposedLeader = getCompanyLeaders().find(
+              const matchedProposedLeader = companyLeadersStatic.find(
                 (leader) => leader.name === proposedLeaderName || String(leader.id) === proposedLeaderName
               );
               work = {
                 id: Date.now() + Math.random(),
                 title: row['待办事项'],
                 type: '待办',
-                department_id: parseDepartmentId(row['责任部门']),
-                creator_role: user.role,
-                creator_id: user.id,
+                departmentId: parseDepartmentId(row['责任部门']),
+                creatorRole: user.role,
+                creatorId: user.id,
                 action: 'todo_decompose',
                 status:
                   user.role === 'DEPARTMENT_MANAGER'
-                    ? 'submitted'
+                    ? 'pending_dept'
                     : user.role === 'DEPARTMENT_LEADER'
-                      ? 'dept_approved'
-                      : 'todo_pending_decompose',
-                need_ceo: false,
-                proposed_leader: matchedProposedLeader?.name || proposedLeaderName,
-                proposed_leader_id: matchedProposedLeader?.id,
-                proposed_leader_role: matchedProposedLeader?.role,
-                proposed_scene: row['事项提出场景'] || '',
-                work_item: row['待办事项'],
-                formed_time: row['形成时间'] || '',
-                responsible_person: row['部门责任人'] || '',
-                cooperate_department: row['配合部门'] || '',
-                cooperate_person: row['配合部门责任人'] || '',
-                work_plan: row['工作计划'] || '',
-                plan_complete_time: row['计划完成时间'] || '',
+                      ? 'pending_company'
+                      : 'pending_decompose',
+                needCeo: false,
+                proposedLeader: matchedProposedLeader?.name || proposedLeaderName,
+                proposedLeaderId: matchedProposedLeader?.id,
+                proposedLeaderRole: matchedProposedLeader?.role,
+                proposedScene: row['事项提出场景'] || '',
+                workItem: row['待办事项'],
+                formedTime: row['形成时间'] || '',
+                responsiblePerson: row['部门责任人'] || '',
+                cooperateDepartment: row['配合部门'] || '',
+                cooperatePerson: row['配合部门责任人'] || '',
+                workPlan: row['工作计划'] || '',
+                planCompleteTime: row['计划完成时间'] || '',
                 progress: row['进展情况'] || ''
               };
               break;
@@ -325,9 +325,9 @@ export function exportCompanyCompletionRate(works: Work[]) {
         ids.add(id);
       }
     };
-    addId(work.department_id);
-    if (Array.isArray(work.department_ids)) {
-      work.department_ids.forEach(addId);
+    addId(work.departmentId);
+    if (Array.isArray(work.departmentIds)) {
+      work.departmentIds.forEach(addId);
     }
     return Array.from(ids);
   };

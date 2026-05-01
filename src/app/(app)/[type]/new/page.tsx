@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Save, Plus, Trash2, Upload, Download, FileDown } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
-import { departments, getDepartmentLeaders, getDepartmentManagers, getUsersByDepartment, getCompanyLeaders } from '@/lib/auth';
+import { departments, departmentLeadersStatic, departmentManagersStatic, getUsersByDepartmentStatic, companyLeadersStatic } from '@/lib/auth';
 import { addWork, getVisibleWorks, type WorkType, type WorkNode } from '@/lib/work-store';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -39,7 +39,7 @@ export default function NewWorkPage() {
       ? routeType
       : 'todo';
   
-  const companyLeaders = getCompanyLeaders();
+  const companyLeaders = companyLeadersStatic;
 
   const canCreateTodo =
     user?.role === 'ADMIN' ||
@@ -61,7 +61,7 @@ export default function NewWorkPage() {
     {
       id: Date.now(),
       title: '',
-      complete_time: '',
+      completeTime: '',
       children: [],
     },
   ]);
@@ -73,7 +73,7 @@ export default function NewWorkPage() {
       {
         id: Date.now(),
         title: '',
-        complete_time: '',
+        completeTime: '',
         children: [],
       },
     ]);
@@ -81,7 +81,7 @@ export default function NewWorkPage() {
 
   const updateNodeCompleteTime = (nodeId: number, completeTime: string) => {
     setNodes(nodes.map((node) =>
-      node.id === nodeId ? { ...node, complete_time: completeTime } : node
+      node.id === nodeId ? { ...node, completeTime: completeTime } : node
     ));
   };
 
@@ -105,7 +105,7 @@ export default function NewWorkPage() {
               {
                 id: Date.now(),
                 title: '',
-                complete_time: '',
+                completeTime: '',
               },
             ],
           }
@@ -143,7 +143,7 @@ export default function NewWorkPage() {
         ? {
             ...node,
             children: node.children.map((child) =>
-              child.id === subNodeId ? { ...child, complete_time: completeTime } : child
+              child.id === subNodeId ? { ...child, completeTime: completeTime } : child
             ),
           }
         : node
@@ -152,34 +152,34 @@ export default function NewWorkPage() {
 
   // 重点工作和主要工作表单
   const [priorityMainForm, setPriorityMainForm] = useState({
-    business_category: '',
-    work_item: '',
-    work_node: '',
-    complete_time: '',
-    complete_form: '',
-    department_id: String(user?.department_id || 2),
-    responsible_leader: '',
+    businessCategory: '',
+    workItem: '',
+    workNode: '',
+    completeTime: '',
+    completeForm: '',
+    departmentId: String(user?.departmentId || 2),
+    responsibleLeader: '',
     supervisor: '',
   });
 
   // 待办事项表单
   const [todoForm, setTodoForm] = useState({
-    proposed_leader_id:
+    proposedLeaderId:
       user?.role === 'VICE_PRESIDENT' || user?.role === 'PRESIDENT'
         ? String(user.id)
         : '',
-    proposed_scene: '',
-    work_item: '',
-    formed_time: '',
-    department_ids:
-      user?.department_id && user.department_id !== 1
-        ? [user.department_id]
+    proposedScene: '',
+    workItem: '',
+    formedTime: '',
+    departmentIds:
+      user?.departmentId && user.departmentId !== 1
+        ? [user.departmentId]
         : [],
-    responsible_persons: [] as string[],
-    cooperate_department_ids: [] as number[],
-    cooperate_persons: [] as string[],
-    work_plan: '',
-    plan_complete_time: '',
+    responsiblePersons: [] as string[],
+    cooperateDepartmentIds: [] as number[],
+    cooperatePersons: [] as string[],
+    workPlan: '',
+    planCompleteTime: '',
     progress: '',
   });
 
@@ -212,9 +212,10 @@ export default function NewWorkPage() {
     downloadExcelTemplate(excelRouteType);
   };
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     if (!user) return;
-    exportWorksToExcel(excelRouteType, getVisibleWorks(user, type));
+    const works = await getVisibleWorks(user, type);
+    exportWorksToExcel(excelRouteType, works);
   };
 
   const handleImportExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -264,31 +265,31 @@ export default function NewWorkPage() {
     }
 
     if (isPriorityOrMain) {
-      if (!priorityMainForm.work_item.trim()) {
+      if (!priorityMainForm.workItem.trim()) {
         alert('请输入工作事项');
         return;
       }
-      if (!priorityMainForm.department_id) {
+      if (!priorityMainForm.departmentId) {
         alert('请选择责任部门');
         return;
       }
     } else if (isTodo) {
-      if (!todoForm.work_item.trim()) {
+      if (!todoForm.workItem.trim()) {
         alert('请输入待办事项');
         return;
       }
-      if (todoForm.department_ids.length === 0) {
+      if (todoForm.departmentIds.length === 0) {
         alert('请选择责任部门');
         return;
       }
-      if (!todoForm.proposed_leader_id) {
+      if (!todoForm.proposedLeaderId) {
         alert('请选择事项提出领导');
         return;
       }
     }
 
     const selectedProposedLeader = isTodo
-      ? companyLeaders.find((leader) => leader.id === Number(todoForm.proposed_leader_id))
+      ? companyLeaders.find((leader) => leader.id === Number(todoForm.proposedLeaderId))
       : null;
 
     if (isTodo && !selectedProposedLeader) {
@@ -313,7 +314,7 @@ export default function NewWorkPage() {
         return;
       }
 
-      if (validNodes.some((node) => !node.complete_time)) {
+      if (validNodes.some((node) => !node.completeTime)) {
         alert('请填写每个任务节点的完成时间');
         return;
       }
@@ -322,59 +323,59 @@ export default function NewWorkPage() {
     if (isPriorityOrMain) {
       addWork({
         id: Date.now(),
-        title: priorityMainForm.work_item,
+        title: priorityMainForm.workItem,
         type,
-        department_id: Number(priorityMainForm.department_id),
-        creator_role: user.role,
-        creator_id: user.id,
+        departmentId: Number(priorityMainForm.departmentId),
+        creatorRole: user.role,
+        creatorId: user.id,
         action: 'create',
         status: 'draft',
-        need_ceo: type === '重点',
-        is_innovation: type === '重点' ? isInnovation : false,
+        needCeo: type === '重点',
+        isInnovation: type === '重点' ? isInnovation : false,
         nodes: nodes.filter((node) => node.title.trim()).map((node) => ({
           ...node,
           children: node.children.filter((child) => child.title.trim()),
         })),
-        business_category: priorityMainForm.business_category,
-        work_item: priorityMainForm.work_item,
-        work_node: priorityMainForm.work_node,
-        complete_time: priorityMainForm.complete_time,
-        complete_form: priorityMainForm.complete_form,
-        responsible_leader: priorityMainForm.responsible_leader,
+        businessCategory: priorityMainForm.businessCategory,
+        workItem: priorityMainForm.workItem,
+        workNode: priorityMainForm.workNode,
+        completeTime: priorityMainForm.completeTime,
+        completeForm: priorityMainForm.completeForm,
+        responsibleLeader: priorityMainForm.responsibleLeader,
         supervisor: priorityMainForm.supervisor,
       });
     } else if (isTodo) {
       addWork({
         id: Date.now(),
-        title: todoForm.work_item,
+        title: todoForm.workItem,
         type: '待办',
-        department_id: todoForm.department_ids[0] || 2,
-        department_ids: todoForm.department_ids,
-        creator_role: user.role,
-        creator_id: user.id,
+        departmentId: todoForm.departmentIds[0] || 2,
+        departmentIds: todoForm.departmentIds,
+        creatorRole: user.role,
+        creatorId: user.id,
         action: 'todo_decompose',
         status: 'draft',
-        need_ceo: false,
-        proposed_leader: selectedProposedLeader?.name || '',
-        proposed_leader_id: selectedProposedLeader?.id,
-        proposed_leader_role: selectedProposedLeader?.role,
-        proposed_scene: todoForm.proposed_scene,
-        work_item: todoForm.work_item,
-        formed_time: todoForm.formed_time,
-        responsible_persons: todoForm.responsible_persons,
-        responsible_person: todoForm.responsible_persons.join('、'),
-        cooperate_department_ids: todoForm.cooperate_department_ids,
-        cooperate_departments: todoForm.cooperate_department_ids
+        needCeo: false,
+        proposedLeader: selectedProposedLeader?.name || '',
+        proposedLeaderId: selectedProposedLeader?.id,
+        proposedLeaderRole: selectedProposedLeader?.role,
+        proposedScene: todoForm.proposedScene,
+        workItem: todoForm.workItem,
+        formedTime: todoForm.formedTime,
+        responsiblePersons: todoForm.responsiblePersons,
+        responsiblePerson: todoForm.responsiblePersons.join('、'),
+        cooperateDepartmentIds: todoForm.cooperateDepartmentIds,
+        cooperateDepartments: todoForm.cooperateDepartmentIds
           .map((id) => departments.find((d) => d.id === id)?.name)
           .filter(Boolean) as string[],
-        cooperate_department: todoForm.cooperate_department_ids
+        cooperateDepartment: todoForm.cooperateDepartmentIds
           .map((id) => departments.find((d) => d.id === id)?.name)
           .filter(Boolean)
           .join('、'),
-        cooperate_persons: todoForm.cooperate_persons,
-        cooperate_person: todoForm.cooperate_persons.join('、'),
-        work_plan: todoForm.work_plan,
-        plan_complete_time: todoForm.plan_complete_time,
+        cooperatePersons: todoForm.cooperatePersons,
+        cooperatePerson: todoForm.cooperatePersons.join('、'),
+        workPlan: todoForm.workPlan,
+        planCompleteTime: todoForm.planCompleteTime,
         progress: todoForm.progress,
         nodes: validNodes,
       });
@@ -389,10 +390,10 @@ export default function NewWorkPage() {
     待办: '新建待办事项',
   };
 
-  const responsiblePersonOptions = todoForm.department_ids
-    .flatMap((departmentId: number) => getUsersByDepartment(departmentId));
-  const cooperatePersonOptions = todoForm.cooperate_department_ids
-    .flatMap((departmentId: number) => getUsersByDepartment(departmentId));
+  const responsiblePersonOptions = todoForm.departmentIds
+    .flatMap((departmentId: number) => getUsersByDepartmentStatic(departmentId));
+  const cooperatePersonOptions = todoForm.cooperateDepartmentIds
+    .flatMap((departmentId: number) => getUsersByDepartmentStatic(departmentId));
 
   return (
     <div className="space-y-6">
@@ -442,8 +443,8 @@ export default function NewWorkPage() {
                 <div>
                   <label className="block text-sm font-medium mb-1">业务类别</label>
                   <Input 
-                    value={priorityMainForm.business_category} 
-                    onChange={(e) => setPriorityMainForm({ ...priorityMainForm, business_category: e.target.value })} 
+                    value={priorityMainForm.businessCategory} 
+                    onChange={(e) => setPriorityMainForm({ ...priorityMainForm, businessCategory: e.target.value })} 
                     placeholder="请输入业务类别"
                   />
                 </div>
@@ -451,8 +452,8 @@ export default function NewWorkPage() {
                 <div>
                   <label className="block text-sm font-medium mb-1">工作事项</label>
                   <Input 
-                    value={priorityMainForm.work_item} 
-                    onChange={(e) => setPriorityMainForm({ ...priorityMainForm, work_item: e.target.value })} 
+                    value={priorityMainForm.workItem} 
+                    onChange={(e) => setPriorityMainForm({ ...priorityMainForm, workItem: e.target.value })} 
                     placeholder="请输入工作事项"
                   />
                 </div>
@@ -492,7 +493,7 @@ export default function NewWorkPage() {
                           <span className="text-sm text-gray-500">节点完成时间</span>
                           <Input
                             type="date"
-                            value={node.complete_time || ''}
+                            value={node.completeTime || ''}
                             onChange={(e) => updateNodeCompleteTime(node.id, e.target.value)}
                             className="w-40"
                           />
@@ -537,7 +538,7 @@ export default function NewWorkPage() {
 
                               <Input
                                 type="date"
-                                value={child.complete_time || ''}
+                                value={child.completeTime || ''}
                                 onChange={(e) =>
                                   updateSubNodeCompleteTime(node.id, child.id, e.target.value)
                                 }
@@ -564,16 +565,16 @@ export default function NewWorkPage() {
                   <label className="block text-sm font-medium mb-1">完成时间</label>
                   <Input 
                     type="date"
-                    value={priorityMainForm.complete_time} 
-                    onChange={(e) => setPriorityMainForm({ ...priorityMainForm, complete_time: e.target.value })} 
+                    value={priorityMainForm.completeTime} 
+                    onChange={(e) => setPriorityMainForm({ ...priorityMainForm, completeTime: e.target.value })} 
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium mb-1">完成形式</label>
                   <Input 
-                    value={priorityMainForm.complete_form} 
-                    onChange={(e) => setPriorityMainForm({ ...priorityMainForm, complete_form: e.target.value })} 
+                    value={priorityMainForm.completeForm} 
+                    onChange={(e) => setPriorityMainForm({ ...priorityMainForm, completeForm: e.target.value })} 
                     placeholder="请输入完成形式"
                   />
                 </div>
@@ -581,8 +582,8 @@ export default function NewWorkPage() {
                 <div>
                   <label className="block text-sm font-medium mb-1">责任部门</label>
                   <select 
-                    value={priorityMainForm.department_id} 
-                    onChange={(e) => setPriorityMainForm({ ...priorityMainForm, department_id: e.target.value, responsible_leader: '', supervisor: '' })} 
+                    value={priorityMainForm.departmentId} 
+                    onChange={(e) => setPriorityMainForm({ ...priorityMainForm, departmentId: e.target.value, responsibleLeader: '', supervisor: '' })} 
                     className="w-full border rounded-md p-2"
                   >
                     {departments.filter((d) => d.id !== 1).map((d) => (
@@ -596,12 +597,12 @@ export default function NewWorkPage() {
                 <div>
                   <label className="block text-sm font-medium mb-1">责任领导</label>
                   <select 
-                    value={priorityMainForm.responsible_leader} 
-                    onChange={(e) => setPriorityMainForm({ ...priorityMainForm, responsible_leader: e.target.value })} 
+                    value={priorityMainForm.responsibleLeader} 
+                    onChange={(e) => setPriorityMainForm({ ...priorityMainForm, responsibleLeader: e.target.value })} 
                     className="w-full border rounded-md p-2"
                   >
                     <option value="">请选择责任领导</option>
-                    {getDepartmentLeaders(Number(priorityMainForm.department_id)).map((u) => (
+                    {departmentLeadersStatic.filter((u: any) => u.departmentId === Number(priorityMainForm.departmentId)).map((u) => (
                       <option key={u.id} value={u.name}>
                         {u.name}
                       </option>
@@ -617,7 +618,7 @@ export default function NewWorkPage() {
                     className="w-full border rounded-md p-2"
                   >
                     <option value="">请选择主管人员</option>
-                    {getDepartmentManagers(Number(priorityMainForm.department_id)).map((u) => (
+                    {departmentManagersStatic.filter((u: any) => u.departmentId === Number(priorityMainForm.departmentId)).map((u) => (
                       <option key={u.id} value={u.name}>
                         {u.name}
                       </option>
@@ -632,9 +633,9 @@ export default function NewWorkPage() {
                 <div>
                   <label className="block text-sm font-medium mb-1">事项提出领导</label>
                   <select
-                    value={todoForm.proposed_leader_id}
+                    value={todoForm.proposedLeaderId}
                     disabled={user?.role === 'VICE_PRESIDENT' || user?.role === 'PRESIDENT'}
-                    onChange={(e) => setTodoForm({ ...todoForm, proposed_leader_id: e.target.value })}
+                    onChange={(e) => setTodoForm({ ...todoForm, proposedLeaderId: e.target.value })}
                     className="w-full border rounded-md p-2"
                   >
                     <option value="">请选择事项提出领导</option>
@@ -649,8 +650,8 @@ export default function NewWorkPage() {
                 <div>
                   <label className="block text-sm font-medium mb-1">事项提出场景</label>
                   <Input 
-                    value={todoForm.proposed_scene} 
-                    onChange={(e) => setTodoForm({ ...todoForm, proposed_scene: e.target.value })} 
+                    value={todoForm.proposedScene} 
+                    onChange={(e) => setTodoForm({ ...todoForm, proposedScene: e.target.value })} 
                     placeholder="请输入事项提出场景"
                   />
                 </div>
@@ -658,8 +659,8 @@ export default function NewWorkPage() {
                 <div>
                   <label className="block text-sm font-medium mb-1">待办事项</label>
                   <Input 
-                    value={todoForm.work_item} 
-                    onChange={(e) => setTodoForm({ ...todoForm, work_item: e.target.value })} 
+                    value={todoForm.workItem} 
+                    onChange={(e) => setTodoForm({ ...todoForm, workItem: e.target.value })} 
                     placeholder="请输入待办事项"
                   />
                 </div>
@@ -668,8 +669,8 @@ export default function NewWorkPage() {
                   <label className="block text-sm font-medium mb-1">形成时间</label>
                   <Input 
                     type="date"
-                    value={todoForm.formed_time} 
-                    onChange={(e) => setTodoForm({ ...todoForm, formed_time: e.target.value })} 
+                    value={todoForm.formedTime} 
+                    onChange={(e) => setTodoForm({ ...todoForm, formedTime: e.target.value })} 
                   />
                 </div>
 
@@ -679,14 +680,14 @@ export default function NewWorkPage() {
                     multiple
                     size={5}
                     className="mt-2 w-full border rounded-md px-3 py-2 text-sm"
-                    value={todoForm.department_ids.map(String)}
+                    value={todoForm.departmentIds.map(String)}
                     onChange={(e) => {
                       const nextDepartmentIds = getSelectedNumbers(e.currentTarget.selectedOptions);
 
                       setTodoForm((prev) => ({
                         ...prev,
-                        department_ids: nextDepartmentIds,
-                        responsible_persons: [],
+                        departmentIds: nextDepartmentIds,
+                        responsiblePersons: [],
                       }));
                     }}
                   >
@@ -705,19 +706,19 @@ export default function NewWorkPage() {
                     multiple
                     size={5}
                     className="mt-2 w-full border rounded-md px-3 py-2 text-sm"
-                    value={todoForm.responsible_persons}
+                    value={todoForm.responsiblePersons}
                     onChange={(e) => {
                       const nextPersons = getSelectedStrings(e.currentTarget.selectedOptions);
 
                       setTodoForm((prev) => ({
                         ...prev,
-                        responsible_persons: nextPersons,
+                        responsiblePersons: nextPersons,
                       }));
                     }}
                   >
                     {responsiblePersonOptions.map((person) => (
                       <option key={person.id} value={person.name}>
-                        {person.name}（{departments.find((d) => d.id === person.department_id)?.name || '-'}）
+                        {person.name}（{departments.find((d) => d.id === person.departmentId)?.name || '-'}）
                       </option>
                     ))}
                   </select>
@@ -730,14 +731,14 @@ export default function NewWorkPage() {
                     multiple
                     size={5}
                     className="mt-2 w-full border rounded-md px-3 py-2 text-sm"
-                    value={todoForm.cooperate_department_ids.map(String)}
+                    value={todoForm.cooperateDepartmentIds.map(String)}
                     onChange={(e) => {
                       const nextDepartmentIds = getSelectedNumbers(e.currentTarget.selectedOptions);
 
                       setTodoForm((prev) => ({
                         ...prev,
-                        cooperate_department_ids: nextDepartmentIds,
-                        cooperate_persons: [],
+                        cooperateDepartmentIds: nextDepartmentIds,
+                        cooperatePersons: [],
                       }));
                     }}
                   >
@@ -756,19 +757,19 @@ export default function NewWorkPage() {
                     multiple
                     size={5}
                     className="mt-2 w-full border rounded-md px-3 py-2 text-sm"
-                    value={todoForm.cooperate_persons}
+                    value={todoForm.cooperatePersons}
                     onChange={(e) => {
                       const nextPersons = getSelectedStrings(e.currentTarget.selectedOptions);
 
                       setTodoForm((prev) => ({
                         ...prev,
-                        cooperate_persons: nextPersons,
+                        cooperatePersons: nextPersons,
                       }));
                     }}
                   >
                     {cooperatePersonOptions.map((person) => (
                       <option key={person.id} value={person.name}>
-                        {person.name}（{departments.find((d) => d.id === person.department_id)?.name || '-'}）
+                        {person.name}（{departments.find((d) => d.id === person.departmentId)?.name || '-'}）
                       </option>
                     ))}
                   </select>
@@ -797,7 +798,7 @@ export default function NewWorkPage() {
                             <span className="text-sm text-gray-500">节点完成时间</span>
                             <Input
                               type="date"
-                              value={node.complete_time || ''}
+                              value={node.completeTime || ''}
                               onChange={(e) => updateNodeCompleteTime(node.id, e.target.value)}
                               className="w-40"
                             />
@@ -842,7 +843,7 @@ export default function NewWorkPage() {
 
                                 <Input
                                   type="date"
-                                  value={child.complete_time || ''}
+                                  value={child.completeTime || ''}
                                   onChange={(e) => updateSubNodeCompleteTime(node.id, child.id, e.target.value)}
                                 />
 
@@ -866,8 +867,8 @@ export default function NewWorkPage() {
                 <div>
                   <label className="block text-sm font-medium mb-1">工作计划</label>
                   <Textarea 
-                    value={todoForm.work_plan} 
-                    onChange={(e) => setTodoForm({ ...todoForm, work_plan: e.target.value })} 
+                    value={todoForm.workPlan} 
+                    onChange={(e) => setTodoForm({ ...todoForm, workPlan: e.target.value })} 
                     placeholder="请输入工作计划"
                     rows={3}
                   />
@@ -877,8 +878,8 @@ export default function NewWorkPage() {
                   <label className="block text-sm font-medium mb-1">计划完成时间</label>
                   <Input 
                     type="date"
-                    value={todoForm.plan_complete_time} 
-                    onChange={(e) => setTodoForm({ ...todoForm, plan_complete_time: e.target.value })} 
+                    value={todoForm.planCompleteTime} 
+                    onChange={(e) => setTodoForm({ ...todoForm, planCompleteTime: e.target.value })} 
                   />
                 </div>
 
