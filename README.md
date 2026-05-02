@@ -77,11 +77,14 @@ npm run start
 
 | 用户名 | 密码 | 角色 |
 |--------|------|------|
-| admin | 123456 | 督办管理员 |
-| zh_manager | 123456 | 部门主管 |
-| jh_manager | 123456 | 部门主管 |
-| vice_president | 123456 | 公司主管领导 |
+| admin | 123456 | 系统管理员 |
+| supervisor | 123456 | 督办管理员 |
 | president | 123456 | 公司主要领导 |
+| vice_president | 123456 | 公司主管领导 |
+| dept_leader | 123456 | 综合处领导 |
+| dept_manager | 123456 | 综合处主管 |
+| dept_leader_2 | 123456 | 计划生产处领导 |
+| dept_manager_2 | 123456 | 计划生产处主管 |
 
 ## 项目结构
 
@@ -114,8 +117,8 @@ src/
 
 | 角色 | 标识 | 说明 |
 |------|------|------|
-| 督办管理员 | ADMIN | 查看全部、录入/导入 |
-| 督办人员 | SUPERVISOR | 督办跟踪 |
+| 系统管理员 | ADMIN | 系统配置管理 |
+| 督办管理员 | SUPERVISOR | 督办跟踪 |
 | 部门主管 | DEPARTMENT_MANAGER | 查看本部门、发起申请 |
 | 部门领导 | DEPARTMENT_LEADER | 查看本部门、审批（部门级） |
 | 公司主管领导 | VICE_PRESIDENT | 查看全部、所有审批权限 |
