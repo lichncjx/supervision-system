@@ -85,6 +85,22 @@ export async function GET(request: NextRequest) {
       },
     });
 
+    const formatDate = (date: Date | null | undefined) => {
+      if (!date) return null;
+      return new Date(date).toISOString().split('T')[0];
+    };
+
+    const processNodesForDisplay = (nodes: any[]) => {
+      return nodes.map(node => ({
+        ...node,
+        completeTime: node.completeTime ? new Date(node.completeTime).toISOString().split('T')[0] : null,
+        children: node.children ? node.children.map((child: any) => ({
+          ...child,
+          completeTime: child.completeTime ? new Date(child.completeTime).toISOString().split('T')[0] : null
+        })) : []
+      }));
+    };
+
     const result = works.map((work) => ({
       id: work.id,
       title: work.title,
@@ -98,7 +114,7 @@ export async function GET(request: NextRequest) {
       workItem: work.workItem,
       workNode: work.workNode,
       businessCategory: work.businessCategory,
-      completeTime: work.completeTime,
+      completeTime: formatDate(work.completeTime),
       completeForm: work.completeForm,
       isInnovation: work.isInnovation,
       responsibleLeader: work.responsibleLeader,
@@ -106,15 +122,15 @@ export async function GET(request: NextRequest) {
       proposedLeader: work.proposedLeader?.name || null,
       proposedLeaderId: work.proposedLeaderId,
       proposedScene: work.proposedScene,
-      formedTime: work.formedTime,
+      formedTime: formatDate(work.formedTime),
       responsiblePersons: work.responsiblePersons as string[] || [],
       cooperateDepartmentIds: work.cooperateDepartmentIds as number[] || [],
       cooperatePersons: work.cooperatePersons as string[] || [],
       workPlan: work.workPlan,
-      planCompleteTime: work.planCompleteTime,
+      planCompleteTime: formatDate(work.planCompleteTime),
       progress: work.progress,
       approvalLeaderId: work.approvalLeaderId,
-      nodes: work.nodes ? JSON.parse(String(work.nodes)) : [],
+      nodes: work.nodes ? processNodesForDisplay(JSON.parse(String(work.nodes))) : [],
       createdAt: work.createdAt.toISOString(),
       updatedAt: work.updatedAt.toISOString(),
     }));
@@ -186,6 +202,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '责任部门不存在' }, { status: 400 });
     }
 
+    const convertToDateTime = (dateStr: string | null | undefined) => {
+      if (!dateStr) return null;
+      return new Date(dateStr + 'T00:00:00.000Z');
+    };
+
+    const processNodes = (nodes: any[]) => {
+      return nodes.map(node => ({
+        ...node,
+        completeTime: node.completeTime ? new Date(node.completeTime + 'T00:00:00.000Z').toISOString() : null,
+        children: node.children ? node.children.map((child: any) => ({
+          ...child,
+          completeTime: child.completeTime ? new Date(child.completeTime + 'T00:00:00.000Z').toISOString() : null
+        })) : []
+      }));
+    };
+
     const workData: any = {
       type: workType,
       title: rest.title || rest.workItem || '未命名事项',
@@ -195,7 +227,7 @@ export async function POST(request: NextRequest) {
       workItem: rest.workItem,
       workNode: rest.workNode,
       businessCategory: rest.businessCategory,
-      completeTime: rest.completeTime,
+      completeTime: convertToDateTime(rest.completeTime),
       completeForm: rest.completeForm,
       isInnovation: rest.isInnovation || false,
       responsibleLeader: rest.responsibleLeader,
@@ -203,15 +235,15 @@ export async function POST(request: NextRequest) {
       proposedLeader: rest.proposedLeader,
       proposedLeaderId: rest.proposedLeaderId,
       proposedScene: rest.proposedScene,
-      formedTime: rest.formedTime,
+      formedTime: convertToDateTime(rest.formedTime),
       responsiblePersons: rest.responsiblePersons,
       cooperateDepartmentIds: rest.cooperateDepartmentIds,
       cooperatePersons: rest.cooperatePersons,
       workPlan: rest.workPlan,
-      planCompleteTime: rest.planCompleteTime,
+      planCompleteTime: convertToDateTime(rest.planCompleteTime),
       progress: rest.progress,
       approvalLeaderId: rest.approvalLeaderId,
-      nodes: rest.nodes ? JSON.stringify(rest.nodes) : null,
+      nodes: rest.nodes ? JSON.stringify(processNodes(rest.nodes)) : null,
     };
 
     const work = await prisma.workItem.create({

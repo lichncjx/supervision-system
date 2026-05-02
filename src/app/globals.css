@@ -135,3 +135,18 @@
 body {
   @apply font-sans;
 }
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+}
+
+.date-empty::-webkit-calendar-picker-indicator {
+  opacity: 0.6;
+}
+
+.date-empty::-webkit-datetime-edit-text,
+.date-empty::-webkit-datetime-edit-month-field,
+.date-empty::-webkit-datetime-edit-day-field,
+.date-empty::-webkit-datetime-edit-year-field {
+  color: transparent !important;
+}

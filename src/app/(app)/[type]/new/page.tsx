@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Download, Upload, FileDown } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { getCompanyLeaders, getDepartments, getDepartmentLeaders, getDepartmentManagers, getUsersByDepartment } from '@/lib/auth';
 import { addWork, type WorkType, type WorkNode } from '@/lib/work-store';
@@ -27,11 +27,6 @@ export default function NewWorkPage() {
   const type = typeMap[routeType] || '待办';
   const isPriorityOrMain = type === '重点' || type === '主要';
   const isTodo = type === '待办';
-
-  const excelRouteType =
-    routeType === 'priority' || routeType === 'main' || routeType === 'todo'
-      ? routeType
-      : 'todo';
 
   const [companyLeaders, setCompanyLeaders] = useState<Array<{ id: number; name: string; role: string }>>([]);
   const [departments, setDepartments] = useState<Array<{ id: number; name: string; code: string; isBusiness: boolean }>>([]);
@@ -250,62 +245,7 @@ export default function NewWorkPage() {
     );
   }
 
-  const handleDownloadTemplate = () => {
-    window.location.href = `/api/excel/template/${excelRouteType}`;
-  };
 
-  const handleExportExcel = async () => {
-    const params = new URLSearchParams();
-    params.set('type', excelRouteType);
-    window.location.href = `/api/excel/export?${params.toString()}`;
-  };
-
-  const handleImportExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const allowedExtensions = ['xlsx', 'xls'];
-    const extension = file.name.split('.').pop()?.toLowerCase();
-
-    if (!extension || !allowedExtensions.includes(extension)) {
-      alert('仅支持上传 .xlsx、.xls 文件。如使用 WPS 表格，请先另存为 Excel 工作簿后再上传。');
-      e.target.value = '';
-      return;
-    }
-
-    const formData = new FormData();
-    formData.append('file', file);
-
-    try {
-      const response = await fetch(`/api/excel/import/${excelRouteType}`, {
-        method: 'POST',
-        body: formData,
-        credentials: 'include',
-      });
-
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        if (data.details && data.details.length > 0) {
-          const errorMsg = data.details.map((d: any) =>
-            `第${d.row}行 [${d.field}]: ${d.reason}`
-          ).join('\n');
-          alert(`导入失败：\n${errorMsg}`);
-        } else {
-          alert(`导入失败：${data.error || '未知错误'}`);
-        }
-        return;
-      }
-
-      alert(data.message || `成功导入 ${data.imported} 条数据`);
-      router.push(`/${routeType}`);
-    } catch (error) {
-      console.error(error);
-      alert('导入失败，请确认文件格式正确且表头匹配');
-    } finally {
-      e.target.value = '';
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -469,34 +409,6 @@ export default function NewWorkPage() {
           </Button>
         </Link>
         <h1 className="text-2xl font-bold">{titleMap[type]}</h1>
-        <div className="ml-auto flex flex-wrap gap-2">
-          <Button type="button" variant="outline" size="sm" onClick={handleDownloadTemplate}>
-            <Download className="h-4 w-4 mr-1" />
-            下载模板
-          </Button>
-
-          <label className="inline-flex items-center">
-            <input
-              type="file"
-              accept=".xlsx,.xls,.csv"
-              className="hidden"
-              onChange={handleImportExcel}
-            />
-            <span className="inline-flex items-center rounded-md border px-3 py-2 text-sm cursor-pointer hover:bg-gray-50">
-              <Upload className="h-4 w-4 mr-1" />
-              导入Excel
-            </span>
-          </label>
-          <p className="text-xs text-gray-500 mt-1">
-            支持格式：.xlsx、.xls、.csv。<br />
-            如使用 WPS 表格，请先另存为 Excel 工作簿后再上传。
-          </p>
-
-          <Button type="button" variant="outline" size="sm" onClick={handleExportExcel}>
-            <FileDown className="h-4 w-4 mr-1" />
-            导出Excel
-          </Button>
-        </div>
       </div>
 
       <Card>

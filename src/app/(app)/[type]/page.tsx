@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/components/providers/auth-provider';
 import { isCompanyLevel, getDepartments } from '@/lib/auth';
 import { getVisibleWorks, queryWorks, type Work, type WorkType, type WorkStatusFilter } from '@/lib/work-store';
-import { Plus, Download } from 'lucide-react';
+import { Plus, Download, Upload, FileSpreadsheet } from 'lucide-react';
 import { WorkListToolbar } from '@/components/work/work-list-toolbar';
 import { PriorityMainWorkListItem } from '@/components/work/priority-main-work-list-item';
 import { TodoWorkListItem } from '@/components/work/todo-work-list-item';
@@ -199,11 +199,12 @@ export default function ItemListPage() {
         <h1 className={`text-2xl font-bold ${colorMap[type]}`}>{titleMap[type]}</h1>
         <div className="flex gap-2">
           <Button variant="outline" onClick={handleDownloadTemplate}>
-            <Download className="h-4 w-4 mr-2" />
+            <FileSpreadsheet className="h-4 w-4 mr-2" />
             下载模板
           </Button>
           <Button variant="outline" onClick={() => importInputRef.current?.click()}>
-            导入Excel
+            <Upload className="h-4 w-4 mr-2" />
+            导入
           </Button>
           <Button variant="outline" onClick={handleExport}>
             <Download className="h-4 w-4 mr-2" />
