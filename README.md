@@ -1,387 +1,154 @@
-# projects
+# 公司督办管理系统
 
-这是一个基于 [Next.js 16](https://nextjs.org) + [shadcn/ui](https://ui.shadcn.com) 的全栈应用项目，由扣子编程 CLI 创建。
+用于跟踪和管理公司重点工作、主要工作、待办事项的企业级督办管理系统。
+
+## 技术栈
+
+- **Framework**: Next.js 15 (App Router)
+- **Core**: React 19
+- **Language**: TypeScript 5
+- **UI 组件**: shadcn/ui (基于 Radix UI)
+- **Styling**: Tailwind CSS 4
+- **数据库**: PostgreSQL + Prisma ORM
+- **表单**: React Hook Form + Zod
+- **图标**: Lucide React
+- **包管理器**: pnpm 9+
+
+## 功能特性
+
+### 事项管理
+- **重点工作**：公司级重要事项，红色标识
+- **主要工作**：部门主要工作，蓝色标识  
+- **待办事项**：日常任务，绿色标识
+- 支持搜索、状态筛选、部门筛选、月份筛选
+- Excel 导入导出功能
+
+### 审批中心
+- 待审批列表
+- 审批操作：同意/退回
+- 审批历史记录
+
+### 工作流
+- 部门审批 → 公司审批 → 立项执行 → 见证材料 → 完成
+- 支持申请调整、申请取消
+- 待办事项分解审批流程
+
+### 权限控制
+- 固定角色：督办管理员、部门主管、部门领导、公司主管领导、公司主要领导
+- 数据范围控制：部门用户只能查看和操作本部门事项
+- 状态机权限控制：不同状态允许不同操作
 
 ## 快速开始
+
+### 安装依赖
+
+```bash
+pnpm install
+```
+
+### 初始化数据库
+
+```bash
+npx prisma db push
+npm run db:seed  # 可选：初始化种子数据
+```
 
 ### 启动开发服务器
 
 ```bash
-coze dev
+npm run dev
 ```
 
-启动后，在浏览器中打开 [http://localhost:5000](http://localhost:5000) 查看应用。
-
-开发服务器支持热更新，修改代码后页面会自动刷新。
+访问 http://localhost:5000 查看应用。
 
 ### 构建生产版本
 
 ```bash
-coze build
+npm run build
 ```
 
 ### 启动生产服务器
 
 ```bash
-coze start
+npm run start
 ```
+
+## 默认账号
+
+| 用户名 | 密码 | 角色 |
+|--------|------|------|
+| admin | 123456 | 督办管理员 |
+| zh_manager | 123456 | 部门主管 |
+| jh_manager | 123456 | 部门主管 |
+| vice_president | 123456 | 公司主管领导 |
+| president | 123456 | 公司主要领导 |
 
 ## 项目结构
 
 ```
 src/
-├── app/                      # Next.js App Router 目录
-│   ├── layout.tsx           # 根布局组件
-│   ├── page.tsx             # 首页
-│   ├── globals.css          # 全局样式（包含 shadcn 主题变量）
-│   └── [route]/             # 其他路由页面
-├── components/              # React 组件目录
-│   └── ui/                  # shadcn/ui 基础组件（优先使用）
-│       ├── button.tsx
-│       ├── card.tsx
-│       └── ...
-├── lib/                     # 工具函数库
-│   └── utils.ts            # cn() 等工具函数
-└── hooks/                   # 自定义 React Hooks（可选）
-
-server/
-├── index.ts                 # 自定义服务器入口
-├── tsconfig.json           # Server TypeScript 配置
-└── dist/                    # 编译输出目录（自动生成）
+├── app/                     # Next.js App Router 页面路由
+│   ├── (app)/              # 已认证的应用页面
+│   │   ├── [type]/         # 事项列表页（动态路由）
+│   │   ├── approval/       # 审批中心
+│   │   ├── status/         # 状态筛选页面
+│   │   └── page.tsx        # 首页/Dashboard
+│   ├── login/              # 登录页
+│   └── api/                # API 接口
+├── components/
+│   ├── ui/                 # shadcn/ui 基础组件
+│   ├── layout/             # 布局组件
+│   ├── common/             # 通用组件
+│   ├── providers/          # React Context Providers
+│   └── work/               # 工作事项相关组件
+└── lib/                    # 工具库和服务
+    ├── auth.ts             # 认证工具函数
+    ├── workflow.ts         # 工作流逻辑
+    ├── work-store.ts       # 工作事项状态管理
+    └── utils.ts            # 通用工具函数
 ```
-
-## 核心开发规范
-
-### 1. 组件开发
-
-**优先使用 shadcn/ui 基础组件**
-
-本项目已预装完整的 shadcn/ui 组件库，位于 `src/components/ui/` 目录。开发时应优先使用这些组件作为基础：
-
-```tsx
-// ✅ 推荐：使用 shadcn 基础组件
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-
-export default function MyComponent() {
-  return (
-    <Card>
-      <CardHeader>标题</CardHeader>
-      <CardContent>
-        <Input placeholder="输入内容" />
-        <Button>提交</Button>
-      </CardContent>
-    </Card>
-  );
-}
-```
-
-**可用的 shadcn 组件清单**
-
-- 表单：`button`, `input`, `textarea`, `select`, `checkbox`, `radio-group`, `switch`, `slider`
-- 布局：`card`, `separator`, `tabs`, `accordion`, `collapsible`, `scroll-area`
-- 反馈：`alert`, `alert-dialog`, `dialog`, `toast`, `sonner`, `progress`
-- 导航：`dropdown-menu`, `menubar`, `navigation-menu`, `context-menu`
-- 数据展示：`table`, `avatar`, `badge`, `hover-card`, `tooltip`, `popover`
-- 其他：`calendar`, `command`, `carousel`, `resizable`, `sidebar`
-
-详见 `src/components/ui/` 目录下的具体组件实现。
-
-### 2. 路由开发
-
-Next.js 使用文件系统路由，在 `src/app/` 目录下创建文件夹即可添加路由：
-
-```bash
-# 创建新路由 /about
-src/app/about/page.tsx
-
-# 创建动态路由 /posts/[id]
-src/app/posts/[id]/page.tsx
-
-# 创建路由组（不影响 URL）
-src/app/(marketing)/about/page.tsx
-
-# 创建 API 路由
-src/app/api/users/route.ts
-```
-
-**页面组件示例**
-
-```tsx
-// src/app/about/page.tsx
-import { Button } from '@/components/ui/button';
-
-export const metadata = {
-  title: '关于我们',
-  description: '关于页面描述',
-};
-
-export default function AboutPage() {
-  return (
-    <div>
-      <h1>关于我们</h1>
-      <Button>了解更多</Button>
-    </div>
-  );
-}
-```
-
-**动态路由示例**
-
-```tsx
-// src/app/posts/[id]/page.tsx
-export default async function PostPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = await params;
-
-  return <div>文章 ID: {id}</div>;
-}
-```
-
-**API 路由示例**
-
-```tsx
-// src/app/api/users/route.ts
-import { NextResponse } from 'next/server';
-
-export async function GET() {
-  return NextResponse.json({ users: [] });
-}
-
-export async function POST(request: Request) {
-  const body = await request.json();
-  return NextResponse.json({ success: true });
-}
-```
-
-### 3. 依赖管理
-
-**必须使用 pnpm 管理依赖**
-
-```bash
-# ✅ 安装依赖
-pnpm install
-
-# ✅ 添加新依赖
-pnpm add package-name
-
-# ✅ 添加开发依赖
-pnpm add -D package-name
-
-# ❌ 禁止使用 npm 或 yarn
-# npm install  # 错误！
-# yarn add     # 错误！
-```
-
-项目已配置 `preinstall` 脚本，使用其他包管理器会报错。
-
-### 4. 样式开发
-
-**使用 Tailwind CSS v4**
-
-本项目使用 Tailwind CSS v4 进行样式开发，并已配置 shadcn 主题变量。
-
-```tsx
-// 使用 Tailwind 类名
-<div className="flex items-center gap-4 p-4 rounded-lg bg-background">
-  <Button className="bg-primary text-primary-foreground">
-    主要按钮
-  </Button>
-</div>
-
-// 使用 cn() 工具函数合并类名
-import { cn } from '@/lib/utils';
-
-<div className={cn(
-  "base-class",
-  condition && "conditional-class",
-  className
-)}>
-  内容
-</div>
-```
-
-**主题变量**
-
-主题变量定义在 `src/app/globals.css` 中，支持亮色/暗色模式：
-
-- `--background`, `--foreground`
-- `--primary`, `--primary-foreground`
-- `--secondary`, `--secondary-foreground`
-- `--muted`, `--muted-foreground`
-- `--accent`, `--accent-foreground`
-- `--destructive`, `--destructive-foreground`
-- `--border`, `--input`, `--ring`
-
-### 5. 表单开发
-
-推荐使用 `react-hook-form` + `zod` 进行表单开发：
-
-```tsx
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-
-const formSchema = z.object({
-  username: z.string().min(2, '用户名至少 2 个字符'),
-  email: z.string().email('请输入有效的邮箱'),
-});
-
-export default function MyForm() {
-  const form = useForm({
-    resolver: zodResolver(formSchema),
-    defaultValues: { username: '', email: '' },
-  });
-
-  const onSubmit = (data: z.infer<typeof formSchema>) => {
-    console.log(data);
-  };
-
-  return (
-    <form onSubmit={form.handleSubmit(onSubmit)}>
-      <Input {...form.register('username')} />
-      <Input {...form.register('email')} />
-      <Button type="submit">提交</Button>
-    </form>
-  );
-}
-```
-
-### 6. 数据获取
-
-**服务端组件（推荐）**
-
-```tsx
-// src/app/posts/page.tsx
-async function getPosts() {
-  const res = await fetch('https://api.example.com/posts', {
-    cache: 'no-store', // 或 'force-cache'
-  });
-  return res.json();
-}
-
-export default async function PostsPage() {
-  const posts = await getPosts();
-
-  return (
-    <div>
-      {posts.map(post => (
-        <div key={post.id}>{post.title}</div>
-      ))}
-    </div>
-  );
-}
-```
-
-**客户端组件**
-
-```tsx
-'use client';
-
-import { useEffect, useState } from 'react';
-
-export default function ClientComponent() {
-  const [data, setData] = useState(null);
-
-  useEffect(() => {
-    fetch('/api/data')
-      .then(res => res.json())
-      .then(setData);
-  }, []);
-
-  return <div>{JSON.stringify(data)}</div>;
-}
-```
-
-## 常见开发场景
-
-### 添加新页面
-
-1. 在 `src/app/` 下创建文件夹和 `page.tsx`
-2. 使用 shadcn 组件构建 UI
-3. 根据需要添加 `layout.tsx` 和 `loading.tsx`
-
-### 创建业务组件
-
-1. 在 `src/components/` 下创建组件文件（非 UI 组件）
-2. 优先组合使用 `src/components/ui/` 中的基础组件
-3. 使用 TypeScript 定义 Props 类型
-
-### 添加全局状态
-
-推荐使用 React Context 或 Zustand：
-
-```tsx
-// src/lib/store.ts
-import { create } from 'zustand';
-
-interface Store {
-  count: number;
-  increment: () => void;
-}
-
-export const useStore = create<Store>((set) => ({
-  count: 0,
-  increment: () => set((state) => ({ count: state.count + 1 })),
-}));
-```
-
-### 集成数据库
-
-推荐使用 Prisma 或 Drizzle ORM，在 `src/lib/db.ts` 中配置。
-
-## 技术栈
-
-- **框架**: Next.js 16.1.1 (App Router)
-- **UI 组件**: shadcn/ui (基于 Radix UI)
-- **样式**: Tailwind CSS v4
-- **表单**: React Hook Form + Zod
-- **图标**: Lucide React
-- **字体**: Geist Sans & Geist Mono
-- **包管理器**: pnpm 9+
-- **TypeScript**: 5.x
-- **数据库**: PostgreSQL + Prisma ORM
 
 ## 权限模型
-
-本系统采用"固定岗位角色 + 数据范围控制 + 状态机权限控制"的简化权限模型，不采用通用 RBAC 动态配权模式。
-
-### 设计背景
-
-督办系统审批流程固定、角色边界清晰、审批责任要求明确，权限与事项状态、责任部门、当前审批人强相关，无法仅通过通用角色权限表准确表达。为避免权限误配置造成越权审批、流程绕行等风险，系统采用内置固定角色的设计方案。
 
 ### 固定角色
 
 | 角色 | 标识 | 说明 |
 |------|------|------|
-| 系统管理员 | ADMIN | 系统配置管理 |
-| 督办管理员 | SUPERVISOR | 督办跟踪管理 |
-| 部门主管 | DEPARTMENT_MANAGER | 发起本部门事项 |
-| 部门领导 | DEPARTMENT_LEADER | 审批本部门事项 |
-| 公司主管领导 | VICE_PRESIDENT | 审批全部事项 |
-| 公司主要领导 | PRESIDENT | 审批重点工作取消 |
+| 督办管理员 | ADMIN | 查看全部、录入/导入 |
+| 督办人员 | SUPERVISOR | 督办跟踪 |
+| 部门主管 | DEPARTMENT_MANAGER | 查看本部门、发起申请 |
+| 部门领导 | DEPARTMENT_LEADER | 查看本部门、审批（部门级） |
+| 公司主管领导 | VICE_PRESIDENT | 查看全部、所有审批权限 |
+| 公司主要领导 | PRESIDENT | 查看全部、仅重点工作取消审批 |
 
 ### 权限控制机制
 
 系统根据以下维度进行严格校验：
-
-1. **事项状态**：不同状态允许的操作不同（如仅 APPROVED/IN_PROGRESS 状态允许申请调整/取消）
+1. **事项状态**：不同状态允许的操作不同
 2. **用户部门**：部门用户只能操作本部门事项
-3. **当前审批人**：只有 currentApproverId 或 currentApproverRole 匹配的用户才能审批
+3. **当前审批人**：只有匹配的用户才能审批
 4. **事项类型**：重点/主要/待办事项的流程和权限不同
 
-### 安全性保障
+## 开发规范
 
-- 所有权限校验在服务端执行，前端仅做展示
-- 审批流转时严格校验下一个审批人的有效性
-- 禁止通过 API 直接修改事项状态
-- 操作日志完整记录关键操作
+### 优先使用 shadcn/ui 组件
+
+```tsx
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+```
+
+### 表单开发
+
+使用 `react-hook-form` + `zod` 进行表单开发。
+
+### 数据获取
+
+服务端组件推荐使用 async/await 获取数据，客户端组件使用 `useEffect` + `fetch`。
+
+### 路径别名
+
+使用 `@/` 路径别名导入模块（已配置）。
 
 ## 参考文档
 
@@ -396,4 +163,4 @@ export const useStore = create<Store>((set) => ({
 2. **优先使用 shadcn/ui 组件** 而不是从零开发基础组件
 3. **遵循 Next.js App Router 规范**，正确区分服务端/客户端组件
 4. **使用 TypeScript** 进行类型安全开发
-5. **使用 `@/` 路径别名** 导入模块（已配置）
+5. **查看 AGENTS.md** 获取更详细的项目文档
