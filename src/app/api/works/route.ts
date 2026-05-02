@@ -1,6 +1,7 @@
 import { NextResponse, NextRequest } from 'next/server';
 import prisma from '@/lib/prisma';
 import { verifyToken } from '@/lib/server-auth';
+import { formatDate, processNodesForDisplay, processAdjustHistory } from '@/lib/utils';
 import { Role, WorkItemType, WorkItemStatus } from '@prisma/client';
 
 const ROLES_CAN_VIEW_ALL: Role[] = [Role.ADMIN, Role.SUPERVISOR, Role.VICE_PRESIDENT, Role.PRESIDENT];
@@ -85,21 +86,7 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    const formatDate = (date: Date | null | undefined) => {
-      if (!date) return null;
-      return new Date(date).toISOString().split('T')[0];
-    };
 
-    const processNodesForDisplay = (nodes: any[]) => {
-      return nodes.map(node => ({
-        ...node,
-        completeTime: node.completeTime ? new Date(node.completeTime).toISOString().split('T')[0] : null,
-        children: node.children ? node.children.map((child: any) => ({
-          ...child,
-          completeTime: child.completeTime ? new Date(child.completeTime).toISOString().split('T')[0] : null
-        })) : []
-      }));
-    };
 
     const result = works.map((work) => ({
       id: work.id,
@@ -131,6 +118,7 @@ export async function GET(request: NextRequest) {
       progress: work.progress,
       approvalLeaderId: work.approvalLeaderId,
       nodes: work.nodes ? processNodesForDisplay(JSON.parse(String(work.nodes))) : [],
+      adjustHistory: work.adjustHistory ? processAdjustHistory(work.adjustHistory as any[]) : [],
       createdAt: work.createdAt.toISOString(),
       updatedAt: work.updatedAt.toISOString(),
     }));

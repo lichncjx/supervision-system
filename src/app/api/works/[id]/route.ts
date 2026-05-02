@@ -1,6 +1,7 @@
 import { NextResponse, NextRequest } from 'next/server';
 import prisma from '@/lib/prisma';
 import { verifyToken } from '@/lib/server-auth';
+import { formatDate, processNodesForDisplay, processAdjustHistory } from '@/lib/utils';
 import { Role } from '@prisma/client';
 
 const ROLES_CAN_VIEW_ALL: Role[] = [Role.ADMIN, Role.SUPERVISOR, Role.VICE_PRESIDENT, Role.PRESIDENT];
@@ -61,6 +62,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       }
     }
 
+
+
     const result = {
       id: work.id,
       title: work.title,
@@ -74,7 +77,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       workItem: work.workItem,
       workNode: work.workNode,
       businessCategory: work.businessCategory,
-      completeTime: work.completeTime,
+      completeTime: formatDate(work.completeTime),
       completeForm: work.completeForm,
       isInnovation: work.isInnovation,
       responsibleLeader: work.responsibleLeader,
@@ -82,17 +85,18 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       proposedLeader: work.proposedLeader?.name || null,
       proposedLeaderId: work.proposedLeaderId,
       proposedScene: work.proposedScene,
-      formedTime: work.formedTime,
+      formedTime: formatDate(work.formedTime),
       responsiblePersons: work.responsiblePersons as string[] || [],
       cooperateDepartmentIds: work.cooperateDepartmentIds as number[] || [],
       cooperatePersons: work.cooperatePersons as string[] || [],
       workPlan: work.workPlan,
-      planCompleteTime: work.planCompleteTime,
+      planCompleteTime: formatDate(work.planCompleteTime),
       progress: work.progress,
       approvalLeaderId: work.approvalLeaderId,
       currentApproverId: work.currentApproverId,
       currentApproverRole: work.currentApproverRole,
-      nodes: typeof work.nodes === 'string' ? JSON.parse(work.nodes) : [],
+      nodes: work.nodes ? processNodesForDisplay(JSON.parse(String(work.nodes))) : [],
+      adjustHistory: work.adjustHistory ? processAdjustHistory(work.adjustHistory as any[]) : [],
       attachments: work.attachments.map((a) => ({
         id: a.id,
         fileName: a.fileName,
