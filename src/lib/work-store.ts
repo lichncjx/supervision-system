@@ -186,6 +186,27 @@ export type WorkEditablePatch = Partial<Pick<
 >>;
 
 export function transformWorkFromAPI(work: any): Work {
+  // 提取对象字段的字符串表示
+  const extractName = (obj: any): string => {
+    if (!obj) return '';
+    if (typeof obj === 'string') return obj;
+    if (typeof obj === 'object' && obj.name) return obj.name;
+    return '';
+  };
+
+  // 提取对象数组的字符串数组
+  const extractNameArray = (arr: any): string[] => {
+    if (!arr) return [];
+    if (Array.isArray(arr)) {
+      return arr.map((item: any) => {
+        if (typeof item === 'string') return item;
+        if (typeof item === 'object' && item.name) return item.name;
+        return String(item);
+      }).filter(Boolean);
+    }
+    return [];
+  };
+
   return {
     id: work.id,
     title: work.title,
@@ -207,14 +228,14 @@ export function transformWorkFromAPI(work: any): Work {
     completeForm: work.completeForm || work.complete_form,
     responsibleLeader: work.responsibleLeader || work.responsible_leader,
     supervisor: work.supervisor,
-    proposedLeader: work.proposedLeader || work.proposed_leader,
+    proposedLeader: extractName(work.proposedLeader),
     proposedLeaderId: work.proposedLeaderId || work.proposed_leader_id,
     proposedLeaderRole: work.proposedLeaderRole || work.proposed_leader_role,
     proposedScene: work.proposedScene || work.proposed_scene,
     formedTime: work.formedTime || work.formed_time,
-    responsiblePersons: work.responsiblePersons || work.responsible_persons || [],
+    responsiblePersons: extractNameArray(work.responsiblePersons || work.responsible_persons),
     cooperateDepartmentIds: work.cooperateDepartmentIds || work.cooperate_department_ids || [],
-    cooperatePersons: work.cooperatePersons || work.cooperate_persons || [],
+    cooperatePersons: extractNameArray(work.cooperatePersons || work.cooperate_persons),
     workPlan: work.workPlan || work.work_plan,
     planCompleteTime: work.planCompleteTime || work.plan_complete_time,
     progress: work.progress,
@@ -512,8 +533,9 @@ export async function resubmitReturnedWork(work: Work) {
   });
 }
 
-export function getStatusName(status: Status) {
-  const map: Record<Status, string> = {
+export function getStatusName(status: string) {
+  const normalized = status.toLowerCase();
+  const map: Record<string, string> = {
     draft: '草稿',
     pending_dept: '待部门审批',
     pending_company: '待公司审批',
@@ -530,18 +552,200 @@ export function getStatusName(status: Status) {
     cancelling: '取消审批中',
     cancelled: '已取消',
   };
-  return map[status] || status;
+  return map[normalized] || status;
 }
 
-export function getActionName(action: ActionType) {
-  const map: Record<ActionType, string> = {
+export function getActionName(action: string) {
+  const map: Record<string, string> = {
     create: '新建审批',
+    submit: '提交审批',
+    approve: '审批通过',
+    reject: '审批退回',
+    evidence: '提交见证材料',
     complete: '完成审批',
-    adjust: '调整审批',
-    cancel: '取消审批',
+    adjust: '申请调整',
+    cancel: '申请取消',
     todo_decompose: '待办分解审批',
+    decompose: '待办分解审批',
   };
   return map[action] || action;
+}
+
+export function getCurrentProcessDescription(
+  status: string,
+  currentApproverRole?: string | null,
+  currentApproverId?: number | null
+): string {
+  const normalizedStatus = status.toLowerCase();
+  const normalizedRole = currentApproverRole?.toUpperCase();
+
+  if (normalizedRole === 'DEPARTMENT_LEADER') {
+    switch (normalizedStatus) {
+      case 'adjusting':
+        return '调整申请待部门领导审批';
+      case 'cancelling':
+        return '取消申请待部门领导审批';
+      default:
+        break;
+    }
+  }
+
+  if (normalizedRole === 'VICE_PRESIDENT') {
+    switch (normalizedStatus) {
+      case 'adjusting':
+        return '调整申请待公司主管领导审批';
+      case 'cancelling':
+        return '取消申请待公司主管领导审批';
+      default:
+        break;
+    }
+  }
+
+  if (currentApproverId) {
+    switch (normalizedStatus) {
+      case 'pending_company':
+        return '待指定公司领导审批';
+      case 'adjusting':
+        return '调整申请待指定公司领导审批';
+      case 'cancelling':
+        return '取消申请待指定公司领导审批';
+      case 'pending_complete':
+        return '完成申请待指定公司领导审批';
+      default:
+        break;
+    }
+  }
+
+  const statusMap: Record<string, string> = {
+    draft: '草稿，待提交',
+    pending_dept: '待部门领导审批',
+    pending_company: '待公司主管领导审批',
+    approved: '已立项，待上传见证材料',
+    in_progress: '进行中',
+    pending_evidence_dept: '见证材料待部门领导审批',
+    pending_evidence_company: '见证材料待公司主管领导审批',
+    pending_complete: '完成申请待公司领导审批',
+    adjusting: '调整审批中',
+    cancelling: '取消审批中',
+    pending_main_leader_cancel: '重点工作取消申请待公司主要领导审批',
+    completed: '已完成',
+    cancelled: '已取消',
+    rejected: '已退回，待修改后重新提交',
+    pending_decompose: '待分解',
+  };
+
+  return statusMap[normalizedStatus] || status;
+}
+
+export function getWorkflowRecordDescription(
+  action: string,
+  previousStatus: string,
+  newStatus: string
+): string {
+  const normalizedAction = action.toLowerCase();
+  const normalizedOldStatus = previousStatus.toLowerCase();
+  const normalizedNewStatus = newStatus.toLowerCase();
+
+  if (normalizedAction === 'reject') {
+    return '审批退回，待修改后重新提交';
+  }
+
+  if (normalizedAction === 'adjust') {
+    return '提交调整申请，进入调整审批流程';
+  }
+
+  if (normalizedAction === 'cancel') {
+    return '提交取消申请，进入取消审批流程';
+  }
+
+  if (normalizedAction === 'evidence') {
+    if (normalizedNewStatus === 'pending_complete') {
+      return '提交完成申请，进入完成审批流程';
+    }
+    return '提交见证材料';
+  }
+
+  if (normalizedAction === 'submit') {
+    return '提交审批申请';
+  }
+
+  if (normalizedAction === 'approve') {
+    if (normalizedOldStatus === 'adjusting') {
+      if (normalizedNewStatus === 'adjusting') {
+        return '调整申请审批通过，继续流转至下一审批节点';
+      }
+      if (normalizedNewStatus === 'in_progress') {
+        return '调整申请审批通过，事项恢复进行中';
+      }
+    }
+
+    if (normalizedOldStatus === 'cancelling') {
+      if (normalizedNewStatus === 'cancelling') {
+        return '取消申请审批通过，继续流转至下一审批节点';
+      }
+      if (normalizedNewStatus === 'pending_main_leader_cancel') {
+        return '公司主管领导审批通过，流转至公司主要领导审批';
+      }
+      if (normalizedNewStatus === 'cancelled') {
+        return '取消申请审批通过，事项已取消';
+      }
+    }
+
+    if (normalizedOldStatus === 'pending_main_leader_cancel') {
+      if (normalizedNewStatus === 'cancelled') {
+        return '公司主要领导审批通过，取消申请生效，事项已取消';
+      }
+    }
+
+    if (normalizedOldStatus === normalizedNewStatus) {
+      return '审批通过，流程继续流转';
+    }
+
+    const statusChangeDesc: Record<string, Record<string, string>> = {
+      draft: {
+        pending_dept: '提交审批，流转至部门领导审批',
+        pending_company: '提交审批，流转至公司领导审批',
+      },
+      pending_dept: {
+        pending_company: '部门领导审批通过，流转至公司领导审批',
+        rejected: '部门领导审批退回',
+      },
+      pending_company: {
+        approved: '公司领导审批通过，事项已立项',
+        in_progress: '公司领导审批通过，事项进入进行中',
+        rejected: '公司领导审批退回',
+      },
+      approved: {
+        pending_evidence_dept: '提交见证材料，待部门领导审批',
+        in_progress: '进入执行阶段',
+      },
+      in_progress: {
+        pending_complete: '提交完成申请',
+      },
+      pending_evidence_dept: {
+        pending_evidence_company: '部门领导审批通过，流转至公司领导审批',
+        approved: '部门领导审批通过',
+      },
+      pending_evidence_company: {
+        completed: '公司领导审批通过，事项已完成',
+      },
+      pending_complete: {
+        completed: '完成审批通过，事项已完成',
+      },
+    };
+
+    if (statusChangeDesc[normalizedOldStatus]?.[normalizedNewStatus]) {
+      return statusChangeDesc[normalizedOldStatus][normalizedNewStatus];
+    }
+
+    return `审批通过，状态变更`;
+  }
+
+  if (normalizedAction === 'decompose') {
+    return '待办事项已分解';
+  }
+
+  return '';
 }
 
 export function isPendingStatus(status: Status) {
@@ -688,11 +892,7 @@ export function canHandleWork(user: User | null | undefined, work: Work) {
   }
 
   if (user.role === 'ADMIN') {
-    return (
-      canApproveWork(user, work) ||
-      work.status === 'pending_decompose' ||
-      isReturnStatus(work.status)
-    );
+    return canApproveWork(user, work);
   }
 
   if (canApproveWork(user, work)) {
@@ -831,7 +1031,7 @@ export async function rejectWork(work: Work, user: User, reason = '审批退回'
   }
 }
 
-export async function submitComplete(work: Work, user: User, proof: string, proofFiles?: ProofFile[]) {
+export async function submitComplete(work: Work, user: User, proof: string, _proofFiles?: ProofFile[]) {
   try {
     const response = await fetch(`/api/works/${work.id}/workflow`, {
       method: 'POST',
@@ -850,7 +1050,7 @@ export async function submitComplete(work: Work, user: User, proof: string, proo
   }
 }
 
-export async function submitAdjust(work: Work, user: User, reason: string, pendingAdjustment?: WorkEditablePatch) {
+export async function submitAdjust(work: Work, user: User, reason: string, _pendingAdjustment?: WorkEditablePatch) {
   try {
     const response = await fetch(`/api/works/${work.id}/workflow`, {
       method: 'POST',
