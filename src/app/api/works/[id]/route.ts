@@ -79,7 +79,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       isInnovation: work.isInnovation,
       responsibleLeader: work.responsibleLeader,
       supervisor: work.supervisor,
-      proposedLeader: work.proposedLeader,
+      proposedLeader: work.proposedLeader?.name || null,
       proposedLeaderId: work.proposedLeaderId,
       proposedScene: work.proposedScene,
       formedTime: work.formedTime,

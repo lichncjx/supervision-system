@@ -76,7 +76,6 @@ export default function StatusFilterPage() {
   const [monthFilter, setMonthFilter] = useState('');
   const [monthOptions, setMonthOptions] = useState<string[]>([]);
   const [list, setList] = useState<Work[]>([]);
-  const [loading, setLoading] = useState(true);
   const [departments, setDepartments] = useState<Array<{ id: number; name: string; code: string; isBusiness: boolean }>>([]);
   const companyLevel = isCompanyLevel(user?.role, user?.departmentId);
 
@@ -103,7 +102,6 @@ export default function StatusFilterPage() {
 
   React.useEffect(() => {
     const loadData = async () => {
-      setLoading(true);
       const visibleForMonthOptions = await getVisibleWorks(user);
       const newMonthOptions = Array.from(
         new Set(
@@ -135,7 +133,6 @@ export default function StatusFilterPage() {
       }
 
       setList(sortWorksByDueDate(filteredList));
-      setLoading(false);
     };
 
     loadData();

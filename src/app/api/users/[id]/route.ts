@@ -1,6 +1,6 @@
 import { NextResponse, NextRequest } from 'next/server';
 import prisma from '@/lib/prisma';
-import { verifyToken, hashPassword } from '@/lib/server-auth';
+import { verifyToken } from '@/lib/server-auth';
 import { Role } from '@prisma/client';
 
 const PROTECTED_USERNAMES = ['admin', 'supervisor', 'president', 'vice_president', 'dept_leader', 'dept_manager'];

@@ -26,7 +26,7 @@ function request(method, path, data = null, cookies = [], headers = {}) {
         let responseBody;
         try {
           responseBody = JSON.parse(buffer.toString());
-        } catch (e) {
+        } catch {
           responseBody = buffer;
         }
         resolve({
@@ -277,7 +277,7 @@ async function runComprehensiveTests() {
   logTest('  取消申请后状态 CANCELLING', todoAfterCancelApply.body?.status === 'CANCELLING', `状态: ${todoAfterCancelApply.body?.status}`);
 
   await request('POST', `/api/works/${todoForCancelId}/workflow`, { action: 'approve' }, deptLeaderLogin.cookies);
-  const todoCancelFinalRes = await request('POST', `/api/works/${todoForCancelId}/workflow`, { action: 'approve' }, vicePresidentLogin.cookies);
+  await request('POST', `/api/works/${todoForCancelId}/workflow`, { action: 'approve' }, vicePresidentLogin.cookies);
 
   const todoAfterCancel = await request('GET', `/api/works/${todoForCancelId}`, null, vicePresidentLogin.cookies);
   logTest('  待办取消后状态 CANCELLED', todoAfterCancel.body?.status === 'CANCELLED', `状态: ${todoAfterCancel.body?.status}`);
@@ -504,7 +504,7 @@ async function runComprehensiveTests() {
             statusCode: res.statusCode,
             body: JSON.parse(Buffer.concat(body).toString())
           });
-        } catch (e) {
+        } catch {
           resolve({ statusCode: res.statusCode, body: null });
         }
       });

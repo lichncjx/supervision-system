@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   db:
     image: postgres:16-alpine
@@ -7,17 +9,15 @@ services:
       POSTGRES_DB: supervision
       POSTGRES_USER: supervision
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    ports:
-      - "5432:5432"
+    volumes:
+      - ../postgres_data:/var/lib/postgresql/data
+    networks:
+      - supervision-net
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U supervision -d supervision"]
       interval: 10s
       timeout: 5s
       retries: 5
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - supervision-net
 
   migrate:
     build:
@@ -46,31 +46,16 @@ services:
       DATABASE_URL: postgresql://supervision:${POSTGRES_PASSWORD}@db:5432/supervision?schema=public
       JWT_SECRET: ${JWT_SECRET}
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
+    volumes:
+      - ../uploads:/app/uploads
+    ports:
+      - "18080:5000"
     depends_on:
       migrate:
         condition: service_completed_successfully
-    volumes:
-      - ./uploads:/app/uploads
-    networks:
-      - supervision-net
-
-  nginx:
-    image: nginx:alpine
-    container_name: supervision-nginx
-    restart: unless-stopped
-    ports:
-      - "5000:80"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf
-      - ./uploads:/app/uploads
-    depends_on:
-      - app
     networks:
       - supervision-net
 
 networks:
   supervision-net:
     driver: bridge
-
-volumes:
-  postgres_data:

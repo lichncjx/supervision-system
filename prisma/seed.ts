@@ -8,12 +8,12 @@ const departments = [
   { name: '综合处', code: 'ZH', isBusiness: true },
   { name: '计划生产处', code: 'JH', isBusiness: true },
   { name: '工艺技术处', code: 'GY', isBusiness: true },
-  { name: '信息档案中心', code: 'XX', isBusiness: true },
+  { name: '信息档案中心', code: 'XD', isBusiness: true },
   { name: '质量管理处', code: 'ZL', isBusiness: true },
   { name: '人力资源处', code: 'RL', isBusiness: true },
   { name: '综合财务处', code: 'CW', isBusiness: true },
   { name: '设备管理处', code: 'SB', isBusiness: true },
-  { name: '行政保障处', code: 'XZ', isBusiness: true },
+  { name: '行政保障处', code: 'XB', isBusiness: true },
   { name: '保密处', code: 'BM', isBusiness: true },
   { name: '51车间', code: '51', isBusiness: true },
   { name: '53车间', code: '53', isBusiness: true },
@@ -41,9 +41,9 @@ async function main() {
 
   for (const department of departments) {
     await prisma.department.upsert({
-      where: { code: department.code },
+      where: { name: department.name },
       update: {
-        name: department.name,
+        code: department.code,
         isBusiness: department.isBusiness,
       },
       create: department,

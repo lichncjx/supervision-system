@@ -54,7 +54,7 @@ function parseExcelDate(value: any): string | null {
 async function validateAndParseExcel(
   file: Buffer,
   type: string,
-  currentUser: { id: number; name: string; role: string; departmentId: number }
+  _currentUser: { id: number; name: string; role: string; departmentId: number }
 ): Promise<{ rows: ImportRow[]; errors: ValidationError[] }> {
   const errors: ValidationError[] = [];
   const rows: ImportRow[] = [];

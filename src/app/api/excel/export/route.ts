@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import * as XLSX from 'xlsx';
 import prisma from '@/lib/prisma';
 import { getUserFromToken } from '@/lib/server-auth';
-import { Role, WorkItemStatus } from '@prisma/client';
+import { WorkItemStatus } from '@prisma/client';
 
 function isCompanyLevelRole(role: string): boolean {
   const companyRoles: string[] = ['ADMIN', 'SUPERVISOR', 'VICE_PRESIDENT', 'PRESIDENT'];

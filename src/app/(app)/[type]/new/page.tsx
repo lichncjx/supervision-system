@@ -222,6 +222,7 @@ export default function NewWorkPage() {
     if (todoForm.cooperateDepartmentIds.length > 0) {
       fetchCoopDepartmentUsers();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [todoForm.cooperateDepartmentIds]);
 
   // 多选下拉框取值函数

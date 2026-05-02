@@ -833,20 +833,13 @@ export async function getWorkflowRecords(workItemId: number): Promise<any[]> {
 
   return records.map(r => ({
     id: r.id,
-    actionType: r.actionType,
-    statusBefore: r.statusBefore,
-    statusAfter: r.statusAfter,
+    action: r.actionType,
+    initiatorId: r.initiatorId,
+    initiatorName: r.initiator?.name || '',
+    initiatorRole: r.initiator?.role || '',
+    previousStatus: r.statusBefore,
+    newStatus: r.statusAfter,
     comment: r.comment,
     createdAt: r.createdAt.toISOString(),
-    initiator: r.initiator ? {
-      id: r.initiator.id,
-      name: r.initiator.name,
-      role: r.initiator.role,
-    } : null,
-    approver: r.approver ? {
-      id: r.approver.id,
-      name: r.approver.name,
-      role: r.approver.role,
-    } : null,
   }));
 }

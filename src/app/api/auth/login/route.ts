@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { verifyPassword, generateToken } from '@/lib/server-auth';
-import { Role } from '@prisma/client';
 
 export async function POST(request: Request) {
   try {
@@ -45,12 +44,15 @@ export async function POST(request: Request) {
       },
     });
 
+    const isHttps = request.headers.get('x-forwarded-proto') === 'https' || 
+                   process.env.NODE_ENV !== 'production';
+
     response.cookies.set({
       name: 'token',
       value: token,
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      secure: isHttps,
+      sameSite: 'lax',
       maxAge: 24 * 60 * 60,
       path: '/',
     });

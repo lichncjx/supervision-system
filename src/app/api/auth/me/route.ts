@@ -13,13 +13,16 @@ export async function GET(request: NextRequest) {
     const decoded = verifyToken(token);
 
     if (!decoded) {
+      const isHttps = request.headers.get('x-forwarded-proto') === 'https' || 
+                     process.env.NODE_ENV !== 'production';
+
       const response = NextResponse.json({ error: '登录已过期' }, { status: 401 });
       response.cookies.set({
         name: 'token',
         value: '',
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        secure: isHttps,
+        sameSite: 'lax',
         maxAge: 0,
         path: '/',
       });
@@ -32,13 +35,16 @@ export async function GET(request: NextRequest) {
     });
 
     if (!user || !user.isActive) {
+      const isHttps = request.headers.get('x-forwarded-proto') === 'https' || 
+                     process.env.NODE_ENV !== 'production';
+
       const response = NextResponse.json({ error: '用户不存在或已停用' }, { status: 401 });
       response.cookies.set({
         name: 'token',
         value: '',
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        secure: isHttps,
+        sameSite: 'lax',
         maxAge: 0,
         path: '/',
       });

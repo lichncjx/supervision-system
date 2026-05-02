@@ -5,10 +5,9 @@ import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { LayoutDashboard, Clock, CheckCircle2, AlertCircle, Plus, Eye } from 'lucide-react';
+import { LayoutDashboard, Clock, CheckCircle2, AlertCircle, Plus } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import {
-  getStats,
   getVisibleWorks,
   canHandleWork,
   isExpiringWork,
@@ -17,7 +16,7 @@ import {
   type Work,
 } from '@/lib/work-store';
 import { StatusBadge } from '@/components/common/badges';
-import { getDepartments, isCompanyLevel } from '@/lib/auth';
+import { isCompanyLevel } from '@/lib/auth';
 
 export default function DashboardPage() {
   const NOTICE_KEY = 'supervision_admin_notice';
@@ -38,8 +37,6 @@ export default function DashboardPage() {
     pendingHandle: 0,
   });
   const [visibleWorks, setVisibleWorks] = useState<Work[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [departments, setDepartments] = useState<Array<{ id: number; name: string; code: string; isBusiness: boolean }>>([]);
 
   useEffect(() => {
     const saved = localStorage.getItem(NOTICE_KEY) || '';
@@ -48,17 +45,8 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    const loadDepartments = async () => {
-      const depts = await getDepartments();
-      setDepartments(depts);
-    };
-    loadDepartments();
-  }, []);
-
-  useEffect(() => {
     const loadData = async () => {
       if (!user) return;
-      setLoading(true);
       try {
         const response = await fetch('/api/dashboard/summary', { credentials: 'include' });
         if (response.ok) {
@@ -81,7 +69,6 @@ export default function DashboardPage() {
       } catch (error) {
         console.error('Failed to load stats:', error);
       }
-      setLoading(false);
     };
     loadData();
   }, [user]);
@@ -120,10 +107,6 @@ export default function DashboardPage() {
   ).slice(0, 5);
 
   const expiringWorks = visibleWorks.filter((work) => isExpiringWork(work)).slice(0, 5);
-
-  const getDepartmentName = (id: number) => {
-    return departments.find((d) => d.id === id)?.name || '-';
-  };
 
   return (
     <div className="space-y-6">
