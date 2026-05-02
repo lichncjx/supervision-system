@@ -892,13 +892,28 @@ export function canHandleWork(user: User | null | undefined, work: Work) {
   }
 
   if (user.role === 'ADMIN') {
-    return canApproveWork(user, work);
+    return false;
   }
 
-  if (canApproveWork(user, work)) {
+  // 本人创建的草稿
+  if (work.status === 'draft' && work.creatorId === user.id) {
     return true;
   }
 
+  // 被退回后待修改重新提交
+  if (isReturnStatus(work.status) && work.creatorId === user.id) {
+    return true;
+  }
+
+  if (
+    isReturnStatus(work.status) &&
+    (user.role === 'DEPARTMENT_MANAGER' || user.role === 'DEPARTMENT_LEADER') &&
+    isWorkRelatedToDepartment(work, user.departmentId)
+  ) {
+    return true;
+  }
+
+  // 待办事项待分解
   if (
     work.type === '待办' &&
     work.status === 'pending_decompose' &&
@@ -908,22 +923,31 @@ export function canHandleWork(user: User | null | undefined, work: Work) {
     return true;
   }
 
+  // 重点/主要工作已立项，待责任部门上传见证材料
   if (
-    isReturnStatus(work.status) &&
+    (work.type === '重点' || work.type === '主要') &&
+    work.status === 'approved' &&
     (user.role === 'DEPARTMENT_MANAGER' || user.role === 'DEPARTMENT_LEADER') &&
     isWorkRelatedToDepartment(work, user.departmentId)
   ) {
     return true;
   }
 
+  // 待办事项进行中，待责任部门提交完成材料
   if (
-    isReturnStatus(work.status) &&
-    work.creatorId === user.id
+    work.type === '待办' &&
+    work.status === 'in_progress' &&
+    (user.role === 'DEPARTMENT_MANAGER' || user.role === 'DEPARTMENT_LEADER') &&
+    isWorkRelatedToDepartment(work, user.departmentId)
   ) {
     return true;
   }
 
   return false;
+}
+
+export function canProcessWork(user: User | null | undefined, work: Work) {
+  return canApproveWork(user, work) || canHandleWork(user, work);
 }
 
 export function canApproveWork(user: User | null | undefined, work: Work) {
@@ -1084,6 +1108,25 @@ export async function submitCancel(work: Work, user: User, reason: string) {
     return await getWorkById(work.id);
   } catch (error) {
     console.error('Submit cancel error:', error);
+    throw error;
+  }
+}
+
+export async function submitWork(work: Work, user: User) {
+  try {
+    const response = await fetch(`/api/works/${work.id}/workflow`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ action: 'submit', comment: '提交审批' }),
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.error || '提交审批失败');
+    }
+    return await getWorkById(work.id);
+  } catch (error) {
+    console.error('Submit work error:', error);
     throw error;
   }
 }

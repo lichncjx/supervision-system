@@ -9,6 +9,8 @@ import {
   getWorkDueDate,
   queryWorks,
   canHandleWork,
+  canApproveWork,
+  canProcessWork,
   sortWorksByDueDate,
   getVisibleWorks,
   isSupervisorTrackingWork,
@@ -26,6 +28,7 @@ type StatusPageFilter =
   | 'all'
   | 'pending'
   | 'processing'
+  | 'process'
   | 'inProgress'
   | 'completed'
   | 'overdue';
@@ -34,6 +37,7 @@ const allowedFilters: StatusPageFilter[] = [
   'all',
   'pending',
   'processing',
+  'process',
   'inProgress',
   'completed',
   'overdue',
@@ -41,8 +45,9 @@ const allowedFilters: StatusPageFilter[] = [
 
 const filterTitle: Record<StatusPageFilter, string> = {
   all: '全部事项',
-  pending: '待审批事项',
-  processing: '待处理事项',
+  pending: '待我审批事项',
+  processing: '待我办理事项',
+  process: '待我处理事项',
   inProgress: '进行中事项',
   completed: '已完成事项',
   overdue: '超期事项',
@@ -84,7 +89,7 @@ export default function StatusFilterPage() {
     : 'all';
 
   const queryStatus =
-    ['all', 'pending', 'inProgress', 'completed', 'overdue'].includes(safeFilter)
+    ['all', 'inProgress', 'completed', 'overdue'].includes(safeFilter)
       ? (safeFilter as WorkStatusFilter)
       : 'all';
 
@@ -124,11 +129,23 @@ export default function StatusFilterPage() {
         filteredList = filteredList.filter((work) => getWorkMonth(work) === monthFilter);
       }
 
-      if (safeFilter === 'processing') {
+      if (safeFilter === 'pending') {
+        filteredList = filteredList.filter((w) =>
+          user?.role === 'SUPERVISOR'
+            ? isSupervisorTrackingWork(w)
+            : canApproveWork(user, w)
+        );
+      } else if (safeFilter === 'processing') {
         filteredList = filteredList.filter((w) =>
           user?.role === 'SUPERVISOR'
             ? isSupervisorTrackingWork(w)
             : canHandleWork(user, w)
+        );
+      } else if (safeFilter === 'process') {
+        filteredList = filteredList.filter((w) =>
+          user?.role === 'SUPERVISOR'
+            ? isSupervisorTrackingWork(w)
+            : canProcessWork(user, w)
         );
       }
 

@@ -1,38 +1,150 @@
-import { NextRequest, NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
-import { getUserFromToken } from '@/lib/server-auth';
-import { WorkItemStatus } from '@prisma/client';
+import { NextRequest, NextResponse } from 'next/server'
+import prisma from '@/lib/prisma'
+import { getUserFromToken } from '@/lib/server-auth'
+import { WorkItemStatus, User, Role } from '@prisma/client'
 
 function isCompanyLevelRole(role: string): boolean {
-  const companyRoles: string[] = ['ADMIN', 'SUPERVISOR', 'VICE_PRESIDENT', 'PRESIDENT'];
-  return companyRoles.includes(role);
+  const companyRoles: string[] = ['ADMIN', 'SUPERVISOR', 'VICE_PRESIDENT', 'PRESIDENT']
+  return companyRoles.includes(role)
+}
+
+function isWorkRelatedToDepartment(workItem: any, departmentId: number): boolean {
+  if (workItem.departmentId === departmentId) return true
+  if (workItem.departmentIds && workItem.departmentIds.includes(departmentId)) return true
+  if (workItem.cooperateDepartmentIds && workItem.cooperateDepartmentIds.includes(departmentId)) return true
+  return false
+}
+
+function canApproveWorkOnServer(user: User, workItem: any): boolean {
+  if (user.role === Role.ADMIN || user.role === Role.SUPERVISOR) {
+    return false
+  }
+
+  const pendingStatuses = [
+    WorkItemStatus.PENDING_DEPT,
+    WorkItemStatus.PENDING_COMPANY,
+    WorkItemStatus.PENDING_EVIDENCE_DEPT,
+    WorkItemStatus.PENDING_EVIDENCE_COMPANY,
+    WorkItemStatus.PENDING_MAIN_LEADER_CANCEL,
+    WorkItemStatus.PENDING_COMPLETE,
+    WorkItemStatus.ADJUSTING,
+    WorkItemStatus.CANCELLING,
+  ]
+
+  if (!pendingStatuses.includes(workItem.status)) {
+    return false
+  }
+
+  if (workItem.currentApproverId && workItem.currentApproverId === user.id) {
+    return true
+  }
+
+  if (workItem.currentApproverRole && workItem.currentApproverRole === user.role) {
+    if (user.role === Role.DEPARTMENT_LEADER) {
+      return workItem.departmentId === user.departmentId
+    }
+    return true
+  }
+
+  return false
+}
+
+function canHandleWorkOnServer(user: User, workItem: any): boolean {
+  if (user.role === Role.ADMIN || user.role === Role.SUPERVISOR) {
+    return false
+  }
+
+  if (workItem.status === WorkItemStatus.DRAFT && workItem.creatorId === user.id) {
+    return true
+  }
+
+  if (workItem.status === WorkItemStatus.REJECTED && workItem.creatorId === user.id) {
+    return true
+  }
+
+  if (
+    workItem.status === WorkItemStatus.REJECTED &&
+    (user.role === Role.DEPARTMENT_MANAGER || user.role === Role.DEPARTMENT_LEADER) &&
+    isWorkRelatedToDepartment(workItem, user.departmentId)
+  ) {
+    return true
+  }
+
+  if (
+    workItem.type === 'TODO' &&
+    workItem.status === WorkItemStatus.PENDING_DECOMPOSE &&
+    (user.role === Role.DEPARTMENT_MANAGER || user.role === Role.DEPARTMENT_LEADER) &&
+    isWorkRelatedToDepartment(workItem, user.departmentId)
+  ) {
+    return true
+  }
+
+  if (
+    (workItem.type === 'PRIORITY' || workItem.type === 'MAIN') &&
+    workItem.status === WorkItemStatus.APPROVED &&
+    (user.role === Role.DEPARTMENT_MANAGER || user.role === Role.DEPARTMENT_LEADER) &&
+    isWorkRelatedToDepartment(workItem, user.departmentId)
+  ) {
+    return true
+  }
+
+  if (
+    workItem.type === 'TODO' &&
+    workItem.status === WorkItemStatus.IN_PROGRESS &&
+    (user.role === Role.DEPARTMENT_MANAGER || user.role === Role.DEPARTMENT_LEADER) &&
+    isWorkRelatedToDepartment(workItem, user.departmentId)
+  ) {
+    return true
+  }
+
+  return false
 }
 
 export async function GET(request: NextRequest) {
   try {
-    const token = request.cookies.get('token')?.value;
+    const token = request.cookies.get('token')?.value
     if (!token) {
-      return NextResponse.json({ error: '未登录' }, { status: 401 });
+      return NextResponse.json({ error: '未登录' }, { status: 401 })
     }
 
-    const currentUser = await getUserFromToken(token);
+    const currentUser = await getUserFromToken(token)
     if (!currentUser) {
-      return NextResponse.json({ error: '登录已过期' }, { status: 401 });
+      return NextResponse.json({ error: '登录已过期' }, { status: 401 })
     }
 
-    const isCompanyLevel = isCompanyLevelRole(currentUser.role);
-    const departmentIdFilter = isCompanyLevel ? undefined : currentUser.departmentId;
+    const isCompanyLevel = isCompanyLevelRole(currentUser.role)
+    const departmentIdFilter = isCompanyLevel ? undefined : currentUser.departmentId
 
     const whereClause: any = departmentIdFilter
       ? { departmentId: departmentIdFilter }
-      : {};
+      : {}
+
+    const allRelevantWorks = await prisma.workItem.findMany({
+      where: {
+        OR: [
+          { ...whereClause },
+          { currentApproverId: currentUser.id },
+        ],
+      },
+    })
+
+    let pendingApproveCount = 0
+    let pendingHandleCount = 0
+    let pendingProcessCount = 0
+
+    for (const workItem of allRelevantWorks) {
+      const canApprove = canApproveWorkOnServer(currentUser, workItem)
+      const canHandle = canHandleWorkOnServer(currentUser, workItem)
+
+      if (canApprove) pendingApproveCount++
+      if (canHandle) pendingHandleCount++
+      if (canApprove || canHandle) pendingProcessCount++
+    }
 
     const [
       priorityTotal,
       mainTotal,
       todoTotal,
-      pendingList,
-      evidencePendingList,
       inProgressList,
       completedList,
       cancelledList,
@@ -47,27 +159,6 @@ export async function GET(request: NextRequest) {
       }),
       prisma.workItem.count({
         where: { ...whereClause, type: 'TODO' },
-      }),
-      prisma.workItem.findMany({
-        where: {
-          ...whereClause,
-          status: {
-            in: [
-              WorkItemStatus.PENDING_DEPT,
-              WorkItemStatus.PENDING_COMPANY,
-              WorkItemStatus.PENDING_EVIDENCE_DEPT,
-              WorkItemStatus.PENDING_EVIDENCE_COMPANY,
-              WorkItemStatus.PENDING_MAIN_LEADER_CANCEL,
-              WorkItemStatus.PENDING_COMPLETE,
-              WorkItemStatus.ADJUSTING,
-              WorkItemStatus.CANCELLING,
-            ],
-          },
-        },
-        select: { id: true, status: true },
-      }),
-      prisma.workItem.count({
-        where: { ...whereClause, status: WorkItemStatus.APPROVED },
       }),
       prisma.workItem.count({
         where: { ...whereClause, status: WorkItemStatus.IN_PROGRESS },
@@ -120,25 +211,23 @@ export async function GET(request: NextRequest) {
           ],
         },
       }),
-    ]);
-
-    const pendingApprove = pendingList.length;
-    const pendingEvidence = evidencePendingList;
+    ])
 
     return NextResponse.json({
       priorityTotal,
       mainTotal,
       todoTotal,
-      pendingApprove,
-      pendingEvidence,
+      pendingApprove: pendingApproveCount,
+      pendingHandle: pendingHandleCount,
+      pendingProcess: pendingProcessCount,
       inProgress: inProgressList,
       completed: completedList,
       cancelled: cancelledList,
       overdue: overdueList,
       thisMonthDue: thisMonthList,
-    });
+    })
   } catch (error) {
-    console.error('Dashboard summary error:', error);
-    return NextResponse.json({ error: '获取统计失败' }, { status: 500 });
+    console.error('Dashboard summary error:', error)
+    return NextResponse.json({ error: '获取统计失败' }, { status: 500 })
   }
 }

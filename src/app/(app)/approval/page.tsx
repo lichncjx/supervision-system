@@ -9,6 +9,7 @@ import {
   approveWork,
   canApproveWork,
   canHandleWork,
+  canProcessWork,
   getActionName,
   getVisibleWorks,
   rejectWork,
@@ -51,7 +52,7 @@ export default function ApprovalPage() {
     return <div className="p-8 text-center text-red-600">无权限访问待我处理</div>;
   }
 
-  const pending = sortWorksByDueDate(works.filter((w) => canHandleWork(user, w)));
+  const pending = sortWorksByDueDate(works.filter((w) => canProcessWork(user, w)));
   const list = tab === 'pending' ? pending : works;
 
   const handleApprove = async (work: Work) => {

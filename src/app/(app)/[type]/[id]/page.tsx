@@ -18,6 +18,7 @@ import {
   resubmitRejectedWork,
   deleteWork,
   getWorkflowRecords,
+  submitWork,
   type ProofFile,
   type WorkEditablePatch,
   type Work,
@@ -188,6 +189,23 @@ export default function WorkDetailPage() {
       !['completed', 'cancelled', 'rejected'].includes(work.status)
     )
   );
+
+  const canSubmitDraft = user && work.status === 'draft' && (
+    user.role === 'ADMIN' ||
+    user.id === work.creatorId
+  );
+
+  const handleSubmitDraft = async () => {
+    if (!user) return;
+    try {
+      await submitWork(work, user);
+      setRefresh(refresh + 1);
+      alert('已提交审批');
+    } catch (error) {
+      console.error(error);
+      alert('提交审批失败，请查看控制台错误');
+    }
+  };
 
   const handleProofFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -967,6 +985,17 @@ export default function WorkDetailPage() {
           }
         }}
       />
+
+      {canSubmitDraft && (
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-gray-500">当前为草稿状态，请提交审批：</span>
+              <Button onClick={handleSubmitDraft}>提交审批</Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <WorkOperationPanel
         work={work}

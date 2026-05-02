@@ -10,6 +10,8 @@ import { useAuth } from '@/components/providers/auth-provider';
 import {
   getVisibleWorks,
   canHandleWork,
+  canApproveWork,
+  canProcessWork,
   isExpiringWork,
   sortWorksByDueDate,
   isSupervisorTrackingWork,
@@ -27,6 +29,8 @@ export default function DashboardPage() {
   const [stats, setStats] = useState({
     total: 0,
     pendingApproval: 0,
+    pendingHandle: 0,
+    pendingProcess: 0,
     inProgress: 0,
     completed: 0,
     expired: 0,
@@ -34,7 +38,6 @@ export default function DashboardPage() {
     priority: 0,
     main: 0,
     todo: 0,
-    pendingHandle: 0,
   });
   const [visibleWorks, setVisibleWorks] = useState<Work[]>([]);
 
@@ -54,6 +57,8 @@ export default function DashboardPage() {
           setStats({
             total: data.priorityTotal + data.mainTotal + data.todoTotal,
             pendingApproval: data.pendingApprove,
+            pendingHandle: data.pendingHandle,
+            pendingProcess: data.pendingProcess,
             inProgress: data.inProgress,
             completed: data.completed,
             expired: data.overdue,
@@ -61,7 +66,6 @@ export default function DashboardPage() {
             priority: data.priorityTotal,
             main: data.mainTotal,
             todo: data.todoTotal,
-            pendingHandle: data.pendingApprove,
           });
         }
         const newWorks = await getVisibleWorks(user);
@@ -98,11 +102,11 @@ export default function DashboardPage() {
     user?.role === 'PRESIDENT' ||
     user?.role === 'SUPERVISOR';
 
-  const pendingHandles = sortWorksByDueDate(
+  const pendingProcesses = sortWorksByDueDate(
     visibleWorks.filter((work) =>
       user?.role === 'SUPERVISOR'
         ? isSupervisorTrackingWork(work)
-        : canHandleWork(user, work)
+        : canProcessWork(user, work)
     )
   ).slice(0, 5);
 
@@ -208,7 +212,7 @@ export default function DashboardPage() {
           <Card className="hover:shadow-md transition cursor-pointer">
             <CardContent className="p-4 flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">待审批</p>
+                <p className="text-sm text-gray-500">待我审批</p>
                 <p className="text-2xl font-bold text-yellow-600">{stats.pendingApproval}</p>
               </div>
               <Clock className="h-6 w-6 text-yellow-600" />
@@ -220,10 +224,10 @@ export default function DashboardPage() {
           <Card className="hover:shadow-md transition cursor-pointer">
             <CardContent className="p-4 flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">待处理</p>
-                <p className="text-2xl font-bold text-orange-600">{stats.pendingHandle}</p>
+                <p className="text-sm text-gray-500">待我办理</p>
+                <p className="text-2xl font-bold text-purple-600">{stats.pendingHandle}</p>
               </div>
-              <Clock className="h-6 w-6 text-orange-600" />
+              <Clock className="h-6 w-6 text-purple-600" />
             </CardContent>
           </Card>
         </Link>
@@ -366,17 +370,19 @@ export default function DashboardPage() {
               </Link>
             </div>
 
-            {pendingHandles.length === 0 ? (
+            {pendingProcesses.length === 0 ? (
               <div className="text-center text-gray-500 py-10">暂无待处理事项</div>
             ) : (
               <div className="space-y-3">
-                {pendingHandles.slice(0, 5).map((work) => (
+                {pendingProcesses.slice(0, 5).map((work) => (
                   <Link key={work.id} href={`/${work.type === '重点' ? 'priority' : work.type === '主要' ? 'main' : 'todo'}/${work.id}`}>
                     <div className="border rounded-lg p-3 hover:bg-gray-50 min-w-0">
                       <div className="font-medium break-words">{work.title}</div>
                       <div className="text-sm text-gray-500 mt-1 flex items-center gap-2">
                         <span>{work.type}工作</span>
                         <StatusBadge status={work.status} />
+                        {canApproveWork(user, work) && <span className="text-yellow-600 font-medium">待审批</span>}
+                        {canHandleWork(user, work) && <span className="text-purple-600 font-medium">待办理</span>}
                       </div>
                       {work.rejectReason && (
                         <div className="text-sm text-red-600 mt-1 break-words">

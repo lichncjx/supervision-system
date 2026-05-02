@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { getCompanyLeaders, getDepartments, getDepartmentLeaders, getDepartmentManagers, getUsersByDepartment } from '@/lib/auth';
-import { addWork, type WorkType, type WorkNode } from '@/lib/work-store';
+import { addWork, submitWork, type WorkType, type WorkNode } from '@/lib/work-store';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -312,8 +312,9 @@ export default function NewWorkPage() {
     }
 
     try {
+      let createdWork;
       if (isPriorityOrMain) {
-        await addWork({
+        createdWork = await addWork({
           id: Date.now(),
           title: priorityMainForm.workItem,
           type,
@@ -337,7 +338,7 @@ export default function NewWorkPage() {
           supervisor: priorityMainForm.supervisor,
         });
       } else if (isTodo) {
-        await addWork({
+        createdWork = await addWork({
           id: Date.now(),
           title: todoForm.workItem,
           type: '待办',
@@ -377,6 +378,11 @@ export default function NewWorkPage() {
           progress: todoForm.progress,
           nodes: validNodes,
         });
+      }
+
+      // 提交审批
+      if (createdWork) {
+        await submitWork(createdWork, user);
       }
 
       router.push(`/${routeType}`);
