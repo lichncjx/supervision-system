@@ -2,7 +2,7 @@
 set -e
 
 echo "======================================"
-echo "Deploying supervision system..."
+echo "Running database migration..."
 echo "======================================"
 
 if [ ! -f ".env" ]; then
@@ -11,22 +11,18 @@ if [ ! -f ".env" ]; then
   exit 1
 fi
 
-echo "Pulling latest app image..."
-docker-compose pull app
+echo "Pulling latest migrate image..."
+docker-compose pull migrate
 
 echo "Starting database..."
 docker-compose up -d db
 
-echo "Starting application..."
-docker-compose up -d app
+echo "Running database migration..."
+docker-compose run --rm migrate
 
-echo "Cleaning dangling images..."
-docker image prune -f
-
-echo "Container status:"
-docker-compose ps
+echo "Migration completed."
 
 echo "======================================"
-echo "Deploy completed."
-echo "Visit: ${NEXT_PUBLIC_APP_URL:-please check your .env NEXT_PUBLIC_APP_URL}"
+echo "After migration, run deploy.sh to restart the app:"
+echo "  ./deploy.sh"
 echo "======================================"
