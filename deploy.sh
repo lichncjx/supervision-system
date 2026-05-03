@@ -28,9 +28,6 @@ docker-compose run --rm migrate
 echo "Starting application..."
 docker-compose up -d app
 
-echo "Cleaning dangling images..."
-docker image prune -f
-
 echo "Container status:"
 docker-compose ps
 
