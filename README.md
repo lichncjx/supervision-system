@@ -166,4 +166,4 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 2. **优先使用 shadcn/ui 组件** 而不是从零开发基础组件
 3. **遵循 Next.js App Router 规范**，正确区分服务端/客户端组件
 4. **使用 TypeScript** 进行类型安全开发
-5. **查看 AGENTS.md** 获取更详细的项目文档
+5. **查看 docs/项目说明.md** 获取更详细的项目文档
