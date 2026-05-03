@@ -1,0 +1,109 @@
+name: 业务规则调整
+description: 用于状态机、审批流、权限、统计口径等业务逻辑调整
+title: "[Logic] "
+labels: ["business-logic", "needs-design"]
+body:
+  - type: textarea
+    id: background
+    attributes:
+      label: 背景说明
+      placeholder: 为什么要调整这个规则？
+    validations:
+      required: true
+
+  - type: textarea
+    id: current
+    attributes:
+      label: 当前规则
+      placeholder: 现在系统是怎么处理的？
+    validations:
+      required: true
+
+  - type: textarea
+    id: target
+    attributes:
+      label: 目标规则
+      placeholder: 希望系统改成什么？
+    validations:
+      required: true
+
+  - type: textarea
+    id: affected
+    attributes:
+      label: 影响范围
+      placeholder: |
+        涉及角色：
+        涉及页面：
+        涉及接口：
+        涉及状态：
+        涉及统计：
+    validations:
+      required: true
+
+  - type: textarea
+    id: permission_rules
+    attributes:
+      label: 权限规则
+      placeholder: |
+        本次调整对不同角色的影响：
+        - 督办管理员：
+        - 部门主管：
+        - 部门领导：
+        - 公司主管领导：
+        - 公司主要领导：
+    validations:
+      required: false
+
+  - type: textarea
+    id: state_rules
+    attributes:
+      label: 状态流转规则
+      placeholder: |
+        修改前：
+        修改后：
+        哪些状态可以进入：
+        哪些状态不能进入：
+        是否需要审批记录：
+    validations:
+      required: false
+
+  - type: textarea
+    id: data_rules
+    attributes:
+      label: 数据口径
+      placeholder: |
+        如果涉及统计、列表、导出、完成率，请说明：
+        - 统计范围：
+        - 排除状态：
+        - 权限过滤：
+        - 首页数量与列表数量是否必须一致：
+    validations:
+      required: false
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 验收标准
+      placeholder: |
+        - [ ] xx角色能看到xx
+        - [ ] xx角色不能看到xx
+        - [ ] 审批通过后状态变为xx
+        - [ ] 首页统计与列表一致
+        - [ ] 不影响其他事项类型
+        - [ ] npm run build 通过
+    validations:
+      required: true
+
+  - type: textarea
+    id: ai_instructions
+    attributes:
+      label: AI 开发约束
+      placeholder: |
+        1. 请先阅读 AGENTS.md。
+        2. 请先分析影响范围，不要直接编码。
+        3. 不要擅自重构数据库。
+        4. 不要删除历史审批记录。
+        5. 不要只改前端按钮，必须检查服务端权限。
+        6. 修改后请说明状态流转前后变化。
+    validations:
+      required: false

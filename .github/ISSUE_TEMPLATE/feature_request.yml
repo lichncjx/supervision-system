@@ -1,0 +1,114 @@
+name: 功能需求
+description: 用于提出新增功能、页面优化、交互优化、流程增强等需求
+title: "[Feature] "
+labels: ["feature", "needs-design"]
+body:
+  - type: textarea
+    id: background
+    attributes:
+      label: 需求背景
+      description: 为什么需要这个功能？当前业务上遇到了什么问题？
+      placeholder: 例如：当前首页不能快速区分即将超期事项，领导查看不方便。
+    validations:
+      required: true
+
+  - type: textarea
+    id: goal
+    attributes:
+      label: 功能目标
+      description: 这个功能希望解决什么问题？实现后应达到什么效果？
+      placeholder: 例如：首页增加即将超期事项卡片，点击后进入对应列表。
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: 功能范围
+      description: 请说明涉及哪些模块、页面、接口或角色。
+      placeholder: |
+        涉及页面：
+        涉及角色：
+        涉及接口：
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected_behavior
+    attributes:
+      label: 期望行为
+      description: 请明确描述功能实现后的具体表现。
+      placeholder: |
+        1. 页面显示什么。
+        2. 用户点击后发生什么。
+        3. 不同角色看到什么。
+        4. 数据如何统计。
+    validations:
+      required: true
+
+  - type: textarea
+    id: permission_rules
+    attributes:
+      label: 权限规则
+      description: 如果涉及不同角色权限，请说明。
+      placeholder: |
+        - 督办管理员：
+        - 部门主管：
+        - 部门领导：
+        - 公司主管领导：
+        - 公司主要领导：
+    validations:
+      required: false
+
+  - type: textarea
+    id: data_rules
+    attributes:
+      label: 数据口径
+      description: 如果涉及统计、查询、导出、完成率等，请明确计算口径。
+      placeholder: |
+        统计范围：
+        排除状态：
+        权限过滤：
+        首页数量与列表数量是否一致：
+    validations:
+      required: false
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 验收标准
+      description: 请用清单形式写明怎样算完成。
+      placeholder: |
+        - [ ] 功能入口正常显示。
+        - [ ] 不同角色权限正确。
+        - [ ] 数据口径正确。
+        - [ ] 不影响原有功能。
+        - [ ] npm run build 通过。
+    validations:
+      required: true
+
+  - type: textarea
+    id: non_goals
+    attributes:
+      label: 本次不做的内容
+      description: 为避免 AI 过度发挥，请明确哪些内容不在本次需求范围内。
+      placeholder: |
+        - 本次不调整数据库结构。
+        - 本次不修改审批流。
+        - 本次不修改事项状态枚举。
+    validations:
+      required: false
+
+  - type: textarea
+    id: ai_instructions
+    attributes:
+      label: AI 开发约束
+      description: 给 Claude / Codex / Trae / Copilot 等 AI Agent 的额外要求。
+      placeholder: |
+        1. 请先阅读 AGENTS.md。
+        2. 不要擅自重构数据库结构。
+        3. 不要绕过服务端权限校验。
+        4. 涉及统计时，必须保证首页数量与列表数量一致。
+        5. 修改完成后请说明修改文件、修改逻辑和自测步骤。
+    validations:
+      required: false
