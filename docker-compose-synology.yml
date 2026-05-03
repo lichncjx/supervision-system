@@ -19,24 +19,8 @@ services:
       timeout: 5s
       retries: 5
 
-  migrate:
-    build:
-      context: .
-      dockerfile: Dockerfile.migrate
-    container_name: supervision-migrate
-    restart: "no"
-    environment:
-      DATABASE_URL: postgresql://supervision:${POSTGRES_PASSWORD}@db:5432/supervision?schema=public
-    depends_on:
-      db:
-        condition: service_healthy
-    networks:
-      - supervision-net
-
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ghcr.io/lichncjx/supervision-system:latest
     container_name: supervision-app
     restart: unless-stopped
     environment:
@@ -51,8 +35,8 @@ services:
     ports:
       - "18080:5000"
     depends_on:
-      migrate:
-        condition: service_completed_successfully
+      db:
+        condition: service_healthy
     networks:
       - supervision-net
 

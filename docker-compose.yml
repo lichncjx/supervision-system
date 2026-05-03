@@ -19,20 +19,6 @@ services:
     networks:
       - supervision-net
 
-  migrate:
-    build:
-      context: .
-      dockerfile: Dockerfile.migrate
-    container_name: supervision-migrate
-    restart: "no"
-    environment:
-      DATABASE_URL: postgresql://supervision:${POSTGRES_PASSWORD}@db:5432/supervision?schema=public
-    depends_on:
-      db:
-        condition: service_healthy
-    networks:
-      - supervision-net
-
   app:
     build:
       context: .
@@ -47,8 +33,8 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
     depends_on:
-      migrate:
-        condition: service_completed_successfully
+      db:
+        condition: service_healthy
     volumes:
       - ./uploads:/app/uploads
     networks:

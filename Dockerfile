@@ -47,8 +47,13 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
+COPY --from=builder --chown=nextjs:nodejs /app/scripts/docker-entrypoint.sh ./scripts/docker-entrypoint.sh
+RUN chmod +x ./scripts/docker-entrypoint.sh
+
 USER nextjs
 
 EXPOSE 5000
+
+ENTRYPOINT ["/app/scripts/docker-entrypoint.sh"]
 
 CMD ["node", "server.js"]
