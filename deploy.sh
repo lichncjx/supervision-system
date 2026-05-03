@@ -16,8 +16,8 @@ if [ ! -f ".env" ]; then
   exit 1
 fi
 
-echo "Pulling latest images..."
-docker-compose pull
+echo "Pulling latest app image..."
+docker-compose pull app
 
 echo "Starting database..."
 docker-compose up -d db
