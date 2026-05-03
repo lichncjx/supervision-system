@@ -47,10 +47,16 @@ EXPOSE 5000
 CMD ["node", "server.js"]
 
 
-FROM builder AS migrate
+FROM node:20-alpine AS migrate
 
 WORKDIR /app
 
 ENV NODE_ENV=production
 
-CMD ["pnpm", "prisma", "migrate", "deploy", "--schema=./prisma/schema.prisma"]
+RUN corepack enable
+
+COPY prisma ./prisma
+
+RUN npm config set registry https://registry.npmmirror.com && npm install prisma@6.19.3
+
+CMD ["./node_modules/.bin/prisma", "migrate", "deploy", "--schema=./prisma/schema.prisma"]
