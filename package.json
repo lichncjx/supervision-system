@@ -8,15 +8,17 @@
     "preinstall": "",
     "lint": "eslint",
     "start": "next start -p 5000",
-    "ts-check": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "ts-check": "pnpm typecheck",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
     "prisma:seed": "tsx prisma/seed.ts",
-    "db:init": "prisma generate && prisma migrate deploy && prisma db seed",
+    "db:deploy": "pnpm prisma:generate && pnpm prisma:deploy",
+    "db:init": "pnpm prisma:generate && pnpm prisma:deploy && pnpm prisma:seed",
     "test:regression": "node tests/regression-baseline.cjs",
-    "test:regression:prepare": "docker compose up -d db && pnpm prisma migrate deploy && pnpm prisma db seed && pnpm dev",
-    "check": "pnpm exec tsc --noEmit && pnpm test:regression"
+    "test:regression:prepare": "docker compose up -d db && pnpm prisma:deploy && pnpm prisma:seed && pnpm dev",
+    "check": "pnpm typecheck && pnpm lint && pnpm build"
   },
   "prisma": {
     "seed": "node_modules/.bin/tsx prisma/seed.ts"

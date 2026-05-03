@@ -6,7 +6,7 @@ RUN npm config set registry https://registry.npmmirror.com && npm install -g pnp
 
 COPY package.json pnpm-lock.yaml .npmrc ./
 
-RUN pnpm config set registry https://registry.npmmirror.com && pnpm install --no-frozen-lockfile
+RUN pnpm config set registry https://registry.npmmirror.com && pnpm install --frozen-lockfile
 
 
 FROM node:20-alpine AS source
