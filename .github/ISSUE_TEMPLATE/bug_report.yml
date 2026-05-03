@@ -1,0 +1,89 @@
+name: Bug反馈
+description: 用于反馈系统功能异常、权限异常、统计异常、页面异常
+title: "[Bug] "
+labels: ["bug", "needs-triage"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 当前问题
+      description: 请说明现在看到的异常现象
+      placeholder: 例如：部门领导审批重点工作后，首页待审批数量没有减少
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望结果
+      description: 正常情况下应该是什么样
+      placeholder: 例如：审批通过后，该事项不再出现在当前用户待审批列表，首页待审批数量同步减少
+    validations:
+      required: true
+
+  - type: dropdown
+    id: role
+    attributes:
+      label: 测试角色
+      options:
+        - admin
+        - 督办管理员
+        - 部门主管
+        - 部门领导
+        - 公司主管领导
+        - 公司主要领导
+        - 其他
+    validations:
+      required: true
+
+  - type: textarea
+    id: page
+    attributes:
+      label: 涉及页面
+      placeholder: 例如：首页、审批中心、重点工作列表、事项详情页、系统管理
+    validations:
+      required: false
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      placeholder: |
+        1. 使用 xx 账号登录
+        2. 进入 xx 页面
+        3. 点击 xx 按钮
+        4. 观察到 xx 异常
+    validations:
+      required: true
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: 截图或录屏
+      description: 可粘贴截图
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: 影响范围
+      placeholder: |
+        是否影响继续测试：
+        是否影响权限：
+        是否影响审批：
+        是否影响统计：
+    validations:
+      required: false
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 验收标准
+      placeholder: |
+        - [ ] 问题可以复现
+        - [ ] 修复后异常消失
+        - [ ] 不影响其他角色权限
+        - [ ] 不影响审批流
+        - [ ] 不影响首页统计
+        - [ ] npm run build 通过
+    validations:
+      required: true
