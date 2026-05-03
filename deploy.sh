@@ -16,8 +16,10 @@ if [ ! -f ".env" ]; then
   exit 1
 fi
 
-echo "Pulling latest app image..."
+echo "Pulling latest images..."
+docker-compose pull db
 docker-compose pull app
+docker-compose pull migrate
 
 echo "Starting database..."
 docker-compose up -d db
@@ -27,6 +29,9 @@ docker-compose run --rm migrate
 
 echo "Starting application..."
 docker-compose up -d app
+
+echo "Cleaning dangling images..."
+docker image prune -f
 
 echo "Container status:"
 docker-compose ps

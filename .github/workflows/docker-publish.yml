@@ -4,6 +4,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      force_migrate:
+        description: Force migrate image build
+        required: false
+        default: "false"
 
 permissions:
   contents: read
@@ -19,6 +24,26 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Check if migrate needs rebuild
+        id: migrate-check
+        run: |
+          if [ "${{ github.event.inputs.force_migrate }}" == "true" ]; then
+            echo "result=true" >> $GITHUB_ENV
+            echo "reason=manual trigger" >> $GITHUB_ENV
+          else
+            if git diff --name-only HEAD~1 | grep -E "^(prisma/|package\.json|pnpm-lock\.yaml|Dockerfile|\.github/workflows/docker-publish\.yml)$" > /dev/null 2>&1; then
+              echo "result=true" >> $GITHUB_ENV
+              echo "reason=infrastructure file changed" >> $GITHUB_ENV
+            else
+              echo "result=false" >> $GITHUB_ENV
+              echo "reason=no infrastructure change" >> $GITHUB_ENV
+            fi
+          fi
+          echo "migrate_needed=$result" >> $GITHUB_ENV
+          echo "migrate_reason=$reason" >> $GITHUB_ENV
+          echo "Changed files:"
+          git diff --name-only HEAD~1
 
       - name: Set lowercase image name
         run: echo "IMAGE_NAME=${IMAGE_NAME,,}" >> $GITHUB_ENV
@@ -40,7 +65,9 @@ jobs:
           docker push $IMAGE_NAME:${{ github.sha }}
 
       - name: Build migrate image
+        if: env.migrate_needed == 'true'
         run: |
+          echo "Building migrate image because: ${{ env.migrate_reason }}"
           docker build \
             --target migrate \
             -t ${IMAGE_NAME}-migrate:latest \
@@ -48,9 +75,19 @@ jobs:
             .
 
       - name: Push migrate image
+        if: env.migrate_needed == 'true'
         run: |
           docker push ${IMAGE_NAME}-migrate:latest
           docker push ${IMAGE_NAME}-migrate:${{ github.sha }}
 
       - name: Show image sizes
         run: docker images | grep supervision-system
+
+      - name: Summary
+        run: |
+          echo "## Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- App image: Always built and pushed" >> $GITHUB_STEP_SUMMARY
+          echo "- Migrate image needed: ${{ env.migrate_needed }}" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ env.migrate_needed }}" == "true" ]; then
+            echo "- Reason: ${{ env.migrate_reason }}" >> $GITHUB_STEP_SUMMARY
+          fi
