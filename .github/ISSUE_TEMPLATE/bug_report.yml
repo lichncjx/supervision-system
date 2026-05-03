@@ -75,6 +75,15 @@ body:
       required: false
 
   - type: textarea
+    id: branch_name
+    attributes:
+      label: 建议分支名
+      description: 建议使用 fix/xxx 格式命名分支
+      placeholder: 例如：fix/login-error
+    validations:
+      required: true
+
+  - type: textarea
     id: acceptance
     attributes:
       label: 验收标准
@@ -84,6 +93,6 @@ body:
         - [ ] 不影响其他角色权限
         - [ ] 不影响审批流
         - [ ] 不影响首页统计
-        - [ ] npm run build 通过
+        - [ ] pnpm build 通过
     validations:
       required: true

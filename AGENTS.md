@@ -72,3 +72,83 @@ AI 或开发者提交 PR 时必须说明：
 4. 涉及权限时必须说明测试角色。
 5. 涉及统计时必须说明统计口径。
 6. 涉及审批时必须说明状态流转前后变化。
+
+## 七、Git 分支与提交规则
+
+### 分支策略
+
+- `main` 是测试环境稳定分支，**不允许直接提交**
+- 不创建 `develop` 分支
+- Bug 修复使用 `fix/xxx` 分支
+- 功能需求使用 `feature/xxx` 分支
+- 权限、审批流、状态机、统计口径等业务规则调整使用 `logic/xxx` 分支
+- 所有修改通过 PR 合并到 `main`
+- PR 必须等待 CI 通过后才能合并
+
+### 分支命名示例
+
+| 分支类型 | 示例 |
+|---------|------|
+| Bug 修复 | `fix/login-error`、`fix/workflow-status` |
+| 功能需求 | `feature/attachment-upload`、`feature/export-excel` |
+| 业务规则调整 | `logic/approval-flow`、`logic/permission-update` |
+
+### AI 工具标准工作流程
+
+AI Agent 或开发者开始任务前必须执行以下步骤：
+
+1. **读取文档**
+   - 阅读 `AGENTS.md`
+   - 阅读 `docs/GitHub协作流程.md`
+
+2. **确认当前分支**
+   ```bash
+   git branch --show-current
+   ```
+
+3. **切换到 main**
+   ```bash
+   git checkout main
+   ```
+
+4. **拉取最新 main**
+   ```bash
+   git pull origin main
+   ```
+
+5. **根据任务类型创建分支**
+   ```bash
+   # Bug 修复
+   git checkout -b fix/xxx
+   # 功能需求
+   git checkout -b feature/xxx
+   # 业务规则调整
+   git checkout -b logic/xxx
+   ```
+
+6. **修改代码**
+   - 遵循项目代码规范
+   - 不修改业务逻辑以外的内容
+
+7. **本地检查**
+   ```bash
+   pnpm lint
+   pnpm typecheck
+   pnpm build
+   ```
+
+8. **推送任务分支**
+   ```bash
+   git push origin fix/xxx
+   ```
+
+9. **创建 PR 到 main**
+   - 使用 PR 模板
+   - 关联对应 Issue
+   - 等待 CI 通过
+
+### 部署规则
+
+- **普通发布**：执行 `sh deploy.sh`
+- **涉及数据库结构变化**：先执行 `sh migrate.sh`，再执行 `sh deploy.sh`
+- **群晖部署命令**：统一使用 `docker-compose`，不使用 `docker compose`，不使用 `-f` 参数
