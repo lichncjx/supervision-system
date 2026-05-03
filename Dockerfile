@@ -1,19 +1,18 @@
-FROM node:20-alpine AS deps
+FROM node:20-alpine AS base
 
 WORKDIR /app
 
 RUN npm config set registry https://registry.npmmirror.com && npm install -g pnpm
+
+
+FROM base AS deps
 
 COPY package.json pnpm-lock.yaml .npmrc ./
 
 RUN pnpm config set registry https://registry.npmmirror.com && pnpm install --frozen-lockfile
 
 
-FROM node:20-alpine AS source
-
-WORKDIR /app
-
-RUN npm config set registry https://registry.npmmirror.com && npm install -g pnpm && pnpm config set registry https://registry.npmmirror.com
+FROM base AS builder
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -21,16 +20,10 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN pnpm prisma generate
-
-
-FROM source AS builder
-
-WORKDIR /app
-
 RUN pnpm build
 
 
-FROM node:20-alpine AS runner
+FROM node:20-alpine AS app
 
 WORKDIR /app
 
@@ -47,19 +40,20 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
-
-COPY --from=builder /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
-COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
-
-COPY --from=builder --chown=nextjs:nodejs /app/scripts/docker-entrypoint.sh ./scripts/docker-entrypoint.sh
-RUN chmod +x ./scripts/docker-entrypoint.sh
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/@prisma/client ./node_modules/@prisma/client
 
 USER nextjs
 
 EXPOSE 5000
 
-ENTRYPOINT ["/app/scripts/docker-entrypoint.sh"]
-
 CMD ["node", "server.js"]
+
+
+FROM builder AS migrate
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+CMD ["pnpm", "prisma", "migrate", "deploy", "--schema=./prisma/schema.prisma"]

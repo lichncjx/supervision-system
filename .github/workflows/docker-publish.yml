@@ -1,4 +1,4 @@
-name: Build and Publish Docker Image
+name: Build and Publish Docker Images
 
 on:
   push:
@@ -26,11 +26,31 @@ jobs:
       - name: Login to GitHub Container Registry
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-      - name: Build Docker image
+      - name: Build app image
         run: |
-          docker build -t $IMAGE_NAME:latest -t $IMAGE_NAME:${{ github.sha }} .
+          docker build \
+            --target app \
+            -t $IMAGE_NAME:latest \
+            -t $IMAGE_NAME:${{ github.sha }} \
+            .
 
-      - name: Push Docker image
+      - name: Push app image
         run: |
           docker push $IMAGE_NAME:latest
           docker push $IMAGE_NAME:${{ github.sha }}
+
+      - name: Build migrate image
+        run: |
+          docker build \
+            --target migrate \
+            -t ${IMAGE_NAME}-migrate:latest \
+            -t ${IMAGE_NAME}-migrate:${{ github.sha }} \
+            .
+
+      - name: Push migrate image
+        run: |
+          docker push ${IMAGE_NAME}-migrate:latest
+          docker push ${IMAGE_NAME}-migrate:${{ github.sha }}
+
+      - name: Show image sizes
+        run: docker images | grep supervision-system
