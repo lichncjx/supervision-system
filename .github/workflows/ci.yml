@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main, trae]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install dependencies
+        run: |
+          if [ -f pnpm-lock.yaml ]; then pnpm install --frozen-lockfile; \
+          elif [ -f package-lock.json ]; then npm ci; \
+          else npm install; fi
+
+      - name: Type check
+        run: |
+          if npm run | grep -q "typecheck"; then npm run typecheck; else npx tsc --noEmit; fi
+
+      - name: Lint
+        run: |
+          if npm run | grep -q "lint"; then npm run lint; else echo "No lint script"; fi
+
+      - name: Build
+        run: npm run build
