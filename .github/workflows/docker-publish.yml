@@ -24,26 +24,32 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
 
       - name: Check if migrate needs rebuild
         id: migrate-check
         run: |
-          if [ "${{ github.event.inputs.force_migrate }}" == "true" ]; then
+          FORCE_MIGRATE="${{ github.event.inputs.force_migrate }}"
+          echo "Force migrate input: '$FORCE_MIGRATE'"
+
+          if [ "$FORCE_MIGRATE" == "true" ]; then
             echo "result=true" >> $GITHUB_ENV
             echo "reason=manual trigger" >> $GITHUB_ENV
+          elif ! git rev-parse HEAD~1 > /dev/null 2>&1; then
+            echo "result=true" >> $GITHUB_ENV
+            echo "reason=first commit" >> $GITHUB_ENV
+          elif git diff --name-only HEAD~1 HEAD | grep -qE "^(prisma/|package\.json|pnpm-lock\.yaml|Dockerfile|\.github/workflows/docker-publish\.yml)$"; then
+            echo "result=true" >> $GITHUB_ENV
+            echo "reason=infrastructure file changed" >> $GITHUB_ENV
           else
-            if git diff --name-only HEAD~1 | grep -E "^(prisma/|package\.json|pnpm-lock\.yaml|Dockerfile|\.github/workflows/docker-publish\.yml)$" > /dev/null 2>&1; then
-              echo "result=true" >> $GITHUB_ENV
-              echo "reason=infrastructure file changed" >> $GITHUB_ENV
-            else
-              echo "result=false" >> $GITHUB_ENV
-              echo "reason=no infrastructure change" >> $GITHUB_ENV
-            fi
+            echo "result=false" >> $GITHUB_ENV
+            echo "reason=no infrastructure change" >> $GITHUB_ENV
           fi
           echo "migrate_needed=$result" >> $GITHUB_ENV
           echo "migrate_reason=$reason" >> $GITHUB_ENV
-          echo "Changed files:"
-          git diff --name-only HEAD~1
+          echo "Changed files between HEAD~1 and HEAD:"
+          git diff --name-only HEAD~1 HEAD || echo "No previous commit"
 
       - name: Set lowercase image name
         run: echo "IMAGE_NAME=${IMAGE_NAME,,}" >> $GITHUB_ENV
