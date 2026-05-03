@@ -66,7 +66,7 @@ done
 echo "Database is ready."
 
 echo "Running database migration..."
-npx prisma migrate deploy
+./node_modules/.bin/prisma migrate deploy --schema=./prisma/schema.prisma
 echo "Database migration completed."
 
 echo "Starting Next.js app..."
