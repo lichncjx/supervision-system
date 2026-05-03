@@ -1112,7 +1112,7 @@ export async function submitCancel(work: Work, user: User, reason: string) {
   }
 }
 
-export async function submitWork(work: Work, user: User) {
+export async function submitWork(work: Work, _user: User) {
   try {
     const response = await fetch(`/api/works/${work.id}/workflow`, {
       method: 'POST',

@@ -14,7 +14,7 @@
     "prisma:deploy": "prisma migrate deploy",
     "prisma:seed": "tsx prisma/seed.ts",
     "db:init": "prisma generate && prisma migrate deploy && prisma db seed",
-    "test:regression": "node tests/regression-baseline.js",
+    "test:regression": "node tests/regression-baseline.cjs",
     "test:regression:prepare": "docker compose up -d db && pnpm prisma migrate deploy && pnpm prisma db seed && pnpm dev",
     "check": "pnpm exec tsc --noEmit && pnpm test:regression"
   },
