@@ -4,6 +4,12 @@
 
 - Closes #
 
+## 分支规则确认
+
+- [ ] 从 `main` 创建分支（未直接从 main 提交）
+- [ ] 分支命名符合规范（fix/xxx、feature/xxx、logic/xxx）
+- [ ] PR 目标合并到 `main`
+
 ## 修改范围
 
 - [ ] 页面 UI
@@ -27,9 +33,9 @@
 
 ## 自测结果
 
-- [ ] `npm run typecheck` 通过
-- [ ] `npm run lint` 通过
-- [ ] `npm run build` 通过
+- [ ] `pnpm typecheck` 通过
+- [ ] `pnpm lint` 通过
+- [ ] `pnpm build` 通过
 - [ ] 已使用 admin 测试
 - [ ] 已使用部门主管测试
 - [ ] 已使用部门领导测试
@@ -43,3 +49,14 @@
 ## 风险点
 
 请说明可能影响哪些旧功能。
+
+## 发布与验收
+
+- [ ] CI 已通过
+- [ ] Docker 镜像构建成功
+- [ ] 本次是否涉及 prisma/**
+- [ ] 是否需要执行 migrate.sh
+- [ ] 是否只需执行 deploy.sh
+- [ ] 群晖测试环境已更新
+- [ ] 测试用户已验证
+- [ ] 关联 Issue 已关闭或准备关闭

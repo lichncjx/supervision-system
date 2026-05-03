@@ -74,6 +74,15 @@ body:
       required: false
 
   - type: textarea
+    id: branch_name
+    attributes:
+      label: 建议分支名
+      description: 建议使用 feature/xxx 格式命名分支
+      placeholder: 例如：feature/attachment-upload
+    validations:
+      required: true
+
+  - type: textarea
     id: acceptance
     attributes:
       label: 验收标准
@@ -83,7 +92,7 @@ body:
         - [ ] 不同角色权限正确。
         - [ ] 数据口径正确。
         - [ ] 不影响原有功能。
-        - [ ] npm run build 通过。
+        - [ ] pnpm build 通过。
     validations:
       required: true
 
@@ -105,7 +114,7 @@ body:
       label: AI 开发约束
       description: 给 Claude / Codex / Trae / Copilot 等 AI Agent 的额外要求。
       placeholder: |
-        1. 请先阅读 AGENTS.md。
+        1. 请先阅读 AGENTS.md 和 docs/GitHub协作流程.md。
         2. 不要擅自重构数据库结构。
         3. 不要绕过服务端权限校验。
         4. 涉及统计时，必须保证首页数量与列表数量一致。

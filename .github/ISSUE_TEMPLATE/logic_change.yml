@@ -81,6 +81,15 @@ body:
       required: false
 
   - type: textarea
+    id: branch_name
+    attributes:
+      label: 建议分支名
+      description: 建议使用 logic/xxx 格式命名分支
+      placeholder: 例如：logic/approval-flow-update
+    validations:
+      required: true
+
+  - type: textarea
     id: acceptance
     attributes:
       label: 验收标准
@@ -90,7 +99,7 @@ body:
         - [ ] 审批通过后状态变为xx
         - [ ] 首页统计与列表一致
         - [ ] 不影响其他事项类型
-        - [ ] npm run build 通过
+        - [ ] pnpm build 通过
     validations:
       required: true
 
@@ -99,7 +108,7 @@ body:
     attributes:
       label: AI 开发约束
       placeholder: |
-        1. 请先阅读 AGENTS.md。
+        1. 请先阅读 AGENTS.md 和 docs/GitHub协作流程.md。
         2. 请先分析影响范围，不要直接编码。
         3. 不要擅自重构数据库。
         4. 不要删除历史审批记录。
