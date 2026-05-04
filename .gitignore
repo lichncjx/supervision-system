@@ -97,6 +97,9 @@ Desktop.ini
 # Uploads
 uploads/
 
+# Claude Code local settings
+.claude/settings.local.json
+
 # Misc
 .vercel
 .turbo
