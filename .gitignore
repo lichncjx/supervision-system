@@ -23,6 +23,7 @@ coverage/
 .env.development.local
 .env.test.local
 .env.production.local
+.env.supabase-preview
 
 # Logs
 logs/
@@ -92,6 +93,9 @@ Desktop.ini
 
 # TypeScript
 *.tsbuildinfo
+
+# Uploads
+uploads/
 
 # Misc
 .vercel
