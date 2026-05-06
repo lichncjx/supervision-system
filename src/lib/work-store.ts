@@ -153,6 +153,7 @@ export interface Work {
   approvalLeaderRole?: string;
   currentApproverId?: number;
   currentApproverRole?: string;
+  firstSubmitterId?: number;
   pendingAdjustment?: WorkEditablePatch;
   pendingAdjustmentReason?: string;
   pendingAdjustmentFromTime?: string;
@@ -260,6 +261,7 @@ export function transformWorkFromAPI(work: any): Work {
     cancelReason: work.cancelReason || work.cancel_reason,
     currentApproverId: work.currentApproverId || work.current_approver_id,
     currentApproverRole: work.currentApproverRole || work.current_approver_role,
+    firstSubmitterId: work.firstSubmitterId ?? undefined,
     attachments: work.attachments || [],
   };
 }
@@ -495,56 +497,29 @@ export async function deleteWork(id: number): Promise<void> {
   }
 }
 
-function getSubmitStatusByUserRole(user: User): Status {
-  if (user.role === 'DEPARTMENT_MANAGER') {
-    return 'pending_dept';
-  }
-
-  if (
-    user.role === 'DEPARTMENT_LEADER' ||
-    user.role === 'ADMIN' ||
-    user.role === 'VICE_PRESIDENT' ||
-    user.role === 'PRESIDENT'
-  ) {
-    return 'pending_company';
-  }
-
-  return 'pending_dept';
-}
-
 export async function resubmitRejectedWork(work: Work, user: User, patch: WorkEditablePatch) {
-  const nextStatus = getSubmitStatusByUserRole(user);
-
-  return updateWork(work.id, {
+  // Step 1: Update content fields (keep status as REJECTED)
+  await updateWork(work.id, {
     ...patch,
     title: patch.title || patch.workItem || work.title,
-    status: nextStatus,
-    rejectReason: null,
-    rejectedFromStatus: null,
   });
-}
 
-export async function resubmitReturnedWork(work: Work) {
-  if (work.status !== 'rejected') {
-    return work;
+  // Step 2: Submit via workflow API to re-enter the approval chain
+  const response = await fetch(`/api/works/${work.id}/workflow`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ action: 'submit', comment: '修改后重新提交审批' }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || '重新提交失败');
   }
 
-  if (work.creatorRole === 'DEPARTMENT_MANAGER') {
-    return updateWork(work.id, {
-      status: 'pending_dept',
-      rejectReason: undefined,
-      rejectedAt: undefined,
-      rejectedFrom: undefined,
-    });
-  }
-
-  return updateWork(work.id, {
-    status: 'pending_company',
-    rejectReason: undefined,
-    rejectedAt: undefined,
-    rejectedFrom: undefined,
-  });
+  return await getWorkById(work.id);
 }
+
 
 export function getStatusName(status: string) {
   const normalized = status.toLowerCase();
@@ -913,17 +888,11 @@ export function canHandleWork(user: User | null | undefined, work: Work) {
     return true;
   }
 
-  // 被退回后待修改重新提交
-  if (isReturnStatus(work.status) && work.creatorId === user.id) {
-    return true;
-  }
-
-  if (
-    isReturnStatus(work.status) &&
-    (user.role === 'DEPARTMENT_MANAGER' || user.role === 'DEPARTMENT_LEADER') &&
-    isWorkRelatedToDepartment(work, user.departmentId)
-  ) {
-    return true;
+  // 被退回后，仅首次提交审批人可以处理
+  // firstSubmitterId ?? creatorId 的 fallback 仅用于兼容历史数据
+  if (isReturnStatus(work.status)) {
+    const submitterId = work.firstSubmitterId ?? work.creatorId;
+    return submitterId === user.id;
   }
 
   // 待办事项待分解

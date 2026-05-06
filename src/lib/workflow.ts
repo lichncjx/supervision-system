@@ -104,6 +104,13 @@ export function canUserSubmit(user: UserSession, workItem: any): boolean {
     return false;
   }
 
+  if (workItem.status === WorkItemStatus.REJECTED) {
+    // firstSubmitterId ?? creatorId 的 fallback 仅用于兼容历史数据：
+    // 引入 firstSubmitterId 前已被退回的事项没有该字段，此时回退到 creatorId。
+    const submitterId = workItem.firstSubmitterId ?? workItem.creatorId;
+    return submitterId === user.userId;
+  }
+
   if (workItem.creatorId !== user.userId) {
     return false;
   }
@@ -165,12 +172,21 @@ export async function submitForApproval(workItemId: number, user: UserSession, c
     }
   }
 
+  // firstSubmitterId: 仅在首次进入正式审批链路（PENDING_DEPT / PENDING_COMPANY）时写入，
+  // 之后不再覆盖。PENDING_DECOMPOSE 不触发写入。
+  // 写入后退回再重新提交不会改变该字段。
+  const entersApprovalChain =
+    newStatus === WorkItemStatus.PENDING_DEPT ||
+    newStatus === WorkItemStatus.PENDING_COMPANY;
+  const shouldSetFirstSubmitter = entersApprovalChain && !workItem.firstSubmitterId;
+
   const updated = await prisma.workItem.update({
     where: { id: workItemId },
     data: {
       status: newStatus,
       currentApproverRole: newApproverRole,
       currentApproverId: newApproverId,
+      ...(shouldSetFirstSubmitter ? { firstSubmitterId: user.userId } : {}),
     },
   });
 
@@ -808,6 +824,12 @@ export async function decomposeTodo(workItemId: number, user: UserSession, nodes
     return { success: false, error: '无权分解待办事项' };
   }
 
+  // firstSubmitterId: 仅在首次进入正式审批链路时写入，之后不再覆盖。
+  const entersApprovalChain =
+    newStatus === WorkItemStatus.PENDING_DEPT ||
+    newStatus === WorkItemStatus.PENDING_COMPANY;
+  const shouldSetFirstSubmitter = entersApprovalChain && !workItem.firstSubmitterId;
+
   const updated = await prisma.workItem.update({
     where: { id: workItemId },
     data: {
@@ -815,6 +837,7 @@ export async function decomposeTodo(workItemId: number, user: UserSession, nodes
       nodes: JSON.stringify(nodes),
       currentApproverRole: newApproverRole,
       currentApproverId: newApproverId,
+      ...(shouldSetFirstSubmitter ? { firstSubmitterId: user.userId } : {}),
     },
   });
 

@@ -117,16 +117,10 @@ function canHandleWorkOnServer(user: User, workItem: any): boolean {
     return true
   }
 
-  if (workItem.status === WorkItemStatus.REJECTED && workItem.creatorId === user.id) {
-    return true
-  }
-
-  if (
-    workItem.status === WorkItemStatus.REJECTED &&
-    (user.role === Role.DEPARTMENT_MANAGER || user.role === Role.DEPARTMENT_LEADER) &&
-    isWorkRelatedToDepartment(workItem, user.departmentId)
-  ) {
-    return true
+  if (workItem.status === WorkItemStatus.REJECTED) {
+    // firstSubmitterId ?? creatorId 的 fallback 仅用于兼容历史数据
+    const submitterId = workItem.firstSubmitterId ?? workItem.creatorId;
+    return submitterId === user.id;
   }
 
   if (

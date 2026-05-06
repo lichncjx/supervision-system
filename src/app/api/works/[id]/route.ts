@@ -95,6 +95,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       approvalLeaderId: work.approvalLeaderId,
       currentApproverId: work.currentApproverId,
       currentApproverRole: work.currentApproverRole,
+      firstSubmitterId: work.firstSubmitterId,
       nodes: work.nodes ? processNodesForDisplay(JSON.parse(String(work.nodes))) : [],
       adjustHistory: work.adjustHistory ? processAdjustHistory(work.adjustHistory as any[]) : [],
       attachments: work.attachments.map((a) => ({

@@ -171,11 +171,8 @@ export default function WorkDetailPage() {
     work.status === 'rejected' &&
     (
       user.role === 'ADMIN' ||
-      user.id === work.creatorId ||
-      (
-        (user.role === 'DEPARTMENT_MANAGER' || user.role === 'DEPARTMENT_LEADER') &&
-        isCurrentUserRelatedDepartment()
-      )
+      // firstSubmitterId ?? creatorId 的 fallback 仅用于兼容历史数据
+      user.id === (work.firstSubmitterId ?? work.creatorId)
     );
 
   const canApprove = user ? canApproveWork(user, work) : false;

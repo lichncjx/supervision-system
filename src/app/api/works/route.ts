@@ -121,6 +121,7 @@ export async function GET(request: NextRequest) {
       approvalLeaderId: work.approvalLeaderId,
       currentApproverId: work.currentApproverId,
       currentApproverRole: work.currentApproverRole,
+      firstSubmitterId: work.firstSubmitterId,
       nodes: work.nodes ? processNodesForDisplay(JSON.parse(String(work.nodes))) : [],
       adjustHistory: work.adjustHistory ? processAdjustHistory(work.adjustHistory as any[]) : [],
       createdAt: work.createdAt.toISOString(),
