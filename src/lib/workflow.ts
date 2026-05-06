@@ -76,6 +76,26 @@ export function canUserApprove(user: UserSession, workItem: any): boolean {
     return true;
   }
 
+  if (!workItem.currentApproverId && !workItem.currentApproverRole) {
+    if (
+      (workItem.type === WorkItemType.PRIORITY || workItem.type === WorkItemType.MAIN) &&
+      (
+        workItem.status === WorkItemStatus.PENDING_COMPANY ||
+        workItem.status === WorkItemStatus.PENDING_EVIDENCE_COMPANY
+      )
+    ) {
+      return user.role === Role.VICE_PRESIDENT;
+    }
+
+    if (
+      workItem.type === WorkItemType.TODO &&
+      workItem.status === WorkItemStatus.PENDING_COMPANY &&
+      workItem.proposedLeaderId
+    ) {
+      return workItem.proposedLeaderId === user.userId;
+    }
+  }
+
   return false;
 }
 

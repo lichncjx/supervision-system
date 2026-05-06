@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { getUserFromToken } from '@/lib/server-auth'
-import { WorkItemStatus, User, Role } from '@prisma/client'
+import { WorkItemStatus, WorkItemType, User, Role } from '@prisma/client'
 
 function isCompanyLevelRole(role: string): boolean {
   const companyRoles: string[] = ['ADMIN', 'SUPERVISOR', 'VICE_PRESIDENT', 'PRESIDENT']
@@ -16,34 +16,93 @@ function isWorkRelatedToDepartment(workItem: any, departmentId: number): boolean
 }
 
 function canApproveWorkOnServer(user: User, workItem: any): boolean {
-  if (user.role === Role.ADMIN || user.role === Role.SUPERVISOR) {
-    return false
-  }
-
   const pendingStatuses = [
     WorkItemStatus.PENDING_DEPT,
     WorkItemStatus.PENDING_COMPANY,
     WorkItemStatus.PENDING_EVIDENCE_DEPT,
     WorkItemStatus.PENDING_EVIDENCE_COMPANY,
-    WorkItemStatus.PENDING_MAIN_LEADER_CANCEL,
-    WorkItemStatus.PENDING_COMPLETE,
-    WorkItemStatus.ADJUSTING,
     WorkItemStatus.CANCELLING,
+    WorkItemStatus.PENDING_MAIN_LEADER_CANCEL,
+    WorkItemStatus.ADJUSTING,
   ]
 
   if (!pendingStatuses.includes(workItem.status)) {
     return false
   }
 
-  if (workItem.currentApproverId && workItem.currentApproverId === user.id) {
-    return true
+  if (user.role === Role.ADMIN || user.role === Role.SUPERVISOR) {
+    return false
   }
 
-  if (workItem.currentApproverRole && workItem.currentApproverRole === user.role) {
-    if (user.role === Role.DEPARTMENT_LEADER) {
-      return workItem.departmentId === user.departmentId
-    }
-    return true
+  if (user.role === Role.DEPARTMENT_LEADER) {
+    return (
+      isWorkRelatedToDepartment(workItem, user.departmentId) &&
+      (
+        workItem.status === WorkItemStatus.PENDING_DEPT ||
+        workItem.status === WorkItemStatus.PENDING_EVIDENCE_DEPT ||
+        workItem.status === WorkItemStatus.ADJUSTING ||
+        workItem.status === WorkItemStatus.CANCELLING
+      )
+    )
+  }
+
+  if (
+    workItem.status === WorkItemStatus.PENDING_COMPANY ||
+    workItem.status === WorkItemStatus.PENDING_EVIDENCE_COMPANY
+  ) {
+    return isSelectedCompanyApproverOnServer(user, workItem)
+  }
+
+  if (
+    workItem.status === WorkItemStatus.CANCELLING ||
+    workItem.status === WorkItemStatus.ADJUSTING
+  ) {
+    return isSelectedCompanyApproverOnServer(user, workItem)
+  }
+
+  if (workItem.status === WorkItemStatus.PENDING_MAIN_LEADER_CANCEL) {
+    return user.role === Role.PRESIDENT
+  }
+
+  return false
+}
+
+function isSelectedCompanyApproverOnServer(user: User, workItem: any): boolean {
+  if (user.role === Role.ADMIN || user.role === Role.SUPERVISOR) {
+    return false
+  }
+
+  if (workItem.currentApproverId) {
+    return workItem.currentApproverId === user.id
+  }
+
+  if (workItem.currentApproverRole) {
+    return workItem.currentApproverRole === user.role
+  }
+
+  if (
+    (workItem.action === 'ADJUST' || workItem.action === 'CANCEL') &&
+    workItem.approvalLeaderId
+  ) {
+    return workItem.approvalLeaderId === user.id
+  }
+
+  if (
+    workItem.type === WorkItemType.TODO &&
+    workItem.status === WorkItemStatus.PENDING_COMPANY &&
+    workItem.proposedLeaderId
+  ) {
+    return workItem.proposedLeaderId === user.id
+  }
+
+  if (
+    (workItem.type === WorkItemType.PRIORITY || workItem.type === WorkItemType.MAIN) &&
+    (
+      workItem.status === WorkItemStatus.PENDING_COMPANY ||
+      workItem.status === WorkItemStatus.PENDING_EVIDENCE_COMPANY
+    )
+  ) {
+    return user.role === Role.VICE_PRESIDENT
   }
 
   return false
@@ -120,12 +179,16 @@ export async function GET(request: NextRequest) {
       : {}
 
     const allRelevantWorks = await prisma.workItem.findMany({
-      where: {
-        OR: [
-          { ...whereClause },
-          { currentApproverId: currentUser.id },
-        ],
-      },
+      where: departmentIdFilter
+        ? {
+            OR: [
+              { departmentId: departmentIdFilter },
+              { departmentIds: { has: departmentIdFilter } },
+              { cooperateDepartmentIds: { has: departmentIdFilter } },
+              { currentApproverId: currentUser.id },
+            ],
+          }
+        : {},
     })
 
     let pendingApproveCount = 0

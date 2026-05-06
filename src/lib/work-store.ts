@@ -43,6 +43,15 @@ export type ActionType =
   | 'cancel'
   | 'todo_decompose';
 
+function normalizeAction(action: unknown): ActionType {
+  const normalized = typeof action === 'string' ? action.toLowerCase() : '';
+  if (normalized === 'complete') return 'complete';
+  if (normalized === 'adjust') return 'adjust';
+  if (normalized === 'cancel') return 'cancel';
+  if (normalized === 'todo_decompose') return 'todo_decompose';
+  return 'create';
+}
+
 export interface WorkSubNode {
   id: number;
   title: string;
@@ -218,7 +227,7 @@ export function transformWorkFromAPI(work: any): Work {
     creatorId: work.creatorId || work.creator_id,
     creatorName: work.creatorName,
     status: work.status?.toLowerCase() as Status || 'draft',
-    action: 'create',
+    action: normalizeAction(work.action || work.action_type),
     needCeo: work.type === '重点',
     isInnovation: work.isInnovation || work.is_innovation,
     nodes: work.nodes || [],
@@ -234,6 +243,7 @@ export function transformWorkFromAPI(work: any): Work {
     proposedLeaderRole: work.proposedLeaderRole || work.proposed_leader_role,
     proposedScene: work.proposedScene || work.proposed_scene,
     formedTime: work.formedTime || work.formed_time,
+    departmentIds: work.departmentIds || work.department_ids || [],
     responsiblePersons: extractNameArray(work.responsiblePersons || work.responsible_persons),
     cooperateDepartmentIds: work.cooperateDepartmentIds || work.cooperate_department_ids || [],
     cooperatePersons: extractNameArray(work.cooperatePersons || work.cooperate_persons),
@@ -403,6 +413,7 @@ export async function addWork(work: Omit<Work, 'createdAt' | 'updatedAt'>): Prom
     proposedLeaderId: work.proposedLeaderId,
     proposedScene: work.proposedScene,
     formedTime: work.formedTime,
+    departmentIds: work.departmentIds,
     responsiblePersons: work.responsiblePersons,
     cooperateDepartmentIds: work.cooperateDepartmentIds,
     cooperatePersons: work.cooperatePersons,
@@ -985,7 +996,7 @@ export function canApproveWork(user: User | null | undefined, work: Work) {
     );
   }
 
-  if (work.status === 'pending_company') {
+  if (work.status === 'pending_company' || work.status === 'pending_evidence_company') {
     return isSelectedCompanyApprover(user, work);
   }
 
@@ -1005,6 +1016,14 @@ function isSelectedCompanyApprover(user: User, work: Work) {
     return false;
   }
 
+  if (work.currentApproverId) {
+    return work.currentApproverId === user.id;
+  }
+
+  if (work.currentApproverRole) {
+    return work.currentApproverRole === user.role;
+  }
+
   if (
     (work.action === 'adjust' || work.action === 'cancel') &&
     work.approvalLeaderId
@@ -1012,11 +1031,18 @@ function isSelectedCompanyApprover(user: User, work: Work) {
     return work.approvalLeaderId === user.id;
   }
 
-  if (work.type === '待办' && work.proposedLeaderId) {
+  if (work.type === '待办' && work.status === 'pending_company' && work.proposedLeaderId) {
     return work.proposedLeaderId === user.id;
   }
 
-  return user.role === 'VICE_PRESIDENT' || user.role === 'PRESIDENT';
+  if (
+    (work.type === '重点' || work.type === '主要') &&
+    (work.status === 'pending_company' || work.status === 'pending_evidence_company')
+  ) {
+    return user.role === 'VICE_PRESIDENT';
+  }
+
+  return false;
 }
 
 export async function approveWork(user: User, work: Work) {

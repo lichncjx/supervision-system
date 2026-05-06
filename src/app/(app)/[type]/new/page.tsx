@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { MultiSearchSelect } from '@/components/common/multi-search-select';
 
 export default function NewWorkPage() {
   const params = useParams<{ type: string }>();
@@ -206,28 +207,38 @@ export default function NewWorkPage() {
   }, [priorityMainForm.departmentId, isPriorityOrMain]);
 
   useEffect(() => {
-    const fetchCoopDepartmentUsers = async () => {
-      for (const deptId of todoForm.cooperateDepartmentIds) {
-        if (!departmentUsers[deptId]) {
-          const users = await getUsersByDepartment(deptId);
-          setDepartmentUsers((prev) => ({ ...prev, [deptId]: users }));
-        }
+    const fetchTodoDepartmentUsers = async () => {
+      const selectedDepartmentIds = Array.from(
+        new Set([...todoForm.departmentIds, ...todoForm.cooperateDepartmentIds]),
+      );
+      const missingDepartmentIds = selectedDepartmentIds.filter(
+        (deptId) => !departmentUsers[deptId],
+      );
+
+      if (missingDepartmentIds.length === 0) {
+        return;
       }
+
+      const usersByDepartment = await Promise.all(
+        missingDepartmentIds.map(async (deptId) => {
+          const users = await getUsersByDepartment(deptId);
+          return [deptId, users] as const;
+        }),
+      );
+
+      setDepartmentUsers((prev) => {
+        const next = { ...prev };
+        usersByDepartment.forEach(([deptId, users]) => {
+          next[deptId] = users;
+        });
+        return next;
+      });
     };
-    if (todoForm.cooperateDepartmentIds.length > 0) {
-      fetchCoopDepartmentUsers();
+
+    if (isTodo) {
+      fetchTodoDepartmentUsers();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [todoForm.cooperateDepartmentIds]);
-
-  // 多选下拉框取值函数
-  function getSelectedNumbers(options: HTMLCollectionOf<HTMLOptionElement>) {
-    return Array.from(options).map((option) => Number(option.value));
-  }
-
-  function getSelectedStrings(options: HTMLCollectionOf<HTMLOptionElement>) {
-    return Array.from(options).map((option) => option.value);
-  }
+  }, [todoForm.departmentIds, todoForm.cooperateDepartmentIds, departmentUsers, isTodo]);
 
   if (type === '待办' && !canCreateTodo) {
     return (
@@ -404,6 +415,20 @@ export default function NewWorkPage() {
   const cooperatePersonOptions = todoForm.cooperateDepartmentIds.flatMap(
     (departmentId: number) => departmentUsers[departmentId] || []
   );
+  const departmentOptions = departments.map((dept) => ({
+    value: String(dept.id),
+    label: dept.name,
+  }));
+  const responsiblePersonSelectOptions = responsiblePersonOptions.map((person) => ({
+    value: person.name,
+    label: person.name,
+    description: person.departmentName || '-',
+  }));
+  const cooperatePersonSelectOptions = cooperatePersonOptions.map((person) => ({
+    value: person.name,
+    label: person.name,
+    description: person.departmentName || '-',
+  }));
 
   return (
     <div className="space-y-6">
@@ -658,104 +683,96 @@ export default function NewWorkPage() {
 
                 <div>
                   <label className="text-sm font-medium">责任部门</label>
-                  <select
-                    multiple
-                    size={5}
-                    className="mt-2 w-full border rounded-md px-3 py-2 text-sm"
+                  <MultiSearchSelect
+                    className="mt-2"
+                    options={departmentOptions}
                     value={todoForm.departmentIds.map(String)}
-                    onChange={(e) => {
-                      const nextDepartmentIds = getSelectedNumbers(e.currentTarget.selectedOptions);
+                    onChange={(nextValues) => {
+                      const nextDepartmentIds = nextValues.map(Number);
+                      const nextDepartmentUserNames = new Set(
+                        nextDepartmentIds.flatMap((deptId) =>
+                          (departmentUsers[deptId] || []).map((person) => person.name),
+                        ),
+                      );
 
                       setTodoForm((prev) => ({
                         ...prev,
                         departmentIds: nextDepartmentIds,
-                        responsiblePersons: [],
+                        responsiblePersons: prev.responsiblePersons.filter((personName) =>
+                          nextDepartmentUserNames.has(personName),
+                        ),
                       }));
                     }}
-                  >
-                    {departments.map((dept) => (
-                      <option key={dept.id} value={dept.id}>
-                        {dept.name}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="mt-1 text-xs text-gray-500">可按住 Ctrl 多选</p>
+                    placeholder="请选择责任部门"
+                    searchPlaceholder="搜索部门名称"
+                    emptyText="未找到匹配部门"
+                  />
                 </div>
 
                 <div>
                   <label className="text-sm font-medium">责任部门责任人</label>
-                  <select
-                    multiple
-                    size={5}
-                    className="mt-2 w-full border rounded-md px-3 py-2 text-sm"
+                  <MultiSearchSelect
+                    className="mt-2"
+                    options={responsiblePersonSelectOptions}
                     value={todoForm.responsiblePersons}
-                    onChange={(e) => {
-                      const nextPersons = getSelectedStrings(e.currentTarget.selectedOptions);
-
+                    onChange={(nextPersons) =>
                       setTodoForm((prev) => ({
                         ...prev,
                         responsiblePersons: nextPersons,
-                      }));
-                    }}
-                  >
-                    {responsiblePersonOptions.map((person) => (
-                      <option key={person.id} value={person.name}>
-                        {person.name}（{person.departmentName || '-'}）
-                      </option>
-                    ))}
-                  </select>
-                  <p className="mt-1 text-xs text-gray-500">先选择责任部门，再选择责任人，可按住 Ctrl 多选</p>
+                      }))
+                    }
+                    placeholder={todoForm.departmentIds.length > 0 ? '请选择责任部门责任人' : '请先选择责任部门'}
+                    searchPlaceholder="搜索姓名"
+                    emptyText="未找到匹配责任人"
+                    disabled={todoForm.departmentIds.length === 0}
+                  />
                 </div>
 
                 <div>
                   <label className="text-sm font-medium">配合部门（可不填）</label>
-                  <select
-                    multiple
-                    size={5}
-                    className="mt-2 w-full border rounded-md px-3 py-2 text-sm"
+                  <MultiSearchSelect
+                    className="mt-2"
+                    options={departmentOptions}
                     value={todoForm.cooperateDepartmentIds.map(String)}
-                    onChange={(e) => {
-                      const nextDepartmentIds = getSelectedNumbers(e.currentTarget.selectedOptions);
+                    onChange={(nextValues) => {
+                      const nextDepartmentIds = nextValues.map(Number);
+                      const nextDepartmentUserNames = new Set(
+                        nextDepartmentIds.flatMap((deptId) =>
+                          (departmentUsers[deptId] || []).map((person) => person.name),
+                        ),
+                      );
 
                       setTodoForm((prev) => ({
                         ...prev,
                         cooperateDepartmentIds: nextDepartmentIds,
-                        cooperatePersons: [],
+                        cooperatePersons: prev.cooperatePersons.filter((personName) =>
+                          nextDepartmentUserNames.has(personName),
+                        ),
                       }));
                     }}
-                  >
-                    {departments.map((dept) => (
-                      <option key={dept.id} value={dept.id}>
-                        {dept.name}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="mt-1 text-xs text-gray-500">可按住 Ctrl 多选</p>
+                    placeholder="请选择配合部门"
+                    searchPlaceholder="搜索部门名称"
+                    emptyText="未找到匹配部门"
+                  />
                 </div>
 
                 <div>
                   <label className="text-sm font-medium">配合部门责任人（可不填）</label>
-                  <select
-                    multiple
-                    size={5}
-                    className="mt-2 w-full border rounded-md px-3 py-2 text-sm"
+                  <MultiSearchSelect
+                    className="mt-2"
+                    options={cooperatePersonSelectOptions}
                     value={todoForm.cooperatePersons}
-                    onChange={(e) => {
-                      const nextPersons = getSelectedStrings(e.currentTarget.selectedOptions);
-
+                    onChange={(nextPersons) =>
                       setTodoForm((prev) => ({
                         ...prev,
                         cooperatePersons: nextPersons,
-                      }));
-                    }}
-                  >
-                    {cooperatePersonOptions.map((person) => (
-                      <option key={person.id} value={person.name}>
-                        {person.name}（{person.departmentName || '-'}）
-                      </option>
-                    ))}
-                  </select>
-                  <p className="mt-1 text-xs text-gray-500">先选择配合部门，再选择配合部门责任人，可按住 Ctrl 多选</p>
+                      }))
+                    }
+                    placeholder={todoForm.cooperateDepartmentIds.length > 0 ? '请选择配合部门责任人' : '请先选择配合部门'}
+                    searchPlaceholder="搜索姓名"
+                    emptyText="未找到匹配责任人"
+                    disabled={todoForm.cooperateDepartmentIds.length === 0}
+                  />
                 </div>
 
                 {user && (user.role === 'DEPARTMENT_MANAGER' || user.role === 'DEPARTMENT_LEADER') && (
