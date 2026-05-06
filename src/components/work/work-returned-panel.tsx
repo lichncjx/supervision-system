@@ -20,6 +20,14 @@ interface WorkReturnedPanelProps {
   companyLeaders: Array<{ id: number; name: string; role: string }>;
   onResubmit: () => void;
   onDelete: () => void;
+  updateNodeTitle: (nodeId: number, title: string) => void;
+  updateNodeCompleteTime: (nodeId: number, completeTime: string) => void;
+  deleteNode: (nodeId: number) => void;
+  addNode: () => void;
+  addSubNode: (nodeId: number) => void;
+  updateSubNodeTitle: (nodeId: number, subNodeId: number, title: string) => void;
+  updateSubNodeCompleteTime: (nodeId: number, subNodeId: number, completeTime: string) => void;
+  deleteSubNode: (nodeId: number, subNodeId: number) => void;
 }
 
 export function WorkReturnedPanel({
@@ -37,6 +45,14 @@ export function WorkReturnedPanel({
   companyLeaders,
   onResubmit,
   onDelete,
+  updateNodeTitle,
+  updateNodeCompleteTime,
+  deleteNode,
+  addNode,
+  addSubNode,
+  updateSubNodeTitle,
+  updateSubNodeCompleteTime,
+  deleteSubNode,
 }: WorkReturnedPanelProps) {
   if (!visible) {
     return null;
@@ -212,6 +228,62 @@ export function WorkReturnedPanel({
                 </div>
               </div>
             )}
+
+            <div>
+              <label className="text-sm font-medium block mb-2">工作节点</label>
+              <div className="space-y-3">
+                {(editForm.nodes || []).map((node: any, index: number) => (
+                  <div key={node.id} className="border rounded p-3 bg-gray-50">
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={node.title}
+                        onChange={(e) => updateNodeTitle(node.id, e.target.value)}
+                        placeholder={`节点${index + 1}`}
+                        className="flex-1"
+                      />
+                      <Input
+                        type="date"
+                        value={node.completeTime || ''}
+                        onChange={(e) => updateNodeCompleteTime(node.id, e.target.value)}
+                        className="w-40"
+                      />
+                      <Button type="button" variant="outline" size="sm" onClick={() => addSubNode(node.id)}>
+                        添加子节点
+                      </Button>
+                      <Button type="button" variant="destructive" size="sm" onClick={() => deleteNode(node.id)}>
+                        删除
+                      </Button>
+                    </div>
+
+                    <div className="pl-5 mt-2 space-y-2">
+                      {(node.children || []).map((child: any, childIndex: number) => (
+                        <div key={child.id} className="flex items-center gap-2">
+                          <Input
+                            value={child.title}
+                            onChange={(e) => updateSubNodeTitle(node.id, child.id, e.target.value)}
+                            placeholder={`子节点${childIndex + 1}`}
+                            className="flex-1"
+                          />
+                          <Input
+                            type="date"
+                            value={child.completeTime || ''}
+                            onChange={(e) => updateSubNodeCompleteTime(node.id, child.id, e.target.value)}
+                            className="w-40"
+                          />
+                          <Button type="button" variant="destructive" size="sm" onClick={() => deleteSubNode(node.id, child.id)}>
+                            删除
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+
+                <Button type="button" variant="outline" onClick={addNode}>
+                  添加节点
+                </Button>
+              </div>
+            </div>
 
             <div>
               <label className="text-sm font-medium">修改说明 / 重新提交原因</label>

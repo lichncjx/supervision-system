@@ -133,9 +133,10 @@ export interface Work {
   workPlan?: string;
   planCompleteTime?: string;
   progress?: string;
-  rejectReason?: string;
+  rejectReason?: string | null;
   rejectedAt?: string;
   rejectedFrom?: Status;
+  rejectedFromStatus?: Status | null;
   rejectedBy?: string;
   adjustHistory?: AdjustHistory[];
   approvalLeader?: string;
@@ -451,6 +452,9 @@ export async function updateWork(id: number, patch: Partial<Work>): Promise<Work
   if (patch.progress !== undefined) data.progress = patch.progress;
   if (patch.approvalLeaderId !== undefined) data.approvalLeaderId = patch.approvalLeaderId;
   if (patch.nodes !== undefined) data.nodes = patch.nodes;
+  if (patch.status !== undefined) data.status = patch.status;
+  if (patch.rejectReason !== undefined) data.rejectReason = patch.rejectReason;
+  if (patch.rejectedFromStatus !== undefined) data.rejectedFromStatus = patch.rejectedFromStatus;
 
   const response = await fetch(`/api/works/${id}`, {
     method: 'PUT',
@@ -504,10 +508,8 @@ export async function resubmitRejectedWork(work: Work, user: User, patch: WorkEd
     ...patch,
     title: patch.title || patch.workItem || work.title,
     status: nextStatus,
-    action: work.action || 'create',
-    rejectReason: undefined,
-    rejectedAt: undefined,
-    rejectedFrom: undefined,
+    rejectReason: null,
+    rejectedFromStatus: null,
   });
 }
 
