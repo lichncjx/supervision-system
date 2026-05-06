@@ -46,7 +46,10 @@ function canApproveWorkOnServer(user: User, workItem: any): boolean {
     )
   }
 
-  if (workItem.status === WorkItemStatus.PENDING_COMPANY) {
+  if (
+    workItem.status === WorkItemStatus.PENDING_COMPANY ||
+    workItem.status === WorkItemStatus.PENDING_EVIDENCE_COMPANY
+  ) {
     return isSelectedCompanyApproverOnServer(user, workItem)
   }
 
@@ -90,6 +93,16 @@ function isSelectedCompanyApproverOnServer(user: User, workItem: any): boolean {
     workItem.proposedLeaderId
   ) {
     return workItem.proposedLeaderId === user.id
+  }
+
+  if (
+    (workItem.type === WorkItemType.PRIORITY || workItem.type === WorkItemType.MAIN) &&
+    (
+      workItem.status === WorkItemStatus.PENDING_COMPANY ||
+      workItem.status === WorkItemStatus.PENDING_EVIDENCE_COMPANY
+    )
+  ) {
+    return user.role === Role.VICE_PRESIDENT
   }
 
   return false

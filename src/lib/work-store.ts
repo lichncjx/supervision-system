@@ -43,6 +43,15 @@ export type ActionType =
   | 'cancel'
   | 'todo_decompose';
 
+function normalizeAction(action: unknown): ActionType {
+  const normalized = typeof action === 'string' ? action.toLowerCase() : '';
+  if (normalized === 'complete') return 'complete';
+  if (normalized === 'adjust') return 'adjust';
+  if (normalized === 'cancel') return 'cancel';
+  if (normalized === 'todo_decompose') return 'todo_decompose';
+  return 'create';
+}
+
 export interface WorkSubNode {
   id: number;
   title: string;
@@ -218,7 +227,7 @@ export function transformWorkFromAPI(work: any): Work {
     creatorId: work.creatorId || work.creator_id,
     creatorName: work.creatorName,
     status: work.status?.toLowerCase() as Status || 'draft',
-    action: 'create',
+    action: normalizeAction(work.action || work.action_type),
     needCeo: work.type === '重点',
     isInnovation: work.isInnovation || work.is_innovation,
     nodes: work.nodes || [],
@@ -987,7 +996,7 @@ export function canApproveWork(user: User | null | undefined, work: Work) {
     );
   }
 
-  if (work.status === 'pending_company') {
+  if (work.status === 'pending_company' || work.status === 'pending_evidence_company') {
     return isSelectedCompanyApprover(user, work);
   }
 
@@ -1024,6 +1033,13 @@ function isSelectedCompanyApprover(user: User, work: Work) {
 
   if (work.type === '待办' && work.status === 'pending_company' && work.proposedLeaderId) {
     return work.proposedLeaderId === user.id;
+  }
+
+  if (
+    (work.type === '重点' || work.type === '主要') &&
+    (work.status === 'pending_company' || work.status === 'pending_evidence_company')
+  ) {
+    return user.role === 'VICE_PRESIDENT';
   }
 
   return false;
