@@ -191,6 +191,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     if (body.progress !== undefined) updateData.progress = body.progress;
     if (body.approvalLeaderId !== undefined) updateData.approvalLeaderId = body.approvalLeaderId;
     if (body.nodes !== undefined) updateData.nodes = JSON.stringify(body.nodes);
+    if (body.status !== undefined) updateData.status = body.status;
+    if (body.rejectReason !== undefined) updateData.rejectReason = body.rejectReason;
+    if (body.rejectedFromStatus !== undefined) updateData.rejectedFromStatus = body.rejectedFromStatus;
 
     const updatedWork = await prisma.workItem.update({
       where: { id: workId },

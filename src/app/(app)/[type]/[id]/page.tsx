@@ -924,6 +924,14 @@ export default function WorkDetailPage() {
         departments={departments}
         companyLeaders={companyLeaders}
         onResubmit={handleResubmit}
+        updateNodeTitle={updateNodeTitle}
+        updateNodeCompleteTime={updateNodeCompleteTime}
+        deleteNode={deleteNode}
+        addNode={addNode}
+        addSubNode={addSubNode}
+        updateSubNodeTitle={updateSubNodeTitle}
+        updateSubNodeCompleteTime={updateSubNodeCompleteTime}
+        deleteSubNode={deleteSubNode}
         onDelete={async () => {
           if (!confirm('确认删除该退回事项？')) return;
           try {
