@@ -1007,6 +1007,14 @@ function isSelectedCompanyApprover(user: User, work: Work) {
     return false;
   }
 
+  if (work.currentApproverId) {
+    return work.currentApproverId === user.id;
+  }
+
+  if (work.currentApproverRole) {
+    return work.currentApproverRole === user.role;
+  }
+
   if (
     (work.action === 'adjust' || work.action === 'cancel') &&
     work.approvalLeaderId
@@ -1014,11 +1022,11 @@ function isSelectedCompanyApprover(user: User, work: Work) {
     return work.approvalLeaderId === user.id;
   }
 
-  if (work.type === '待办' && work.proposedLeaderId) {
+  if (work.type === '待办' && work.status === 'pending_company' && work.proposedLeaderId) {
     return work.proposedLeaderId === user.id;
   }
 
-  return user.role === 'VICE_PRESIDENT' || user.role === 'PRESIDENT';
+  return false;
 }
 
 export async function approveWork(user: User, work: Work) {

@@ -69,6 +69,14 @@ function isSelectedCompanyApproverOnServer(user: User, workItem: any): boolean {
     return false
   }
 
+  if (workItem.currentApproverId) {
+    return workItem.currentApproverId === user.id
+  }
+
+  if (workItem.currentApproverRole) {
+    return workItem.currentApproverRole === user.role
+  }
+
   if (
     (workItem.action === 'ADJUST' || workItem.action === 'CANCEL') &&
     workItem.approvalLeaderId
@@ -76,19 +84,15 @@ function isSelectedCompanyApproverOnServer(user: User, workItem: any): boolean {
     return workItem.approvalLeaderId === user.id
   }
 
-  if (workItem.type === WorkItemType.TODO && workItem.proposedLeaderId) {
+  if (
+    workItem.type === WorkItemType.TODO &&
+    workItem.status === WorkItemStatus.PENDING_COMPANY &&
+    workItem.proposedLeaderId
+  ) {
     return workItem.proposedLeaderId === user.id
   }
 
-  if (workItem.currentApproverId && workItem.currentApproverId === user.id) {
-    return true
-  }
-
-  if (workItem.currentApproverRole && workItem.currentApproverRole === user.role) {
-    return true
-  }
-
-  return user.role === Role.VICE_PRESIDENT || user.role === Role.PRESIDENT
+  return false
 }
 
 function canHandleWorkOnServer(user: User, workItem: any): boolean {
