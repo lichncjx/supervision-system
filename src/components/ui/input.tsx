@@ -18,7 +18,7 @@ function Input({ className, type, value, ...props }: React.ComponentProps<"input
         className
       )}
       {...props}
-      value={isDateType && !value ? undefined : value}
+      value={value}
     />
   )
 }

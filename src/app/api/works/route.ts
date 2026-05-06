@@ -94,6 +94,7 @@ export async function GET(request: NextRequest) {
       type: work.type === 'PRIORITY' ? '重点' : work.type === 'MAIN' ? '主要' : '待办',
       status: work.status,
       departmentId: work.departmentId,
+      departmentIds: work.departmentIds as number[] || [],
       departmentName: work.department?.name || '-',
       creatorId: work.creatorId,
       creatorName: work.creator?.name || '-',
@@ -220,10 +221,10 @@ export async function POST(request: NextRequest) {
       isInnovation: rest.isInnovation || false,
       responsibleLeader: rest.responsibleLeader,
       supervisor: rest.supervisor,
-      proposedLeader: rest.proposedLeader,
       proposedLeaderId: rest.proposedLeaderId,
       proposedScene: rest.proposedScene,
       formedTime: convertToDateTime(rest.formedTime),
+      departmentIds: rest.departmentIds || (departmentId ? [departmentId] : []),
       responsiblePersons: rest.responsiblePersons,
       cooperateDepartmentIds: rest.cooperateDepartmentIds,
       cooperatePersons: rest.cooperatePersons,
@@ -236,7 +237,10 @@ export async function POST(request: NextRequest) {
 
     const work = await prisma.workItem.create({
       data: workData,
-      include: { department: true },
+      include: {
+        department: true,
+        proposedLeader: { select: { id: true, name: true } },
+      },
     });
 
     await prisma.operationLog.create({
@@ -257,7 +261,10 @@ export async function POST(request: NextRequest) {
       title: work.title,
       type: work.type === 'PRIORITY' ? '重点' : work.type === 'MAIN' ? '主要' : '待办',
       departmentId: work.departmentId,
+      departmentIds: work.departmentIds as number[] || [],
       departmentName: work.department?.name || '-',
+      proposedLeader: work.proposedLeader?.name || null,
+      proposedLeaderId: work.proposedLeaderId,
       status: work.status,
       createdAt: work.createdAt.toISOString(),
       updatedAt: work.updatedAt.toISOString(),

@@ -747,7 +747,9 @@ export default function WorkDetailPage() {
           <div>
             <span className="text-sm text-gray-500">配合部门：</span>
             <span>
-              {work.cooperateDepartments && work.cooperateDepartments.length > 0
+              {work.cooperateDepartmentIds && work.cooperateDepartmentIds.length > 0
+                ? work.cooperateDepartmentIds.map((id: number) => getDepartmentName(id)).join('、')
+                : work.cooperateDepartments && work.cooperateDepartments.length > 0
                 ? work.cooperateDepartments.join('、')
                 : work.cooperateDepartment || '-'}
             </span>
