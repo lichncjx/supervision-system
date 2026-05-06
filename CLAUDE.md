@@ -17,7 +17,7 @@
 ## Claude Code 特别提醒
 
 1. 不要直接修改或提交 `main`。
-2. 文档更新使用 `docs/xxx` 分支。
+2. 文档更新使用 `docs/xxx` 分支，配置维护使用 `chore/xxx` 分支。
 3. 开工前先检查当前分支和工作区状态，不要覆盖用户未提交改动。
 4. 修改完成后按任务风险运行 `pnpm lint`、`pnpm typecheck`、`pnpm build` 或 `pnpm check`。
 5. PR 描述使用 `.github/pull_request_template.md`。
