@@ -1,12 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as XLSX from 'xlsx';
 import prisma from '@/lib/prisma';
-import { getUserFromToken } from '@/lib/server-auth';
-
-function isCompanyLevelRole(role: string): boolean {
-  const companyRoles: string[] = ['ADMIN', 'SUPERVISOR', 'VICE_PRESIDENT', 'PRESIDENT'];
-  return companyRoles.includes(role);
-}
+import { getUserFromToken, isSupervisionAdmin } from '@/lib/server-auth';
 
 async function getDepartmentStatsForExcel(
   departmentId: number,
@@ -40,25 +35,14 @@ async function getDepartmentStatsForExcel(
     ],
   };
 
-  const [
-    priorityTotal,
-    priorityCompleted,
-    mainTotal,
-    mainCompleted,
-    todoTotal,
-    todoCompleted,
-    cancelled,
-    overdue,
-  ] = await Promise.all([
-    prisma.workItem.count({ where: priorityWhere }),
-    prisma.workItem.count({ where: { ...priorityWhere, status: 'COMPLETED' } }),
-    prisma.workItem.count({ where: mainWhere }),
-    prisma.workItem.count({ where: { ...mainWhere, status: 'COMPLETED' } }),
-    prisma.workItem.count({ where: todoWhere }),
-    prisma.workItem.count({ where: { ...todoWhere, status: 'COMPLETED' } }),
-    prisma.workItem.count({ where: { ...baseWhere, status: 'CANCELLED' } }),
-    prisma.workItem.count({ where: { ...baseWhere, ...overdueCondition } }),
-  ]);
+  const priorityTotal = await prisma.workItem.count({ where: priorityWhere });
+  const priorityCompleted = await prisma.workItem.count({ where: { ...priorityWhere, status: 'COMPLETED' } });
+  const mainTotal = await prisma.workItem.count({ where: mainWhere });
+  const mainCompleted = await prisma.workItem.count({ where: { ...mainWhere, status: 'COMPLETED' } });
+  const todoTotal = await prisma.workItem.count({ where: todoWhere });
+  const todoCompleted = await prisma.workItem.count({ where: { ...todoWhere, status: 'COMPLETED' } });
+  const cancelled = await prisma.workItem.count({ where: { ...baseWhere, status: 'CANCELLED' } });
+  const overdue = await prisma.workItem.count({ where: { ...baseWhere, ...overdueCondition } });
 
   const total = priorityTotal + mainTotal + todoTotal;
   const completed = priorityCompleted + mainCompleted + todoCompleted;
@@ -100,10 +84,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: '登录已过期' }, { status: 401 });
     }
 
-    const isCompanyLevel = isCompanyLevelRole(currentUser.role);
-
-    if (!isCompanyLevel) {
-      return NextResponse.json({ error: '无权导出完成率统计' }, { status: 403 });
+    if (!isSupervisionAdmin(currentUser.role)) {
+      return NextResponse.json({ error: '无权导出完成率统计，仅限系统管理员和督办管理员' }, { status: 403 });
     }
 
     const { searchParams } = new URL(request.url);
@@ -119,11 +101,10 @@ export async function GET(request: NextRequest) {
       orderBy: { name: 'asc' },
     });
 
-    const stats = await Promise.all(
-      departments.map((dept) =>
-        getDepartmentStatsForExcel(dept.id, dept.name, undefined, startDate, endDate)
-      )
-    );
+    const stats = [];
+    for (const dept of departments) {
+      stats.push(await getDepartmentStatsForExcel(dept.id, dept.name, undefined, startDate, endDate));
+    }
 
     const today = new Date().toISOString().split('T')[0];
 
@@ -170,7 +151,7 @@ export async function GET(request: NextRequest) {
     XLSX.utils.book_append_sheet(workbook, worksheet, '完成率统计');
     const buffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'buffer' });
 
-    await prisma.operationLog.create({
+    prisma.operationLog.create({
       data: {
         userId: currentUser.id,
         userName: currentUser.name,
@@ -181,6 +162,8 @@ export async function GET(request: NextRequest) {
         targetId: 0,
         description: '导出完成率统计',
       },
+    }).catch((logError) => {
+      console.error('Failed to write operation log:', logError);
     });
 
     const fileName = `完成率统计_${today}.xlsx`;
@@ -193,7 +176,8 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Completion rate export error:', error);
-    return NextResponse.json({ error: '导出失败' }, { status: 500 });
+    const message = error instanceof Error ? error.message : '未知错误';
+    console.error('Completion rate export error:', message);
+    return NextResponse.json({ error: `导出失败: ${message}` }, { status: 500 });
   }
 }

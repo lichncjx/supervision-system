@@ -68,6 +68,10 @@ export function canImportExport(role: Role): boolean {
   return IMPORT_EXPORT_ROLES.includes(role)
 }
 
+export function isSupervisionAdmin(role: Role): boolean {
+  return role === Role.ADMIN || role === Role.SUPERVISOR
+}
+
 export function canCreateWorkItem(role: Role): boolean {
   return !IMPORT_EXPORT_ROLES.includes(role) || role === Role.ADMIN
 }

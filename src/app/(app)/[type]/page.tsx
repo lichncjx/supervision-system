@@ -137,13 +137,32 @@ export default function ItemListPage() {
     return departments.find((d) => d.id === id)?.name || '-';
   };
 
-  const handleExport = () => {
+  const handleExport = async () => {
     const params = new URLSearchParams();
     params.set('type', routeType);
     if (keyword) params.set('keyword', keyword);
     if (departmentFilter !== '全部') params.set('departmentId', String(departmentFilter));
     if (statusFilter !== 'all') params.set('status', statusFilter);
-    window.location.href = `/api/excel/export?${params.toString()}`;
+
+    try {
+      const res = await fetch(`/api/excel/export?${params.toString()}`, { credentials: 'include' });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: '导出失败' }));
+        alert(err.error || '导出失败');
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = '';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      alert('导出失败，请检查网络连接');
+    }
   };
 
   const handleReset = () => {

@@ -18,7 +18,7 @@ import {
   type WorkType,
   type Work,
 } from '@/lib/work-store';
-import { getDepartments, isCompanyLevel } from '@/lib/auth';
+import { getDepartments, isCompanyLevel, isSupervisionAdmin } from '@/lib/auth';
 import { StatusBadge } from '@/components/common/badges';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -31,7 +31,8 @@ type StatusPageFilter =
   | 'process'
   | 'inProgress'
   | 'completed'
-  | 'overdue';
+  | 'overdue'
+  | 'expiring';
 
 const allowedFilters: StatusPageFilter[] = [
   'all',
@@ -41,6 +42,7 @@ const allowedFilters: StatusPageFilter[] = [
   'inProgress',
   'completed',
   'overdue',
+  'expiring',
 ];
 
 const filterTitle: Record<StatusPageFilter, string> = {
@@ -51,6 +53,7 @@ const filterTitle: Record<StatusPageFilter, string> = {
   inProgress: '进行中事项',
   completed: '已完成事项',
   overdue: '超期事项',
+  expiring: '临期事项',
 };
 
 function getRouteType(type: string) {
@@ -89,7 +92,7 @@ export default function StatusFilterPage() {
     : 'all';
 
   const queryStatus =
-    ['all', 'inProgress', 'completed', 'overdue'].includes(safeFilter)
+    ['all', 'inProgress', 'completed', 'overdue', 'expiring'].includes(safeFilter)
       ? (safeFilter as WorkStatusFilter)
       : 'all';
 
@@ -156,6 +159,27 @@ export default function StatusFilterPage() {
   }, [user, typeFilter, departmentFilter, keyword, monthFilter, safeFilter, queryStatus, companyLevel]);
 
   const finalList = list;
+
+  if (safeFilter === 'all' && user && !isSupervisionAdmin(user.role)) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Link href="/">
+            <Button variant="outline" size="sm">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              返回首页
+            </Button>
+          </Link>
+          <h1 className="text-2xl font-bold">无权限访问</h1>
+        </div>
+        <Card>
+          <CardContent className="p-8 text-center text-gray-500">
+            只有督办管理员可以访问综合查询页面
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
