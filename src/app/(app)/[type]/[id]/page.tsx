@@ -569,15 +569,15 @@ export default function WorkDetailPage() {
             <span>{work.completeForm || '-'}</span>
           </div>
           <div>
-            <span className="text-sm text-gray-500">责任部门：</span>
+            <span className="text-sm text-gray-500">主办部门：</span>
             <span>{getDepartmentName(work.departmentId ?? 0)}</span>
           </div>
           <div>
-            <span className="text-sm text-gray-500">责任领导：</span>
+            <span className="text-sm text-gray-500">部门领导：</span>
             <span>{work.responsibleLeader || '-'}</span>
           </div>
           <div>
-            <span className="text-sm text-gray-500">主管人员：</span>
+            <span className="text-sm text-gray-500">主管人员 / 业务主管人员：</span>
             <span>{work.supervisor || '-'}</span>
           </div>
           {work.type === '重点' && (
@@ -712,6 +712,7 @@ export default function WorkDetailPage() {
           <div>
             <span className="text-sm text-gray-500">事项提出领导：</span>
             <span>{work.proposedLeader || '-'}</span>
+            <span className="text-xs text-gray-400 ml-2">（提出该待办事项，默认也是审批领导）</span>
           </div>
           <div>
             <span className="text-sm text-gray-500">事项提出场景：</span>
@@ -726,7 +727,7 @@ export default function WorkDetailPage() {
             <span>{work.formedTime || '-'}</span>
           </div>
           <div>
-            <span className="text-sm text-gray-500">责任部门：</span>
+            <span className="text-sm text-gray-500">主责部门：</span>
             <span>
               {work.departmentIds && work.departmentIds.length > 0
                 ? work.departmentIds.map((id: number) => getDepartmentName(id)).join('、')
@@ -734,7 +735,7 @@ export default function WorkDetailPage() {
             </span>
           </div>
           <div>
-            <span className="text-sm text-gray-500">责任部门责任人：</span>
+            <span className="text-sm text-gray-500">主责责任人：</span>
             <span>
               {work.responsiblePersons && work.responsiblePersons.length > 0
                 ? work.responsiblePersons.join('、')
@@ -752,7 +753,7 @@ export default function WorkDetailPage() {
             </span>
           </div>
           <div>
-            <span className="text-sm text-gray-500">配合部门责任人：</span>
+            <span className="text-sm text-gray-500">配合责任人：</span>
             <span>
               {work.cooperatePersons && work.cooperatePersons.length > 0
                 ? work.cooperatePersons.join('、')

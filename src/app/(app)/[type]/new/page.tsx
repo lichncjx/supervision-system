@@ -363,6 +363,8 @@ export default function NewWorkPage() {
           proposedLeader: selectedProposedLeader?.name || '',
           proposedLeaderId: selectedProposedLeader?.id,
           proposedLeaderRole: selectedProposedLeader?.role,
+          // approvalLeaderId 默认等于 proposedLeaderId，特殊情况才单独指定
+          approvalLeaderId: selectedProposedLeader?.id,
           proposedScene: todoForm.proposedScene,
           workItem: todoForm.workItem,
           formedTime: todoForm.formedTime,
@@ -602,13 +604,16 @@ export default function NewWorkPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-1">责任领导</label>
+                  <label className="block text-sm font-medium mb-1">
+                    部门领导
+                    <span className="text-xs text-gray-400 ml-1">（负责该部门事项审批的部门领导）</span>
+                  </label>
                   <select
                     value={priorityMainForm.responsibleLeader}
                     onChange={(e) => setPriorityMainForm({ ...priorityMainForm, responsibleLeader: e.target.value })}
                     className="w-full border rounded-md p-2"
                   >
-                    <option value="">请选择责任领导</option>
+                    <option value="">请选择部门领导</option>
                     {departmentLeaders.map((u) => (
                       <option key={u.id} value={u.name}>
                         {u.name}
@@ -618,13 +623,16 @@ export default function NewWorkPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-1">主管人员</label>
+                  <label className="block text-sm font-medium mb-1">
+                    主管人员
+                    <span className="text-xs text-gray-400 ml-1">（业务主管人员 / 具体跟踪办理人，非督办管理员）</span>
+                  </label>
                   <select
                     value={priorityMainForm.supervisor}
                     onChange={(e) => setPriorityMainForm({ ...priorityMainForm, supervisor: e.target.value })}
                     className="w-full border rounded-md p-2"
                   >
-                    <option value="">请选择主管人员</option>
+                    <option value="">请选择主管人员（非必选）</option>
                     {departmentManagers.map((u) => (
                       <option key={u.id} value={u.name}>
                         {u.name}
@@ -638,7 +646,10 @@ export default function NewWorkPage() {
             {isTodo && (
               <>
                 <div>
-                  <label className="block text-sm font-medium mb-1">事项提出领导</label>
+                  <label className="block text-sm font-medium mb-1">
+                    事项提出领导
+                    <span className="text-xs text-gray-400 ml-1">（提出该待办事项的公司领导，默认也是审批领导）</span>
+                  </label>
                   <select
                     value={todoForm.proposedLeaderId}
                     disabled={user?.role === 'VICE_PRESIDENT' || user?.role === 'PRESIDENT'}
@@ -710,7 +721,10 @@ export default function NewWorkPage() {
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium">责任部门责任人</label>
+                  <label className="text-sm font-medium">
+                    主责责任人
+                    <span className="text-xs text-gray-400 ml-1">（主责部门的具体责任人姓名留底）</span>
+                  </label>
                   <MultiSearchSelect
                     className="mt-2"
                     options={responsiblePersonSelectOptions}
@@ -729,7 +743,10 @@ export default function NewWorkPage() {
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium">配合部门（可不填）</label>
+                  <label className="text-sm font-medium">
+                    配合部门
+                    <span className="text-xs text-gray-400 ml-1">（协助执行的部门，非必选）</span>
+                  </label>
                   <MultiSearchSelect
                     className="mt-2"
                     options={departmentOptions}
@@ -757,7 +774,10 @@ export default function NewWorkPage() {
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium">配合部门责任人（可不填）</label>
+                  <label className="text-sm font-medium">
+                    配合责任人
+                    <span className="text-xs text-gray-400 ml-1">（配合部门的具体责任人姓名留底，非必选）</span>
+                  </label>
                   <MultiSearchSelect
                     className="mt-2"
                     options={cooperatePersonSelectOptions}

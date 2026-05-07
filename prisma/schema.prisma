@@ -41,6 +41,8 @@ enum ActionType {
 }
 
 enum Role {
+  // 注意：SUPERVISOR 是系统级"督办管理员"，拥有全局查看、导入导出权限。
+  // 事项字段 supervisor（主管人员/业务主管人员）与此角色无关，未来将迁移为 deptManager 语义。
   ADMIN                  @map("admin")
   SUPERVISOR             @map("supervisor")
   DEPARTMENT_MANAGER     @map("department_manager")
@@ -96,57 +98,86 @@ model WorkItem {
   status                WorkItemStatus
   action                ActionType?
   needMainLeaderCancel  Boolean         @default(false)
-  
+
+  // ---- 事项基本信息 ----
   businessCategory      String?         @db.VarChar(100)
   workItem              String?         @db.VarChar(500)
   workNode              String?         @db.VarChar(200)
   completeTime          DateTime?
   completeForm          String?         @db.VarChar(200)
   isInnovation          Boolean         @default(false)
-  
+
+  // ---- 部门关联字段 ----
+  // departmentId: 重点/主要工作所属单一主办部门（FK 关联 departments）
+  // departmentIds:  待办事项的主责部门 ID 数组（未来迁移为 responsibleDepartmentIds）
+  // cooperateDepartmentIds: 待办事项的配合部门 ID 数组
   departmentId          Int?
   departmentIds         Int[]           @default([])
   cooperateDepartmentIds Int[]          @default([])
-  
+
+  // ---- 业务人员 ID 字段（xxxId = 真实关联字段，用于权限、流程、审批、待处理判断）----
+  // creatorId: 创建事项草稿的用户（始终为当前用户，写入后不可修改）
   creatorId             Int
+  // firstSubmitterId: 首次将事项送入正式审批链路（PENDING_DEPT/PENDING_COMPANY）的操作人
+  // 仅在首次进入时写入，后续退回再提交不覆盖
+  firstSubmitterId      Int?
+  // proposedLeaderId: 待办事项的提出领导 ID（公司领导：VICE_PRESIDENT 或 PRESIDENT）
+  proposedLeaderId      Int?
+  // approvalLeaderId: 待办事项的审批领导 ID，默认等于 proposedLeaderId
+  // 负责后续调整、取消、完成审批
+  approvalLeaderId      Int?
+  // currentApproverId / currentApproverRole: 当前应执行审批操作的用户/角色
   currentApproverId     Int?
   currentApproverRole   Role?
-  approvalLeaderId      Int?
-  proposedLeaderId      Int?
-  firstSubmitterId      Int?
-  
+
+  // ---- 业务人员姓名快照字段（xxxName 语义，仅用于页面展示、Excel 导出、历史留痕）----
+  // responsibleLeader: 重点/主要工作的部门领导姓名（legacy，未来迁移为 deptLeaderName）
+  //   - 创建时从部门 DEPARTMENT_LEADER 列表下拉选择
+  //   - 调整/退回时变为自由文本 Input（存在无约束风险）
+  //   - 不参与权限判断
   responsibleLeader     String?         @db.VarChar(50)
+  // supervisor: 重点/主要工作的主管人员/业务主管人员姓名（legacy，未来迁移为 deptManagerName）
+  //   - 注意：与系统角色 SUPERVISOR（督办管理员）无关
+  //   - 创建时从部门 DEPARTMENT_MANAGER 列表下拉选择
+  //   - 调整/退回时变为自由文本 Input（存在无约束风险）
+  //   - 不参与权限判断
   supervisor            String?         @db.VarChar(50)
+  // responsiblePersons: 待办事项的主责责任人姓名数组（legacy，未来迁移为 responsiblePersonNames）
   responsiblePersons    String[]        @default([])
+  // cooperatePersons: 待办事项的配合部门责任人姓名数组（legacy，未来迁移为 cooperatePersonNames）
   cooperatePersons      String[]        @default([])
-  
+
+  // ---- 待办事项专用字段 ----
   proposedScene         String?         @db.VarChar(200)
   formedTime            DateTime?
   workPlan              String?         @db.Text
   planCompleteTime      DateTime?
   progress              String?         @db.Text
-  
+
+  // ---- 证明材料 / 调整 / 取消 / 退回 ----
   proof                 String?         @db.Text
   adjustReason          String?         @db.Text
   cancelReason          String?         @db.Text
   rejectReason          String?         @db.Text
   rejectedFromStatus    WorkItemStatus?
-  
+
+  // ---- JSON 扩展字段 ----
   nodes                 Json?
   adjustHistory         Json?           @default("[]")
-  
+
   createdAt             DateTime        @default(now())
   updatedAt             DateTime        @updatedAt
-  
+
   department            Department?     @relation("DepartmentWorkItems", fields: [departmentId], references: [id])
   creator               User            @relation("CreatorWorkItems", fields: [creatorId], references: [id])
   currentApprover       User?           @relation("ApproverWorkItems", fields: [currentApproverId], references: [id])
+  // approvalLeader FK: 关联到 users 表，但 Prisma schema 中未声明 @relation
   approvalLeader        User?           @relation("ApprovalLeaderWorkItems", fields: [approvalLeaderId], references: [id])
   proposedLeader        User?           @relation("ProposedLeaderWorkItems", fields: [proposedLeaderId], references: [id])
-  
+
   workflowRecords       WorkflowRecord[]
   attachments           Attachment[]
-  
+
   @@map("work_items")
 }
 

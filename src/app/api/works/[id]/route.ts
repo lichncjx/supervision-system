@@ -178,8 +178,11 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     if (body.completeTime !== undefined) updateData.completeTime = convertToDateTime(body.completeTime);
     if (body.completeForm !== undefined) updateData.completeForm = body.completeForm;
     if (body.isInnovation !== undefined) updateData.isInnovation = body.isInnovation;
+    // responsibleLeader: 部门领导姓名快照（legacy，不参与权限判断）
     if (body.responsibleLeader !== undefined) updateData.responsibleLeader = body.responsibleLeader;
+    // supervisor: 主管人员姓名快照（legacy，非系统角色 SUPERVISOR）
     if (body.supervisor !== undefined) updateData.supervisor = body.supervisor;
+    // proposedLeaderId: 优先使用 ID 字段，文本 proposedLeader 仅作快照展示
     if (body.proposedLeaderId !== undefined) updateData.proposedLeaderId = body.proposedLeaderId || null;
     if (body.proposedScene !== undefined) updateData.proposedScene = body.proposedScene;
     if (body.formedTime !== undefined) updateData.formedTime = convertToDateTime(body.formedTime);
@@ -189,6 +192,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     if (body.workPlan !== undefined) updateData.workPlan = body.workPlan;
     if (body.planCompleteTime !== undefined) updateData.planCompleteTime = convertToDateTime(body.planCompleteTime);
     if (body.progress !== undefined) updateData.progress = body.progress;
+    // approvalLeaderId: 默认等于 proposedLeaderId，特殊情况才单独指定
     if (body.approvalLeaderId !== undefined) updateData.approvalLeaderId = body.approvalLeaderId || null;
     if (body.nodes !== undefined) updateData.nodes = JSON.stringify(body.nodes);
     if (body.status !== undefined) updateData.status = body.status;
