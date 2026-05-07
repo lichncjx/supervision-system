@@ -101,6 +101,13 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: 'desc' },
     });
 
+    const departments = await prisma.department.findMany({
+      select: { id: true, code: true },
+    });
+    const deptIdToCode = new Map(departments.filter((d) => d.code).map((d) => [d.id, d.code!]));
+    const deptCodes = (ids: number[]) =>
+      ids.map((id) => deptIdToCode.get(id) || String(id)).join('/');
+
     const today = new Date().toISOString().split('T')[0];
     let fileName = `督办事项导出_${today}.xlsx`;
     const headers = [
@@ -120,7 +127,7 @@ export async function GET(request: NextRequest) {
       // 主管人员：业务主管人员姓名快照（重点/主要专用，未来迁移为 deptManagerName，非系统角色督办管理员）
       '主管人员',
       '配合部门',
-      '配合部门责任人',
+      '配合责任人',
       '进展情况',
       '创建人',
       '创建时间',
@@ -146,10 +153,12 @@ export async function GET(request: NextRequest) {
         isPriorityOrMain ? (item.workNode || '') : '',
         item.completeTime ? new Date(item.completeTime).toISOString().split('T')[0] : '',
         isPriorityOrMain ? (item.completeForm || '') : '',
-        item.department?.name || '',
+        isPriorityOrMain
+          ? (item.departmentId ? (deptIdToCode.get(item.departmentId) || String(item.departmentId)) : '')
+          : (Array.isArray(item.departmentIds) ? deptCodes(item.departmentIds) : ''),
         isPriorityOrMain ? (item.deptLeaderName || item.responsibleLeader || '') : '',   // 快照优先，旧字段兜底
         isPriorityOrMain ? (item.deptManagerName || item.supervisor || '') : '',         // 快照优先，旧字段兜底
-        item.type === 'TODO' ? ((item.cooperateDepartmentIds || []).join('、')) : '',
+        item.type === 'TODO' ? deptCodes(item.cooperateDepartmentIds || []) : '',
         item.type === 'TODO' ? ((item.cooperatePersons || []).join('、')) : '',
         item.type === 'TODO' ? (item.progress || '') : '',
         item.creator?.name || '',

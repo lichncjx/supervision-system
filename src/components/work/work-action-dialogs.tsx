@@ -323,11 +323,11 @@ export function WorkActionDialogs({
                       </select>
                     </div>
                     <div>
-                      <label className="text-sm font-medium">责任部门责任人</label>
+                      <label className="text-sm font-medium">主责责任人</label>
                       <Input
                         value={editForm.responsiblePerson || ''}
                         onChange={(e) => setEditForm((prev: any) => ({ ...prev, responsiblePerson: e.target.value }))}
-                        placeholder="请输入责任部门责任人"
+                        placeholder="请输入主责责任人"
                       />
                     </div>
                     <div>
@@ -339,11 +339,11 @@ export function WorkActionDialogs({
                       />
                     </div>
                     <div>
-                      <label className="text-sm font-medium">配合部门责任人</label>
+                      <label className="text-sm font-medium">配合责任人</label>
                       <Input
                         value={editForm.cooperatePerson || ''}
                         onChange={(e) => setEditForm((prev: any) => ({ ...prev, cooperatePerson: e.target.value }))}
-                        placeholder="请输入配合部门责任人"
+                        placeholder="请输入配合责任人"
                       />
                     </div>
                     <div>

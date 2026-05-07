@@ -82,9 +82,12 @@ async function validateAndParseExcel(
 
   const departments = await prisma.department.findMany({
     where: { isBusiness: true },
-    select: { id: true, name: true },
+    select: { id: true, name: true, code: true },
   });
   const deptNameToId = new Map(departments.map((d) => [d.name, d.id]));
+  const deptCodeToId = new Map(departments.filter((d) => d.code).map((d) => [d.code!, d.id]));
+  const resolveDeptId = (input: string) =>
+    deptNameToId.get(input) ?? deptCodeToId.get(input.toUpperCase()) ?? null;
 
   const companyLeaders = await prisma.user.findMany({
     where: {
@@ -128,17 +131,18 @@ async function validateAndParseExcel(
       if (!completeTimeStr || !parseExcelDate(completeTimeStr)) {
         errors.push({ row: rowNum, field: '完成时间', value: completeTimeStr, reason: '必填字段，格式为 YYYY-MM-DD' });
       }
+      const resolvedDeptId = departmentName ? resolveDeptId(departmentName) : null;
       if (!departmentName) {
         errors.push({ row: rowNum, field: '责任部门', value: departmentName, reason: '必填字段不能为空' });
-      } else if (!deptNameToId.has(departmentName)) {
-        errors.push({ row: rowNum, field: '责任部门', value: departmentName, reason: '部门不存在或不是业务部门' });
+      } else if (!resolvedDeptId) {
+        errors.push({ row: rowNum, field: '责任部门', value: departmentName, reason: `部门"${departmentName}"不存在或不是业务部门，请填写部门全名或缩写代码` });
       }
       if (!responsibleLeader) {
         errors.push({ row: rowNum, field: '责任领导', value: responsibleLeader, reason: '必填字段不能为空' });
       }
 
       if (errors.filter((e) => e.row === rowNum).length === 0) {
-        const deptId = deptNameToId.get(departmentName)!;
+        const deptId = resolvedDeptId!;
         const deptLeaders = await prisma.user.findMany({
           where: { departmentId: deptId, role: Role.DEPARTMENT_LEADER, isActive: true },
           select: { id: true, name: true },
@@ -171,7 +175,9 @@ async function validateAndParseExcel(
             completeTime: parseExcelDate(completeTimeStr),
             completeForm,
             departmentName,
-            departmentId: deptNameToId.get(departmentName),
+            departmentId: resolvedDeptId,
+            // 双写：保留用户原始输入（可能是全名或代码），用于后续回显
+            departmentCode: departments.find(d => d.id === resolvedDeptId)?.code || departmentName,
             responsibleLeader,
             supervisor,
             deptLeaderId,
@@ -199,17 +205,18 @@ async function validateAndParseExcel(
       if (!completeTimeStr || !parseExcelDate(completeTimeStr)) {
         errors.push({ row: rowNum, field: '完成时间', value: completeTimeStr, reason: '必填字段，格式为 YYYY-MM-DD' });
       }
+      const resolvedDeptId = departmentName ? resolveDeptId(departmentName) : null;
       if (!departmentName) {
         errors.push({ row: rowNum, field: '责任部门', value: departmentName, reason: '必填字段不能为空' });
-      } else if (!deptNameToId.has(departmentName)) {
-        errors.push({ row: rowNum, field: '责任部门', value: departmentName, reason: '部门不存在或不是业务部门' });
+      } else if (!resolvedDeptId) {
+        errors.push({ row: rowNum, field: '责任部门', value: departmentName, reason: `部门"${departmentName}"不存在或不是业务部门，请填写部门全名或缩写代码` });
       }
       if (!responsibleLeader) {
         errors.push({ row: rowNum, field: '责任领导', value: responsibleLeader, reason: '必填字段不能为空' });
       }
 
       if (errors.filter((e) => e.row === rowNum).length === 0) {
-        const deptId = deptNameToId.get(departmentName)!;
+        const deptId = resolvedDeptId!;
         const deptLeaders = await prisma.user.findMany({
           where: { departmentId: deptId, role: Role.DEPARTMENT_LEADER, isActive: true },
           select: { id: true, name: true },
@@ -241,7 +248,8 @@ async function validateAndParseExcel(
             completeTime: parseExcelDate(completeTimeStr),
             completeForm,
             departmentName,
-            departmentId: deptNameToId.get(departmentName),
+            departmentId: resolvedDeptId,
+            departmentCode: departments.find(d => d.id === resolvedDeptId)?.code || departmentName,
             responsibleLeader,
             supervisor,
             deptLeaderId,
@@ -262,10 +270,10 @@ async function validateAndParseExcel(
       // 责任部门：主责部门，斜杠分隔多个部门名称
       const departmentNames = getCell('责任部门');
       // 部门责任人：主责人员姓名留底（legacy，未来迁移为 responsiblePersonNames）
-      const responsiblePersons = getCell('部门责任人');
+      const responsiblePersons = getCell('主责责任人');
       const cooperateDepartmentNames = getCell('配合部门');
       // 配合部门责任人：协助人员姓名留底（legacy，未来迁移为 cooperatePersonNames）
-      const cooperatePersons = getCell('配合部门责任人');
+      const cooperatePersons = getCell('配合责任人');
       const workPlan = getCell('工作计划');
       const planCompleteTimeStr = getCell('计划完成时间');
       const progress = getCell('进展情况');
@@ -298,10 +306,11 @@ async function validateAndParseExcel(
         const deptIds: number[] = [];
         const deptNames = departmentNames.split('/').map((s: string) => s.trim()).filter(Boolean);
         for (const dn of deptNames) {
-          if (!deptNameToId.has(dn)) {
-            errors.push({ row: rowNum, field: '责任部门', value: dn, reason: `部门"${dn}"不存在或不是业务部门` });
+          const resolved = resolveDeptId(dn);
+          if (!resolved) {
+            errors.push({ row: rowNum, field: '责任部门', value: dn, reason: `部门"${dn}"不存在或不是业务部门，请填写部门全名或缩写代码，多个用 / 分隔` });
           } else {
-            deptIds.push(deptNameToId.get(dn)!);
+            deptIds.push(resolved);
           }
         }
 

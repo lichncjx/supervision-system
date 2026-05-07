@@ -755,7 +755,7 @@ export default function NewWorkPage() {
                         responsiblePersons: nextPersons,
                       }))
                     }
-                    placeholder={todoForm.departmentIds.length > 0 ? '请选择责任部门责任人' : '请先选择责任部门'}
+                    placeholder={todoForm.departmentIds.length > 0 ? '请选择主责责任人' : '请先选择责任部门'}
                     searchPlaceholder="搜索姓名"
                     emptyText="未找到匹配责任人"
                     disabled={todoForm.departmentIds.length === 0}
@@ -808,7 +808,7 @@ export default function NewWorkPage() {
                         cooperatePersons: nextPersons,
                       }))
                     }
-                    placeholder={todoForm.cooperateDepartmentIds.length > 0 ? '请选择配合部门责任人' : '请先选择配合部门'}
+                    placeholder={todoForm.cooperateDepartmentIds.length > 0 ? '请选择配合责任人' : '请先选择配合部门'}
                     searchPlaceholder="搜索姓名"
                     emptyText="未找到匹配责任人"
                     disabled={todoForm.cooperateDepartmentIds.length === 0}

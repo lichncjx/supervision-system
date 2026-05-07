@@ -189,8 +189,26 @@ export default function ItemListPage() {
     e.target.value = '';
   };
 
-  const handleDownloadTemplate = () => {
-    window.location.href = `/api/excel/template/${routeType}`;
+  const handleDownloadTemplate = async () => {
+    try {
+      const res = await fetch(`/api/excel/template/${routeType}`, { credentials: 'include' });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: '下载模板失败' }));
+        alert(err.error || '下载模板失败');
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = ''; // 由 Content-Disposition 决定文件名
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      alert('下载模板失败，请检查网络连接');
+    }
   };
 
   return (
