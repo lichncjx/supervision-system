@@ -29,7 +29,7 @@ export function PriorityMainWorkListItem({ item, routeType, getDepartmentName }:
           {item.workNode || '-'}
         </div>
         <div>
-          <span className="text-gray-500">完成时间：</span>
+          <span className="text-gray-500">计划完成时间：</span>
           {item.completeTime || '-'}
         </div>
         <div>

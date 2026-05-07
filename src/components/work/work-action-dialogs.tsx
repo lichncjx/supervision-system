@@ -125,7 +125,7 @@ export function WorkActionDialogs({
                       />
                     </div>
                     <div>
-                      <label className="text-sm font-medium">完成时间</label>
+                      <label className="text-sm font-medium">计划完成时间</label>
                       <Input
                         type="date"
                         value={editForm.completeTime || ''}

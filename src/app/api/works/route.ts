@@ -1,7 +1,7 @@
 import { NextResponse, NextRequest } from 'next/server';
 import prisma from '@/lib/prisma';
 import { verifyToken } from '@/lib/server-auth';
-import { formatDate, processNodesForDisplay, processAdjustHistory } from '@/lib/utils';
+import { formatDate, processNodesForDisplay, processAdjustHistory, convertToDateTime } from '@/lib/utils';
 import { Role, WorkItemType, WorkItemStatus } from '@prisma/client';
 
 const ROLES_CAN_VIEW_ALL: Role[] = [Role.ADMIN, Role.SUPERVISOR, Role.VICE_PRESIDENT, Role.PRESIDENT];
@@ -121,6 +121,7 @@ export async function GET(request: NextRequest) {
       approvalLeaderId: work.approvalLeaderId,
       currentApproverId: work.currentApproverId,
       currentApproverRole: work.currentApproverRole,
+      firstSubmitterId: work.firstSubmitterId,
       nodes: work.nodes ? processNodesForDisplay(JSON.parse(String(work.nodes))) : [],
       adjustHistory: work.adjustHistory ? processAdjustHistory(work.adjustHistory as any[]) : [],
       createdAt: work.createdAt.toISOString(),
@@ -193,11 +194,6 @@ export async function POST(request: NextRequest) {
     if (!department) {
       return NextResponse.json({ error: '责任部门不存在' }, { status: 400 });
     }
-
-    const convertToDateTime = (dateStr: string | null | undefined) => {
-      if (!dateStr) return null;
-      return new Date(dateStr + 'T00:00:00.000Z');
-    };
 
     const processNodes = (nodes: any[]) => {
       return nodes.map(node => ({
