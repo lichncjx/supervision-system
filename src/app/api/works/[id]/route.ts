@@ -109,6 +109,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         fileName: a.fileName,
         fileSize: a.fileSize,
         fileType: a.fileType,
+        category: a.category,
         uploadedAt: a.uploadedAt.toISOString(),
         userId: a.userId,
         userName: a.user.name,

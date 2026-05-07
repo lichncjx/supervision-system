@@ -227,10 +227,11 @@ model Attachment {
   fileSize        Int
   fileType        String          @db.VarChar(50)
   uploadedAt      DateTime        @default(now())
-  
+  category        String          @default("general") @db.VarChar(30)
+
   workItem        WorkItem?       @relation(fields: [workItemId], references: [id], onDelete: Cascade)
   user            User            @relation(fields: [userId], references: [id])
-  
+
   @@map("attachments")
 }
 

@@ -19,7 +19,6 @@ import {
   deleteWork,
   getWorkflowRecords,
   submitWork,
-  type ProofFile,
   type WorkEditablePatch,
   type Work,
   type WorkflowRecord,
@@ -48,7 +47,7 @@ export default function WorkDetailPage() {
   const [companyLeaders, setCompanyLeaders] = useState<Array<{ id: number; name: string; role: string }>>([]);
   const [departments, setDepartments] = useState<Array<{ id: number; name: string; code: string; isBusiness: boolean }>>([]);
   const [proof, setProof] = useState('');
-  const [proofFiles, setProofFiles] = useState<ProofFile[]>([]);
+  const [uploading, setUploading] = useState(false);
   const [adjustReason, setAdjustReason] = useState('');
   const [cancelReason, setCancelReason] = useState('');
   const [approvalLeaderId, setApprovalLeaderId] = useState('');
@@ -224,38 +223,54 @@ export default function WorkDetailPage() {
     }
   };
 
-  const handleProofFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
+  const handleUploadEvidence = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
 
-    if (files.length === 0) return;
+    setUploading(true);
+    for (const file of Array.from(files)) {
+      const formData = new FormData();
+      formData.append('workItemId', String(work.id));
+      formData.append('file', file);
+      formData.append('category', 'evidence');
 
-    const readFile = (file: File): Promise<ProofFile> => {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-
-        reader.onload = () => {
-          resolve({
-            id: Date.now() + Math.random(),
-            name: file.name,
-            type: file.type,
-            size: file.size,
-            dataUrl: String(reader.result || ''),
-            uploadedAt: new Date().toISOString(),
-            uploadedBy: user?.name,
-          });
-        };
-
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
-    };
-
-    const result = await Promise.all(files.map(readFile));
-    setProofFiles((prev: any) => [...prev, ...result]);
+      try {
+        const res = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+          credentials: 'include',
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          alert(data.error || '上传失败');
+        }
+      } catch (err) {
+        console.error(err);
+        alert('上传失败');
+      }
+    }
+    setUploading(false);
+    e.target.value = '';
+    setRefresh((v) => v + 1);
   };
 
-  const removeProofFile = (id: number) => {
-    setProofFiles((prev: any) => prev.filter((file: any) => file.id !== id));
+  const handleDeleteEvidence = async (attachmentId: number) => {
+    if (!confirm('确定要删除该证明材料附件吗？')) return;
+    try {
+      const res = await fetch(`/api/attachments/${attachmentId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        alert(data.error || '删除失败');
+        return;
+      }
+      setRefresh((v) => v + 1);
+    } catch (err) {
+      console.error(err);
+      alert('删除失败');
+    }
   };
 
   // 节点操作函数
@@ -368,13 +383,13 @@ export default function WorkDetailPage() {
 
   const handleComplete = async () => {
     if (!user) return;
-    if (!proof.trim() && proofFiles.length === 0) {
-      alert('请填写见证材料说明或上传附件');
+    if (!proof.trim()) {
+      alert('请填写见证材料说明');
       return;
     }
 
     try {
-      await submitComplete(work, user, proof, proofFiles);
+      await submitComplete(work, user, proof);
       setRefresh(refresh + 1);
       alert('已提交完成材料');
     } catch (error) {
@@ -660,34 +675,38 @@ export default function WorkDetailPage() {
 
         {work.proof && (
           <div>
-            <span className="text-sm text-gray-500">见证材料：</span>
+            <span className="text-sm text-gray-500">见证材料说明：</span>
             <p className="mt-1 p-2 bg-gray-50 rounded break-words whitespace-pre-wrap overflow-hidden">{work.proof}</p>
           </div>
         )}
-        {work.proofFiles && work.proofFiles.length > 0 && (
-          <div>
-            <span className="text-sm text-gray-500">见证材料附件：</span>
-            <div className="mt-2 space-y-2">
-              {work.proofFiles.map((file: any) => (
-                <div key={file.id} className="flex items-center justify-between rounded border p-2 text-sm">
-                  <div className="min-w-0">
-                    <div className="font-medium break-words">{file.name}</div>
-                    <div className="text-xs text-gray-500">
-                      上传人：{file.uploadedBy || '-'}　
-                      上传时间：{file.uploadedAt ? new Date(file.uploadedAt).toLocaleString() : '-'}
+        {(() => {
+          const evidenceAttachments = (work.attachments || []).filter(a => a.category === 'evidence');
+          if (evidenceAttachments.length === 0) return null;
+          return (
+            <div>
+              <span className="text-sm text-gray-500">见证材料附件：</span>
+              <div className="mt-2 space-y-2">
+                {evidenceAttachments.map((att) => (
+                  <div key={att.id} className="flex items-center justify-between rounded border p-2 text-sm">
+                    <div className="min-w-0">
+                      <div className="font-medium break-words">{att.fileName}</div>
+                      <div className="text-xs text-gray-500">
+                        上传人：{att.userName || '-'}
+                        上传时间：{att.uploadedAt ? new Date(att.uploadedAt).toLocaleString() : '-'}
+                      </div>
                     </div>
+                    <a href={`/api/attachments/${att.id}/download`} target="_blank" rel="noopener noreferrer">
+                      <Button variant="outline" size="sm">
+                        <Download className="h-4 w-4 mr-1" />
+                        下载
+                      </Button>
+                    </a>
                   </div>
-                  <a href={file.dataUrl} download={file.name}>
-                    <Button variant="outline" size="sm">
-                      <Download className="h-4 w-4 mr-1" />
-                      下载
-                    </Button>
-                  </a>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {work.adjustReason && (
           <div>
@@ -844,34 +863,38 @@ export default function WorkDetailPage() {
 
         {work.proof && (
           <div>
-            <span className="text-sm text-gray-500">见证材料：</span>
+            <span className="text-sm text-gray-500">见证材料说明：</span>
             <p className="mt-1 p-2 bg-gray-50 rounded break-words whitespace-pre-wrap overflow-hidden">{work.proof}</p>
           </div>
         )}
-        {work.proofFiles && work.proofFiles.length > 0 && (
-          <div>
-            <span className="text-sm text-gray-500">见证材料附件：</span>
-            <div className="mt-2 space-y-2">
-              {work.proofFiles.map((file: any) => (
-                <div key={file.id} className="flex items-center justify-between rounded border p-2 text-sm">
-                  <div className="min-w-0">
-                    <div className="font-medium break-words">{file.name}</div>
-                    <div className="text-xs text-gray-500">
-                      上传人：{file.uploadedBy || '-'}　
-                      上传时间：{file.uploadedAt ? new Date(file.uploadedAt).toLocaleString() : '-'}
+        {(() => {
+          const evidenceAttachments = (work.attachments || []).filter(a => a.category === 'evidence');
+          if (evidenceAttachments.length === 0) return null;
+          return (
+            <div>
+              <span className="text-sm text-gray-500">见证材料附件：</span>
+              <div className="mt-2 space-y-2">
+                {evidenceAttachments.map((att) => (
+                  <div key={att.id} className="flex items-center justify-between rounded border p-2 text-sm">
+                    <div className="min-w-0">
+                      <div className="font-medium break-words">{att.fileName}</div>
+                      <div className="text-xs text-gray-500">
+                        上传人：{att.userName || '-'}
+                        上传时间：{att.uploadedAt ? new Date(att.uploadedAt).toLocaleString() : '-'}
+                      </div>
                     </div>
+                    <a href={`/api/attachments/${att.id}/download`} target="_blank" rel="noopener noreferrer">
+                      <Button variant="outline" size="sm">
+                        <Download className="h-4 w-4 mr-1" />
+                        下载
+                      </Button>
+                    </a>
                   </div>
-                  <a href={file.dataUrl} download={file.name}>
-                    <Button variant="outline" size="sm">
-                      <Download className="h-4 w-4 mr-1" />
-                      下载
-                    </Button>
-                  </a>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
         {work.adjustReason && (
           <div>
             <p className="break-words whitespace-pre-wrap overflow-hidden">
@@ -923,7 +946,7 @@ export default function WorkDetailPage() {
       </Card>
 
       <WorkAttachmentPanel
-        attachments={work.attachments || []}
+        attachments={(work.attachments || []).filter(a => a.category !== 'evidence')}
         canUpload={!!canEdit}
         canDelete={canDeleteAttachment}
         onUpload={handleUploadAttachments}
@@ -1031,9 +1054,10 @@ export default function WorkDetailPage() {
         work={work}
         proof={proof}
         onProofChange={setProof}
-        proofFiles={proofFiles}
-        onProofFileChange={handleProofFileChange}
-        onRemoveProofFile={removeProofFile}
+        evidenceAttachments={(work.attachments || []).filter(a => a.category === 'evidence')}
+        onUploadEvidence={handleUploadEvidence}
+        onDeleteEvidence={handleDeleteEvidence}
+        uploading={uploading}
         onComplete={handleComplete}
         onOpenAdjustDialog={(editForm, adjustReason) => {
           setEditForm(editForm);

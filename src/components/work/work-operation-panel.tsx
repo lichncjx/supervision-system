@@ -5,8 +5,14 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { StatusBadge } from '@/components/common/badges';
-import { CheckCircle } from 'lucide-react';
-import { getCurrentProcessDescription, type ProofFile } from '@/lib/work-store';
+import { CheckCircle, Download, Loader2 } from 'lucide-react';
+import { getCurrentProcessDescription, type Attachment } from '@/lib/work-store';
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
 
 interface WorkOperationPanelProps {
   work: {
@@ -40,9 +46,10 @@ interface WorkOperationPanelProps {
   };
   proof: string;
   onProofChange: (value: string) => void;
-  proofFiles: ProofFile[];
-  onProofFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onRemoveProofFile: (fileId: number) => void;
+  evidenceAttachments: Attachment[];
+  onUploadEvidence: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onDeleteEvidence: (attachmentId: number) => void;
+  uploading: boolean;
   onComplete: () => void;
   onOpenAdjustDialog: (editForm: any, adjustReason: string) => void;
   onOpenCancelDialog: (cancelReason: string) => void;
@@ -52,9 +59,10 @@ export function WorkOperationPanel({
   work,
   proof,
   onProofChange,
-  proofFiles,
-  onProofFileChange,
-  onRemoveProofFile,
+  evidenceAttachments,
+  onUploadEvidence,
+  onDeleteEvidence,
+  uploading,
   onComplete,
   onOpenAdjustDialog,
   onOpenCancelDialog,
@@ -123,22 +131,49 @@ export function WorkOperationPanel({
               <Input
                 type="file"
                 multiple
-                onChange={onProofFileChange}
+                onChange={onUploadEvidence}
+                disabled={uploading}
               />
 
-              {proofFiles.length > 0 && (
+              {uploading && (
+                <p className="text-sm text-gray-500 mt-1 flex items-center gap-1">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  上传中...
+                </p>
+              )}
+
+              {evidenceAttachments.length > 0 && (
                 <div className="mt-2 space-y-2">
-                  {proofFiles.map((file) => (
-                    <div key={file.id} className="flex items-center justify-between rounded border p-2 text-sm">
-                      <span className="break-words">{file.name}</span>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onRemoveProofFile(file.id)}
-                      >
-                        删除
-                      </Button>
+                  {evidenceAttachments.map((att) => (
+                    <div key={att.id} className="flex items-center justify-between rounded border p-2 text-sm">
+                      <div className="min-w-0 flex-1">
+                        <div className="font-medium break-words">{att.fileName}</div>
+                        <div className="text-xs text-gray-500">
+                          {att.userName || '-'}
+                          {att.uploadedAt ? new Date(att.uploadedAt).toLocaleString() : '-'}
+                          {formatFileSize(att.fileSize)}
+                        </div>
+                      </div>
+                      <div className="flex gap-2 ml-2 shrink-0">
+                        <a
+                          href={`/api/attachments/${att.id}/download`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <Button type="button" variant="outline" size="sm">
+                            <Download className="h-4 w-4 mr-1" />
+                            下载
+                          </Button>
+                        </a>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onDeleteEvidence(att.id)}
+                        >
+                          删除
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
