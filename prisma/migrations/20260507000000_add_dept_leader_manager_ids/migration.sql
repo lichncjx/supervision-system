@@ -24,16 +24,14 @@ ALTER TABLE "work_items" ADD CONSTRAINT "work_items_deptManagerId_fkey"
 --       仅处理 priority / main 类型事项
 -- ============================================================
 
--- Step A: 唯一匹配 → 回填 deptLeaderId + deptLeaderName
+-- Step A: 唯一匹配 → 仅回填 deptLeaderId（Name 统一由 Step B 从旧文本写入）
 UPDATE work_items wi
 SET
-  "deptLeaderId" = sub.matched_user_id,
-  "deptLeaderName" = sub.matched_user_name
+  "deptLeaderId" = sub.matched_user_id
 FROM (
   SELECT
     wi2.id AS work_item_id,
-    u.id AS matched_user_id,
-    u.name AS matched_user_name
+    u.id AS matched_user_id
   FROM work_items wi2
   JOIN users u ON u."departmentId" = wi2."departmentId"
     AND u.name = wi2."responsibleLeader"
@@ -53,7 +51,7 @@ FROM (
 ) sub
 WHERE wi.id = sub.work_item_id;
 
--- Step B: 所有非 NULL responsibleLeader → 写 deptLeaderName 快照
+-- Step B: 所有非 NULL responsibleLeader → 写 deptLeaderName 快照（from 旧文本，与 ID 回填结果无关）
 UPDATE work_items
 SET "deptLeaderName" = "responsibleLeader"
 WHERE "responsibleLeader" IS NOT NULL
@@ -65,16 +63,14 @@ WHERE "responsibleLeader" IS NOT NULL
 -- 同上规则，role='department_manager'
 -- ============================================================
 
--- Step C: 唯一匹配 → 回填 deptManagerId + deptManagerName
+-- Step C: 唯一匹配 → 仅回填 deptManagerId（Name 统一由 Step D 从旧文本写入）
 UPDATE work_items wi
 SET
-  "deptManagerId" = sub.matched_user_id,
-  "deptManagerName" = sub.matched_user_name
+  "deptManagerId" = sub.matched_user_id
 FROM (
   SELECT
     wi2.id AS work_item_id,
-    u.id AS matched_user_id,
-    u.name AS matched_user_name
+    u.id AS matched_user_id
   FROM work_items wi2
   JOIN users u ON u."departmentId" = wi2."departmentId"
     AND u.name = wi2."supervisor"
@@ -94,7 +90,7 @@ FROM (
 ) sub
 WHERE wi.id = sub.work_item_id;
 
--- Step D: 所有非 NULL supervisor → 写 deptManagerName 快照
+-- Step D: 所有非 NULL supervisor → 写 deptManagerName 快照（from 旧文本，与 ID 回填结果无关）
 UPDATE work_items
 SET "deptManagerName" = "supervisor"
 WHERE "supervisor" IS NOT NULL
