@@ -1,7 +1,7 @@
 import { NextResponse, NextRequest } from 'next/server';
 import prisma from '@/lib/prisma';
 import { verifyToken } from '@/lib/server-auth';
-import { formatDate, processNodesForDisplay, processAdjustHistory } from '@/lib/utils';
+import { formatDate, processNodesForDisplay, processAdjustHistory, convertToDateTime } from '@/lib/utils';
 import { Role } from '@prisma/client';
 
 const ROLES_CAN_VIEW_ALL: Role[] = [Role.ADMIN, Role.SUPERVISOR, Role.VICE_PRESIDENT, Role.PRESIDENT];
@@ -175,7 +175,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     if (body.workItem !== undefined) updateData.workItem = body.workItem;
     if (body.workNode !== undefined) updateData.workNode = body.workNode;
     if (body.businessCategory !== undefined) updateData.businessCategory = body.businessCategory;
-    if (body.completeTime !== undefined) updateData.completeTime = body.completeTime;
+    if (body.completeTime !== undefined) updateData.completeTime = convertToDateTime(body.completeTime);
     if (body.completeForm !== undefined) updateData.completeForm = body.completeForm;
     if (body.isInnovation !== undefined) updateData.isInnovation = body.isInnovation;
     if (body.responsibleLeader !== undefined) updateData.responsibleLeader = body.responsibleLeader;
@@ -183,12 +183,12 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     if (body.proposedLeader !== undefined) updateData.proposedLeader = body.proposedLeader;
     if (body.proposedLeaderId !== undefined) updateData.proposedLeaderId = body.proposedLeaderId;
     if (body.proposedScene !== undefined) updateData.proposedScene = body.proposedScene;
-    if (body.formedTime !== undefined) updateData.formedTime = body.formedTime;
+    if (body.formedTime !== undefined) updateData.formedTime = convertToDateTime(body.formedTime);
     if (body.responsiblePersons !== undefined) updateData.responsiblePersons = body.responsiblePersons;
     if (body.cooperateDepartmentIds !== undefined) updateData.cooperateDepartmentIds = body.cooperateDepartmentIds;
     if (body.cooperatePersons !== undefined) updateData.cooperatePersons = body.cooperatePersons;
     if (body.workPlan !== undefined) updateData.workPlan = body.workPlan;
-    if (body.planCompleteTime !== undefined) updateData.planCompleteTime = body.planCompleteTime;
+    if (body.planCompleteTime !== undefined) updateData.planCompleteTime = convertToDateTime(body.planCompleteTime);
     if (body.progress !== undefined) updateData.progress = body.progress;
     if (body.approvalLeaderId !== undefined) updateData.approvalLeaderId = body.approvalLeaderId;
     if (body.nodes !== undefined) updateData.nodes = JSON.stringify(body.nodes);
