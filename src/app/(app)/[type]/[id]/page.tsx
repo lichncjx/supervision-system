@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Download } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
-import { getCompanyLeaders, getDepartments } from '@/lib/auth';
+import { getCompanyLeaders, getDepartments, getDepartmentLeaders, getDepartmentManagers } from '@/lib/auth';
 import {
   getWorkById,
   submitComplete,
@@ -58,6 +58,9 @@ export default function WorkDetailPage() {
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
   const [editForm, setEditForm] = useState<any>({});
   const [editReason, setEditReason] = useState('');
+  // Phase 2: department leaders/managers for returned panel dropdowns
+  const [departmentLeaders, setDepartmentLeaders] = useState<Array<{ id: number; name: string; role: string; departmentId: number }>>([]);
+  const [departmentManagers, setDepartmentManagers] = useState<Array<{ id: number; name: string; role: string; departmentId: number }>>([]);
 
   const [work, setWork] = useState<Work | undefined>();
   const [workflowRecords, setWorkflowRecords] = useState<WorkflowRecord[]>([]);
@@ -96,6 +99,21 @@ export default function WorkDetailPage() {
     fetchWorkflowRecords();
   }, [work, refresh]);
 
+  // Phase 2: fetch department leaders/managers for priority/main returned panel
+  useEffect(() => {
+    if (work && (work.type === '重点' || work.type === '主要') && work.departmentId) {
+      const fetchDeptUsers = async () => {
+        const [leaders, managers] = await Promise.all([
+          getDepartmentLeaders(work.departmentId!),
+          getDepartmentManagers(work.departmentId!),
+        ]);
+        setDepartmentLeaders(leaders);
+        setDepartmentManagers(managers);
+      };
+      fetchDeptUsers();
+    }
+  }, [work?.departmentId, work?.type]);
+
   // 初始化编辑表单
   React.useEffect(() => {
     if (work) {
@@ -110,6 +128,8 @@ export default function WorkDetailPage() {
         departmentId: work.departmentId,
         responsibleLeader: work.responsibleLeader || '',
         supervisor: work.supervisor || '',
+        deptLeaderId: work.deptLeaderId ? String(work.deptLeaderId) : '',
+        deptManagerId: work.deptManagerId ? String(work.deptManagerId) : '',
         proposedLeader: work.proposedLeader || '',
         proposedLeaderId: work.proposedLeaderId ? String(work.proposedLeaderId) : '',
         proposedLeaderRole: work.proposedLeaderRole || '',
@@ -574,11 +594,11 @@ export default function WorkDetailPage() {
           </div>
           <div>
             <span className="text-sm text-gray-500">部门领导：</span>
-            <span>{work.responsibleLeader || '-'}</span>
+            <span>{work.deptLeaderName || work.responsibleLeader || '-'}</span>
           </div>
           <div>
-            <span className="text-sm text-gray-500">主管人员 / 业务主管人员：</span>
-            <span>{work.supervisor || '-'}</span>
+            <span className="text-sm text-gray-500">主管人员：</span>
+            <span>{work.deptManagerName || work.supervisor || '-'}</span>
           </div>
           {work.type === '重点' && (
             <div>
@@ -923,6 +943,8 @@ export default function WorkDetailPage() {
         isTodo={isTodo}
         departments={departments}
         companyLeaders={companyLeaders}
+        departmentLeaders={departmentLeaders}
+        departmentManagers={departmentManagers}
         onResubmit={handleResubmit}
         updateNodeTitle={updateNodeTitle}
         updateNodeCompleteTime={updateNodeCompleteTime}

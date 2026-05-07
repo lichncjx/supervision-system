@@ -152,6 +152,10 @@ export default function NewWorkPage() {
     completeTime: '',
     completeForm: '',
     departmentId: String(user?.departmentId || 2),
+    // Phase 2: 部门领导/主管人员 ID（select value 为 userId 字符串）
+    deptLeaderId: '',
+    deptManagerId: '',
+    // 旧字段：姓名快照（双写保留，select onChange 时同步更新）
     responsibleLeader: '',
     supervisor: '',
   });
@@ -347,6 +351,8 @@ export default function NewWorkPage() {
           completeForm: priorityMainForm.completeForm,
           responsibleLeader: priorityMainForm.responsibleLeader,
           supervisor: priorityMainForm.supervisor,
+          deptLeaderId: Number(priorityMainForm.deptLeaderId) || undefined,
+          deptManagerId: Number(priorityMainForm.deptManagerId) || undefined,
         });
       } else if (isTodo) {
         createdWork = await addWork({
@@ -592,7 +598,7 @@ export default function NewWorkPage() {
                   <label className="block text-sm font-medium mb-1">责任部门</label>
                   <select
                     value={priorityMainForm.departmentId}
-                    onChange={(e) => setPriorityMainForm({ ...priorityMainForm, departmentId: e.target.value, responsibleLeader: '', supervisor: '' })}
+                    onChange={(e) => setPriorityMainForm({ ...priorityMainForm, departmentId: e.target.value, deptLeaderId: '', deptManagerId: '', responsibleLeader: '', supervisor: '' })}
                     className="w-full border rounded-md p-2"
                   >
                     {departments.map((d) => (
@@ -609,13 +615,20 @@ export default function NewWorkPage() {
                     <span className="text-xs text-gray-400 ml-1">（负责该部门事项审批的部门领导）</span>
                   </label>
                   <select
-                    value={priorityMainForm.responsibleLeader}
-                    onChange={(e) => setPriorityMainForm({ ...priorityMainForm, responsibleLeader: e.target.value })}
+                    value={priorityMainForm.deptLeaderId}
+                    onChange={(e) => {
+                      const selected = departmentLeaders.find(u => String(u.id) === e.target.value);
+                      setPriorityMainForm({
+                        ...priorityMainForm,
+                        deptLeaderId: e.target.value,
+                        responsibleLeader: selected?.name || '',
+                      });
+                    }}
                     className="w-full border rounded-md p-2"
                   >
                     <option value="">请选择部门领导</option>
                     {departmentLeaders.map((u) => (
-                      <option key={u.id} value={u.name}>
+                      <option key={u.id} value={u.id}>
                         {u.name}
                       </option>
                     ))}
@@ -625,16 +638,23 @@ export default function NewWorkPage() {
                 <div>
                   <label className="block text-sm font-medium mb-1">
                     主管人员
-                    <span className="text-xs text-gray-400 ml-1">（业务主管人员 / 具体跟踪办理人，非督办管理员）</span>
+                    <span className="text-xs text-gray-400 ml-1">（负责该事项具体跟踪办理）</span>
                   </label>
                   <select
-                    value={priorityMainForm.supervisor}
-                    onChange={(e) => setPriorityMainForm({ ...priorityMainForm, supervisor: e.target.value })}
+                    value={priorityMainForm.deptManagerId}
+                    onChange={(e) => {
+                      const selected = departmentManagers.find(u => String(u.id) === e.target.value);
+                      setPriorityMainForm({
+                        ...priorityMainForm,
+                        deptManagerId: e.target.value,
+                        supervisor: selected?.name || '',
+                      });
+                    }}
                     className="w-full border rounded-md p-2"
                   >
-                    <option value="">请选择主管人员（非必选）</option>
+                    <option value="">请选择主管人员</option>
                     {departmentManagers.map((u) => (
-                      <option key={u.id} value={u.name}>
+                      <option key={u.id} value={u.id}>
                         {u.name}
                       </option>
                     ))}
@@ -723,7 +743,7 @@ export default function NewWorkPage() {
                 <div>
                   <label className="text-sm font-medium">
                     主责责任人
-                    <span className="text-xs text-gray-400 ml-1">（主责部门的具体责任人姓名留底）</span>
+                    <span className="text-xs text-gray-400 ml-1">（主责部门的具体责任人）</span>
                   </label>
                   <MultiSearchSelect
                     className="mt-2"
@@ -745,7 +765,7 @@ export default function NewWorkPage() {
                 <div>
                   <label className="text-sm font-medium">
                     配合部门
-                    <span className="text-xs text-gray-400 ml-1">（协助执行的部门，非必选）</span>
+                    <span className="text-xs text-gray-400 ml-1">（协助执行的部门）</span>
                   </label>
                   <MultiSearchSelect
                     className="mt-2"
@@ -776,7 +796,7 @@ export default function NewWorkPage() {
                 <div>
                   <label className="text-sm font-medium">
                     配合责任人
-                    <span className="text-xs text-gray-400 ml-1">（配合部门的具体责任人姓名留底，非必选）</span>
+                    <span className="text-xs text-gray-400 ml-1">（配合部门的具体责任人）</span>
                   </label>
                   <MultiSearchSelect
                     className="mt-2"

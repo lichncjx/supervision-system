@@ -137,6 +137,14 @@ export interface Work {
   // supervisor: 重点/主要工作的主管人员/业务主管人员姓名（legacy，未来迁移为 deptManagerName）
   //   注意：与系统角色 SUPERVISOR（督办管理员）无关，不参与权限判断
   supervisor?: string;
+  // deptLeaderId: 部门领导用户 ID（Phase 2 新增，重点/主要工作专用）
+  deptLeaderId?: number;
+  // deptLeaderName: 部门领导姓名快照（展示优先读此字段）
+  deptLeaderName?: string;
+  // deptManagerId: 部门主管人员用户 ID（Phase 2 新增，重点/主要工作专用）
+  deptManagerId?: number;
+  // deptManagerName: 主管人员姓名快照（展示优先读此字段）
+  deptManagerName?: string;
   // responsiblePersons: 待办事项的主责责任人姓名数组（legacy，未来迁移为 responsiblePersonNames）
   responsiblePersons?: string[];
   // responsiblePerson: 拼接后的主责责任人字符串（legacy，逐步弱化）
@@ -226,6 +234,10 @@ export type WorkEditablePatch = Partial<Pick<
   | 'approvalLeader'
   | 'approvalLeaderId'
   | 'approvalLeaderRole'
+  | 'deptLeaderId'
+  | 'deptLeaderName'
+  | 'deptManagerId'
+  | 'deptManagerName'
 >>;
 
 export function transformWorkFromAPI(work: any): Work {
@@ -278,6 +290,12 @@ export function transformWorkFromAPI(work: any): Work {
     // 重点/主要工作 - 主管人员姓名快照（legacy: supervisor, 未来: deptManagerName）
     // 注意：不是系统角色 SUPERVISOR（督办管理员）
     supervisor: work.supervisor,
+    // Phase 2: 部门领导/主管人员 ID 和 Name
+    // deptLeaderName 优先 relation.name（实时），其次快照，最后旧字段
+    deptLeaderId: work.deptLeaderId ?? undefined,
+    deptLeaderName: extractName(work.deptLeader) || work.deptLeaderName || work.responsibleLeader || work.responsible_leader,
+    deptManagerId: work.deptManagerId ?? undefined,
+    deptManagerName: extractName(work.deptManager) || work.deptManagerName || work.supervisor,
     // 待办事项 - 主责责任人姓名数组
     responsiblePersons: extractNameArray(work.responsiblePersons || work.responsible_persons),
     // 待办事项 - 配合部门 ID 数组
@@ -432,6 +450,8 @@ export async function queryWorks(user: User | null | undefined, query: WorkQuery
         w.proposedScene,
         w.responsibleLeader,
         w.supervisor,
+        w.deptLeaderName,
+        w.deptManagerName,
         w.responsiblePerson,
         w.progress,
         w.workPlan,
@@ -455,10 +475,13 @@ export async function addWork(work: Omit<Work, 'createdAt' | 'updatedAt'>): Prom
     completeTime: work.completeTime,
     completeForm: work.completeForm,
     isInnovation: work.isInnovation,
-    // responsibleLeader: 部门领导姓名快照（未来迁移为 deptLeaderName）
+    // responsibleLeader: 部门领导姓名快照（legacy，未来迁移为 deptLeaderName）
     responsibleLeader: work.responsibleLeader,
-    // supervisor: 主管人员姓名快照（未来迁移为 deptManagerName, 非系统角色 SUPERVISOR）
+    // supervisor: 主管人员姓名快照（legacy，未来迁移为 deptManagerName）
     supervisor: work.supervisor,
+    // Phase 2: 部门领导/主管人员 ID
+    deptLeaderId: work.deptLeaderId,
+    deptManagerId: work.deptManagerId,
     // proposedLeader / proposedLeaderRole 文本仅作为快照传递，服务端优先使用 proposedLeaderId
     proposedLeader: work.proposedLeader,
     proposedLeaderId: work.proposedLeaderId,
@@ -502,6 +525,8 @@ export async function updateWork(id: number, patch: Partial<Work>): Promise<Work
   if (patch.isInnovation !== undefined) data.isInnovation = patch.isInnovation;
   if (patch.responsibleLeader !== undefined) data.responsibleLeader = patch.responsibleLeader;
   if (patch.supervisor !== undefined) data.supervisor = patch.supervisor;
+  if (patch.deptLeaderId !== undefined) data.deptLeaderId = patch.deptLeaderId;
+  if (patch.deptManagerId !== undefined) data.deptManagerId = patch.deptManagerId;
   if (patch.proposedLeader !== undefined) data.proposedLeader = patch.proposedLeader;
   if (patch.proposedLeaderId !== undefined) data.proposedLeaderId = patch.proposedLeaderId;
   if (patch.proposedScene !== undefined) data.proposedScene = patch.proposedScene;

@@ -147,8 +147,8 @@ export async function GET(request: NextRequest) {
         item.completeTime ? new Date(item.completeTime).toISOString().split('T')[0] : '',
         isPriorityOrMain ? (item.completeForm || '') : '',
         item.department?.name || '',
-        isPriorityOrMain ? (item.responsibleLeader || '') : '',   // deptLeaderName 快照
-        isPriorityOrMain ? (item.supervisor || '') : '',           // deptManagerName 快照
+        isPriorityOrMain ? (item.deptLeaderName || item.responsibleLeader || '') : '',   // 快照优先，旧字段兜底
+        isPriorityOrMain ? (item.deptManagerName || item.supervisor || '') : '',         // 快照优先，旧字段兜底
         item.type === 'TODO' ? ((item.cooperateDepartmentIds || []).join('、')) : '',
         item.type === 'TODO' ? ((item.cooperatePersons || []).join('、')) : '',
         item.type === 'TODO' ? (item.progress || '') : '',

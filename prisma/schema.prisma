@@ -87,7 +87,10 @@ model User {
   approvedWorkflowRecords  WorkflowRecord[]    @relation("WorkflowApprover")
   operationLogs        OperationLog[]
   attachments          Attachment[]
-  
+  // Phase 2: 部门领导/主管人员关联的重点/主要工作事项
+  deptLeaderItems  WorkItem[]  @relation("DeptLeaderWorkItems")
+  deptManagerItems WorkItem[]  @relation("DeptManagerWorkItems")
+
   @@map("users")
 }
 
@@ -130,6 +133,14 @@ model WorkItem {
   currentApproverId     Int?
   currentApproverRole   Role?
 
+  // ---- 重点/主要工作部门人员 ID 字段（xxxId = 真实关联字段，允许 NULL，有 FK 约束）----
+  // deptLeaderId: 部门领导用户 ID（重点/主要工作专用，关联 DEPARTMENT_LEADER 角色用户）
+  //   - 允许 NULL；有值时必须指向 users.id
+  //   - onDelete: SetNull（用户删除时自动置空，用户停用通过 isActive=false）
+  deptLeaderId          Int?
+  // deptManagerId: 部门主管人员/业务主管人员用户 ID（重点/主要工作专用，关联 DEPARTMENT_MANAGER 角色用户）
+  deptManagerId         Int?
+
   // ---- 业务人员姓名快照字段（xxxName 语义，仅用于页面展示、Excel 导出、历史留痕）----
   // responsibleLeader: 重点/主要工作的部门领导姓名（legacy，未来迁移为 deptLeaderName）
   //   - 创建时从部门 DEPARTMENT_LEADER 列表下拉选择
@@ -142,6 +153,10 @@ model WorkItem {
   //   - 调整/退回时变为自由文本 Input（存在无约束风险）
   //   - 不参与权限判断
   supervisor            String?         @db.VarChar(50)
+  // deptLeaderName: 部门领导姓名快照（展示/导出优先读此字段，fallback 到 responsibleLeader）
+  deptLeaderName        String?         @db.VarChar(50)
+  // deptManagerName: 主管人员姓名快照（同上）
+  deptManagerName       String?         @db.VarChar(50)
   // responsiblePersons: 待办事项的主责责任人姓名数组（legacy，未来迁移为 responsiblePersonNames）
   responsiblePersons    String[]        @default([])
   // cooperatePersons: 待办事项的配合部门责任人姓名数组（legacy，未来迁移为 cooperatePersonNames）
@@ -174,6 +189,9 @@ model WorkItem {
   // approvalLeader FK: 关联到 users 表，但 Prisma schema 中未声明 @relation
   approvalLeader        User?           @relation("ApprovalLeaderWorkItems", fields: [approvalLeaderId], references: [id])
   proposedLeader        User?           @relation("ProposedLeaderWorkItems", fields: [proposedLeaderId], references: [id])
+  // Phase 2: 部门领导/主管人员 FK 关联（onDelete: SetNull）
+  deptLeader            User?           @relation("DeptLeaderWorkItems", fields: [deptLeaderId], references: [id], onDelete: SetNull)
+  deptManager           User?           @relation("DeptManagerWorkItems", fields: [deptManagerId], references: [id], onDelete: SetNull)
 
   workflowRecords       WorkflowRecord[]
   attachments           Attachment[]

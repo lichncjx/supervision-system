@@ -43,6 +43,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         department: true,
         creator: { select: { name: true, role: true } },
         proposedLeader: { select: { id: true, name: true } },
+        deptLeader: { select: { id: true, name: true } },
+        deptManager: { select: { id: true, name: true } },
         attachments: {
           include: {
             user: { select: { name: true } },
@@ -82,6 +84,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       isInnovation: work.isInnovation,
       responsibleLeader: work.responsibleLeader,
       supervisor: work.supervisor,
+      deptLeaderId: work.deptLeaderId,
+      deptLeaderName: work.deptLeader?.name || work.deptLeaderName || work.responsibleLeader || null,
+      deptManagerId: work.deptManagerId,
+      deptManagerName: work.deptManager?.name || work.deptManagerName || work.supervisor || null,
       proposedLeader: work.proposedLeader?.name || null,
       proposedLeaderId: work.proposedLeaderId,
       proposedScene: work.proposedScene,
@@ -170,6 +176,66 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     const body = await request.json();
 
+    // Phase 2: effectiveDepartmentId = body.departmentId ?? existingWork.departmentId
+    const effectiveDepartmentId = body.departmentId ?? work.departmentId;
+
+    // Phase 2: departmentId 变化时，如果请求未明确传入新人员字段，则清空
+    const departmentChanged = body.departmentId !== undefined && body.departmentId !== work.departmentId;
+    const noNewDeptLeader = body.deptLeaderId === undefined && body.responsibleLeader === undefined;
+    const noNewDeptManager = body.deptManagerId === undefined && body.supervisor === undefined;
+
+    // Phase 2: 校验 deptLeaderId
+    let validatedDeptLeaderName: string | null | undefined = undefined;
+    if (body.deptLeaderId !== undefined) {
+      if (body.deptLeaderId) {
+        const deptLeader = await prisma.user.findUnique({
+          where: { id: body.deptLeaderId },
+          select: { id: true, name: true, role: true, departmentId: true, isActive: true },
+        });
+        if (!deptLeader) {
+          return NextResponse.json({ error: '所选部门领导用户不存在' }, { status: 400 });
+        }
+        if (deptLeader.departmentId !== effectiveDepartmentId) {
+          return NextResponse.json({ error: '部门领导不属于所选责任部门' }, { status: 400 });
+        }
+        if (deptLeader.role !== Role.DEPARTMENT_LEADER) {
+          return NextResponse.json({ error: '所选用户不是部门领导角色' }, { status: 400 });
+        }
+        if (!deptLeader.isActive) {
+          return NextResponse.json({ error: '所选部门领导用户已停用' }, { status: 400 });
+        }
+        validatedDeptLeaderName = deptLeader.name;
+      } else {
+        validatedDeptLeaderName = null;
+      }
+    }
+
+    // Phase 2: 校验 deptManagerId
+    let validatedDeptManagerName: string | null | undefined = undefined;
+    if (body.deptManagerId !== undefined) {
+      if (body.deptManagerId) {
+        const deptManager = await prisma.user.findUnique({
+          where: { id: body.deptManagerId },
+          select: { id: true, name: true, role: true, departmentId: true, isActive: true },
+        });
+        if (!deptManager) {
+          return NextResponse.json({ error: '所选主管人员用户不存在' }, { status: 400 });
+        }
+        if (deptManager.departmentId !== effectiveDepartmentId) {
+          return NextResponse.json({ error: '主管人员不属于所选责任部门' }, { status: 400 });
+        }
+        if (deptManager.role !== Role.DEPARTMENT_MANAGER) {
+          return NextResponse.json({ error: '所选用户不是部门主管角色' }, { status: 400 });
+        }
+        if (!deptManager.isActive) {
+          return NextResponse.json({ error: '所选主管人员用户已停用' }, { status: 400 });
+        }
+        validatedDeptManagerName = deptManager.name;
+      } else {
+        validatedDeptManagerName = null;
+      }
+    }
+
     const updateData: any = {};
     if (body.title !== undefined) updateData.title = body.title;
     if (body.workItem !== undefined) updateData.workItem = body.workItem;
@@ -182,6 +248,44 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     if (body.responsibleLeader !== undefined) updateData.responsibleLeader = body.responsibleLeader;
     // supervisor: 主管人员姓名快照（legacy，非系统角色 SUPERVISOR）
     if (body.supervisor !== undefined) updateData.supervisor = body.supervisor;
+    // Phase 2: deptLeaderId/deptManagerId（校验后写入）
+    if (body.deptLeaderId !== undefined) {
+      updateData.deptLeaderId = body.deptLeaderId || null;
+      if (validatedDeptLeaderName !== undefined) {
+        updateData.deptLeaderName = validatedDeptLeaderName;
+        if (validatedDeptLeaderName !== null && body.responsibleLeader === undefined) {
+          updateData.responsibleLeader = validatedDeptLeaderName;
+        }
+      }
+    }
+    if (body.deptManagerId !== undefined) {
+      updateData.deptManagerId = body.deptManagerId || null;
+      if (validatedDeptManagerName !== undefined) {
+        updateData.deptManagerName = validatedDeptManagerName;
+        if (validatedDeptManagerName !== null && body.supervisor === undefined) {
+          updateData.supervisor = validatedDeptManagerName;
+        }
+      }
+    }
+    // deptLeaderName 跟随 responsibleLeader 更新
+    if (body.responsibleLeader !== undefined && body.deptLeaderId === undefined) {
+      updateData.deptLeaderName = body.responsibleLeader;
+    }
+    // deptManagerName 跟随 supervisor 更新
+    if (body.supervisor !== undefined && body.deptManagerId === undefined) {
+      updateData.deptManagerName = body.supervisor;
+    }
+    // Phase 2: departmentId 变化时主动清空人员字段（如果客户端未传入新值）
+    if (departmentChanged && noNewDeptLeader) {
+      updateData.deptLeaderId = null;
+      updateData.deptLeaderName = null;
+      updateData.responsibleLeader = null;
+    }
+    if (departmentChanged && noNewDeptManager) {
+      updateData.deptManagerId = null;
+      updateData.deptManagerName = null;
+      updateData.supervisor = null;
+    }
     // proposedLeaderId: 优先使用 ID 字段，文本 proposedLeader 仅作快照展示
     if (body.proposedLeaderId !== undefined) updateData.proposedLeaderId = body.proposedLeaderId || null;
     if (body.proposedScene !== undefined) updateData.proposedScene = body.proposedScene;
