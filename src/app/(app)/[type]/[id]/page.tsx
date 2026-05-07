@@ -597,7 +597,7 @@ export default function WorkDetailPage() {
             <span>{work.deptLeaderName || work.responsibleLeader || '-'}</span>
           </div>
           <div>
-            <span className="text-sm text-gray-500">主管人员 / 业务主管人员：</span>
+            <span className="text-sm text-gray-500">主管人员：</span>
             <span>{work.deptManagerName || work.supervisor || '-'}</span>
           </div>
           {work.type === '重点' && (

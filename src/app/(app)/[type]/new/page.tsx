@@ -638,7 +638,7 @@ export default function NewWorkPage() {
                 <div>
                   <label className="block text-sm font-medium mb-1">
                     主管人员
-                    <span className="text-xs text-gray-400 ml-1">（业务主管人员 / 具体跟踪办理人，非督办管理员）</span>
+                    <span className="text-xs text-gray-400 ml-1">（负责该事项具体跟踪办理）</span>
                   </label>
                   <select
                     value={priorityMainForm.deptManagerId}
@@ -652,7 +652,7 @@ export default function NewWorkPage() {
                     }}
                     className="w-full border rounded-md p-2"
                   >
-                    <option value="">请选择主管人员（非必选）</option>
+                    <option value="">请选择主管人员</option>
                     {departmentManagers.map((u) => (
                       <option key={u.id} value={u.id}>
                         {u.name}
@@ -743,7 +743,7 @@ export default function NewWorkPage() {
                 <div>
                   <label className="text-sm font-medium">
                     主责责任人
-                    <span className="text-xs text-gray-400 ml-1">（主责部门的具体责任人姓名留底）</span>
+                    <span className="text-xs text-gray-400 ml-1">（主责部门的具体责任人）</span>
                   </label>
                   <MultiSearchSelect
                     className="mt-2"
@@ -765,7 +765,7 @@ export default function NewWorkPage() {
                 <div>
                   <label className="text-sm font-medium">
                     配合部门
-                    <span className="text-xs text-gray-400 ml-1">（协助执行的部门，非必选）</span>
+                    <span className="text-xs text-gray-400 ml-1">（协助执行的部门）</span>
                   </label>
                   <MultiSearchSelect
                     className="mt-2"
@@ -796,7 +796,7 @@ export default function NewWorkPage() {
                 <div>
                   <label className="text-sm font-medium">
                     配合责任人
-                    <span className="text-xs text-gray-400 ml-1">（配合部门的具体责任人姓名留底，非必选）</span>
+                    <span className="text-xs text-gray-400 ml-1">（配合部门的具体责任人）</span>
                   </label>
                   <MultiSearchSelect
                     className="mt-2"

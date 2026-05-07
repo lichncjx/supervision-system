@@ -151,7 +151,7 @@ export function WorkReturnedPanel({
                       }}
                       className="w-full border rounded-md p-2"
                     >
-                      <option value="">请选择主管人员（非必选）</option>
+                      <option value="">请选择主管人员</option>
                       {departmentManagers.map((u) => (
                         <option key={u.id} value={u.id}>{u.name}</option>
                       ))}
@@ -225,7 +225,7 @@ export function WorkReturnedPanel({
                 <div>
                   <label className="text-sm font-medium">
                     主责责任人
-                    <span className="text-xs text-gray-400 ml-1">（姓名留底，多个用顿号分隔）</span>
+                    <span className="text-xs text-gray-400 ml-1">（多个用顿号分隔）</span>
                   </label>
                   <Input
                     value={editForm.responsiblePerson || ''}
@@ -244,7 +244,7 @@ export function WorkReturnedPanel({
                 <div>
                   <label className="text-sm font-medium">
                     配合责任人
-                    <span className="text-xs text-gray-400 ml-1">（姓名留底，多个用顿号分隔）</span>
+                    <span className="text-xs text-gray-400 ml-1">（多个用顿号分隔）</span>
                   </label>
                   <Input
                     value={editForm.cooperatePerson || ''}
