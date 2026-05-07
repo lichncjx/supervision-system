@@ -218,9 +218,15 @@ export async function POST(request: NextRequest) {
       completeTime: convertToDateTime(rest.completeTime),
       completeForm: rest.completeForm,
       isInnovation: rest.isInnovation || false,
+      // responsibleLeader: 部门领导姓名快照（legacy，未来迁移为 deptLeaderName）
       responsibleLeader: rest.responsibleLeader,
+      // supervisor: 主管人员姓名快照（legacy，未来迁移为 deptManagerName，非系统角色 SUPERVISOR）
       supervisor: rest.supervisor,
+      // proposedLeaderId: 提出领导 ID（真实关联字段）
       proposedLeaderId: rest.proposedLeaderId,
+      // approvalLeaderId: 审批领导 ID，默认等于 proposedLeaderId
+      // 只有特殊情况才允许单独指定
+      approvalLeaderId: rest.approvalLeaderId || rest.proposedLeaderId,
       proposedScene: rest.proposedScene,
       formedTime: convertToDateTime(rest.formedTime),
       departmentIds: rest.departmentIds || (departmentId ? [departmentId] : []),
@@ -230,7 +236,6 @@ export async function POST(request: NextRequest) {
       workPlan: rest.workPlan,
       planCompleteTime: convertToDateTime(rest.planCompleteTime),
       progress: rest.progress,
-      approvalLeaderId: rest.approvalLeaderId,
       nodes: rest.nodes ? JSON.stringify(processNodes(rest.nodes)) : null,
     };
 

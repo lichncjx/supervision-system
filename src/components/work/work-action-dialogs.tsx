@@ -75,7 +75,10 @@ export function WorkActionDialogs({
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium">公司审批领导</label>
+              <label className="text-sm font-medium">
+                公司审批领导
+                <span className="text-xs text-gray-400 ml-1">（负责本次调整审批的公司领导）</span>
+              </label>
               <select
                 value={approvalLeaderId}
                 onChange={(e) => setApprovalLeaderId(e.target.value)}
@@ -405,7 +408,10 @@ export function WorkActionDialogs({
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium">公司审批领导</label>
+              <label className="text-sm font-medium">
+                公司审批领导
+                <span className="text-xs text-gray-400 ml-1">（负责本次取消审批的公司领导）</span>
+              </label>
               <select
                 value={approvalLeaderId}
                 onChange={(e) => setApprovalLeaderId(e.target.value)}

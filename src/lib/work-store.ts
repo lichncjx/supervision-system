@@ -101,22 +101,61 @@ export interface Work {
   title: string;
   description?: string;
   type: WorkType;
+
+  // ---- 部门关联 ----
+  // departmentId: 重点/主要工作的单一主办部门
   departmentId?: number;
   departmentName?: string;
+  // departmentIds: 待办事项的主责部门 ID 数组（未来迁移为 responsibleDepartmentIds）
+  departmentIds?: number[];
+
+  // ---- 业务人员 ID 字段（xxxId = 真实关联字段，用于权限、流程、审批、待处理判断）----
   creatorRole: string;
   creatorId?: number;
   creatorName?: string;
+  // firstSubmitterId: 首次提交审批人，退回后处理权限判定依据
+  // firstSubmitterId ?? creatorId 的 fallback 仅用于兼容历史数据
+  firstSubmitterId?: number;
+  // proposedLeaderId: 待办事项的提出领导用户 ID（公司领导）
+  proposedLeaderId?: number;
+  // approvalLeaderId: 待办事项的审批领导用户 ID，默认应等于 proposedLeaderId
+  approvalLeaderId?: number;
+  // currentApproverId / currentApproverRole: 当前应执行审批操作的用户/角色
+  currentApproverId?: number;
+  currentApproverRole?: string;
+
+  // ---- 业务人员姓名快照字段（仅用于页面展示、Excel 导出、历史留痕，不参与权限判断）----
+  // proposedLeader: 提出领导姓名（从 Prisma relation 解析，非独立 DB 字段）
+  proposedLeader?: string;
+  proposedLeaderRole?: string;
+  // approvalLeader: 审批领导姓名（从 Prisma relation 解析，非独立 DB 字段）
+  approvalLeader?: string;
+  approvalLeaderRole?: string;
+  // responsibleLeader: 重点/主要工作的部门领导姓名（legacy，未来迁移为 deptLeaderName）
+  //   注意：仅用于展示和导出，不参与权限判断
+  responsibleLeader?: string;
+  // supervisor: 重点/主要工作的主管人员/业务主管人员姓名（legacy，未来迁移为 deptManagerName）
+  //   注意：与系统角色 SUPERVISOR（督办管理员）无关，不参与权限判断
+  supervisor?: string;
+  // responsiblePersons: 待办事项的主责责任人姓名数组（legacy，未来迁移为 responsiblePersonNames）
+  responsiblePersons?: string[];
+  // responsiblePerson: 拼接后的主责责任人字符串（legacy，逐步弱化）
+  responsiblePerson?: string;
+  // cooperatePersons: 待办事项的配合部门责任人姓名数组（legacy，未来迁移为 cooperatePersonNames）
+  cooperatePersons?: string[];
+  // cooperatePerson: 拼接后的配合责任人字符串（legacy，逐步弱化）
+  cooperatePerson?: string;
+  // cooperateDepartmentIds: 待办事项的配合部门 ID 数组
+  cooperateDepartmentIds?: number[];
+  // cooperateDepartments: 配合部门名称数组（已弱化，逐步去除）
+  cooperateDepartments?: string[];
+  // cooperateDepartment: 拼接后的配合部门字符串（legacy，逐步弱化）
+  cooperateDepartment?: string;
+
+  // ---- 事项基本信息 ----
   status: Status;
   action: ActionType;
   needCeo: boolean;
-  proof?: string;
-  proofFiles?: ProofFile[];
-  adjustReason?: string;
-  cancelReason?: string;
-  adjustNewTime?: string;
-  adjustTimeType?: 'completeTime' | 'planCompleteTime';
-  createdAt: string;
-  updatedAt: string;
   isInnovation?: boolean;
   nodes?: WorkNode[];
   businessCategory?: string;
@@ -124,41 +163,34 @@ export interface Work {
   workNode?: string;
   completeTime?: string;
   completeForm?: string;
-  responsibleLeader?: string;
-  supervisor?: string;
-  proposedLeader?: string;
-  proposedLeaderId?: number;
-  proposedLeaderRole?: string;
   proposedScene?: string;
   formedTime?: string;
-  responsiblePerson?: string;
-  cooperateDepartment?: string;
-  cooperatePerson?: string;
-  departmentIds?: number[];
-  responsiblePersons?: string[];
-  cooperateDepartmentIds?: number[];
-  cooperateDepartments?: string[];
-  cooperatePersons?: string[];
   workPlan?: string;
   planCompleteTime?: string;
   progress?: string;
+
+  // ---- 证明材料 / 调整 / 取消 / 退回 / 附件 ----
+  proof?: string;
+  proofFiles?: ProofFile[];
+  adjustReason?: string;
+  cancelReason?: string;
+  adjustNewTime?: string;
+  adjustTimeType?: 'completeTime' | 'planCompleteTime';
   rejectReason?: string | null;
   rejectedAt?: string;
   rejectedFrom?: Status;
   rejectedFromStatus?: Status | null;
   rejectedBy?: string;
   adjustHistory?: AdjustHistory[];
-  approvalLeader?: string;
-  approvalLeaderId?: number;
-  approvalLeaderRole?: string;
-  currentApproverId?: number;
-  currentApproverRole?: string;
-  firstSubmitterId?: number;
   pendingAdjustment?: WorkEditablePatch;
   pendingAdjustmentReason?: string;
   pendingAdjustmentFromTime?: string;
   pendingAdjustmentToTime?: string;
   attachments?: Attachment[];
+
+  // ---- 时间戳 ----
+  createdAt: string;
+  updatedAt: string;
 }
 
 export type WorkEditablePatch = Partial<Pick<
@@ -197,7 +229,7 @@ export type WorkEditablePatch = Partial<Pick<
 >>;
 
 export function transformWorkFromAPI(work: any): Work {
-  // 提取对象字段的字符串表示
+  // 从 relation 对象或字符串中提取名称
   const extractName = (obj: any): string => {
     if (!obj) return '';
     if (typeof obj === 'string') return obj;
@@ -205,7 +237,7 @@ export function transformWorkFromAPI(work: any): Work {
     return '';
   };
 
-  // 提取对象数组的字符串数组
+  // 从对象数组或字符串数组中提取名称数组
   const extractNameArray = (arr: any): string[] => {
     if (!arr) return [];
     if (Array.isArray(arr)) {
@@ -222,11 +254,37 @@ export function transformWorkFromAPI(work: any): Work {
     id: work.id,
     title: work.title,
     type: work.type as WorkType,
+    // 部门字段
     departmentId: work.departmentId,
     departmentName: work.departmentName,
+    departmentIds: work.departmentIds || work.department_ids || [],
+    // 创建者（ID 用于权限判断）
     creatorRole: work.creatorRole || work.creator_role || '',
     creatorId: work.creatorId || work.creator_id,
     creatorName: work.creatorName,
+    // 首次提交审批人
+    firstSubmitterId: work.firstSubmitterId ?? undefined,
+    // 待办事项提出领导（API 返回 proposedLeader 为 relation 对象，提取 name 字段）
+    proposedLeader: extractName(work.proposedLeader),
+    proposedLeaderId: work.proposedLeaderId || work.proposed_leader_id,
+    proposedLeaderRole: work.proposedLeaderRole || work.proposed_leader_role,
+    // 待办事项审批领导
+    approvalLeaderId: work.approvalLeaderId || work.approval_leader_id,
+    // 审批当前节点
+    currentApproverId: work.currentApproverId || work.current_approver_id,
+    currentApproverRole: work.currentApproverRole || work.current_approver_role,
+    // 重点/主要工作 - 部门领导姓名快照（legacy: responsibleLeader, 未来: deptLeaderName）
+    responsibleLeader: work.responsibleLeader || work.responsible_leader,
+    // 重点/主要工作 - 主管人员姓名快照（legacy: supervisor, 未来: deptManagerName）
+    // 注意：不是系统角色 SUPERVISOR（督办管理员）
+    supervisor: work.supervisor,
+    // 待办事项 - 主责责任人姓名数组
+    responsiblePersons: extractNameArray(work.responsiblePersons || work.responsible_persons),
+    // 待办事项 - 配合部门 ID 数组
+    cooperateDepartmentIds: work.cooperateDepartmentIds || work.cooperate_department_ids || [],
+    // 待办事项 - 配合责任人姓名数组
+    cooperatePersons: extractNameArray(work.cooperatePersons || work.cooperate_persons),
+    // 事项基本信息
     status: work.status?.toLowerCase() as Status || 'draft',
     action: normalizeAction(work.action || work.action_type),
     needCeo: work.type === '重点',
@@ -237,31 +295,19 @@ export function transformWorkFromAPI(work: any): Work {
     workNode: work.workNode || work.work_node,
     completeTime: work.completeTime || work.complete_time,
     completeForm: work.completeForm || work.complete_form,
-    responsibleLeader: work.responsibleLeader || work.responsible_leader,
-    supervisor: work.supervisor,
-    proposedLeader: extractName(work.proposedLeader),
-    proposedLeaderId: work.proposedLeaderId || work.proposed_leader_id,
-    proposedLeaderRole: work.proposedLeaderRole || work.proposed_leader_role,
     proposedScene: work.proposedScene || work.proposed_scene,
     formedTime: work.formedTime || work.formed_time,
-    departmentIds: work.departmentIds || work.department_ids || [],
-    responsiblePersons: extractNameArray(work.responsiblePersons || work.responsible_persons),
-    cooperateDepartmentIds: work.cooperateDepartmentIds || work.cooperate_department_ids || [],
-    cooperatePersons: extractNameArray(work.cooperatePersons || work.cooperate_persons),
     workPlan: work.workPlan || work.work_plan,
     planCompleteTime: work.planCompleteTime || work.plan_complete_time,
     progress: work.progress,
-    approvalLeaderId: work.approvalLeaderId || work.approval_leader_id,
-    createdAt: work.createdAt || work.created_at,
-    updatedAt: work.updatedAt || work.updated_at,
+    // 退回/调整/取消/附件
     rejectReason: work.rejectReason || work.reject_reason,
     rejectedAt: work.rejectedAt || work.rejected_at,
     rejectedFrom: work.rejectedFrom || work.rejected_from_status,
     adjustReason: work.adjustReason || work.adjust_reason,
     cancelReason: work.cancelReason || work.cancel_reason,
-    currentApproverId: work.currentApproverId || work.current_approver_id,
-    currentApproverRole: work.currentApproverRole || work.current_approver_role,
-    firstSubmitterId: work.firstSubmitterId ?? undefined,
+    createdAt: work.createdAt || work.created_at,
+    updatedAt: work.updatedAt || work.updated_at,
     attachments: work.attachments || [],
   };
 }
@@ -409,8 +455,11 @@ export async function addWork(work: Omit<Work, 'createdAt' | 'updatedAt'>): Prom
     completeTime: work.completeTime,
     completeForm: work.completeForm,
     isInnovation: work.isInnovation,
+    // responsibleLeader: 部门领导姓名快照（未来迁移为 deptLeaderName）
     responsibleLeader: work.responsibleLeader,
+    // supervisor: 主管人员姓名快照（未来迁移为 deptManagerName, 非系统角色 SUPERVISOR）
     supervisor: work.supervisor,
+    // proposedLeader / proposedLeaderRole 文本仅作为快照传递，服务端优先使用 proposedLeaderId
     proposedLeader: work.proposedLeader,
     proposedLeaderId: work.proposedLeaderId,
     proposedScene: work.proposedScene,
@@ -875,6 +924,7 @@ export async function getFilteredWorks(user: User | null | undefined, filter: Wo
 export function canHandleWork(user: User | null | undefined, work: Work) {
   if (!user) return false;
 
+  // SUPERVISOR（督办管理员）和 ADMIN 不参与具体事项处理
   if (user.role === 'SUPERVISOR') {
     return false;
   }
@@ -883,19 +933,22 @@ export function canHandleWork(user: User | null | undefined, work: Work) {
     return false;
   }
 
-  // 本人创建的草稿
+  // 本人创建的草稿，使用 creatorId 判断
   if (work.status === 'draft' && work.creatorId === user.id) {
     return true;
   }
 
-  // 被退回后，仅首次提交审批人可以处理
-  // firstSubmitterId ?? creatorId 的 fallback 仅用于兼容历史数据
+  // 被退回后，仅首次提交审批人（firstSubmitterId）可以处理
+  // firstSubmitterId ?? creatorId 的 fallback 仅用于兼容引入该字段前的历史数据
   if (isReturnStatus(work.status)) {
     const submitterId = work.firstSubmitterId ?? work.creatorId;
     return submitterId === user.id;
   }
 
-  // 待办事项待分解
+  // 以下判断依赖部门关联（departmentId / departmentIds / cooperateDepartmentIds）
+  // 注意：未来 deptManagerId 落地后，可在此处增加精确人员权限判断
+
+  // 待办事项待分解（部门主管/部门领导可分解关联部门的待办）
   if (
     work.type === '待办' &&
     work.status === 'pending_decompose' &&
@@ -906,6 +959,7 @@ export function canHandleWork(user: User | null | undefined, work: Work) {
   }
 
   // 重点/主要工作已立项，待责任部门上传见证材料
+  // 当前按部门角色泛化判断，未来可增加 deptManagerId 精确匹配
   if (
     (work.type === '重点' || work.type === '主要') &&
     work.status === 'approved' &&
@@ -985,14 +1039,17 @@ function isSelectedCompanyApprover(user: User, work: Work) {
     return false;
   }
 
+  // 优先：当前审批人 ID 精确匹配
   if (work.currentApproverId) {
     return work.currentApproverId === user.id;
   }
 
+  // 次选：当前审批角色匹配
   if (work.currentApproverRole) {
     return work.currentApproverRole === user.role;
   }
 
+  // 调整/取消审批：以 approvalLeaderId 为准
   if (
     (work.action === 'adjust' || work.action === 'cancel') &&
     work.approvalLeaderId
@@ -1000,10 +1057,12 @@ function isSelectedCompanyApprover(user: User, work: Work) {
     return work.approvalLeaderId === user.id;
   }
 
+  // 待办事项公司审批：以 proposedLeaderId 为准
   if (work.type === '待办' && work.status === 'pending_company' && work.proposedLeaderId) {
     return work.proposedLeaderId === user.id;
   }
 
+  // 重点/主要工作公司审批：回退到角色匹配（VICE_PRESIDENT）
   if (
     (work.type === '重点' || work.type === '主要') &&
     (work.status === 'pending_company' || work.status === 'pending_evidence_company')

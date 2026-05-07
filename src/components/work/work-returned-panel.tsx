@@ -121,7 +121,10 @@ export function WorkReturnedPanel({
             {isTodo && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm font-medium">事项提出领导</label>
+                  <label className="text-sm font-medium">
+                    事项提出领导
+                    <span className="text-xs text-gray-400 ml-1">（提出该待办事项的公司领导，默认也是审批领导）</span>
+                  </label>
                   <select
                     value={editForm.proposedLeaderId || ''}
                     onChange={(e) => setEditForm((prev: any) => ({ ...prev, proposedLeaderId: e.target.value }))}
@@ -162,7 +165,7 @@ export function WorkReturnedPanel({
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium">责任部门</label>
+                  <label className="text-sm font-medium">主责部门</label>
                   <select
                     value={editForm.departmentId || ''}
                     onChange={(e) => setEditForm((prev: any) => ({ ...prev, departmentId: Number(e.target.value) }))}
@@ -177,7 +180,10 @@ export function WorkReturnedPanel({
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium">责任部门责任人</label>
+                  <label className="text-sm font-medium">
+                    主责责任人
+                    <span className="text-xs text-gray-400 ml-1">（姓名留底，多个用顿号分隔）</span>
+                  </label>
                   <Input
                     value={editForm.responsiblePerson || ''}
                     onChange={(e) => setEditForm((prev: any) => ({ ...prev, responsiblePerson: e.target.value }))}
@@ -193,7 +199,10 @@ export function WorkReturnedPanel({
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium">配合部门责任人</label>
+                  <label className="text-sm font-medium">
+                    配合责任人
+                    <span className="text-xs text-gray-400 ml-1">（姓名留底，多个用顿号分隔）</span>
+                  </label>
                   <Input
                     value={editForm.cooperatePerson || ''}
                     onChange={(e) => setEditForm((prev: any) => ({ ...prev, cooperatePerson: e.target.value }))}

@@ -7,15 +7,23 @@ const DEPT_ROLES: Role[] = [Role.DEPARTMENT_MANAGER, Role.DEPARTMENT_LEADER]
 const IMPORT_EXPORT_ROLES: Role[] = [Role.ADMIN, Role.SUPERVISOR, Role.DEPARTMENT_MANAGER, Role.DEPARTMENT_LEADER]
 
 export async function canAccessWorkItem(user: User, workItem: WorkItem): Promise<boolean> {
+  // 公司级角色（ADMIN/SUPERVISOR/VICE_PRESIDENT/PRESIDENT）可以查看所有事项
   if (isCompanyLevelRole(user.role)) {
     return true
   }
 
+  // 单选部门匹配
   if (workItem.departmentId === user.departmentId) {
     return true
   }
 
+  // 多选部门匹配（待办事项的 departmentIds）
   if (workItem.departmentIds.includes(user.departmentId)) {
+    return true
+  }
+
+  // 配合部门匹配（待办事项的 cooperateDepartmentIds）
+  if (workItem.cooperateDepartmentIds.includes(user.departmentId)) {
     return true
   }
 

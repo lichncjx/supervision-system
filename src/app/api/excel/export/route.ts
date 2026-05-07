@@ -113,8 +113,11 @@ export async function GET(request: NextRequest) {
       '工作节点',
       '完成时间',
       '完成形式',
+      // 责任部门：重点/主要=单一部门，待办=主责部门（多选）
       '责任部门',
+      // 责任领导：部门领导姓名快照（重点/主要专用，未来迁移为 deptLeaderName）
       '责任领导',
+      // 主管人员：业务主管人员姓名快照（重点/主要专用，未来迁移为 deptManagerName，非系统角色督办管理员）
       '主管人员',
       '配合部门',
       '配合部门责任人',
@@ -124,7 +127,9 @@ export async function GET(request: NextRequest) {
       '更新时间',
       '取消原因',
       '退回原因',
+      // 事项提出领导：提出待办的公司领导姓名
       '事项提出领导',
+      // 指定审批领导：负责审批的公司领导姓名（默认等于提出领导）
       '指定审批领导',
     ];
 
@@ -142,8 +147,8 @@ export async function GET(request: NextRequest) {
         item.completeTime ? new Date(item.completeTime).toISOString().split('T')[0] : '',
         isPriorityOrMain ? (item.completeForm || '') : '',
         item.department?.name || '',
-        isPriorityOrMain ? (item.responsibleLeader || '') : '',
-        isPriorityOrMain ? (item.supervisor || '') : '',
+        isPriorityOrMain ? (item.responsibleLeader || '') : '',   // deptLeaderName 快照
+        isPriorityOrMain ? (item.supervisor || '') : '',           // deptManagerName 快照
         item.type === 'TODO' ? ((item.cooperateDepartmentIds || []).join('、')) : '',
         item.type === 'TODO' ? ((item.cooperatePersons || []).join('、')) : '',
         item.type === 'TODO' ? (item.progress || '') : '',

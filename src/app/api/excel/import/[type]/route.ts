@@ -114,7 +114,9 @@ async function validateAndParseExcel(
       const completeTimeStr = getCell('完成时间');
       const completeForm = getCell('完成形式');
       const departmentName = getCell('责任部门');
+      // responsibleLeader: 部门领导姓名（legacy，未来迁移为 deptLeaderName）
       const responsibleLeader = getCell('责任领导');
+      // supervisor: 主管人员姓名（legacy，未来迁移为 deptManagerName）
       const supervisor = getCell('主管人员');
 
       if (!workItem) {
@@ -172,7 +174,9 @@ async function validateAndParseExcel(
       const completeTimeStr = getCell('完成时间');
       const completeForm = getCell('完成形式');
       const departmentName = getCell('责任部门');
+      // responsibleLeader: 部门领导姓名（legacy，未来迁移为 deptLeaderName）
       const responsibleLeader = getCell('责任领导');
+      // supervisor: 主管人员姓名（legacy，未来迁移为 deptManagerName）
       const supervisor = getCell('主管人员');
 
       if (!workItem) {
@@ -220,14 +224,19 @@ async function validateAndParseExcel(
         });
       }
     } else if (type === 'todo' || type === 'TODO') {
+      // 事项提出领导：提出该待办事项的公司领导（PRESIDENT 或 VICE_PRESIDENT）
       const proposedLeaderName = getCell('事项提出领导');
+      // 指定审批领导：负责后续调整、取消、完成审批的公司领导（默认等于提出领导）
       const approvalLeaderName = getCell('指定审批领导');
       const proposedScene = getCell('事项提出场景');
       const workItem = getCell('待办事项');
       const formedTimeStr = getCell('形成时间');
+      // 责任部门：主责部门，斜杠分隔多个部门名称
       const departmentNames = getCell('责任部门');
+      // 部门责任人：主责人员姓名留底（legacy，未来迁移为 responsiblePersonNames）
       const responsiblePersons = getCell('部门责任人');
       const cooperateDepartmentNames = getCell('配合部门');
+      // 配合部门责任人：协助人员姓名留底（legacy，未来迁移为 cooperatePersonNames）
       const cooperatePersons = getCell('配合部门责任人');
       const workPlan = getCell('工作计划');
       const planCompleteTimeStr = getCell('计划完成时间');
@@ -401,9 +410,11 @@ export async function POST(
           updatedAt: now,
         };
       } else {
+        // 默认 approvalLeaderId = proposedLeaderId（提出领导也负责后续审批）
+        // 仅当明确指定了不同的审批领导时才使用不同的值
         const finalProposedLeaderId = data.proposedLeaderId || data.approvalLeaderId;
-        const finalApprovalLeaderId = data.approvalLeaderId;
-        
+        const finalApprovalLeaderId = data.approvalLeaderId || finalProposedLeaderId;
+
         return {
           type: 'TODO' as WorkItemType,
           title: data.workItem,
