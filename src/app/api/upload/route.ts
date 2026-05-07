@@ -73,6 +73,11 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const workItemIdStr = formData.get('workItemId');
     const file = formData.get('file') as File | null;
+    const categoryRaw = (formData.get('category') as string) || 'general';
+
+    if (!['general', 'evidence'].includes(categoryRaw)) {
+      return NextResponse.json({ error: '无效的附件分类' }, { status: 400 });
+    }
 
     if (!workItemIdStr) {
       return NextResponse.json({ error: '请提供事项ID' }, { status: 400 });
@@ -147,6 +152,7 @@ export async function POST(request: NextRequest) {
         filePath: relativePath,
         fileSize: file.size,
         fileType: ext,
+        category: categoryRaw,
         uploadedAt: now,
       },
     });
@@ -171,6 +177,7 @@ export async function POST(request: NextRequest) {
         fileName: attachment.fileName,
         fileSize: attachment.fileSize,
         fileType: attachment.fileType,
+        category: attachment.category,
         uploadedAt: attachment.uploadedAt,
       },
     });

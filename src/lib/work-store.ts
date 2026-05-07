@@ -65,21 +65,12 @@ export interface WorkNode {
   children: WorkSubNode[];
 }
 
-export interface ProofFile {
-  id: number;
-  name: string;
-  type: string;
-  size: number;
-  dataUrl: string;
-  uploadedAt: string;
-  uploadedBy?: string;
-}
-
 export interface Attachment {
   id: number;
   fileName: string;
   fileSize: number;
   fileType: string;
+  category: string;
   uploadedAt: string;
   userId: number;
   userName?: string;
@@ -179,7 +170,6 @@ export interface Work {
 
   // ---- 证明材料 / 调整 / 取消 / 退回 / 附件 ----
   proof?: string;
-  proofFiles?: ProofFile[];
   adjustReason?: string;
   cancelReason?: string;
   adjustNewTime?: string;
@@ -1136,7 +1126,7 @@ export async function rejectWork(work: Work, user: User, reason = '审批退回'
   }
 }
 
-export async function submitComplete(work: Work, user: User, proof: string, _proofFiles?: ProofFile[]) {
+export async function submitComplete(work: Work, user: User, proof: string) {
   try {
     const response = await fetch(`/api/works/${work.id}/workflow`, {
       method: 'POST',
