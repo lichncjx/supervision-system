@@ -18,6 +18,9 @@ interface WorkReturnedPanelProps {
   isTodo: boolean;
   departments: Array<{ id: number; name: string; code: string; isBusiness: boolean }>;
   companyLeaders: Array<{ id: number; name: string; role: string }>;
+  // Phase 2: department leaders/managers for Priority/Main dropdowns
+  departmentLeaders?: Array<{ id: number; name: string; role: string; departmentId: number }>;
+  departmentManagers?: Array<{ id: number; name: string; role: string; departmentId: number }>;
   onResubmit: () => void;
   onDelete: () => void;
   updateNodeTitle: (nodeId: number, title: string) => void;
@@ -43,6 +46,8 @@ export function WorkReturnedPanel({
   isTodo,
   departments,
   companyLeaders,
+  departmentLeaders,
+  departmentManagers,
   onResubmit,
   onDelete,
   updateNodeTitle,
@@ -115,6 +120,44 @@ export function WorkReturnedPanel({
                     onChange={(e) => setEditForm((prev: any) => ({ ...prev, completeForm: e.target.value }))}
                   />
                 </div>
+
+                {departmentLeaders && departmentLeaders.length > 0 && (
+                  <div>
+                    <label className="text-sm font-medium">部门领导</label>
+                    <select
+                      value={editForm.deptLeaderId || ''}
+                      onChange={(e) => {
+                        const selected = departmentLeaders.find(u => String(u.id) === e.target.value);
+                        setEditForm((prev: any) => ({ ...prev, deptLeaderId: e.target.value, responsibleLeader: selected?.name || '' }));
+                      }}
+                      className="w-full border rounded-md p-2"
+                    >
+                      <option value="">请选择部门领导</option>
+                      {departmentLeaders.map((u) => (
+                        <option key={u.id} value={u.id}>{u.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {departmentManagers && departmentManagers.length > 0 && (
+                  <div>
+                    <label className="text-sm font-medium">主管人员</label>
+                    <select
+                      value={editForm.deptManagerId || ''}
+                      onChange={(e) => {
+                        const selected = departmentManagers.find(u => String(u.id) === e.target.value);
+                        setEditForm((prev: any) => ({ ...prev, deptManagerId: e.target.value, supervisor: selected?.name || '' }));
+                      }}
+                      className="w-full border rounded-md p-2"
+                    >
+                      <option value="">请选择主管人员（非必选）</option>
+                      {departmentManagers.map((u) => (
+                        <option key={u.id} value={u.id}>{u.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
             )}
 

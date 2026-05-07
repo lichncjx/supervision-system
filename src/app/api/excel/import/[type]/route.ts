@@ -141,15 +141,25 @@ async function validateAndParseExcel(
         const deptId = deptNameToId.get(departmentName)!;
         const deptLeaders = await prisma.user.findMany({
           where: { departmentId: deptId, role: Role.DEPARTMENT_LEADER, isActive: true },
-          select: { name: true },
+          select: { id: true, name: true },
         });
         const deptLeaderNames = deptLeaders.map((u) => u.name);
         if (responsibleLeader && !deptLeaderNames.includes(responsibleLeader)) {
           errors.push({ row: rowNum, field: '责任领导', value: responsibleLeader, reason: `不是${departmentName}的部门领导` });
         }
-      }
+        // Phase 2: 从姓名解析 deptLeaderId（唯一匹配前提）
+        const matchedDeptLeaders = deptLeaders.filter(u => u.name === responsibleLeader);
+        const deptLeaderId = matchedDeptLeaders.length === 1 ? matchedDeptLeaders[0].id : null;
+        // supervisor 可解析但无硬校验
+        const deptManagers = supervisor
+          ? await prisma.user.findMany({
+              where: { departmentId: deptId, role: Role.DEPARTMENT_MANAGER, isActive: true },
+              select: { id: true, name: true },
+            })
+          : [];
+        const matchedDeptManagers = supervisor ? deptManagers.filter(u => u.name === supervisor) : [];
+        const deptManagerId = matchedDeptManagers.length === 1 ? matchedDeptManagers[0].id : null;
 
-      if (errors.filter((e) => e.row === rowNum).length === 0) {
         rows.push({
           row: rowNum,
           data: {
@@ -164,6 +174,10 @@ async function validateAndParseExcel(
             departmentId: deptNameToId.get(departmentName),
             responsibleLeader,
             supervisor,
+            deptLeaderId,
+            deptLeaderName: responsibleLeader || null,
+            deptManagerId,
+            deptManagerName: supervisor || null,
           },
         });
       }
@@ -198,15 +212,25 @@ async function validateAndParseExcel(
         const deptId = deptNameToId.get(departmentName)!;
         const deptLeaders = await prisma.user.findMany({
           where: { departmentId: deptId, role: Role.DEPARTMENT_LEADER, isActive: true },
-          select: { name: true },
+          select: { id: true, name: true },
         });
         const deptLeaderNames = deptLeaders.map((u) => u.name);
         if (responsibleLeader && !deptLeaderNames.includes(responsibleLeader)) {
           errors.push({ row: rowNum, field: '责任领导', value: responsibleLeader, reason: `不是${departmentName}的部门领导` });
         }
-      }
+        // Phase 2: 从姓名解析 deptLeaderId（唯一匹配前提）
+        const matchedDeptLeaders = deptLeaders.filter(u => u.name === responsibleLeader);
+        const deptLeaderId = matchedDeptLeaders.length === 1 ? matchedDeptLeaders[0].id : null;
+        // supervisor 可解析但无硬校验
+        const deptManagers = supervisor
+          ? await prisma.user.findMany({
+              where: { departmentId: deptId, role: Role.DEPARTMENT_MANAGER, isActive: true },
+              select: { id: true, name: true },
+            })
+          : [];
+        const matchedDeptManagers = supervisor ? deptManagers.filter(u => u.name === supervisor) : [];
+        const deptManagerId = matchedDeptManagers.length === 1 ? matchedDeptManagers[0].id : null;
 
-      if (errors.filter((e) => e.row === rowNum).length === 0) {
         rows.push({
           row: rowNum,
           data: {
@@ -220,6 +244,10 @@ async function validateAndParseExcel(
             departmentId: deptNameToId.get(departmentName),
             responsibleLeader,
             supervisor,
+            deptLeaderId,
+            deptLeaderName: responsibleLeader || null,
+            deptManagerId,
+            deptManagerName: supervisor || null,
           },
         });
       }
@@ -406,6 +434,10 @@ export async function POST(
           completeForm: data.completeForm || null,
           responsibleLeader: data.responsibleLeader || null,
           supervisor: data.supervisor || null,
+          deptLeaderId: data.deptLeaderId || null,
+          deptLeaderName: data.deptLeaderName || null,
+          deptManagerId: data.deptManagerId || null,
+          deptManagerName: data.deptManagerName || null,
           createdAt: now,
           updatedAt: now,
         };
