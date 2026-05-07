@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getUserFromToken } from '@/lib/server-auth';
+import {
+  canViewAttachment,
+  canUploadAttachment,
+  type AttPermWorkItem,
+} from '@/lib/attachment-permissions';
 import { writeFile, mkdir } from 'fs/promises';
 import { existsSync } from 'fs';
 import path from 'path';
@@ -16,47 +21,6 @@ const FORBIDDEN_EXTENSIONS = [
 ];
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024;
-
-function isCompanyLevelRole(role: string): boolean {
-  const companyRoles: string[] = ['ADMIN', 'SUPERVISOR', 'VICE_PRESIDENT', 'PRESIDENT'];
-  return companyRoles.includes(role);
-}
-
-async function canEditWork(
-  user: { id: number; role: string; departmentId: number },
-  workItem: { departmentId: number | null; status: string }
-): Promise<boolean> {
-  if (isCompanyLevelRole(user.role)) {
-    return true;
-  }
-
-  const isOwnDepartment = workItem.departmentId === user.departmentId;
-  if (!isOwnDepartment) {
-    return false;
-  }
-
-  const forbiddenStatuses = ['COMPLETED', 'CANCELLED', 'REJECTED'];
-  if (forbiddenStatuses.includes(workItem.status)) {
-    return false;
-  }
-
-  return user.role === 'DEPARTMENT_MANAGER' || user.role === 'DEPARTMENT_LEADER';
-}
-
-async function canViewWork(
-  user: { id: number; role: string; departmentId: number },
-  workItem: { departmentId: number | null; creatorId: number }
-): Promise<boolean> {
-  if (isCompanyLevelRole(user.role)) {
-    return true;
-  }
-
-  if (workItem.creatorId === user.id) {
-    return true;
-  }
-
-  return workItem.departmentId === user.departmentId;
-}
 
 export async function POST(request: NextRequest) {
   try {
@@ -108,18 +72,26 @@ export async function POST(request: NextRequest) {
 
     const workItem = await prisma.workItem.findUnique({
       where: { id: workItemId },
-      select: { id: true, departmentId: true, status: true, creatorId: true },
+      select: { id: true, departmentId: true, status: true, creatorId: true, type: true, deptManagerId: true },
     });
 
     if (!workItem) {
       return NextResponse.json({ error: '事项不存在' }, { status: 404 });
     }
 
-    if (!(await canViewWork(currentUser, workItem))) {
+    const permWorkItem: AttPermWorkItem = {
+      departmentId: workItem.departmentId,
+      status: workItem.status,
+      creatorId: workItem.creatorId,
+      type: workItem.type,
+      deptManagerId: workItem.deptManagerId,
+    };
+
+    if (!canViewAttachment(currentUser, permWorkItem)) {
       return NextResponse.json({ error: '无权查看该事项' }, { status: 403 });
     }
 
-    if (!(await canEditWork(currentUser, workItem))) {
+    if (!canUploadAttachment(currentUser, permWorkItem)) {
       return NextResponse.json({ error: '无权上传该事项的附件' }, { status: 403 });
     }
 

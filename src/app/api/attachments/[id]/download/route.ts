@@ -1,28 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getUserFromToken } from '@/lib/server-auth';
+import {
+  canViewAttachment,
+  type AttPermWorkItem,
+} from '@/lib/attachment-permissions';
 import { existsSync, promises as fs } from 'fs';
 import path from 'path';
-
-function isCompanyLevelRole(role: string): boolean {
-  const companyRoles: string[] = ['ADMIN', 'SUPERVISOR', 'VICE_PRESIDENT', 'PRESIDENT'];
-  return companyRoles.includes(role);
-}
-
-async function canViewWork(
-  user: { id: number; role: string; departmentId: number },
-  workItem: { departmentId: number | null; creatorId: number }
-): Promise<boolean> {
-  if (isCompanyLevelRole(user.role)) {
-    return true;
-  }
-
-  if (workItem.creatorId === user.id) {
-    return true;
-  }
-
-  return workItem.departmentId === user.departmentId;
-}
 
 export async function GET(
   request: NextRequest,
@@ -50,7 +34,7 @@ export async function GET(
       where: { id: attachmentId },
       include: {
         workItem: {
-          select: { departmentId: true, creatorId: true },
+          select: { departmentId: true, creatorId: true, type: true, deptManagerId: true },
         },
       },
     });
@@ -60,7 +44,14 @@ export async function GET(
     }
 
     if (attachment.workItem) {
-      if (!(await canViewWork(currentUser, attachment.workItem))) {
+      const permWorkItem: AttPermWorkItem = {
+        departmentId: attachment.workItem.departmentId,
+        status: '', // download 不校验状态
+        creatorId: attachment.workItem.creatorId,
+        type: attachment.workItem.type,
+        deptManagerId: attachment.workItem.deptManagerId,
+      };
+      if (!canViewAttachment(currentUser, permWorkItem)) {
         return NextResponse.json({ error: '无权查看该附件' }, { status: 403 });
       }
     }
