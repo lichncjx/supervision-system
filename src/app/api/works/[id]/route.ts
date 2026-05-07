@@ -180,8 +180,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     if (body.isInnovation !== undefined) updateData.isInnovation = body.isInnovation;
     if (body.responsibleLeader !== undefined) updateData.responsibleLeader = body.responsibleLeader;
     if (body.supervisor !== undefined) updateData.supervisor = body.supervisor;
-    if (body.proposedLeader !== undefined) updateData.proposedLeader = body.proposedLeader;
-    if (body.proposedLeaderId !== undefined) updateData.proposedLeaderId = body.proposedLeaderId;
+    if (body.proposedLeaderId !== undefined) updateData.proposedLeaderId = body.proposedLeaderId || null;
     if (body.proposedScene !== undefined) updateData.proposedScene = body.proposedScene;
     if (body.formedTime !== undefined) updateData.formedTime = convertToDateTime(body.formedTime);
     if (body.responsiblePersons !== undefined) updateData.responsiblePersons = body.responsiblePersons;
@@ -190,7 +189,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     if (body.workPlan !== undefined) updateData.workPlan = body.workPlan;
     if (body.planCompleteTime !== undefined) updateData.planCompleteTime = convertToDateTime(body.planCompleteTime);
     if (body.progress !== undefined) updateData.progress = body.progress;
-    if (body.approvalLeaderId !== undefined) updateData.approvalLeaderId = body.approvalLeaderId;
+    if (body.approvalLeaderId !== undefined) updateData.approvalLeaderId = body.approvalLeaderId || null;
     if (body.nodes !== undefined) updateData.nodes = JSON.stringify(body.nodes);
     if (body.status !== undefined) updateData.status = body.status;
     if (body.rejectReason !== undefined) updateData.rejectReason = body.rejectReason;

@@ -569,7 +569,7 @@ export default function NewWorkPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-1">完成时间</label>
+                  <label className="block text-sm font-medium mb-1">计划完成时间</label>
                   <Input 
                     type="date"
                     value={priorityMainForm.completeTime} 

@@ -561,7 +561,7 @@ export default function WorkDetailPage() {
             <span>{work.workNode || '-'}</span>
           </div>
           <div>
-            <span className="text-sm text-gray-500">完成时间：</span>
+            <span className="text-sm text-gray-500">计划完成时间：</span>
             <span>{work.completeTime || '-'}</span>
           </div>
           <div>
