@@ -72,7 +72,10 @@ datasource db {
 
 ```bash
 DATABASE_URL="postgresql://..." DIRECT_URL="postgresql://..." pnpm prisma:deploy
+pnpm prisma:generate
 ```
+
+- 涉及 migration 的变更（如 Phase 2 WorkItem 四列新增、Phase 3A Attachment.category 新增）合并到 `main` 后，需重新执行上述命令。
 
 - 可选：执行 `pnpm prisma:seed` 填充测试数据。
 - 每次 PR 部署使用同一套 schema，数据在 PR 之间可选择性清理。
