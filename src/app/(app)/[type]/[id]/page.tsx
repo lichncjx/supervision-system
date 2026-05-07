@@ -203,6 +203,12 @@ export default function WorkDetailPage() {
       (user.role === 'DEPARTMENT_MANAGER' || user.role === 'DEPARTMENT_LEADER') &&
       isCurrentUserRelatedDepartment() &&
       !['completed', 'cancelled', 'rejected'].includes(work.status)
+    ) ||
+    (
+      // Phase 3B: deptManagerId（含 rejected，用于退回后补充材料）
+      (work.type === '重点' || work.type === '主要') &&
+      user.id === work.deptManagerId &&
+      !['completed', 'cancelled'].includes(work.status)
     )
   );
 
@@ -567,9 +573,14 @@ export default function WorkDetailPage() {
     }
   };
 
-  const canDeleteAttachment = (attachment: { userId: number }) => {
+  const canDeleteAttachment = (attachment: { userId: number }): boolean => {
     if (!user) return false;
-    return canEdit || user.id === attachment.userId || user.role === 'ADMIN';
+    // ADMIN / SUPERVISOR 可删除所有附件
+    if (user.role === 'ADMIN' || user.role === 'SUPERVISOR') return true;
+    // 上传者本人可删除自己上传的附件
+    if (user.id === attachment.userId) return true;
+    // 其他任何人不可删除他人附件
+    return false;
   };
 
   const getDepartmentName = (id: number) => {

@@ -1,34 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getUserFromToken } from '@/lib/server-auth';
+import {
+  canDeleteAttachment,
+  type AttPermWorkItem,
+  type AttPermAttachment,
+} from '@/lib/attachment-permissions';
 import { existsSync } from 'fs';
 import path from 'path';
-
-function isCompanyLevelRole(role: string): boolean {
-  const companyRoles: string[] = ['ADMIN', 'SUPERVISOR', 'VICE_PRESIDENT', 'PRESIDENT'];
-  return companyRoles.includes(role);
-}
-
-async function canEditWork(
-  user: { id: number; role: string; departmentId: number },
-  workItem: { departmentId: number | null; status: string }
-): Promise<boolean> {
-  if (isCompanyLevelRole(user.role)) {
-    return true;
-  }
-
-  const isOwnDepartment = workItem.departmentId === user.departmentId;
-  if (!isOwnDepartment) {
-    return false;
-  }
-
-  const forbiddenStatuses = ['COMPLETED', 'CANCELLED', 'REJECTED'];
-  if (forbiddenStatuses.includes(workItem.status)) {
-    return false;
-  }
-
-  return user.role === 'DEPARTMENT_MANAGER' || user.role === 'DEPARTMENT_LEADER';
-}
 
 export async function DELETE(
   request: NextRequest,
@@ -56,7 +35,7 @@ export async function DELETE(
       where: { id: attachmentId },
       include: {
         workItem: {
-          select: { departmentId: true, status: true },
+          select: { departmentId: true, status: true, creatorId: true, type: true, deptManagerId: true },
         },
       },
     });
@@ -65,13 +44,26 @@ export async function DELETE(
       return NextResponse.json({ error: '附件不存在' }, { status: 404 });
     }
 
-    const isUploader = attachment.userId === currentUser.id;
-    const isAdmin = currentUser.role === 'ADMIN';
-    const canEdit = attachment.workItem
-      ? await canEditWork(currentUser, attachment.workItem)
-      : false;
+    let canDelete = false;
 
-    if (!isUploader && !isAdmin && !canEdit) {
+    if (attachment.workItem) {
+      const permWorkItem: AttPermWorkItem = {
+        departmentId: attachment.workItem.departmentId,
+        status: attachment.workItem.status,
+        creatorId: attachment.workItem.creatorId,
+        type: attachment.workItem.type,
+        deptManagerId: attachment.workItem.deptManagerId,
+      };
+      const permAttachment: AttPermAttachment = {
+        userId: attachment.userId,
+      };
+      canDelete = canDeleteAttachment(currentUser, permWorkItem, permAttachment);
+    } else {
+      // 孤立附件（workItem 已删除）：仅 ADMIN 可删（保守策略）
+      canDelete = currentUser.role === 'ADMIN';
+    }
+
+    if (!canDelete) {
       return NextResponse.json({ error: '无权删除该附件' }, { status: 403 });
     }
 
