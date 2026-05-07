@@ -29,13 +29,13 @@ export function TodoWorkListItem({ item, routeType, getDepartmentName }: TodoWor
           {item.proposedScene || '-'}
         </div>
         <div>
-          <span className="text-gray-500">责任部门：</span>
+          <span className="text-gray-500">主责部门：</span>
           {item.departmentIds && item.departmentIds.length > 0
             ? item.departmentIds.map((id: number) => getDepartmentName(id)).join('、')
             : getDepartmentName(item.departmentId ?? 0)}
         </div>
         <div>
-          <span className="text-gray-500">责任部门责任人：</span>
+          <span className="text-gray-500">主责责任人：</span>
           {item.responsiblePersons && item.responsiblePersons.length > 0
             ? item.responsiblePersons.join('、')
             : item.responsiblePerson || '-'}

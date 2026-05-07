@@ -285,7 +285,7 @@ export default function NewWorkPage() {
         return;
       }
       if (todoForm.departmentIds.length === 0) {
-        alert('请选择责任部门');
+        alert('请选择主责部门');
         return;
       }
       if (!todoForm.proposedLeaderId) {
@@ -713,7 +713,7 @@ export default function NewWorkPage() {
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium">责任部门</label>
+                  <label className="text-sm font-medium">主责部门</label>
                   <MultiSearchSelect
                     className="mt-2"
                     options={departmentOptions}
@@ -734,7 +734,7 @@ export default function NewWorkPage() {
                         ),
                       }));
                     }}
-                    placeholder="请选择责任部门"
+                    placeholder="请选择主责部门"
                     searchPlaceholder="搜索部门名称"
                     emptyText="未找到匹配部门"
                   />
@@ -755,7 +755,7 @@ export default function NewWorkPage() {
                         responsiblePersons: nextPersons,
                       }))
                     }
-                    placeholder={todoForm.departmentIds.length > 0 ? '请选择责任部门责任人' : '请先选择责任部门'}
+                    placeholder={todoForm.departmentIds.length > 0 ? '请选择主责责任人' : '请先选择主责部门'}
                     searchPlaceholder="搜索姓名"
                     emptyText="未找到匹配责任人"
                     disabled={todoForm.departmentIds.length === 0}
@@ -808,7 +808,7 @@ export default function NewWorkPage() {
                         cooperatePersons: nextPersons,
                       }))
                     }
-                    placeholder={todoForm.cooperateDepartmentIds.length > 0 ? '请选择配合部门责任人' : '请先选择配合部门'}
+                    placeholder={todoForm.cooperateDepartmentIds.length > 0 ? '请选择配合责任人' : '请先选择配合部门'}
                     searchPlaceholder="搜索姓名"
                     emptyText="未找到匹配责任人"
                     disabled={todoForm.cooperateDepartmentIds.length === 0}

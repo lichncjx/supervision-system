@@ -25,12 +25,13 @@ export async function GET(
     }
 
     const normalizedType = type.toLowerCase() as ExcelRouteType;
-    const { buffer, fileName } = getExcelTemplate(normalizedType);
+    const { body, fileName } = getExcelTemplate(normalizedType);
 
-    return new NextResponse(new Uint8Array(buffer), {
+    return new NextResponse(new Uint8Array(body), {
       status: 200,
       headers: {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'Content-Length': String(body.byteLength),
         'Content-Disposition': `attachment; filename="${encodeURIComponent(fileName)}"`,
       },
     });

@@ -135,6 +135,11 @@ export default function WorkDetailPage() {
         proposedScene: work.proposedScene || '',
         formedTime: work.formedTime || '',
         responsiblePerson: work.responsiblePerson || '',
+        // Phase 4A: 数组字段，支持编辑时多部门/多责任人的 MultiSearchSelect
+        departmentIds: work.departmentIds || [] as number[],
+        responsiblePersons: work.responsiblePersons || [] as string[],
+        cooperateDepartmentIds: work.cooperateDepartmentIds || [] as number[],
+        cooperatePersons: work.cooperatePersons || [] as string[],
         cooperateDepartment: work.cooperateDepartment || '',
         cooperatePerson: work.cooperatePerson || '',
         workPlan: work.workPlan || '',
