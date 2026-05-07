@@ -267,12 +267,12 @@ async function validateAndParseExcel(
       const proposedScene = getCell('事项提出场景');
       const workItem = getCell('待办事项');
       const formedTimeStr = getCell('形成时间');
-      // 责任部门：主责部门，斜杠分隔多个部门名称
-      const departmentNames = getCell('责任部门');
-      // 部门责任人：主责人员姓名留底（legacy，未来迁移为 responsiblePersonNames）
+      // 主责部门：多个用 / 分隔，填写部门全名或缩写代码
+      const departmentNames = getCell('主责部门');
+      // 主责责任人：主责部门的具体责任人，多个用 / 分隔
       const responsiblePersons = getCell('主责责任人');
       const cooperateDepartmentNames = getCell('配合部门');
-      // 配合部门责任人：协助人员姓名留底（legacy，未来迁移为 cooperatePersonNames）
+      // 配合责任人：配合部门的具体责任人，多个用 / 分隔
       const cooperatePersons = getCell('配合责任人');
       const workPlan = getCell('工作计划');
       const planCompleteTimeStr = getCell('计划完成时间');
