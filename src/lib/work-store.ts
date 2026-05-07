@@ -10,7 +10,8 @@ export type WorkStatusFilter =
   | 'completed'
   | 'rejected'
   | 'cancelled'
-  | 'overdue';
+  | 'overdue'
+  | 'expiring';
 
 export interface WorkQuery {
   type?: WorkType | '全部';
@@ -424,6 +425,10 @@ export async function queryWorks(user: User | null | undefined, query: WorkQuery
 
     if (query.status === 'overdue') {
       list = list.filter((w) => isOverdueWork(w));
+    }
+
+    if (query.status === 'expiring') {
+      list = list.filter((w) => isExpiringWork(w));
     }
   }
 
@@ -926,7 +931,7 @@ export function isExpiringWork(work: Work) {
   return diff >= 0 && diff <= 15 * 24 * 60 * 60 * 1000;
 }
 
-export type WorkFilter = 'all' | 'pending' | 'inProgress' | 'completed' | 'overdue';
+export type WorkFilter = 'all' | 'pending' | 'inProgress' | 'completed' | 'overdue' | 'expiring';
 
 export async function getFilteredWorks(user: User | null | undefined, filter: WorkFilter): Promise<Work[]> {
   const list = await getVisibleWorks(user);
@@ -936,6 +941,7 @@ export async function getFilteredWorks(user: User | null | undefined, filter: Wo
   if (filter === 'inProgress') return list.filter((w) => isInProgressStatus(w.status));
   if (filter === 'completed') return list.filter((w) => w.status === 'completed');
   if (filter === 'overdue') return list.filter((w) => isOverdueWork(w));
+  if (filter === 'expiring') return list.filter((w) => isExpiringWork(w));
 
   return list;
 }

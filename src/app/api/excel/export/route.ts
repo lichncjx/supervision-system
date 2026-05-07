@@ -187,7 +187,7 @@ export async function GET(request: NextRequest) {
     XLSX.utils.book_append_sheet(workbook, worksheet, '数据');
     const buffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'buffer' });
 
-    await prisma.operationLog.create({
+    prisma.operationLog.create({
       data: {
         userId: currentUser.id,
         userName: currentUser.name,
@@ -198,6 +198,8 @@ export async function GET(request: NextRequest) {
         targetId: 0,
         description: `导出事项数据，共 ${workItems.length} 条`,
       },
+    }).catch((logError) => {
+      console.error('Failed to write operation log:', logError);
     });
 
     return new NextResponse(new Uint8Array(buffer), {
@@ -208,7 +210,8 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Export error:', error);
-    return NextResponse.json({ error: '导出失败' }, { status: 500 });
+    const message = error instanceof Error ? error.message : '未知错误';
+    console.error('Export error:', message);
+    return NextResponse.json({ error: `导出失败: ${message}` }, { status: 500 });
   }
 }

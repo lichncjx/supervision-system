@@ -180,6 +180,11 @@ export function isAdmin(role?: string): boolean {
   return upperRole === 'ADMIN';
 }
 
+export function isSupervisionAdmin(role?: string): boolean {
+  const upperRole = role?.toUpperCase();
+  return upperRole === 'ADMIN' || upperRole === 'SUPERVISOR';
+}
+
 export function canImportExport(role?: string): boolean {
   const upperRole = role?.toUpperCase();
   return (

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { LayoutDashboard, Clock, CheckCircle2, AlertCircle, Plus } from 'lucide-react';
+import { Clock, CheckCircle2, AlertCircle, Plus } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import {
   getVisibleWorks,
@@ -13,12 +13,13 @@ import {
   canApproveWork,
   canProcessWork,
   isExpiringWork,
+  isOverdueWork,
   sortWorksByDueDate,
   isSupervisorTrackingWork,
   type Work,
 } from '@/lib/work-store';
 import { StatusBadge } from '@/components/common/badges';
-import { isCompanyLevel } from '@/lib/auth';
+import { isSupervisionAdmin } from '@/lib/auth';
 
 export default function DashboardPage() {
   const NOTICE_KEY = 'supervision_admin_notice';
@@ -51,6 +52,11 @@ export default function DashboardPage() {
     const loadData = async () => {
       if (!user) return;
       try {
+        const newWorks = await getVisibleWorks(user);
+        setVisibleWorks(newWorks);
+        const expiredCount = newWorks.filter((w) => isOverdueWork(w)).length;
+        const expiringCount = newWorks.filter((w) => isExpiringWork(w)).length;
+
         const response = await fetch('/api/dashboard/summary', { credentials: 'include' });
         if (response.ok) {
           const data = await response.json();
@@ -61,15 +67,15 @@ export default function DashboardPage() {
             pendingProcess: data.pendingProcess,
             inProgress: data.inProgress,
             completed: data.completed,
-            expired: data.overdue,
-            expiring: 0,
+            expired: expiredCount,
+            expiring: expiringCount,
             priority: data.priorityTotal,
             main: data.mainTotal,
             todo: data.todoTotal,
           });
+        } else {
+          setStats((prev) => ({ ...prev, expired: expiredCount, expiring: expiringCount }));
         }
-        const newWorks = await getVisibleWorks(user);
-        setVisibleWorks(newWorks);
       } catch (error) {
         console.error('Failed to load stats:', error);
       }
@@ -84,7 +90,27 @@ export default function DashboardPage() {
     alert('督办提示已保存');
   };
 
-  const companyLevel = isCompanyLevel(user?.role, user?.departmentId);
+  const handleExportCompletionRate = async () => {
+    try {
+      const res = await fetch('/api/excel/completion-rate', { credentials: 'include' });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: '导出失败' }));
+        alert(err.error || '导出失败');
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = '';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      alert('导出失败，请检查网络连接');
+    }
+  };
 
   const canEditNotice = user?.role === 'ADMIN' || user?.role === 'SUPERVISOR';
 
@@ -196,18 +222,6 @@ export default function DashboardPage() {
       </Card>
 
       <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-        <Link href="/status/all" className="block">
-          <Card className="hover:shadow-md transition cursor-pointer">
-            <CardContent className="p-4 flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">总事项</p>
-                <p className="text-2xl font-bold">{stats.total}</p>
-              </div>
-              <LayoutDashboard className="h-6 w-6 text-gray-500" />
-            </CardContent>
-          </Card>
-        </Link>
-
         <Link href="/status/pending" className="block">
           <Card className="hover:shadow-md transition cursor-pointer">
             <CardContent className="p-4 flex items-center justify-between">
@@ -256,6 +270,18 @@ export default function DashboardPage() {
           </Card>
         </Link>
 
+        <Link href="/status/expiring" className="block">
+          <Card className="hover:shadow-md transition cursor-pointer">
+            <CardContent className="p-4 flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500">临期</p>
+                <p className="text-2xl font-bold text-orange-500">{stats.expiring}</p>
+              </div>
+              <Clock className="h-6 w-6 text-orange-500" />
+            </CardContent>
+          </Card>
+        </Link>
+
         <Link href="/status/overdue" className="block">
           <Card className="hover:shadow-md transition cursor-pointer">
             <CardContent className="p-4 flex items-center justify-between">
@@ -269,7 +295,7 @@ export default function DashboardPage() {
         </Link>
       </div>
 
-      {companyLevel && (
+      {isSupervisionAdmin(user?.role) && (
         <Card>
           <CardContent className="p-4 flex items-center justify-between">
             <div>
@@ -279,12 +305,10 @@ export default function DashboardPage() {
               </div>
             </div>
             <div className="flex gap-2">
-              {(user?.role === 'ADMIN' || user?.role === 'SUPERVISOR' || user?.role === 'VICE_PRESIDENT' || user?.role === 'PRESIDENT') && (
+              {isSupervisionAdmin(user?.role) && (
                 <Button
                   variant="outline"
-                  onClick={() => {
-                    window.location.href = '/api/excel/completion-rate';
-                  }}
+                  onClick={handleExportCompletionRate}
                 >
                   导出完成率
                 </Button>
@@ -334,36 +358,6 @@ export default function DashboardPage() {
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-lg">近期到期</h3>
-            </div>
-
-            {expiringWorks.length === 0 ? (
-              <div className="text-center text-gray-500 py-10">近期没有即将到期事项</div>
-            ) : (
-              <div className="space-y-3">
-                {expiringWorks.slice(0, 5).map((work) => {
-                  const date = work.completeTime || work.planCompleteTime;
-                  return (
-                    <Link key={work.id} href={`/${work.type === '重点' ? 'priority' : work.type === '主要' ? 'main' : 'todo'}/${work.id}`}>
-                      <div className="border rounded-lg p-3 hover:bg-gray-50 min-w-0">
-                        <div className="font-medium break-words">{work.title}</div>
-                        <div className="text-sm text-gray-500 mt-1 flex items-center gap-2 flex-wrap">
-                          <span>{work.type}工作</span>
-                          <StatusBadge status={work.status} />
-                          <span>计划完成：{date || '-'}</span>
-                        </div>
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-lg">待我处理</h3>
               <Link href="/approval">
                 <Button variant="link" size="sm">查看全部</Button>
@@ -392,6 +386,39 @@ export default function DashboardPage() {
                     </div>
                   </Link>
                 ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-lg">近期到期</h3>
+              <Link href="/status/expiring">
+                <Button variant="link" size="sm">查看全部</Button>
+              </Link>
+            </div>
+
+            {expiringWorks.length === 0 ? (
+              <div className="text-center text-gray-500 py-10">近期没有即将到期事项</div>
+            ) : (
+              <div className="space-y-3">
+                {expiringWorks.slice(0, 5).map((work) => {
+                  const date = work.completeTime || work.planCompleteTime;
+                  return (
+                    <Link key={work.id} href={`/${work.type === '重点' ? 'priority' : work.type === '主要' ? 'main' : 'todo'}/${work.id}`}>
+                      <div className="border rounded-lg p-3 hover:bg-gray-50 min-w-0">
+                        <div className="font-medium break-words">{work.title}</div>
+                        <div className="text-sm text-gray-500 mt-1 flex items-center gap-2 flex-wrap">
+                          <span>{work.type}工作</span>
+                          <StatusBadge status={work.status} />
+                          <span>计划完成：{date || '-'}</span>
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
               </div>
             )}
           </CardContent>
