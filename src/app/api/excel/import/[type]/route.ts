@@ -314,6 +314,20 @@ async function validateAndParseExcel(
           }
         }
 
+        // 配合部门名称 → ID 转换（Phase 4A：修复之前 cooperateDepartmentIds 硬编码为 [] 的 bug）
+        const cooperateDeptIds: number[] = [];
+        const cooperateDeptNameList = cooperateDepartmentNames
+          ? cooperateDepartmentNames.split('/').map((s: string) => s.trim()).filter(Boolean)
+          : [];
+        for (const cn of cooperateDeptNameList) {
+          const resolved = resolveDeptId(cn);
+          if (!resolved) {
+            errors.push({ row: rowNum, field: '配合部门', value: cn, reason: `配合部门"${cn}"不存在或不是业务部门，请填写部门全名或缩写代码，多个用 / 分隔` });
+          } else {
+            cooperateDeptIds.push(resolved);
+          }
+        }
+
         if (errors.filter((e) => e.row === rowNum).length === 0) {
           rows.push({
             row: rowNum,
@@ -329,7 +343,7 @@ async function validateAndParseExcel(
               departmentNames: deptNames,
               departmentIds: deptIds,
               responsiblePersons: responsiblePersons.split('/').map((s: string) => s.trim()).filter(Boolean),
-              cooperateDepartmentNames: cooperateDepartmentNames.split('/').map((s: string) => s.trim()).filter(Boolean),
+              cooperateDepartmentIds: cooperateDeptIds,
               cooperatePersons: cooperatePersons.split('/').map((s: string) => s.trim()).filter(Boolean),
               workPlan,
               planCompleteTime: parseExcelDate(planCompleteTimeStr),
@@ -468,7 +482,7 @@ export async function POST(
           workItem: data.workItem,
           formedTime: data.formedTime ? new Date(data.formedTime) : null,
           departmentIds: data.departmentIds,
-          cooperateDepartmentIds: [],
+          cooperateDepartmentIds: data.cooperateDepartmentIds || [],
           responsiblePersons: data.responsiblePersons,
           cooperatePersons: data.cooperatePersons,
           workPlan: data.workPlan,

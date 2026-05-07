@@ -521,6 +521,7 @@ export async function updateWork(id: number, patch: Partial<Work>): Promise<Work
   if (patch.proposedLeaderId !== undefined) data.proposedLeaderId = patch.proposedLeaderId;
   if (patch.proposedScene !== undefined) data.proposedScene = patch.proposedScene;
   if (patch.formedTime !== undefined) data.formedTime = patch.formedTime;
+  if (patch.departmentIds !== undefined) data.departmentIds = patch.departmentIds;
   if (patch.responsiblePersons !== undefined) data.responsiblePersons = patch.responsiblePersons;
   if (patch.cooperateDepartmentIds !== undefined) data.cooperateDepartmentIds = patch.cooperateDepartmentIds;
   if (patch.cooperatePersons !== undefined) data.cooperatePersons = patch.cooperatePersons;

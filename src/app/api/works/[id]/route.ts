@@ -291,6 +291,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     if (body.proposedLeaderId !== undefined) updateData.proposedLeaderId = body.proposedLeaderId || null;
     if (body.proposedScene !== undefined) updateData.proposedScene = body.proposedScene;
     if (body.formedTime !== undefined) updateData.formedTime = convertToDateTime(body.formedTime);
+    // Phase 4A: departmentIds 更新分支（之前遗漏，导致编辑时主责部门数组无法更新）
+    if (body.departmentIds !== undefined) updateData.departmentIds = body.departmentIds;
     if (body.responsiblePersons !== undefined) updateData.responsiblePersons = body.responsiblePersons;
     if (body.cooperateDepartmentIds !== undefined) updateData.cooperateDepartmentIds = body.cooperateDepartmentIds;
     if (body.cooperatePersons !== undefined) updateData.cooperatePersons = body.cooperatePersons;
