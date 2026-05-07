@@ -110,10 +110,15 @@ export function canUploadAttachment(
 // ---------------------------------------------------------------------------
 // canDeleteAttachment — 删除权限
 // ---------------------------------------------------------------------------
+//
+// 规则（Phase 3C 收紧后）：
+//   1. ADMIN / SUPERVISOR → 可删除所有附件
+//   2. 上传者本人 → 可删除自己上传的附件
+//   3. 其他任何人（含同部门 DEPT_MANAGER / DEPT_LEADER、deptManagerId 非上传者）→ 禁止删除
 
 export function canDeleteAttachment(
   user: AttPermUser,
-  workItem: AttPermWorkItem,
+  _workItem: AttPermWorkItem,
   attachment: AttPermAttachment,
 ): boolean {
   // ADMIN / SUPERVISOR 可删除所有附件
@@ -121,24 +126,6 @@ export function canDeleteAttachment(
 
   // 上传者本人可删除自己的附件
   if (attachment.userId === user.id) return true;
-
-  // deptManagerId 只能删除自己上传的附件（已在上方返回），不允许删除他人附件
-  if (
-    (workItem.type === 'PRIORITY' || workItem.type === 'MAIN') &&
-    workItem.deptManagerId === user.id
-  ) {
-    return false;
-  }
-
-  // 同部门 DEPT_MANAGER / DEPT_LEADER：原有权限（保留现有行为，后续可收紧）
-  const forbiddenStatuses = ['COMPLETED', 'CANCELLED', 'REJECTED'];
-  if (
-    (user.role === 'DEPARTMENT_MANAGER' || user.role === 'DEPARTMENT_LEADER') &&
-    workItem.departmentId === user.departmentId &&
-    !forbiddenStatuses.includes(workItem.status)
-  ) {
-    return true;
-  }
 
   return false;
 }
