@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { Building, Settings, Users, Plus, Trash2, Power, KeyRound, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { getRoleName, type Role } from '@/lib/auth';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -308,42 +307,34 @@ export default function AdminPage() {
       </h1>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="p-6 flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">部门数量</p>
-              <p className="text-3xl font-bold">{departments.length}</p>
-            </div>
-            <Building className="h-8 w-8 text-blue-600" />
-          </CardContent>
-        </Card>
+        <div className="bg-gradient-to-br from-white to-slate-50/50 rounded-xl p-6 flex items-center justify-between border border-slate-200/80 hover:shadow-md transition-shadow">
+          <div>
+            <p className="text-sm text-slate-500">部门数量</p>
+            <p className="text-3xl font-bold">{departments.length}</p>
+          </div>
+          <Building className="h-8 w-8 text-blue-600" />
+        </div>
 
-        <Card>
-          <CardContent className="p-6 flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">用户数量</p>
-              <p className="text-3xl font-bold">{userList.length}</p>
-            </div>
-            <Users className="h-8 w-8 text-green-600" />
-          </CardContent>
-        </Card>
+        <div className="bg-gradient-to-br from-white to-slate-50/50 rounded-xl p-6 flex items-center justify-between border border-slate-200/80 hover:shadow-md transition-shadow">
+          <div>
+            <p className="text-sm text-slate-500">用户数量</p>
+            <p className="text-3xl font-bold">{userList.length}</p>
+          </div>
+          <Users className="h-8 w-8 text-green-600" />
+        </div>
 
-        <Card>
-          <CardContent className="p-6 flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">角色数量</p>
-              <p className="text-3xl font-bold">6</p>
-            </div>
-            <Settings className="h-8 w-8 text-purple-600" />
-          </CardContent>
-        </Card>
+        <div className="bg-gradient-to-br from-white to-slate-50/50 rounded-xl p-6 flex items-center justify-between border border-slate-200/80 hover:shadow-md transition-shadow">
+          <div>
+            <p className="text-sm text-slate-500">角色数量</p>
+            <p className="text-3xl font-bold">6</p>
+          </div>
+          <Settings className="h-8 w-8 text-purple-600" />
+        </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>新增用户账号</CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-6 gap-3 items-end">
+      <div className="rounded-xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50/50 overflow-hidden">
+        <h2 className="font-semibold text-slate-800 px-5 pt-5">新增用户账号</h2>
+        <div className="p-5 grid grid-cols-1 md:grid-cols-6 gap-3 items-end">
           <div>
             <label className="text-sm font-medium">姓名</label>
             <Input
@@ -374,7 +365,7 @@ export default function AdminPage() {
               />
               <button
                 type="button"
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500"
                 onClick={() => setShowCreatePassword(!showCreatePassword)}
               >
                 {showCreatePassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -385,7 +376,7 @@ export default function AdminPage() {
           <div>
             <label className="text-sm font-medium">角色</label>
             <select
-              className="w-full border rounded-md h-10 px-3"
+              className="rounded-full border-slate-200 bg-slate-50 h-10 px-4 w-full text-sm text-slate-600"
               value={form.role}
               onChange={(e) =>
                 setForm({
@@ -412,7 +403,7 @@ export default function AdminPage() {
           <div>
             <label className="text-sm font-medium">所属部门</label>
             <select
-              className="w-full border rounded-md h-10 px-3"
+              className="rounded-full border-slate-200 bg-slate-50 h-10 px-4 w-full text-sm text-slate-600"
               value={form.departmentId}
               disabled={isCompanyRole}
               onChange={(e) => setForm({ ...form, departmentId: Number(e.target.value) })}
@@ -427,51 +418,49 @@ export default function AdminPage() {
             </select>
           </div>
 
-          <Button onClick={handleAddUser}>
+          <Button className="rounded-full" onClick={handleAddUser}>
             <Plus className="h-4 w-4 mr-1" />
             新增
           </Button>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>用户列表</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <div className="rounded-xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50/50 overflow-hidden">
+        <h2 className="font-semibold text-slate-800 px-5 pt-5">用户列表</h2>
+        <div className="p-5">
           <div className="space-y-3">
             {userList.map((u) => (
-              <div key={u.id} className="flex items-center justify-between p-4 border rounded-lg">
+              <div key={u.id} className="flex items-center justify-between p-4 rounded-xl border border-slate-200">
                 <div>
                   <p className="font-medium">
                     {u.name}
                     {!u.isActive && <span className="ml-2 text-red-600 text-sm">已停用</span>}
                     {u.isProtected && <Badge className="ml-2" variant="outline">内置账号</Badge>}
                   </p>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-slate-500">
                     用户名：{u.username}
                   </p>
                 </div>
 
                 <div className="flex items-center gap-3">
                   <Badge variant="outline">{getRoleName(u.role)}</Badge>
-                  <span className="text-sm text-gray-500">{u.departmentName}</span>
+                  <span className="text-sm text-slate-500">{u.departmentName}</span>
 
-                  <Button size="sm" variant="outline" onClick={() => openEditDialog(u)}>
+                  <Button size="sm" variant="outline" className="rounded-full" onClick={() => openEditDialog(u)}>
                     编辑
                   </Button>
 
-                  <Button size="sm" variant="outline" onClick={() => openAdminPasswordDialog(u)}>
+                  <Button size="sm" variant="outline" className="rounded-full" onClick={() => openAdminPasswordDialog(u)}>
                     <KeyRound className="h-4 w-4 mr-1" />
                     修改密码
                   </Button>
 
-                  <Button size="sm" variant="outline" onClick={() => handleToggleActive(u)}>
+                  <Button size="sm" variant="outline" className="rounded-full" onClick={() => handleToggleActive(u)}>
                     <Power className="h-4 w-4 mr-1" />
                     {u.isActive ? '停用' : '启用'}
                   </Button>
 
-                  <Button size="sm" variant="destructive" onClick={() => handleDelete(u)} disabled={u.isProtected}>
+                  <Button size="sm" variant="destructive" className="rounded-full" onClick={() => handleDelete(u)} disabled={u.isProtected}>
                     <Trash2 className="h-4 w-4 mr-1" />
                     删除
                   </Button>
@@ -479,27 +468,25 @@ export default function AdminPage() {
               </div>
             ))}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>部门列表（固定17个）</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <div className="rounded-xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50/50 overflow-hidden">
+        <h2 className="font-semibold text-slate-800 px-5 pt-5">部门列表（固定17个）</h2>
+        <div className="p-5">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {departments.map((dept) => (
-              <div key={dept.id} className="p-4 border rounded-lg bg-gray-50">
+              <div key={dept.id} className="p-4 bg-white/60 border border-slate-200 rounded-xl">
                 <p className="font-medium">{dept.name}</p>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-slate-500">
                   ID: {dept.id} / {dept.code}
-                  {!dept.isBusiness && <span className="ml-2 text-gray-400">(非业务部门)</span>}
+                  {!dept.isBusiness && <span className="ml-2 text-slate-400">(非业务部门)</span>}
                 </p>
               </div>
             ))}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       <Dialog open={!!passwordTarget} onOpenChange={(open) => !open && setPasswordTarget(null)}>
         <DialogContent>
@@ -510,7 +497,7 @@ export default function AdminPage() {
           <div className="space-y-4">
             <div>
               <label className="text-sm font-medium">用户名</label>
-              <p className="mt-1 text-sm text-gray-600">{passwordTarget?.name} ({passwordTarget?.username})</p>
+              <p className="mt-1 text-sm text-slate-500">{passwordTarget?.name} ({passwordTarget?.username})</p>
             </div>
 
             <div>
@@ -525,7 +512,7 @@ export default function AdminPage() {
                 />
                 <button
                   type="button"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500"
                   onClick={() => setShowAdminPassword(!showAdminPassword)}
                 >
                   {showAdminPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -535,10 +522,10 @@ export default function AdminPage() {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setPasswordTarget(null)}>
+            <Button variant="outline" className="rounded-full" onClick={() => setPasswordTarget(null)}>
               取消
             </Button>
-            <Button onClick={handleAdminChangePassword}>
+            <Button className="rounded-full" onClick={handleAdminChangePassword}>
               确认修改
             </Button>
           </DialogFooter>
@@ -554,7 +541,7 @@ export default function AdminPage() {
           <div className="space-y-4">
             <div>
               <label className="text-sm font-medium">用户名</label>
-              <p className="mt-1 text-sm text-gray-600">{editTarget?.username}</p>
+              <p className="mt-1 text-sm text-slate-500">{editTarget?.username}</p>
             </div>
 
             <div>
@@ -569,7 +556,7 @@ export default function AdminPage() {
             <div>
               <label className="text-sm font-medium">角色</label>
               <select
-                className="w-full border rounded-md h-10 px-3 mt-1"
+                className="rounded-full border-slate-200 bg-slate-50 h-10 px-4 w-full text-sm text-slate-600 mt-1"
                 value={editForm.role}
                 onChange={(e) => {
                   const newRole = e.target.value as Role;
@@ -592,7 +579,7 @@ export default function AdminPage() {
             <div>
               <label className="text-sm font-medium">所属部门</label>
               <select
-                className="w-full border rounded-md h-10 px-3 mt-1"
+                className="rounded-full border-slate-200 bg-slate-50 h-10 px-4 w-full text-sm text-slate-600 mt-1"
                 value={editForm.departmentId}
                 disabled={['ADMIN', 'SUPERVISOR', 'VICE_PRESIDENT', 'PRESIDENT'].includes(editForm.role)}
                 onChange={(e) => setEditForm({ ...editForm, departmentId: Number(e.target.value) })}
@@ -639,10 +626,10 @@ export default function AdminPage() {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditTarget(null)}>
+            <Button variant="outline" className="rounded-full" onClick={() => setEditTarget(null)}>
               取消
             </Button>
-            <Button onClick={handleEditUser}>
+            <Button className="rounded-full" onClick={handleEditUser}>
               确认修改
             </Button>
           </DialogFooter>
