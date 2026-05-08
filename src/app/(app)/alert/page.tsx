@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchAndPagination } from '@/hooks/use-search-pagination';
 import Link from 'next/link';
+import { statusColors } from '@/lib/status-colors';
 import { AlertTriangle, Eye } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { getDepartments } from '@/lib/auth';
@@ -14,8 +15,6 @@ import {
   sortWorksByDueDate,
   type Work,
 } from '@/lib/work-store';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { StatusBadge } from '@/components/common/badges';
 import { WorkListPagination } from '@/components/work/work-list-pagination';
 import { WorkSearchBar } from '@/components/work/work-search-bar';
@@ -73,60 +72,81 @@ export default function AlertPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold flex items-center gap-2">
-        <AlertTriangle className="h-7 w-7" />
+      <h1 className="stagger-1 text-2xl font-bold text-slate-900 flex items-center gap-2">
+        <AlertTriangle className="h-7 w-7 text-orange-500" />
         临超期
       </h1>
 
-      <div className="flex gap-2 border-b">
-        <button onClick={() => setTab('expiring')} className={`px-4 py-2 ${tab === 'expiring' ? 'border-b-2 border-red-600 text-red-600' : ''}`}>
+      <div className="stagger-2 flex rounded-full bg-slate-100 p-1 w-fit">
+        <button
+          onClick={() => setTab('expiring')}
+          className={`rounded-full px-4 py-1.5 text-sm font-medium transition-all ${
+            tab === 'expiring' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+          }`}
+        >
           临期（{expiringCount}）
         </button>
-        <button onClick={() => setTab('overdue')} className={`px-4 py-2 ${tab === 'overdue' ? 'border-b-2 border-red-600 text-red-600' : ''}`}>
+        <button
+          onClick={() => setTab('overdue')}
+          className={`rounded-full px-4 py-1.5 text-sm font-medium transition-all ${
+            tab === 'overdue' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+          }`}
+        >
           超期（{overdueCount}）
         </button>
-        <button onClick={() => setTab('all')} className={`px-4 py-2 ${tab === 'all' ? 'border-b-2 border-blue-600 text-blue-600' : ''}`}>
+        <button
+          onClick={() => setTab('all')}
+          className={`rounded-full px-4 py-1.5 text-sm font-medium transition-all ${
+            tab === 'all' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+          }`}
+        >
           全部事项
         </button>
       </div>
 
       <WorkSearchBar keyword={keyword} onKeywordChange={setKeyword} total={total} page={page} totalPages={totalPages} />
 
-      <Card>
-        <CardContent className="p-0">
-          {list.length === 0 ? (
-            <div className="py-16 text-center text-gray-500">暂无数据</div>
-          ) : (
-            <>
-            <div className="divide-y">
-              {list.map((work) => (
-                <div key={work.id} className="p-4 flex items-center justify-between hover:bg-gray-50">
-                  <div>
-                    <div className="font-medium">{work.title}</div>
-                    <div className="text-sm text-gray-500 mt-1">
-                      类型：{work.type}
-                      操作：{getActionName(work.action)}
-                      状态：<StatusBadge status={work.status} />
-                      部门：{departments.find((d) => d.id === work.departmentId)?.name || '-'}
-                    </div>
-                    <div className="text-sm text-gray-500 mt-1">
-                      计划完成时间：{work.completeTime || work.planCompleteTime || '-'}
-                    </div>
-                    {work.rejectReason && (
-                      <div className="text-sm text-red-600 mt-1 break-words whitespace-pre-wrap">
-                        上次退回原因：{work.rejectReason}
-                      </div>
-                    )}
-                  </div>
+      <div className="stagger-3 rounded-xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50/50 overflow-hidden">
+        {list.length === 0 ? (
+          <div className="py-16 text-center text-slate-400 text-sm">暂无数据</div>
+        ) : (
+          <>
+            <div className="divide-y divide-slate-100">
+              {list.map((work) => {
+                const isOverdue = isOverdueWork(work);
+                const borderClass = isOverdue
+                  ? statusColors.overdue.left
+                  : statusColors.expiring.left;
 
-                  <Link href={`/${getRouteType(work)}/${work.id}`}>
-                    <Button size="sm" variant="outline">
-                      <Eye className="h-4 w-4 mr-1" />
-                      查看
-                    </Button>
-                  </Link>
-                </div>
-              ))}
+                return (
+                  <div key={work.id} className={`flex items-center justify-between hover:translate-x-0.5 transition min-w-0 ${borderClass}`}>
+                    <div className="p-4">
+                      <div className="text-sm font-medium text-slate-700 break-words leading-snug">{work.title}</div>
+                      <div className="text-xs text-slate-500 mt-1.5 flex items-center gap-2 flex-wrap">
+                        <span className="text-slate-400">{work.type}</span>
+                        <span className="text-slate-400">{getActionName(work.action)}</span>
+                        <StatusBadge status={work.status} />
+                        <span className="text-slate-400">部门：{departments.find((d) => d.id === work.departmentId)?.name || '-'}</span>
+                      </div>
+                      <div className="text-xs text-slate-500 mt-1">
+                        计划完成时间：{work.completeTime || work.planCompleteTime || '-'}
+                      </div>
+                      {work.rejectReason && (
+                        <div className="text-xs text-rose-600 mt-1.5 break-words bg-rose-50/50 rounded px-2 py-1">
+                          上次退回原因：{work.rejectReason}
+                        </div>
+                      )}
+                    </div>
+
+                    <Link href={`/${getRouteType(work)}/${work.id}`} className="shrink-0 pr-4">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-slate-50 border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:-translate-y-0.5 transition-all">
+                        <Eye className="h-3.5 w-3.5" />
+                        查看
+                      </span>
+                    </Link>
+                  </div>
+                );
+              })}
             </div>
             <WorkListPagination
               page={page}
@@ -136,10 +156,9 @@ export default function AlertPage() {
               onPageChange={setPage}
               onPageSizeChange={(newSize) => { setPageSize(newSize); setPage(1); }}
             />
-            </>
-          )}
-        </CardContent>
-      </Card>
+          </>
+        )}
+      </div>
     </div>
   );
 }
