@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchAndPagination } from '@/hooks/use-search-pagination';
 import Link from 'next/link';
-import { getWorkTypeAccent } from '@/lib/status-colors';
+import { getWorkTypeAccent, getWorkTypeText } from '@/lib/status-colors';
 import { ClipboardCheck, Eye, CheckCircle, XCircle, Play } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { getDepartments } from '@/lib/auth';
@@ -12,6 +12,7 @@ import {
   canApproveWork,
   canHandleWork,
   getActionName,
+  getWorkDueDate,
   getVisibleWorks,
   rejectWork,
   sortWorksByDueDate,
@@ -97,8 +98,9 @@ export default function ApprovalPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="stagger-1 text-2xl font-bold text-slate-900 flex items-center gap-2">
-        <ClipboardCheck className="h-7 w-7 text-purple-500" />
+      <h1 className="stagger-1 flex items-center gap-3 text-2xl font-bold text-slate-800">
+        <span className="w-1 h-6 rounded-full bg-purple-500" />
+        <ClipboardCheck className="h-6 w-6 text-purple-500" />
         待我处理
       </h1>
 
@@ -145,10 +147,10 @@ export default function ApprovalPage() {
                     <div className="p-4 min-w-0 flex-1">
                       <div className="text-sm font-medium text-slate-700 break-words leading-snug">{work.title}</div>
                       <div className="text-xs text-slate-500 mt-1.5 flex items-center gap-2 flex-wrap">
-                        <span className="text-slate-400">{work.type}</span>
-                        <span className="text-slate-400">{getActionName(work.action)}</span>
+                        <span className={`font-medium ${getWorkTypeText(work.type)}`}>{work.type}</span>
                         <StatusBadge status={work.status} />
-                        <span className="text-slate-400">部门：{departments.find((d) => d.id === work.departmentId)?.name || '-'}</span>
+                        <span className="text-slate-400">责任部门：{departments.find((d) => d.id === work.departmentId)?.name || '-'}</span>
+                        <span className="text-slate-400">计划完成时间：{getWorkDueDate(work) || '-'}</span>
                       </div>
                       {work.type === '待办' && (
                         <div className="text-xs text-slate-500 mt-1">

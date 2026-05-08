@@ -176,7 +176,10 @@ export default function StatusFilterPage() {
           <ArrowLeft className="h-4 w-4" />
           返回首页
         </Link>
-        <h1 className="text-2xl font-bold text-slate-900">{filterTitle[safeFilter]}</h1>
+        <h1 className="stagger-1 flex items-center gap-3 text-2xl font-bold text-slate-800">
+          <span className="w-1 h-6 rounded-full bg-slate-500" />
+          {filterTitle[safeFilter]}
+        </h1>
       </div>
 
       <div className="stagger-2 rounded-xl border border-slate-200/80 bg-white/70 backdrop-blur-sm p-4">

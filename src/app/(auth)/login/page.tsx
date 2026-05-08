@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/providers/auth-provider';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Eye, EyeOff } from 'lucide-react';
 
 export default function LoginPage() {
@@ -38,90 +40,84 @@ export default function LoginPage() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <p>加载中...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-lg shadow-md">
+    <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="max-w-md w-full space-y-8 p-8 bg-gradient-to-br from-white to-slate-50/50 rounded-xl shadow-lg stagger-1">
         <div>
-          <h1 className="text-2xl font-bold text-center text-gray-900">
-            公司督办管理系统（禁止上传涉密信息）
+          <h1 className="text-2xl font-bold text-center text-slate-800">
+            督办管理系统
           </h1>
-          <p className="mt-2 text-center text-gray-600">
-            请登录您的账号
+          <p className="mt-2 text-center text-sm text-rose-500 font-medium">
+            禁止上传涉密信息
           </p>
         </div>
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded">
+            <div className="bg-rose-50/80 border border-rose-200 text-rose-600 rounded-xl px-4 py-3">
               {error}
             </div>
           )}
 
           <div className="space-y-4">
             <div>
-              <label htmlFor="username" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="username" className="block text-sm font-medium text-slate-600">
                 用户名
               </label>
-              <input
+              <Input
                 id="username"
                 name="username"
                 type="text"
                 required
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                className="mt-1 focus:ring-slate-400 focus:border-slate-400"
                 placeholder="请输入用户名"
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="password" className="block text-sm font-medium text-slate-600">
                 密码
               </label>
               <div className="relative mt-1">
-                <input
+                <Input
                   id="password"
                   name="password"
                   type={showPassword ? 'text' : 'password'}
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full px-3 py-2 pr-10 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  className="pr-10 focus:ring-slate-400 focus:border-slate-400"
                   placeholder="请输入密码"
                 />
-                <button
+                <Button
                   type="button"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full"
                   onClick={() => setShowPassword(!showPassword)}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
+                </Button>
               </div>
             </div>
           </div>
 
-          <button
+          <Button
             type="submit"
+            className="w-full rounded-full bg-slate-800 hover:bg-slate-900"
             disabled={isLoading}
-            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
           >
             {isLoading ? '登录中...' : '登录'}
-          </button>
+          </Button>
 
-          <div className="text-center text-sm text-gray-500 space-y-1">
-            <p>系统管理员：admin / 123456</p>
-            <p>督办管理员：supervisor / 123456</p>
-            <p>公司主要领导：president / 123456</p>
-            <p>公司主管领导：vice_president / 123456</p>
-            <p>部门领导：dept_leader / 123456</p>
-            <p>部门主管：dept_manager / 123456</p>
-         </div>
         </form>
       </div>
     </div>

@@ -139,7 +139,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       <header className="bg-white border-b sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <h1 className="text-lg md:text-xl font-bold text-gray-900 leading-tight">
-   公司督办管理系统（禁止上传涉密信息）
+   督办管理系统
  </h1>
           {user && (
             <div className="flex items-center gap-3">
