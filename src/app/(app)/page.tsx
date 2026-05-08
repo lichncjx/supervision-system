@@ -2,13 +2,11 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { statusColors, expiryColors, workTypeColors, getWorkTypeAccent } from '@/lib/status-colors';
 
 const pillColors = { ...statusColors, ...expiryColors };
 import { Textarea } from '@/components/ui/textarea';
-import { Plus } from 'lucide-react';
+import { Plus, Bell, Search } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import {
   getVisibleWorks,
@@ -176,49 +174,82 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="stagger-1 rounded-xl border border-slate-200/80 bg-white/70 backdrop-blur-sm p-4">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <div className="font-bold text-gray-900">督办提示</div>
+      <div className="stagger-1 overflow-hidden rounded-xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50/50">
+        <div className="flex items-start gap-4 p-4">
+          <div className="shrink-0 w-9 h-9 rounded-lg bg-amber-100 flex items-center justify-center">
+            <Bell className="w-4 h-4 text-amber-600" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between gap-3">
+              <div className="font-semibold text-slate-800">督办提示</div>
+              {canEditNotice && !noticeEditing && (
+                <button
+                  onClick={() => setNoticeEditing(true)}
+                  className="shrink-0 inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-all"
+                >
+                  编辑
+                </button>
+              )}
             </div>
 
-            {canEditNotice && !noticeEditing && (
-              <Button size="sm" variant="outline" onClick={() => setNoticeEditing(true)}>
-                编辑
-              </Button>
+            {noticeEditing && canEditNotice ? (
+              <div className="mt-3 space-y-3">
+                <Textarea
+                  value={noticeDraft}
+                  onChange={(e) => setNoticeDraft(e.target.value)}
+                  rows={3}
+                  placeholder="请输入督办提示、工作要求或注意事项"
+                />
+                <div className="flex gap-2">
+                  <button onClick={saveNotice} className="inline-flex items-center rounded-full bg-slate-800 px-4 py-1.5 text-sm font-medium text-white hover:bg-slate-900 transition-colors">
+                    保存
+                  </button>
+                  <button
+                    onClick={() => { setNoticeDraft(adminNotice); setNoticeEditing(false); }}
+                    className="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+                  >
+                    取消
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="mt-2 text-sm text-slate-600 leading-relaxed whitespace-pre-wrap break-words">
+                {adminNotice || <span className="text-slate-400">暂无督办提示</span>}
+              </div>
             )}
           </div>
-
-          {noticeEditing && canEditNotice ? (
-            <div className="mt-3 space-y-3">
-              <Textarea
-                value={noticeDraft}
-                onChange={(e) => setNoticeDraft(e.target.value)}
-                rows={3}
-                placeholder="请输入督办提示、工作要求或注意事项"
-              />
-              <div className="flex gap-2">
-                <Button size="sm" onClick={saveNotice}>保存</Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    setNoticeDraft(adminNotice);
-                    setNoticeEditing(false);
-                  }}
-                >
-                  取消
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <div className="mt-3 rounded-lg bg-slate-50/80 p-3 text-sm text-slate-700 whitespace-pre-wrap break-words">
-              {adminNotice || '暂无督办提示'}
-            </div>
-          )}
         </div>
+      </div>
 
-      <div className="stagger-2 flex flex-wrap items-center gap-2">
+      {isSupervisionAdmin(user?.role) && (
+        <div className="stagger-2 overflow-hidden rounded-xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50/50">
+          <div className="flex items-center gap-4 p-4">
+            <div className="shrink-0 w-9 h-9 rounded-lg bg-indigo-100 flex items-center justify-center">
+              <Search className="w-4 h-4 text-indigo-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-semibold text-slate-800 text-sm">综合查询</div>
+              <div className="text-xs text-slate-500 mt-0.5">按事项类型、责任部门、状态和关键词筛选全公司事项</div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={handleExportCompletionRate}
+                className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-all"
+              >
+                导出完成率
+              </button>
+              <Link
+                href="/status/all"
+                className="inline-flex items-center rounded-full bg-slate-800 px-4 py-1.5 text-sm font-medium text-white hover:bg-slate-900 transition-colors"
+              >
+                进入综合查询
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="stagger-3 flex flex-wrap items-center gap-2">
         {([
           { href: '/status/overdue', label: '超期', count: stats.overdue, key: 'overdue' as const },
           { href: '/status/expiring', label: '临期', count: stats.expiring, key: 'expiring' as const },
@@ -232,33 +263,6 @@ export default function DashboardPage() {
           </Link>
         ))}
       </div>
-
-      {isSupervisionAdmin(user?.role) && (
-        <Card className="stagger-3">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <div className="font-bold text-gray-900">综合查询</div>
-              <div className="text-sm text-gray-500">
-                可按事项类型、责任部门、状态和关键词筛选全公司事项
-              </div>
-            </div>
-            <div className="flex gap-2">
-              {isSupervisionAdmin(user?.role) && (
-                <Button
-                  variant="outline"
-                  onClick={handleExportCompletionRate}
-                >
-                  导出完成率
-                </Button>
-              )}
-
-              <Link href="/status/all">
-                <Button>进入综合查询</Button>
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       <div className="stagger-4 grid grid-cols-1 md:grid-cols-3 gap-4">
         {([
