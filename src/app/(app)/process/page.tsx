@@ -140,9 +140,9 @@ export default function ApprovalPage() {
                 const isApproving = canApproveWork(user!, work);
                 const isHandling = !isApproving && canHandleWork(user!, work);
                 const borderClass = isApproving
-                  ? 'border-l-2 border-l-indigo-400 bg-indigo-50/30'
+                  ? 'border-l-2 border-l-purple-400 bg-purple-50/30'
                   : isHandling
-                  ? 'border-l-2 border-l-purple-400 bg-purple-50/20'
+                  ? 'border-l-2 border-l-indigo-400 bg-indigo-50/20'
                   : 'border-l-2 border-l-slate-300';
 
                 return (
