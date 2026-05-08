@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Clock, CheckCircle2, AlertCircle, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import {
   getVisibleWorks,
@@ -225,77 +225,26 @@ export default function DashboardPage() {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-        <Link href="/status/approving" className="block">
-          <Card className="hover:shadow-md transition cursor-pointer">
-            <CardContent className="p-4 flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">待我审批</p>
-                <p className="text-2xl font-bold text-yellow-600">{stats.approving}</p>
-              </div>
-              <Clock className="h-6 w-6 text-yellow-600" />
-            </CardContent>
-          </Card>
+      <div className="stagger-2 flex flex-wrap items-center gap-2">
+        <Link href="/status/approving" className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3.5 py-1.5 text-sm font-medium text-amber-700 border border-amber-100 hover:-translate-y-0.5 transition">
+          <span className="w-2 h-2 rounded-full bg-amber-500" />
+          待审批 <span className="tabular-nums font-bold">{stats.approving}</span>
         </Link>
-
-        <Link href="/status/handling" className="block">
-          <Card className="hover:shadow-md transition cursor-pointer">
-            <CardContent className="p-4 flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">待我办理</p>
-                <p className="text-2xl font-bold text-purple-600">{stats.handling}</p>
-              </div>
-              <Clock className="h-6 w-6 text-purple-600" />
-            </CardContent>
-          </Card>
+        <Link href="/status/handling" className="inline-flex items-center gap-1.5 rounded-full bg-purple-50 px-3.5 py-1.5 text-sm font-medium text-purple-700 border border-purple-100 hover:-translate-y-0.5 transition">
+          <span className="w-2 h-2 rounded-full bg-purple-500" />
+          待办理 <span className="tabular-nums font-bold">{stats.handling}</span>
         </Link>
-
-        <Link href="/status/inProgress" className="block">
-          <Card className="hover:shadow-md transition cursor-pointer">
-            <CardContent className="p-4 flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">进行中</p>
-                <p className="text-2xl font-bold text-blue-600">{stats.inProgress}</p>
-              </div>
-              <AlertCircle className="h-6 w-6 text-blue-600" />
-            </CardContent>
-          </Card>
+        <Link href="/status/inProgress" className="inline-flex items-center gap-1.5 rounded-full bg-sky-50 px-3.5 py-1.5 text-sm font-medium text-sky-700 border border-sky-100 hover:-translate-y-0.5 transition">
+          <span className="w-2 h-2 rounded-full bg-sky-500" />
+          进行中 <span className="tabular-nums font-bold">{stats.inProgress}</span>
         </Link>
-
-        <Link href="/status/completed" className="block">
-          <Card className="hover:shadow-md transition cursor-pointer">
-            <CardContent className="p-4 flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">已完成</p>
-                <p className="text-2xl font-bold text-green-600">{stats.completed}</p>
-              </div>
-              <CheckCircle2 className="h-6 w-6 text-green-600" />
-            </CardContent>
-          </Card>
+        <Link href="/status/expiring" className="inline-flex items-center gap-1.5 rounded-full bg-orange-50 px-3.5 py-1.5 text-sm font-medium text-orange-700 border border-orange-100 hover:-translate-y-0.5 transition">
+          <span className="w-2 h-2 rounded-full bg-orange-500" />
+          临期 <span className="tabular-nums font-bold">{stats.expiring}</span>
         </Link>
-
-        <Link href="/status/expiring" className="block">
-          <Card className="hover:shadow-md transition cursor-pointer">
-            <CardContent className="p-4 flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">临期</p>
-                <p className="text-2xl font-bold text-orange-500">{stats.expiring}</p>
-              </div>
-              <Clock className="h-6 w-6 text-orange-500" />
-            </CardContent>
-          </Card>
-        </Link>
-
-        <Link href="/status/overdue" className="block">
-          <Card className="hover:shadow-md transition cursor-pointer">
-            <CardContent className="p-4 flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">超期</p>
-                <p className="text-2xl font-bold text-red-600">{stats.overdue}</p>
-              </div>
-              <AlertCircle className="h-6 w-6 text-red-600" />
-            </CardContent>
-          </Card>
+        <Link href="/status/overdue" className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 px-3.5 py-1.5 text-sm font-medium text-rose-700 border border-rose-100 hover:-translate-y-0.5 transition">
+          <span className="w-2 h-2 rounded-full bg-rose-500" />
+          超期 <span className="tabular-nums font-bold">{stats.overdue}</span>
         </Link>
       </div>
 
