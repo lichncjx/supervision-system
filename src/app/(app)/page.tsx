@@ -295,7 +295,7 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <h3 className="text-sm font-semibold text-slate-500 tracking-wide flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                <span className="w-1.5 h-1.5 rounded-full bg-purple-400" />
                 待处理
               </h3>
               {(stats.approving + stats.handling) > 0 && (
