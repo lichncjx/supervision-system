@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchAndPagination } from '@/hooks/use-search-pagination';
 import Link from 'next/link';
+import { statusColors } from '@/lib/status-colors';
 import { ClipboardCheck, Eye, CheckCircle, XCircle } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { getDepartments } from '@/lib/auth';
@@ -140,10 +141,10 @@ export default function ApprovalPage() {
                 const isApproving = canApproveWork(user!, work);
                 const isHandling = !isApproving && canHandleWork(user!, work);
                 const borderClass = isApproving
-                  ? 'border-l-2 border-l-purple-400 bg-purple-50/30'
+                  ? statusColors.approving.left
                   : isHandling
-                  ? 'border-l-2 border-l-indigo-400 bg-indigo-50/20'
-                  : 'border-l-2 border-l-slate-300';
+                  ? statusColors.handling.left
+                  : statusColors.inProgress.left;
 
                 return (
                   <div key={work.id} className={`flex items-start justify-between hover:translate-x-0.5 transition min-w-0 ${borderClass}`}>

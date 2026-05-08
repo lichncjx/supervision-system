@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchAndPagination } from '@/hooks/use-search-pagination';
 import Link from 'next/link';
+import { statusColors } from '@/lib/status-colors';
 import { AlertTriangle, Eye } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { getDepartments } from '@/lib/auth';
@@ -114,8 +115,8 @@ export default function AlertPage() {
               {list.map((work) => {
                 const isOverdue = isOverdueWork(work);
                 const borderClass = isOverdue
-                  ? 'border-l-2 border-l-rose-400 bg-rose-50/30'
-                  : 'border-l-2 border-l-orange-400 bg-orange-50/20';
+                  ? statusColors.overdue.left
+                  : statusColors.expiring.left;
 
                 return (
                   <div key={work.id} className={`flex items-center justify-between hover:translate-x-0.5 transition min-w-0 ${borderClass}`}>
