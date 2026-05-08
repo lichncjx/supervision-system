@@ -40,6 +40,9 @@ export default function AdminPage() {
   const [userList, setUserList] = useState<User[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [deptFilter, setDeptFilter] = useState<number | '全部'>('全部');
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
 
   const [form, setForm] = useState({
     username: '',
@@ -101,6 +104,18 @@ export default function AdminPage() {
   if (!user || user.role !== 'ADMIN') {
     return <div className="p-8 text-center text-red-600">无权限访问系统管理</div>;
   }
+
+  const filteredUsers = deptFilter === '全部'
+    ? userList
+    : userList.filter(u => u.departmentId === deptFilter);
+
+  const totalPages = Math.ceil(filteredUsers.length / pageSize);
+  const pagedUsers = filteredUsers.slice((page - 1) * pageSize, page * pageSize);
+
+  const handleDeptFilterChange = (value: number | '全部') => {
+    setDeptFilter(value);
+    setPage(1);
+  };
 
   if (isLoading) {
     return <div className="p-8 text-center">加载中...</div>;
@@ -426,10 +441,22 @@ export default function AdminPage() {
       </div>
 
       <div className="rounded-xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50/50 overflow-hidden">
-        <h2 className="font-semibold text-slate-800 px-5 pt-5">用户列表</h2>
+        <div className="flex items-center justify-between px-5 pt-5">
+          <h2 className="font-semibold text-slate-800">用户列表</h2>
+          <select
+            value={deptFilter}
+            onChange={(e) => handleDeptFilterChange(e.target.value === '全部' ? '全部' : Number(e.target.value))}
+            className="rounded-full border border-slate-200 h-8 px-3 text-sm text-slate-600 bg-slate-50"
+          >
+            <option value="全部">全部部门</option>
+            {departments.filter(d => d.isBusiness).map(d => (
+              <option key={d.id} value={d.id}>{d.name}</option>
+            ))}
+          </select>
+        </div>
         <div className="p-5">
           <div className="space-y-3">
-            {userList.map((u) => (
+            {pagedUsers.map((u) => (
               <div key={u.id} className="flex items-center justify-between p-4 rounded-xl border border-slate-200">
                 <div>
                   <p className="font-medium">
@@ -467,6 +494,26 @@ export default function AdminPage() {
                 </div>
               </div>
             ))}
+          </div>
+          <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100">
+            <span className="text-sm text-slate-500">共 {filteredUsers.length} 人</span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPage(p => p - 1)}
+                disabled={page === 1}
+                className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-slate-200 text-slate-500 hover:bg-slate-100 disabled:opacity-30 transition-colors"
+              >
+                ←
+              </button>
+              <span className="text-sm font-medium text-slate-600 w-16 text-center tabular-nums">{page}/{totalPages}</span>
+              <button
+                onClick={() => setPage(p => p + 1)}
+                disabled={page === totalPages}
+                className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-slate-200 text-slate-500 hover:bg-slate-100 disabled:opacity-30 transition-colors"
+              >
+                →
+              </button>
+            </div>
           </div>
         </div>
       </div>
