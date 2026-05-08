@@ -152,7 +152,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                 onClick={() => setPasswordDialogOpen(true)}
               >
                 <KeyRound className="h-4 w-4 mr-1" />
-                改密
+                修改密码
               </Button>
               <Button variant="outline" size="sm" onClick={handleLogout}>
                 <LogOut className="h-4 w-4 mr-1" />

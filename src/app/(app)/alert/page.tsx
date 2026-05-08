@@ -110,7 +110,7 @@ export default function AlertPage() {
                       部门：{departments.find((d) => d.id === work.departmentId)?.name || '-'}
                     </div>
                     <div className="text-sm text-gray-500 mt-1">
-                      计划/完成时间：{work.completeTime || work.planCompleteTime || '-'}
+                      计划完成时间：{work.completeTime || work.planCompleteTime || '-'}
                     </div>
                     {work.rejectReason && (
                       <div className="text-sm text-red-600 mt-1 break-words whitespace-pre-wrap">

@@ -280,7 +280,7 @@ export default function StatusFilterPage() {
                       责任部门：{work.departmentIds && work.departmentIds.length > 0
                           ? work.departmentIds.map((id: number) => getDepartmentName(id)).join('、')
                           : getDepartmentName(work.departmentId ?? 0)}　
-                      计划/完成时间：{getWorkDueDate(work) || '-'}
+                      计划完成时间：{getWorkDueDate(work) || '-'}
                     </div>
 
                     {work.progress && (
