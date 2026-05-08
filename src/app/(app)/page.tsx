@@ -216,12 +216,12 @@ export default function DashboardPage() {
         </div>
 
       <div className="stagger-2 flex flex-wrap items-center gap-2">
-        <Link href="/status/approving" className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3.5 py-1.5 text-sm font-medium text-amber-700 border border-amber-100 hover:-translate-y-0.5 transition">
-          <span className="w-2 h-2 rounded-full bg-amber-500" />
+        <Link href="/status/approving" className="inline-flex items-center gap-1.5 rounded-full bg-purple-50 px-3.5 py-1.5 text-sm font-medium text-purple-700 border border-purple-100 hover:-translate-y-0.5 transition">
+          <span className="w-2 h-2 rounded-full bg-purple-500" />
           待审批 <span className="tabular-nums font-bold">{stats.approving}</span>
         </Link>
-        <Link href="/status/handling" className="inline-flex items-center gap-1.5 rounded-full bg-purple-50 px-3.5 py-1.5 text-sm font-medium text-purple-700 border border-purple-100 hover:-translate-y-0.5 transition">
-          <span className="w-2 h-2 rounded-full bg-purple-500" />
+        <Link href="/status/handling" className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-3.5 py-1.5 text-sm font-medium text-indigo-700 border border-indigo-100 hover:-translate-y-0.5 transition">
+          <span className="w-2 h-2 rounded-full bg-indigo-500" />
           待办理 <span className="tabular-nums font-bold">{stats.handling}</span>
         </Link>
         <Link href="/status/inProgress" className="inline-flex items-center gap-1.5 rounded-full bg-sky-50 px-3.5 py-1.5 text-sm font-medium text-sky-700 border border-sky-100 hover:-translate-y-0.5 transition">
