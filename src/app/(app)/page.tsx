@@ -218,11 +218,11 @@ export default function DashboardPage() {
 
       <div className="stagger-2 flex flex-wrap items-center gap-2">
         {([
-          { href: '/status/approving', label: '待审批', count: stats.approving, key: 'approving' as const },
-          { href: '/status/handling', label: '待办理', count: stats.handling, key: 'handling' as const },
-          { href: '/status/inProgress', label: '进行中', count: stats.inProgress, key: 'inProgress' as const },
-          { href: '/status/expiring', label: '临期', count: stats.expiring, key: 'expiring' as const },
           { href: '/status/overdue', label: '超期', count: stats.overdue, key: 'overdue' as const },
+          { href: '/status/expiring', label: '临期', count: stats.expiring, key: 'expiring' as const },
+          { href: '/status/inProgress', label: '进行中', count: stats.inProgress, key: 'inProgress' as const },
+          { href: '/status/handling', label: '待办理', count: stats.handling, key: 'handling' as const },
+          { href: '/status/approving', label: '待审批', count: stats.approving, key: 'approving' as const },
         ]).map(({ href, label, count, key }) => (
           <Link key={key} href={href} className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-medium border hover:-translate-y-0.5 transition ${statusColors[key].pill}`}>
             <span className={`w-2 h-2 rounded-full ${statusColors[key].dot}`} />
@@ -291,7 +291,51 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="stagger-5 rounded-xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50/50 p-5">
+        <div className="stagger-5 rounded-xl border border-slate-200/80 bg-gradient-to-br from-white to-amber-50/20 p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-semibold text-slate-500 tracking-wide flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-orange-300" />
+                临超期
+              </h3>
+              {(stats.expiring + stats.overdue) > 0 && (
+                <span className="inline-flex items-center justify-center min-w-[1.25rem] h-5 rounded-full bg-slate-100 text-slate-500 text-xs font-semibold px-1.5 tabular-nums">
+                  {stats.expiring + stats.overdue}
+                </span>
+              )}
+            </div>
+            <Link href="/alert" className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium text-slate-500 bg-slate-100 hover:bg-slate-200 hover:text-slate-700 transition-colors">
+              查看全部 <span className="text-slate-400">→</span>
+            </Link>
+          </div>
+
+          {alertWorks.length === 0 ? (
+            <div className="text-center text-slate-400 py-10 text-sm">暂无临超期事项</div>
+          ) : (
+            <div className="space-y-2">
+              {alertWorks.slice(0, 5).map((work) => {
+                const date = work.completeTime || work.planCompleteTime
+                const borderColor = isOverdueWork(work)
+                  ? statusColors.overdue.left
+                  : statusColors.expiring.left
+                return (
+                  <Link key={work.id} href={`/${work.type === '重点' ? 'priority' : work.type === '主要' ? 'main' : 'todo'}/${work.id}`}>
+                    <div className={`border-l-2 rounded-lg p-3 hover:translate-x-0.5 transition min-w-0 ${borderColor}`}>
+                      <div className="text-sm font-medium text-slate-700 break-words leading-snug">{work.title}</div>
+                      <div className="text-xs text-slate-500 mt-1.5 flex items-center gap-2 flex-wrap">
+                        <span className="text-slate-400">{work.type}工作</span>
+                        <StatusBadge status={work.status} />
+                        <span className="text-slate-400">计划完成：{date || '-'}</span>
+                      </div>
+                    </div>
+                  </Link>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
+        <div className="stagger-6 rounded-xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50/50 p-5">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <h3 className="text-sm font-semibold text-slate-500 tracking-wide flex items-center gap-2">
@@ -334,50 +378,6 @@ export default function DashboardPage() {
                           退回人：{work.rejectedBy || '-'}；退回原因：{work.rejectReason}
                         </div>
                       )}
-                    </div>
-                  </Link>
-                )
-              })}
-            </div>
-          )}
-        </div>
-
-        <div className="stagger-6 rounded-xl border border-slate-200/80 bg-gradient-to-br from-white to-amber-50/20 p-5">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <h3 className="text-sm font-semibold text-slate-500 tracking-wide flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-orange-300" />
-                临超期
-              </h3>
-              {(stats.expiring + stats.overdue) > 0 && (
-                <span className="inline-flex items-center justify-center min-w-[1.25rem] h-5 rounded-full bg-slate-100 text-slate-500 text-xs font-semibold px-1.5 tabular-nums">
-                  {stats.expiring + stats.overdue}
-                </span>
-              )}
-            </div>
-            <Link href="/alert" className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium text-slate-500 bg-slate-100 hover:bg-slate-200 hover:text-slate-700 transition-colors">
-              查看全部 <span className="text-slate-400">→</span>
-            </Link>
-          </div>
-
-          {alertWorks.length === 0 ? (
-            <div className="text-center text-slate-400 py-10 text-sm">暂无临超期事项</div>
-          ) : (
-            <div className="space-y-2">
-              {alertWorks.slice(0, 5).map((work) => {
-                const date = work.completeTime || work.planCompleteTime
-                const borderColor = isOverdueWork(work)
-                  ? statusColors.overdue.left
-                  : statusColors.expiring.left
-                return (
-                  <Link key={work.id} href={`/${work.type === '重点' ? 'priority' : work.type === '主要' ? 'main' : 'todo'}/${work.id}`}>
-                    <div className={`border-l-2 rounded-lg p-3 hover:translate-x-0.5 transition min-w-0 ${borderColor}`}>
-                      <div className="text-sm font-medium text-slate-700 break-words leading-snug">{work.title}</div>
-                      <div className="text-xs text-slate-500 mt-1.5 flex items-center gap-2 flex-wrap">
-                        <span className="text-slate-400">{work.type}工作</span>
-                        <StatusBadge status={work.status} />
-                        <span className="text-slate-400">计划完成：{date || '-'}</span>
-                      </div>
                     </div>
                   </Link>
                 )
