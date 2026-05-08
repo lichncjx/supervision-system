@@ -144,12 +144,12 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between stagger-1">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">
+          <h2 className="text-2xl font-bold text-slate-900">
             {user ? `欢迎回来，${user.name}` : '欢迎使用公司督办管理系统'}
           </h2>
-          <p className="text-gray-500 mt-1">实时跟踪和管理公司督办事项</p>
+          <p className="text-slate-500 mt-1 text-sm">实时跟踪和管理公司督办事项</p>
         </div>
 
         <div className="flex gap-2">
@@ -180,8 +180,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <Card>
-        <CardContent className="p-4">
+      <div className="stagger-1 rounded-xl border border-slate-200/80 bg-white/70 backdrop-blur-sm p-4">
           <div className="flex items-center justify-between gap-3">
             <div>
               <div className="font-bold text-gray-900">督办提示</div>
@@ -218,12 +217,11 @@ export default function DashboardPage() {
               </div>
             </div>
           ) : (
-            <div className="mt-3 rounded-md bg-blue-50 border border-blue-100 p-3 text-sm text-blue-900 whitespace-pre-wrap break-words">
+            <div className="mt-3 rounded-lg bg-slate-50/80 p-3 text-sm text-slate-700 whitespace-pre-wrap break-words">
               {adminNotice || '暂无督办提示'}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
 
       <div className="stagger-2 flex flex-wrap items-center gap-2">
         <Link href="/status/approving" className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3.5 py-1.5 text-sm font-medium text-amber-700 border border-amber-100 hover:-translate-y-0.5 transition">
@@ -249,7 +247,7 @@ export default function DashboardPage() {
       </div>
 
       {isSupervisionAdmin(user?.role) && (
-        <Card>
+        <Card className="stagger-3">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
               <div className="font-bold text-gray-900">综合查询</div>
@@ -337,7 +335,7 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card>
+        <Card className="stagger-5">
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-lg">待处理</h3>
@@ -352,7 +350,7 @@ export default function DashboardPage() {
               <div className="space-y-3">
                 {pendingProcesses.slice(0, 5).map((work) => (
                   <Link key={work.id} href={`/${work.type === '重点' ? 'priority' : work.type === '主要' ? 'main' : 'todo'}/${work.id}`}>
-                    <div className="border rounded-lg p-3 hover:bg-gray-50 min-w-0">
+                    <div className="border-l-2 border-l-slate-300 rounded-lg p-3 hover:bg-slate-50 hover:translate-x-0.5 transition min-w-0">
                       <div className="font-medium break-words">{work.title}</div>
                       <div className="text-sm text-gray-500 mt-1 flex items-center gap-2">
                         <span>{work.type}工作</span>
@@ -373,7 +371,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="stagger-6">
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-lg">临超期</h3>
@@ -390,7 +388,7 @@ export default function DashboardPage() {
                   const date = work.completeTime || work.planCompleteTime;
                   return (
                     <Link key={work.id} href={`/${work.type === '重点' ? 'priority' : work.type === '主要' ? 'main' : 'todo'}/${work.id}`}>
-                      <div className="border rounded-lg p-3 hover:bg-gray-50 min-w-0">
+                      <div className="border-l-2 border-l-slate-300 rounded-lg p-3 hover:bg-slate-50 hover:translate-x-0.5 transition min-w-0">
                         <div className="font-medium break-words">{work.title}</div>
                         <div className="text-sm text-gray-500 mt-1 flex items-center gap-2 flex-wrap">
                           <span>{work.type}工作</span>

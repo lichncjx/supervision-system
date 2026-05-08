@@ -121,11 +121,11 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   };
 
   if (isLoading) {
-    return <div className="min-h-screen flex items-center justify-center bg-gray-50">加载中...</div>;
+    return <div className="min-h-screen flex items-center justify-center bg-slate-50">加载中...</div>;
   }
 
   if (!isAuthenticated && pathname !== '/login') {
-    return <div className="min-h-screen flex items-center justify-center bg-gray-50">正在跳转登录...</div>;
+    return <div className="min-h-screen flex items-center justify-center bg-slate-50">正在跳转登录...</div>;
   }
 
   const visibleNavItems = navItems.filter((item) => {
@@ -135,7 +135,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   });
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-slate-50">
       <header className="bg-white border-b sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <h1 className="text-lg md:text-xl font-bold text-gray-900 leading-tight">
