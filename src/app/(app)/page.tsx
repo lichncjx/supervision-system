@@ -4,7 +4,9 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { statusColors, workTypeColors } from '@/lib/status-colors';
+import { statusColors, expiryColors, workTypeColors } from '@/lib/status-colors';
+
+const pillColors = { ...statusColors, ...expiryColors };
 import { Textarea } from '@/components/ui/textarea';
 import { Plus } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
@@ -224,8 +226,8 @@ export default function DashboardPage() {
           { href: '/status/handling', label: '待办理', count: stats.handling, key: 'handling' as const },
           { href: '/status/approving', label: '待审批', count: stats.approving, key: 'approving' as const },
         ]).map(({ href, label, count, key }) => (
-          <Link key={key} href={href} className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-medium border hover:-translate-y-0.5 transition ${statusColors[key].pill}`}>
-            <span className={`w-2 h-2 rounded-full ${statusColors[key].dot}`} />
+          <Link key={key} href={href} className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-medium border hover:-translate-y-0.5 transition ${pillColors[key].pill}`}>
+            <span className={`w-2 h-2 rounded-full ${pillColors[key].dot}`} />
             {label} <span className="tabular-nums font-bold">{count}</span>
           </Link>
         ))}
@@ -316,8 +318,8 @@ export default function DashboardPage() {
               {alertWorks.slice(0, 5).map((work) => {
                 const date = work.completeTime || work.planCompleteTime
                 const borderColor = isOverdueWork(work)
-                  ? statusColors.overdue.left
-                  : statusColors.expiring.left
+                  ? expiryColors.overdue.left
+                  : expiryColors.expiring.left
                 return (
                   <Link key={work.id} href={`/${work.type === '重点' ? 'priority' : work.type === '主要' ? 'main' : 'todo'}/${work.id}`}>
                     <div className={`border-l-2 rounded-lg p-3 hover:translate-x-0.5 transition min-w-0 ${borderColor}`}>

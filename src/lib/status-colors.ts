@@ -23,18 +23,6 @@ export const statusColors = {
     left: 'border-l-2 border-l-emerald-400 bg-emerald-50/20',
     text: 'text-emerald-600',
   },
-  expiring: {
-    pill: 'bg-orange-50 text-orange-700 border-orange-100',
-    dot: 'bg-orange-500',
-    left: 'border-l-2 border-l-orange-400 bg-orange-50/20',
-    text: 'text-orange-600',
-  },
-  overdue: {
-    pill: 'bg-rose-50 text-rose-700 border-rose-100',
-    dot: 'bg-rose-500',
-    left: 'border-l-2 border-l-rose-400 bg-rose-50/30',
-    text: 'text-rose-600',
-  },
   rejected: {
     pill: 'bg-red-50 text-red-700 border-red-100',
     dot: 'bg-red-500',
@@ -46,6 +34,27 @@ export const statusColors = {
     dot: 'bg-slate-400',
     left: 'border-l-2 border-l-slate-400 bg-slate-50/30',
     text: 'text-slate-500',
+  },
+} as const;
+
+export const expiryColors = {
+  normal: {
+    pill: 'bg-amber-50 text-amber-700 border-amber-100',
+    dot: 'bg-amber-500',
+    left: 'border-l-2 border-l-amber-400 bg-amber-50/20',
+    text: 'text-amber-600',
+  },
+  expiring: {
+    pill: 'bg-orange-50 text-orange-700 border-orange-100',
+    dot: 'bg-orange-500',
+    left: 'border-l-2 border-l-orange-400 bg-orange-50/20',
+    text: 'text-orange-600',
+  },
+  overdue: {
+    pill: 'bg-rose-50 text-rose-700 border-rose-100',
+    dot: 'bg-rose-500',
+    left: 'border-l-2 border-l-rose-400 bg-rose-50/30',
+    text: 'text-rose-600',
   },
 } as const;
 
@@ -74,4 +83,5 @@ export const workTypeColors = {
 } as const;
 
 export type StatusColorKey = keyof typeof statusColors;
+export type ExpiryColorKey = keyof typeof expiryColors;
 export type WorkTypeColorKey = keyof typeof workTypeColors;
