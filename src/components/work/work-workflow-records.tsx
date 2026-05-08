@@ -1,6 +1,5 @@
 'use client';
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getRoleName } from '@/lib/auth';
 import { getActionName, getStatusName, getWorkflowRecordDescription } from '@/lib/work-store';
 
@@ -25,11 +24,9 @@ export function WorkWorkflowRecords({ records }: WorkWorkflowRecordsProps) {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>审批记录</CardTitle>
-      </CardHeader>
-      <CardContent>
+    <div className="rounded-xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50/50 p-5">
+      <h3 className="font-semibold text-slate-800 mb-4">审批记录</h3>
+      <div>
         <div className="space-y-3">
           {records.map((record) => {
             const recordDesc = getWorkflowRecordDescription(
@@ -40,13 +37,13 @@ export function WorkWorkflowRecords({ records }: WorkWorkflowRecordsProps) {
             const isSameStatus = record.previousStatus.toLowerCase() === record.newStatus.toLowerCase();
 
             return (
-              <div key={record.id} className="border rounded p-3 bg-gray-50">
+              <div key={record.id} className="rounded-lg bg-white/60 border border-slate-200 p-4">
                 <div className="flex justify-between items-start">
                   <div>
                     <span className="font-medium">{record.initiatorName}</span>
-                    <span className="text-gray-500 text-sm ml-2">({getRoleName(record.initiatorRole)})</span>
+                    <span className="text-slate-500 text-sm ml-2">({getRoleName(record.initiatorRole)})</span>
                   </div>
-                  <span className="text-sm text-gray-400">{new Date(record.createdAt).toLocaleString()}</span>
+                  <span className="text-sm text-slate-400">{new Date(record.createdAt).toLocaleString()}</span>
                 </div>
                 <div className="mt-1">
                   <span className="text-blue-600">{getActionName(record.action as any)}</span>
@@ -57,7 +54,7 @@ export function WorkWorkflowRecords({ records }: WorkWorkflowRecordsProps) {
                   </div>
                 )}
                 {isSameStatus && !recordDesc && (
-                  <div className="mt-1 text-sm text-gray-500">
+                  <div className="mt-1 text-sm text-slate-500">
                     当前记录为流程节点流转，事项状态未最终变化
                   </div>
                 )}
@@ -73,7 +70,7 @@ export function WorkWorkflowRecords({ records }: WorkWorkflowRecordsProps) {
             );
           })}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

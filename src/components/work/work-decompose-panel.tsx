@@ -1,6 +1,5 @@
 'use client';
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
@@ -39,11 +38,9 @@ export function WorkDecomposePanel({
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>待办事项分解</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <div className="rounded-xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50/50 p-5">
+      <h3 className="font-semibold text-slate-800 mb-4">待办事项分解</h3>
+      <div className="space-y-4">
         <div className="p-3 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">
           该事项由公司领导提出，请责任部门进行任务分解，补充工作计划、节点、子节点和计划完成时间后提交审批。
         </div>
@@ -70,7 +67,7 @@ export function WorkDecomposePanel({
           <label className="text-sm font-medium block mb-2">任务节点</label>
           <div className="space-y-3">
             {(editForm.nodes || []).map((node: any, index: number) => (
-              <div key={node.id} className="border rounded p-3 bg-gray-50">
+              <div key={node.id} className="border rounded p-3 bg-slate-50/50">
                 <div className="flex items-center gap-2">
                   <Input
                     value={node.title}
@@ -125,7 +122,7 @@ export function WorkDecomposePanel({
         <Button onClick={onSubmitDecomposition}>
           提交分解结果
         </Button>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

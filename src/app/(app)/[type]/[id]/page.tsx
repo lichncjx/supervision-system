@@ -25,7 +25,7 @@ import {
   getCurrentProcessDescription,
 } from '@/lib/work-store';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { statusColors, workTypeColors } from '@/lib/status-colors';
 import { WorkAttachmentPanel } from '@/components/work/work-attachment-panel';
 import { WorkOperationPanel } from '@/components/work/work-operation-panel';
 import { WorkWorkflowRecords } from '@/components/work/work-workflow-records';
@@ -154,9 +154,9 @@ export default function WorkDetailPage() {
   if (!work) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-500">事项不存在</p>
+        <p className="text-slate-500">事项不存在</p>
         <Link href={`/${type}`}>
-          <Button variant="link">返回列表</Button>
+          <Button variant="link" className="rounded-full">返回列表</Button>
         </Link>
       </div>
     );
@@ -594,55 +594,56 @@ export default function WorkDetailPage() {
 
   const isPriorityOrMain = work.type === '重点' || work.type === '主要';
   const isTodo = work.type === '待办';
+  const typeColorKey = work.type === '重点' ? 'priority' : work.type === '主要' ? 'main' : 'todo';
 
   const renderPriorityOrMainInfo = () => {
     return (
       <div className="space-y-2">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <span className="text-sm text-gray-500">业务类别：</span>
+            <span className="text-sm text-slate-500">业务类别：</span>
             <span>{work.businessCategory || '-'}</span>
           </div>
           <div>
-            <span className="text-sm text-gray-500">工作事项：</span>
+            <span className="text-sm text-slate-500">工作事项：</span>
             <span>{work.workItem || '-'}</span>
           </div>
           <div>
-            <span className="text-sm text-gray-500">工作节点：</span>
+            <span className="text-sm text-slate-500">工作节点：</span>
             <span>{work.workNode || '-'}</span>
           </div>
           <div>
-            <span className="text-sm text-gray-500">计划完成时间：</span>
+            <span className="text-sm text-slate-500">计划完成时间：</span>
             <span>{work.completeTime || '-'}</span>
           </div>
           <div>
-            <span className="text-sm text-gray-500">完成形式：</span>
+            <span className="text-sm text-slate-500">完成形式：</span>
             <span>{work.completeForm || '-'}</span>
           </div>
           <div>
-            <span className="text-sm text-gray-500">主办部门：</span>
+            <span className="text-sm text-slate-500">主办部门：</span>
             <span>{getDepartmentName(work.departmentId ?? 0)}</span>
           </div>
           <div>
-            <span className="text-sm text-gray-500">部门领导：</span>
+            <span className="text-sm text-slate-500">部门领导：</span>
             <span>{work.deptLeaderName || work.responsibleLeader || '-'}</span>
           </div>
           <div>
-            <span className="text-sm text-gray-500">主管人员：</span>
+            <span className="text-sm text-slate-500">主管人员：</span>
             <span>{work.deptManagerName || work.supervisor || '-'}</span>
           </div>
           {work.type === '重点' && (
             <div>
-              <span className="text-sm text-gray-500">是否为创新工作：</span>
+              <span className="text-sm text-slate-500">是否为创新工作：</span>
               <span>{work.isInnovation ? '是' : '否'}</span>
             </div>
           )}
           <div>
-            <span className="text-sm text-gray-500">当前状态：</span>
+            <span className="text-sm text-slate-500">当前状态：</span>
             <StatusBadge status={work.status} />
           </div>
           <div>
-            <span className="text-sm text-gray-500">当前环节：</span>
+            <span className="text-sm text-slate-500">当前环节：</span>
             <span className="text-blue-600">{getCurrentProcessDescription(
               work.status,
               work.currentApproverRole,
@@ -652,7 +653,7 @@ export default function WorkDetailPage() {
         </div>
 
         {work.rejectReason && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded text-sm text-red-700 break-words whitespace-pre-wrap">
+          <div className="p-3 bg-rose-50/50 rounded text-sm text-rose-600 break-words whitespace-pre-wrap">
             <div>退回人：{work.rejectedBy || '-'}</div>
             <div>退回原因：{work.rejectReason}</div>
             {work.rejectedAt && (
@@ -666,13 +667,13 @@ export default function WorkDetailPage() {
           {work.nodes && work.nodes.length > 0 ? (
             <div className="space-y-3">
               {work.nodes.map((node: any, index: number) => (
-                <div key={node.id} className="border rounded p-3 bg-gray-50">
+                <div key={node.id} className="border rounded p-3 bg-slate-50">
                   <div className="font-medium break-words">
                     {index + 1}. {node.title}
                     {node.completeTime ? `（节点完成时间：${node.completeTime}）` : ''}
                   </div>
                   {node.children && node.children.length > 0 && (
-                    <div className="pl-5 mt-2 space-y-1 text-sm text-gray-600">
+                    <div className="pl-5 mt-2 space-y-1 text-sm text-slate-500">
                       {node.children.map((child: any, childIndex: number) => (
                         <div key={child.id} className="break-words">
                           {index + 1}.{childIndex + 1} {child.title}
@@ -685,14 +686,14 @@ export default function WorkDetailPage() {
               ))}
             </div>
           ) : (
-            <p className="text-gray-500">暂无工作节点</p>
+            <p className="text-slate-500">暂无工作节点</p>
           )}
         </div>
 
         {work.proof && (
           <div>
-            <span className="text-sm text-gray-500">见证材料说明：</span>
-            <p className="mt-1 p-2 bg-gray-50 rounded break-words whitespace-pre-wrap overflow-hidden">{work.proof}</p>
+            <span className="text-sm text-slate-500">见证材料说明：</span>
+            <p className="mt-1 p-2 bg-slate-50 rounded break-words whitespace-pre-wrap overflow-hidden">{work.proof}</p>
           </div>
         )}
         {(() => {
@@ -700,19 +701,19 @@ export default function WorkDetailPage() {
           if (evidenceAttachments.length === 0) return null;
           return (
             <div>
-              <span className="text-sm text-gray-500">见证材料附件：</span>
+              <span className="text-sm text-slate-500">见证材料附件：</span>
               <div className="mt-2 space-y-2">
                 {evidenceAttachments.map((att) => (
                   <div key={att.id} className="flex items-center justify-between rounded border p-2 text-sm">
                     <div className="min-w-0">
                       <div className="font-medium break-words">{att.fileName}</div>
-                      <div className="text-xs text-gray-500">
+                      <div className="text-xs text-slate-500">
                         上传人：{att.userName || '-'}
                         上传时间：{att.uploadedAt ? new Date(att.uploadedAt).toLocaleString() : '-'}
                       </div>
                     </div>
                     <a href={`/api/attachments/${att.id}/download`} target="_blank" rel="noopener noreferrer">
-                      <Button variant="outline" size="sm">
+                      <Button variant="outline" size="sm" className="rounded-full">
                         <Download className="h-4 w-4 mr-1" />
                         下载
                       </Button>
@@ -737,7 +738,7 @@ export default function WorkDetailPage() {
           </p>
         )}
         {work.adjustHistory && work.adjustHistory.length > 0 && (
-          <div className="p-3 bg-purple-50 border border-purple-200 rounded text-sm text-purple-800 space-y-2">
+          <div className="p-3 bg-purple-50/50 rounded text-sm text-purple-600 space-y-2">
             <div className="font-medium">调整记录</div>
             {work.adjustHistory.map((item) => (
               <div key={item.id} className="border-t border-purple-100 pt-2 first:border-t-0 first:pt-0">
@@ -752,8 +753,8 @@ export default function WorkDetailPage() {
         )}
         {work.cancelReason && (
           <div>
-            <span className="text-sm text-gray-500">取消原因：</span>
-            <p className="mt-1 p-2 bg-gray-50 rounded break-words whitespace-pre-wrap overflow-hidden">{work.cancelReason}</p>
+            <span className="text-sm text-slate-500">取消原因：</span>
+            <p className="mt-1 p-2 bg-slate-50 rounded break-words whitespace-pre-wrap overflow-hidden">{work.cancelReason}</p>
           </div>
         )}
       </div>
@@ -765,24 +766,24 @@ export default function WorkDetailPage() {
       <div className="space-y-2">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <span className="text-sm text-gray-500">事项提出领导：</span>
+            <span className="text-sm text-slate-500">事项提出领导：</span>
             <span>{work.proposedLeader || '-'}</span>
-            <span className="text-xs text-gray-400 ml-2">（提出该待办事项，默认也是审批领导）</span>
+            <span className="text-xs text-slate-400 ml-2">（提出该待办事项，默认也是审批领导）</span>
           </div>
           <div>
-            <span className="text-sm text-gray-500">事项提出场景：</span>
+            <span className="text-sm text-slate-500">事项提出场景：</span>
             <span>{work.proposedScene || '-'}</span>
           </div>
           <div>
-            <span className="text-sm text-gray-500">待办事项：</span>
+            <span className="text-sm text-slate-500">待办事项：</span>
             <span>{work.workItem || '-'}</span>
           </div>
           <div>
-            <span className="text-sm text-gray-500">形成时间：</span>
+            <span className="text-sm text-slate-500">形成时间：</span>
             <span>{work.formedTime || '-'}</span>
           </div>
           <div>
-            <span className="text-sm text-gray-500">主责部门：</span>
+            <span className="text-sm text-slate-500">主责部门：</span>
             <span>
               {work.departmentIds && work.departmentIds.length > 0
                 ? work.departmentIds.map((id: number) => getDepartmentName(id)).join('、')
@@ -790,7 +791,7 @@ export default function WorkDetailPage() {
             </span>
           </div>
           <div>
-            <span className="text-sm text-gray-500">主责责任人：</span>
+            <span className="text-sm text-slate-500">主责责任人：</span>
             <span>
               {work.responsiblePersons && work.responsiblePersons.length > 0
                 ? work.responsiblePersons.join('、')
@@ -798,7 +799,7 @@ export default function WorkDetailPage() {
             </span>
           </div>
           <div>
-            <span className="text-sm text-gray-500">配合部门：</span>
+            <span className="text-sm text-slate-500">配合部门：</span>
             <span>
               {work.cooperateDepartmentIds && work.cooperateDepartmentIds.length > 0
                 ? work.cooperateDepartmentIds.map((id: number) => getDepartmentName(id)).join('、')
@@ -808,7 +809,7 @@ export default function WorkDetailPage() {
             </span>
           </div>
           <div>
-            <span className="text-sm text-gray-500">配合责任人：</span>
+            <span className="text-sm text-slate-500">配合责任人：</span>
             <span>
               {work.cooperatePersons && work.cooperatePersons.length > 0
                 ? work.cooperatePersons.join('、')
@@ -816,23 +817,23 @@ export default function WorkDetailPage() {
             </span>
           </div>
           <div>
-            <span className="text-sm text-gray-500">工作计划：</span>
+            <span className="text-sm text-slate-500">工作计划：</span>
             <span>{work.workPlan || '-'}</span>
           </div>
           <div>
-            <span className="text-sm text-gray-500">计划完成时间：</span>
+            <span className="text-sm text-slate-500">计划完成时间：</span>
             <span>{work.planCompleteTime || '-'}</span>
           </div>
           <div>
-            <span className="text-sm text-gray-500">进展情况：</span>
+            <span className="text-sm text-slate-500">进展情况：</span>
             <ExpandableText text={work.progress} />
           </div>
           <div>
-            <span className="text-sm text-gray-500">当前状态：</span>
+            <span className="text-sm text-slate-500">当前状态：</span>
             <StatusBadge status={work.status} />
           </div>
           <div>
-            <span className="text-sm text-gray-500">当前环节：</span>
+            <span className="text-sm text-slate-500">当前环节：</span>
             <span className="text-blue-600">{getCurrentProcessDescription(
               work.status,
               work.currentApproverRole,
@@ -846,13 +847,13 @@ export default function WorkDetailPage() {
             <p className="font-medium mb-2">任务分解节点：</p>
             <div className="space-y-3">
               {work.nodes.map((node: any, index: number) => (
-                <div key={node.id} className="border rounded p-3 bg-gray-50">
+                <div key={node.id} className="border rounded p-3 bg-slate-50">
                   <div className="font-medium break-words">
                     {index + 1}. {node.title}
                     {node.completeTime ? `（节点完成时间：${node.completeTime}）` : ''}
                   </div>
                   {node.children && node.children.length > 0 && (
-                    <div className="pl-5 mt-2 space-y-1 text-sm text-gray-600">
+                    <div className="pl-5 mt-2 space-y-1 text-sm text-slate-500">
                       {node.children.map((child: any, childIndex: number) => (
                         <div key={child.id} className="break-words">
                           {index + 1}.{childIndex + 1} {child.title}
@@ -868,7 +869,7 @@ export default function WorkDetailPage() {
         )}
 
         {work.rejectReason && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded text-sm text-red-700 break-words whitespace-pre-wrap">
+          <div className="p-3 bg-rose-50/50 rounded text-sm text-rose-600 break-words whitespace-pre-wrap">
             <div>退回人：{work.rejectedBy || '-'}</div>
             <div>退回原因：{work.rejectReason}</div>
             {work.rejectedAt && (
@@ -879,8 +880,8 @@ export default function WorkDetailPage() {
 
         {work.proof && (
           <div>
-            <span className="text-sm text-gray-500">见证材料说明：</span>
-            <p className="mt-1 p-2 bg-gray-50 rounded break-words whitespace-pre-wrap overflow-hidden">{work.proof}</p>
+            <span className="text-sm text-slate-500">见证材料说明：</span>
+            <p className="mt-1 p-2 bg-slate-50 rounded break-words whitespace-pre-wrap overflow-hidden">{work.proof}</p>
           </div>
         )}
         {(() => {
@@ -888,19 +889,19 @@ export default function WorkDetailPage() {
           if (evidenceAttachments.length === 0) return null;
           return (
             <div>
-              <span className="text-sm text-gray-500">见证材料附件：</span>
+              <span className="text-sm text-slate-500">见证材料附件：</span>
               <div className="mt-2 space-y-2">
                 {evidenceAttachments.map((att) => (
                   <div key={att.id} className="flex items-center justify-between rounded border p-2 text-sm">
                     <div className="min-w-0">
                       <div className="font-medium break-words">{att.fileName}</div>
-                      <div className="text-xs text-gray-500">
+                      <div className="text-xs text-slate-500">
                         上传人：{att.userName || '-'}
                         上传时间：{att.uploadedAt ? new Date(att.uploadedAt).toLocaleString() : '-'}
                       </div>
                     </div>
                     <a href={`/api/attachments/${att.id}/download`} target="_blank" rel="noopener noreferrer">
-                      <Button variant="outline" size="sm">
+                      <Button variant="outline" size="sm" className="rounded-full">
                         <Download className="h-4 w-4 mr-1" />
                         下载
                       </Button>
@@ -925,8 +926,8 @@ export default function WorkDetailPage() {
         )}
         {work.cancelReason && (
           <div>
-            <span className="text-sm text-gray-500">取消原因：</span>
-            <p className="mt-1 p-2 bg-gray-50 rounded break-words whitespace-pre-wrap overflow-hidden">{work.cancelReason}</p>
+            <span className="text-sm text-slate-500">取消原因：</span>
+            <p className="mt-1 p-2 bg-slate-50 rounded break-words whitespace-pre-wrap overflow-hidden">{work.cancelReason}</p>
           </div>
         )}
       </div>
@@ -937,7 +938,7 @@ export default function WorkDetailPage() {
     <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Link href={`/${type}`}>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" className="rounded-full">
             <ArrowLeft className="h-4 w-4 mr-2" />
             返回列表
           </Button>
@@ -945,21 +946,24 @@ export default function WorkDetailPage() {
         <h1 className="text-2xl font-bold">事项详情</h1>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{work.title}</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <div className="rounded-xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50/50 overflow-hidden stagger-1">
+        <div className="p-5">
+          <div className="flex items-center gap-3">
+            <span className={`w-1.5 h-8 rounded-full ${workTypeColors[typeColorKey]?.text?.replace('text-', 'bg-') || 'bg-slate-400'}`} />
+            <h2 className="font-semibold text-slate-800">{work.title}</h2>
+          </div>
+        </div>
+        <div className="space-y-4 p-5">
           {isPriorityOrMain && renderPriorityOrMainInfo()}
           {isTodo && renderTodoInfo()}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      <Card>
-        <CardContent className="p-4">
+      <div className="rounded-xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50/50 overflow-hidden stagger-2">
+        <div className="p-4">
           <WorkflowProgress work={work} />
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       <WorkAttachmentPanel
         attachments={(work.attachments || []).filter(a => a.category !== 'evidence')}
@@ -1056,14 +1060,14 @@ export default function WorkDetailPage() {
       />
 
       {canSubmitDraft && (
-        <Card>
-          <CardContent className="p-4">
+        <div className="rounded-xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50/50 overflow-hidden stagger-3">
+          <div className="p-4">
             <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-500">当前为草稿状态，请提交审批：</span>
-              <Button onClick={handleSubmitDraft}>提交审批</Button>
+              <span className="text-sm text-slate-500">当前为草稿状态，请提交审批：</span>
+              <Button onClick={handleSubmitDraft} className="rounded-full">提交审批</Button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
 
       <WorkOperationPanel

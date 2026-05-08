@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
@@ -115,23 +114,21 @@ export function WorkReturnedPanel({
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>退回事项处理</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <div className="rounded-xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50/50 p-5">
+      <h3 className="font-semibold text-slate-800 mb-4">退回事项处理</h3>
+      <div className="space-y-4">
         {rejectReason && (
-          <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded break-words whitespace-pre-wrap">
+          <div className="p-3 bg-rose-50/50 rounded text-red-700 break-words whitespace-pre-wrap">
             退回原因：{rejectReason}
           </div>
         )}
 
         {!editMode ? (
           <div className="flex gap-3">
-            <Button onClick={() => setEditMode(true)}>
+            <Button onClick={() => setEditMode(true)} className="rounded-full">
               修改后重新提交
             </Button>
-            <Button variant="destructive" onClick={onDelete}>
+            <Button variant="destructive" onClick={onDelete} className="rounded-full">
               删除退回事项
             </Button>
           </div>
@@ -181,7 +178,7 @@ export function WorkReturnedPanel({
                         const selected = departmentLeaders.find(u => String(u.id) === e.target.value);
                         setEditForm((prev: any) => ({ ...prev, deptLeaderId: e.target.value, responsibleLeader: selected?.name || '' }));
                       }}
-                      className="w-full border rounded-md p-2"
+                      className="rounded-lg border-slate-200 bg-white/60"
                     >
                       <option value="">请选择部门领导</option>
                       {departmentLeaders.map((u) => (
@@ -200,7 +197,7 @@ export function WorkReturnedPanel({
                         const selected = departmentManagers.find(u => String(u.id) === e.target.value);
                         setEditForm((prev: any) => ({ ...prev, deptManagerId: e.target.value, supervisor: selected?.name || '' }));
                       }}
-                      className="w-full border rounded-md p-2"
+                      className="rounded-lg border-slate-200 bg-white/60"
                     >
                       <option value="">请选择主管人员</option>
                       {departmentManagers.map((u) => (
@@ -217,12 +214,12 @@ export function WorkReturnedPanel({
                 <div>
                   <label className="text-sm font-medium">
                     事项提出领导
-                    <span className="text-xs text-gray-400 ml-1">（提出该待办事项的公司领导，默认也是审批领导）</span>
+                    <span className="text-xs text-slate-400 ml-1">（提出该待办事项的公司领导，默认也是审批领导）</span>
                   </label>
                   <select
                     value={editForm.proposedLeaderId || ''}
                     onChange={(e) => setEditForm((prev: any) => ({ ...prev, proposedLeaderId: e.target.value }))}
-                    className="w-full border rounded-md p-2"
+                    className="rounded-lg border-slate-200 bg-white/60"
                   >
                     <option value="">请选择事项提出领导</option>
                     {companyLeaders.map((leader) => (
@@ -261,7 +258,7 @@ export function WorkReturnedPanel({
                 <div className="md:col-span-2">
                   <label className="text-sm font-medium">
                     主责部门
-                    <span className="text-xs text-gray-400 ml-1">（可多选，支持搜索）</span>
+                    <span className="text-xs text-slate-400 ml-1">（可多选，支持搜索）</span>
                   </label>
                   <MultiSearchSelect
                     className="mt-2"
@@ -291,7 +288,7 @@ export function WorkReturnedPanel({
                 <div className="md:col-span-2">
                   <label className="text-sm font-medium">
                     主责责任人
-                    <span className="text-xs text-gray-400 ml-1">（主责部门的具体责任人，可多选，支持搜索）</span>
+                    <span className="text-xs text-slate-400 ml-1">（主责部门的具体责任人，可多选，支持搜索）</span>
                   </label>
                   <MultiSearchSelect
                     className="mt-2"
@@ -314,7 +311,7 @@ export function WorkReturnedPanel({
                 <div className="md:col-span-2">
                   <label className="text-sm font-medium">
                     配合部门
-                    <span className="text-xs text-gray-400 ml-1">（可多选，支持搜索）</span>
+                    <span className="text-xs text-slate-400 ml-1">（可多选，支持搜索）</span>
                   </label>
                   <MultiSearchSelect
                     className="mt-2"
@@ -344,7 +341,7 @@ export function WorkReturnedPanel({
                 <div className="md:col-span-2">
                   <label className="text-sm font-medium">
                     配合责任人
-                    <span className="text-xs text-gray-400 ml-1">（配合部门的具体责任人，可多选，支持搜索）</span>
+                    <span className="text-xs text-slate-400 ml-1">（配合部门的具体责任人，可多选，支持搜索）</span>
                   </label>
                   <MultiSearchSelect
                     className="mt-2"
@@ -397,7 +394,7 @@ export function WorkReturnedPanel({
               <label className="text-sm font-medium block mb-2">工作节点</label>
               <div className="space-y-3">
                 {(editForm.nodes || []).map((node: any, index: number) => (
-                  <div key={node.id} className="border rounded p-3 bg-gray-50">
+                  <div key={node.id} className="border rounded p-3 bg-slate-50/50">
                     <div className="flex items-center gap-2">
                       <Input
                         value={node.title}
@@ -411,10 +408,10 @@ export function WorkReturnedPanel({
                         onChange={(e) => updateNodeCompleteTime(node.id, e.target.value)}
                         className="w-40"
                       />
-                      <Button type="button" variant="outline" size="sm" onClick={() => addSubNode(node.id)}>
+                      <Button type="button" variant="outline" size="sm" onClick={() => addSubNode(node.id)} className="rounded-full">
                         添加子节点
                       </Button>
-                      <Button type="button" variant="destructive" size="sm" onClick={() => deleteNode(node.id)}>
+                      <Button type="button" variant="destructive" size="sm" onClick={() => deleteNode(node.id)} className="rounded-full">
                         删除
                       </Button>
                     </div>
@@ -434,7 +431,7 @@ export function WorkReturnedPanel({
                             onChange={(e) => updateSubNodeCompleteTime(node.id, child.id, e.target.value)}
                             className="w-40"
                           />
-                          <Button type="button" variant="destructive" size="sm" onClick={() => deleteSubNode(node.id, child.id)}>
+                          <Button type="button" variant="destructive" size="sm" onClick={() => deleteSubNode(node.id, child.id)} className="rounded-full">
                             删除
                           </Button>
                         </div>
@@ -443,7 +440,7 @@ export function WorkReturnedPanel({
                   </div>
                 ))}
 
-                <Button type="button" variant="outline" onClick={addNode}>
+                <Button type="button" variant="outline" onClick={addNode} className="rounded-full">
                   添加节点
                 </Button>
               </div>
@@ -460,16 +457,16 @@ export function WorkReturnedPanel({
             </div>
 
             <div className="flex gap-3">
-              <Button onClick={onResubmit}>
+              <Button onClick={onResubmit} className="rounded-full">
                 保存修改并重新提交
               </Button>
-              <Button variant="outline" onClick={() => setEditMode(false)}>
+              <Button variant="outline" onClick={() => setEditMode(false)} className="rounded-full">
                 取消
               </Button>
             </div>
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

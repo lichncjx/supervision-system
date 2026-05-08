@@ -23,18 +23,6 @@ export const statusColors = {
     left: 'border-l-2 border-l-emerald-400 bg-emerald-50/20',
     text: 'text-emerald-600',
   },
-  expiring: {
-    pill: 'bg-orange-50 text-orange-700 border-orange-100',
-    dot: 'bg-orange-500',
-    left: 'border-l-2 border-l-orange-400 bg-orange-50/20',
-    text: 'text-orange-600',
-  },
-  overdue: {
-    pill: 'bg-rose-50 text-rose-700 border-rose-100',
-    dot: 'bg-rose-500',
-    left: 'border-l-2 border-l-rose-400 bg-rose-50/30',
-    text: 'text-rose-600',
-  },
   rejected: {
     pill: 'bg-red-50 text-red-700 border-red-100',
     dot: 'bg-red-500',
@@ -49,12 +37,34 @@ export const statusColors = {
   },
 } as const;
 
+export const expiryColors = {
+  normal: {
+    pill: 'bg-amber-50 text-amber-700 border-amber-100',
+    dot: 'bg-amber-500',
+    left: 'border-l-2 border-l-amber-400 bg-amber-50/20',
+    text: 'text-amber-600',
+  },
+  expiring: {
+    pill: 'bg-orange-50 text-orange-700 border-orange-100',
+    dot: 'bg-orange-500',
+    left: 'border-l-2 border-l-orange-400 bg-orange-50/20',
+    text: 'text-orange-600',
+  },
+  overdue: {
+    pill: 'bg-rose-50 text-rose-700 border-rose-100',
+    dot: 'bg-rose-500',
+    left: 'border-l-2 border-l-rose-400 bg-rose-50/30',
+    text: 'text-rose-600',
+  },
+} as const;
+
 export const workTypeColors = {
   priority: {
     text: 'text-rose-600',
     gradient: 'from-red-50 to-rose-50/30',
     progress: 'bg-rose-500',
     button: 'bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100',
+    left: 'border-l-2 border-l-rose-400 bg-rose-50/20',
     icon: '★',
   },
   main: {
@@ -62,6 +72,7 @@ export const workTypeColors = {
     gradient: 'from-blue-50 to-sky-50/30',
     progress: 'bg-sky-500',
     button: 'bg-sky-50 text-sky-600 border-sky-200 hover:bg-sky-100',
+    left: 'border-l-2 border-l-sky-400 bg-sky-50/20',
     icon: '●',
   },
   todo: {
@@ -69,9 +80,32 @@ export const workTypeColors = {
     gradient: 'from-emerald-50 to-teal-50/30',
     progress: 'bg-emerald-500',
     button: 'bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100',
+    left: 'border-l-2 border-l-emerald-400 bg-emerald-50/20',
     icon: '✓',
   },
 } as const;
 
+export function getWorkTypeAccent(type: string): string {
+  if (type === '重点') return workTypeColors.priority.left;
+  if (type === '主要') return workTypeColors.main.left;
+  return workTypeColors.todo.left;
+}
+
+export function getWorkTypeText(type: string): string {
+  if (type === '重点') return workTypeColors.priority.text;
+  if (type === '主要') return workTypeColors.main.text;
+  return workTypeColors.todo.text;
+}
+
+export function getStatusAccent(status: string): string {
+  if (['pending_dept', 'pending_company', 'pending_complete'].includes(status)) return statusColors.approving.left;
+  if (['pending_decompose', 'pending_evidence_dept', 'pending_evidence_company', 'adjusting'].includes(status)) return statusColors.handling.left;
+  if (['in_progress', 'approved'].includes(status)) return statusColors.inProgress.left;
+  if (status === 'completed') return statusColors.completed.left;
+  if (['rejected', 'pending_main_leader_cancel'].includes(status)) return statusColors.rejected.left;
+  return statusColors.cancelled.left;
+}
+
 export type StatusColorKey = keyof typeof statusColors;
+export type ExpiryColorKey = keyof typeof expiryColors;
 export type WorkTypeColorKey = keyof typeof workTypeColors;

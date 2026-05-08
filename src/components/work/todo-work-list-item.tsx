@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { Eye } from 'lucide-react';
 import { StatusBadge } from '@/components/common/badges';
 import { ExpandableText } from '@/components/common/expandable-text';
-import { workTypeColors } from '@/lib/status-colors';
 import type { Work } from '@/lib/work-store';
 
 interface TodoWorkListItemProps {
@@ -14,10 +13,8 @@ interface TodoWorkListItemProps {
 }
 
 export function TodoWorkListItem({ item, routeType, getDepartmentName }: TodoWorkListItemProps) {
-  const c = workTypeColors.todo;
-
   return (
-    <div className={`rounded-xl border border-slate-200/80 bg-gradient-to-br ${c.gradient} p-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200`}>
+    <div className="rounded-xl border border-slate-200/80 bg-white/60 p-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
       <div className="text-sm font-semibold text-slate-800 break-words leading-snug">
         {item.workItem || item.title}
       </div>
@@ -67,7 +64,7 @@ export function TodoWorkListItem({ item, routeType, getDepartmentName }: TodoWor
       </div>
       <div className="mt-3 flex justify-end">
         <Link href={`/${routeType}/${item.id}`}>
-          <span className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-sm font-medium hover:-translate-y-0.5 transition-all ${c.button}`}>
+          <span className="inline-flex items-center gap-1 rounded-full bg-slate-50 border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:-translate-y-0.5 transition-all">
             <Eye className="h-3.5 w-3.5" />
             查看
           </span>

@@ -15,7 +15,7 @@ export function ExpandableText({
   const [expanded, setExpanded] = useState(false);
 
   if (!text) {
-    return <span className="text-gray-400">{empty}</span>;
+    return <span className="text-slate-400">{empty}</span>;
   }
 
   const lineHeight = 1.6;
@@ -29,7 +29,7 @@ export function ExpandableText({
         }`}
         style={expanded ? {} : { maxHeight: `${maxHeight}px` }}
       >
-        <p className="text-sm leading-relaxed text-gray-700 whitespace-pre-wrap">
+        <p className="text-sm leading-relaxed text-slate-700 whitespace-pre-wrap">
           {text}
         </p>
       </div>
@@ -39,7 +39,7 @@ export function ExpandableText({
             variant="ghost"
             size="sm"
             onClick={() => setExpanded(!expanded)}
-            className="h-7 px-2 text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+            className="h-7 px-2 text-xs text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full"
           >
             {expanded ? '收起' : '展开全文'}
           </Button>

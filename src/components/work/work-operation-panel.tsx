@@ -1,6 +1,5 @@
 'use client';
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
@@ -100,18 +99,16 @@ export function WorkOperationPanel({
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>事项操作</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-6">
+    <div className="rounded-xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50/50 p-5">
+      <h3 className="font-semibold text-slate-800 mb-4">事项操作</h3>
+      <div className="space-y-6">
         <div className="space-y-2">
           <div>
-            <span className="text-sm text-gray-500">当前状态：</span>
+            <span className="text-sm text-slate-500">当前状态：</span>
             <StatusBadge status={work.status} />
           </div>
           <div>
-            <span className="text-sm text-gray-500">当前环节：</span>
+            <span className="text-sm text-slate-500">当前环节：</span>
             <span className="text-blue-600">
               {getCurrentProcessDescription(work.status, work.currentApproverRole, work.currentApproverId)}
             </span>
@@ -136,7 +133,7 @@ export function WorkOperationPanel({
               />
 
               {uploading && (
-                <p className="text-sm text-gray-500 mt-1 flex items-center gap-1">
+                <p className="text-sm text-slate-500 mt-1 flex items-center gap-1">
                   <Loader2 className="h-3 w-3 animate-spin" />
                   上传中...
                 </p>
@@ -148,7 +145,7 @@ export function WorkOperationPanel({
                     <div key={att.id} className="flex items-center justify-between rounded border p-2 text-sm">
                       <div className="min-w-0 flex-1">
                         <div className="font-medium break-words">{att.fileName}</div>
-                        <div className="text-xs text-gray-500">
+                        <div className="text-xs text-slate-500">
                           {att.userName || '-'}
                           {att.uploadedAt ? new Date(att.uploadedAt).toLocaleString() : '-'}
                           {formatFileSize(att.fileSize)}
@@ -188,7 +185,7 @@ export function WorkOperationPanel({
         </div>
 
         <div className="space-y-4 border-t pt-4">
-          <h4 className="font-medium text-gray-600">其他操作</h4>
+          <h4 className="font-medium text-slate-600">其他操作</h4>
           <div className="flex gap-3">
             <Button variant="outline" onClick={handleOpenAdjust}>
               申请调整
@@ -199,7 +196,7 @@ export function WorkOperationPanel({
             </Button>
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

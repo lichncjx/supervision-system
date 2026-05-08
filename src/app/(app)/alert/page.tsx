@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchAndPagination } from '@/hooks/use-search-pagination';
 import Link from 'next/link';
-import { statusColors } from '@/lib/status-colors';
+import { getWorkTypeAccent } from '@/lib/status-colors';
 import { AlertTriangle, Eye } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { getDepartments } from '@/lib/auth';
@@ -113,10 +113,7 @@ export default function AlertPage() {
           <>
             <div className="divide-y divide-slate-100">
               {list.map((work) => {
-                const isOverdue = isOverdueWork(work);
-                const borderClass = isOverdue
-                  ? statusColors.overdue.left
-                  : statusColors.expiring.left;
+                const borderClass = getWorkTypeAccent(work.type);
 
                 return (
                   <div key={work.id} className={`flex items-center justify-between hover:translate-x-0.5 transition min-w-0 ${borderClass}`}>

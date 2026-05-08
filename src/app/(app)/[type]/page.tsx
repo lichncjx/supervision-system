@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { useAuth } from '@/components/providers/auth-provider';
 import { isCompanyLevel, getDepartments } from '@/lib/auth';
 import { getVisibleWorks, queryWorks, type Work, type WorkType, type WorkStatusFilter } from '@/lib/work-store';
-import { workTypeColors } from '@/lib/status-colors';
+import { workTypeColors, getStatusAccent } from '@/lib/status-colors';
 import { Plus, Download, Upload, FileSpreadsheet } from 'lucide-react';
 import { WorkListToolbar } from '@/components/work/work-list-toolbar';
 import { PriorityMainWorkListItem } from '@/components/work/priority-main-work-list-item';
@@ -280,7 +280,7 @@ export default function ItemListPage() {
           <>
             <div className="divide-y divide-slate-100">
               {pagedList.map((item) => (
-                <div key={item.id} className="p-4">
+                <div key={item.id} className={`p-4 ${getStatusAccent(item.status)}`}>
                   {isPriorityOrMain ? (
                     <PriorityMainWorkListItem
                       item={item}
