@@ -38,6 +38,9 @@ export default function DashboardPage() {
     priority: 0,
     main: 0,
     todo: 0,
+    priorityCompleted: 0,
+    mainCompleted: 0,
+    todoCompleted: 0,
   });
   const [visibleWorks, setVisibleWorks] = useState<Work[]>([]);
 
@@ -70,6 +73,9 @@ export default function DashboardPage() {
             priority: data.priorityTotal,
             main: data.mainTotal,
             todo: data.todoTotal,
+            priorityCompleted: data.priorityCompleted ?? 0,
+            mainCompleted: data.mainCompleted ?? 0,
+            todoCompleted: data.todoCompleted ?? 0,
           });
         } else {
           setStats((prev) => ({ ...prev, overdue, expiring }));
