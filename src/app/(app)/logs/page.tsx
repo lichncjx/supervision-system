@@ -126,7 +126,10 @@ export default function LogsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">操作日志</h1>
+        <h1 className="stagger-1 flex items-center gap-3 text-2xl font-bold text-slate-800">
+          <span className="w-1 h-6 rounded-full bg-slate-500" />
+          操作日志
+        </h1>
       </div>
 
       <div className="rounded-xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50/50 p-5">

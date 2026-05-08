@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Star, ListTodo, CheckSquare } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { getCompanyLeaders, getDepartments, getDepartmentLeaders, getDepartmentManagers, getUsersByDepartment } from '@/lib/auth';
 import { addWork, submitWork, type WorkType, type WorkNode } from '@/lib/work-store';
@@ -417,6 +417,10 @@ export default function NewWorkPage() {
     待办: '新建待办事项',
   };
 
+  const accentBar = routeType === 'priority' ? 'bg-rose-500' : routeType === 'main' ? 'bg-sky-500' : 'bg-emerald-500';
+  const iconColor = routeType === 'priority' ? 'text-rose-500' : routeType === 'main' ? 'text-sky-500' : 'text-emerald-500';
+  const TitleIcon = routeType === 'priority' ? Star : routeType === 'main' ? ListTodo : CheckSquare;
+
   const responsiblePersonOptions = todoForm.departmentIds.flatMap(
     (departmentId: number) => departmentUsers[departmentId] || []
   );
@@ -447,7 +451,11 @@ export default function NewWorkPage() {
             返回列表
           </Button>
         </Link>
-        <h1 className="text-2xl font-bold">{titleMap[type]}</h1>
+        <h1 className="flex items-center gap-3 text-2xl font-bold text-slate-800">
+          <span className={`w-1 h-6 rounded-full ${accentBar}`} />
+          <TitleIcon className={`h-6 w-6 ${iconColor}`} />
+          {titleMap[type]}
+        </h1>
       </div>
 
       <Card>

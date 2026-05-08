@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchAndPagination } from '@/hooks/use-search-pagination';
 import Link from 'next/link';
-import { getWorkTypeAccent } from '@/lib/status-colors';
+import { getWorkTypeAccent, getWorkTypeText } from '@/lib/status-colors';
 import { AlertTriangle, Eye } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { getDepartments } from '@/lib/auth';
@@ -12,6 +12,7 @@ import {
   isExpiringWork,
   isOverdueWork,
   getActionName,
+  getWorkDueDate,
   sortWorksByDueDate,
   type Work,
 } from '@/lib/work-store';
@@ -72,8 +73,9 @@ export default function AlertPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="stagger-1 text-2xl font-bold text-slate-900 flex items-center gap-2">
-        <AlertTriangle className="h-7 w-7 text-orange-500" />
+      <h1 className="stagger-1 flex items-center gap-3 text-2xl font-bold text-slate-800">
+        <span className="w-1 h-6 rounded-full bg-orange-500" />
+        <AlertTriangle className="h-6 w-6 text-orange-500" />
         临超期
       </h1>
 
@@ -120,13 +122,10 @@ export default function AlertPage() {
                     <div className="p-4">
                       <div className="text-sm font-medium text-slate-700 break-words leading-snug">{work.title}</div>
                       <div className="text-xs text-slate-500 mt-1.5 flex items-center gap-2 flex-wrap">
-                        <span className="text-slate-400">{work.type}</span>
-                        <span className="text-slate-400">{getActionName(work.action)}</span>
+                        <span className={`font-medium ${getWorkTypeText(work.type)}`}>{work.type}</span>
                         <StatusBadge status={work.status} />
-                        <span className="text-slate-400">部门：{departments.find((d) => d.id === work.departmentId)?.name || '-'}</span>
-                      </div>
-                      <div className="text-xs text-slate-500 mt-1">
-                        计划完成时间：{work.completeTime || work.planCompleteTime || '-'}
+                        <span className="text-slate-400">责任部门：{departments.find((d) => d.id === work.departmentId)?.name || '-'}</span>
+                        <span className="text-slate-400">计划完成时间：{work.completeTime || work.planCompleteTime || '-'}</span>
                       </div>
                       {work.rejectReason && (
                         <div className="text-xs text-rose-600 mt-1.5 break-words bg-rose-50/50 rounded px-2 py-1">

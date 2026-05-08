@@ -8,7 +8,7 @@ import { useAuth } from '@/components/providers/auth-provider';
 import { isCompanyLevel, getDepartments } from '@/lib/auth';
 import { getVisibleWorks, queryWorks, type Work, type WorkType, type WorkStatusFilter } from '@/lib/work-store';
 import { workTypeColors, getStatusAccent } from '@/lib/status-colors';
-import { Plus, Download, Upload, FileSpreadsheet } from 'lucide-react';
+import { Plus, Download, Upload, FileSpreadsheet, Star, ListTodo, CheckSquare } from 'lucide-react';
 import { WorkListToolbar } from '@/components/work/work-list-toolbar';
 import { PriorityMainWorkListItem } from '@/components/work/priority-main-work-list-item';
 import { TodoWorkListItem } from '@/components/work/todo-work-list-item';
@@ -57,6 +57,9 @@ export default function ItemListPage() {
 
   const routeKey = routeType === 'priority' ? 'priority' as const : routeType === 'main' ? 'main' as const : 'todo' as const;
   const c = workTypeColors[routeKey];
+  const accentBar = routeType === 'priority' ? 'bg-rose-500' : routeType === 'main' ? 'bg-sky-500' : 'bg-emerald-500';
+  const iconColor = routeType === 'priority' ? 'text-rose-500' : routeType === 'main' ? 'text-sky-500' : 'text-emerald-500';
+  const TitleIcon = routeType === 'priority' ? Star : routeType === 'main' ? ListTodo : CheckSquare;
 
   const canCreate =
     type === '待办'
@@ -221,7 +224,11 @@ export default function ItemListPage() {
   return (
     <div className="space-y-6">
       <div className="stagger-1 flex items-center justify-between">
-        <h1 className={`text-2xl font-bold ${c.text}`}>{titleMap[type]}</h1>
+        <h1 className="flex items-center gap-3 text-2xl font-bold text-slate-800">
+          <span className={`w-1 h-6 rounded-full ${accentBar}`} />
+          <TitleIcon className={`h-6 w-6 ${iconColor}`} />
+          {titleMap[type]}
+        </h1>
         <div className="flex gap-2">
           <button onClick={handleDownloadTemplate} className={pillButton}>
             <FileSpreadsheet className="h-3.5 w-3.5" />

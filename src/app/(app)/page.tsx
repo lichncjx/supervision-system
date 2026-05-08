@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { statusColors, expiryColors, workTypeColors, getWorkTypeAccent } from '@/lib/status-colors';
+import { statusColors, expiryColors, workTypeColors, getWorkTypeAccent, getWorkTypeText } from '@/lib/status-colors';
 
 const pillColors = { ...statusColors, ...expiryColors };
 import { Textarea } from '@/components/ui/textarea';
@@ -327,9 +327,9 @@ export default function DashboardPage() {
                     <div className={`border-l-2 rounded-lg p-3 hover:translate-x-0.5 transition min-w-0 ${borderColor}`}>
                       <div className="text-sm font-medium text-slate-700 break-words leading-snug">{work.title}</div>
                       <div className="text-xs text-slate-500 mt-1.5 flex items-center gap-2 flex-wrap">
-                        <span className="text-slate-400">{work.type}工作</span>
+                        <span className={`font-medium ${getWorkTypeText(work.type)}`}>{work.type}</span>
                         <StatusBadge status={work.status} />
-                        <span className="text-slate-400">计划完成：{date || '-'}</span>
+                        <span className="text-slate-400">计划完成时间：{date || '-'}</span>
                       </div>
                     </div>
                   </Link>
@@ -367,8 +367,8 @@ export default function DashboardPage() {
                   <Link key={work.id} href={`/${work.type === '重点' ? 'priority' : work.type === '主要' ? 'main' : 'todo'}/${work.id}`}>
                     <div className={`border-l-2 rounded-lg p-3 hover:translate-x-0.5 transition min-w-0 ${borderColor}`}>
                       <div className="text-sm font-medium text-slate-700 break-words leading-snug">{work.title}</div>
-                      <div className="text-xs text-slate-500 mt-1.5 flex items-center gap-2">
-                        <span className="text-slate-400">{work.type}工作</span>
+                      <div className="text-xs text-slate-500 mt-1.5 flex items-center gap-2 flex-wrap">
+                        <span className={`font-medium ${getWorkTypeText(work.type)}`}>{work.type}</span>
                         <StatusBadge status={work.status} />
                         {canApproveWork(user, work) && <span className="text-purple-600 font-medium text-xs">待审批</span>}
                         {canHandleWork(user, work) && <span className="text-indigo-600 font-medium text-xs">待办理</span>}

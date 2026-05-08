@@ -315,8 +315,9 @@ export default function AdminPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold flex items-center gap-2">
-        <Settings className="h-7 w-7" />
+      <h1 className="stagger-1 flex items-center gap-3 text-2xl font-bold text-slate-800">
+        <span className="w-1 h-6 rounded-full bg-slate-500" />
+        <Settings className="h-6 w-6 text-slate-500" />
         系统管理
       </h1>
 
