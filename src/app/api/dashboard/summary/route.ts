@@ -205,6 +205,9 @@ export async function GET(request: NextRequest) {
       cancelledList,
       overdueList,
       thisMonthList,
+      priorityCompleted,
+      mainCompleted,
+      todoCompleted,
     ] = await Promise.all([
       prisma.workItem.count({
         where: { ...whereClause, type: 'PRIORITY' },
@@ -266,6 +269,15 @@ export async function GET(request: NextRequest) {
           ],
         },
       }),
+      prisma.workItem.count({
+        where: { ...whereClause, type: 'PRIORITY', status: WorkItemStatus.COMPLETED },
+      }),
+      prisma.workItem.count({
+        where: { ...whereClause, type: 'MAIN', status: WorkItemStatus.COMPLETED },
+      }),
+      prisma.workItem.count({
+        where: { ...whereClause, type: 'TODO', status: WorkItemStatus.COMPLETED },
+      }),
     ])
 
     return NextResponse.json({
@@ -279,6 +291,9 @@ export async function GET(request: NextRequest) {
       cancelled: cancelledList,
       overdue: overdueList,
       thisMonthDue: thisMonthList,
+      priorityCompleted,
+      mainCompleted,
+      todoCompleted,
     })
   } catch (error) {
     console.error('Dashboard summary error:', error)
