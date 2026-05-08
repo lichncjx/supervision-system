@@ -18,7 +18,7 @@ const ITEM_STATUS = {
 
 export function getStatusColor(status: string): string {
   const colorMap: Record<string, string> = {
-    draft: 'bg-gray-100 text-gray-700 border border-gray-200',
+    draft: 'bg-slate-100 text-slate-700 border border-slate-200',
     pending_dept: 'bg-yellow-100 text-yellow-800 border border-yellow-200',
     pending_company: 'bg-orange-100 text-orange-800 border border-orange-200',
     approved: 'bg-blue-100 text-blue-800 border border-blue-200',
@@ -32,10 +32,10 @@ export function getStatusColor(status: string): string {
     rejected: 'bg-red-100 text-red-800 border border-red-200',
     adjusting: 'bg-purple-100 text-purple-800 border border-purple-200',
     cancelling: 'bg-rose-100 text-rose-800 border border-rose-200',
-    cancelled: 'bg-gray-200 text-gray-700 border border-gray-300',
+    cancelled: 'bg-slate-200 text-slate-700 border border-slate-300',
   };
 
-  return colorMap[status] || 'bg-gray-100 text-gray-800 border border-gray-200';
+  return colorMap[status] || 'bg-slate-100 text-slate-700 border border-slate-200';
 }
 
 export function getStatusLabel(status: string): string {
@@ -77,13 +77,13 @@ export function getTypeColor(type: string): string {
     main: 'bg-blue-100 text-blue-800',
     todo: 'bg-green-100 text-green-800',
   };
-  return colorMap[type] || 'bg-gray-100 text-gray-800';
+  return colorMap[type] || 'bg-slate-100 text-slate-700';
 }
 
 // 时间颜色判断
 export function getDateColor(priorityDate: string | null, actualDate: string | null, status: string): string {
   if (status === ITEM_STATUS.COMPLETED || status === ITEM_STATUS.CANCELLED) {
-    return 'text-gray-500';
+    return 'text-slate-500';
   }
 
   if (!priorityDate) return 'text-gray-500';
