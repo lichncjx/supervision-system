@@ -90,7 +90,7 @@ export function WorkListToolbar({
           className="border rounded-md h-10 px-3"
         >
           <option value="all">全部状态</option>
-          <option value="pending">待审批</option>
+          <option value="approving">待审批</option>
           <option value="inProgress">进行中</option>
           <option value="completed">已完成</option>
           <option value="rejected">已退回</option>

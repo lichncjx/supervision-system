@@ -36,7 +36,7 @@ const navItems = [
   { href: '/priority', label: '重点工作', icon: Star, color: 'text-red-600' },
   { href: '/main', label: '主要工作', icon: ListTodo, color: 'text-blue-600' },
   { href: '/todo', label: '待办事项', icon: CheckSquare, color: 'text-green-600' },
-  { href: '/approval', label: '待我处理', icon: ClipboardCheck },
+  { href: '/process', label: '待我处理', icon: ClipboardCheck },
   { href: '/admin', label: '系统管理', icon: Settings, requireAdmin: true },
   { href: '/logs', label: '操作日志', icon: FileText, requireSupervisor: true },
 ];

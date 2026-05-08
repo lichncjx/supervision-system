@@ -96,7 +96,7 @@ export function getAvailableMenus(user: User | null) {
     { name: '重点工作', href: '/priority', icon: 'AlertCircle' },
     { name: '主要工作', href: '/main', icon: 'Calendar' },
     { name: '待办事项', href: '/todo', icon: 'CheckSquare' },
-    { name: '待我处理', href: '/approval', icon: 'FileText' },
+    { name: '待我处理', href: '/process', icon: 'FileText' },
   ];
 
   if (user.role === ROLES.ADMIN) {
