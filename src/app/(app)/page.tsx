@@ -149,32 +149,25 @@ export default function DashboardPage() {
           <h2 className="text-2xl font-bold text-slate-900">
             {user ? `欢迎回来，${user.name}` : '欢迎使用公司督办管理系统'}
           </h2>
-          <p className="text-slate-500 mt-1 text-sm">实时跟踪和管理公司督办事项</p>
         </div>
 
         <div className="flex gap-2">
           {canCreateWork && (
             <>
-              <Link href="/priority/new">
-                <Button size="sm">
-                  <Plus className="h-4 w-4 mr-1" />
-                  重点工作
-                </Button>
+              <Link href="/priority/new" className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 border border-rose-200 px-3.5 py-1.5 text-sm font-medium text-rose-600 hover:bg-rose-100 hover:-translate-y-0.5 transition-all">
+                <Plus className="h-3.5 w-3.5" />
+                重点工作
               </Link>
-              <Link href="/main/new">
-                <Button size="sm" variant="outline">
-                  <Plus className="h-4 w-4 mr-1" />
-                  主要工作
-                </Button>
+              <Link href="/main/new" className="inline-flex items-center gap-1.5 rounded-full bg-sky-50 border border-sky-200 px-3.5 py-1.5 text-sm font-medium text-sky-600 hover:bg-sky-100 hover:-translate-y-0.5 transition-all">
+                <Plus className="h-3.5 w-3.5" />
+                主要工作
               </Link>
             </>
           )}
           {canCreateTodo && (
-            <Link href="/todo/new">
-              <Button size="sm" variant="outline">
-                <Plus className="h-4 w-4 mr-1" />
-                待办事项
-              </Button>
+            <Link href="/todo/new" className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200 px-3.5 py-1.5 text-sm font-medium text-emerald-600 hover:bg-emerald-100 hover:-translate-y-0.5 transition-all">
+              <Plus className="h-3.5 w-3.5" />
+              待办事项
             </Link>
           )}
         </div>
@@ -184,7 +177,6 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between gap-3">
             <div>
               <div className="font-bold text-gray-900">督办提示</div>
-              <div className="text-sm text-gray-500">由督办管理员维护，所有用户可见</div>
             </div>
 
             {canEditNotice && !noticeEditing && (
@@ -338,7 +330,10 @@ export default function DashboardPage() {
         <div className="stagger-5 rounded-xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50/50 p-5">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <h3 className="font-bold text-slate-800">待处理</h3>
+              <h3 className="text-sm font-semibold text-slate-500 tracking-wide flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                待处理
+              </h3>
               {(stats.approving + stats.handling) > 0 && (
                 <span className="inline-flex items-center justify-center min-w-[1.25rem] h-5 rounded-full bg-slate-100 text-slate-500 text-xs font-semibold px-1.5 tabular-nums">
                   {stats.approving + stats.handling}
@@ -386,7 +381,10 @@ export default function DashboardPage() {
         <div className="stagger-6 rounded-xl border border-slate-200/80 bg-gradient-to-br from-white to-amber-50/20 p-5">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <h3 className="font-bold text-slate-800">临超期</h3>
+              <h3 className="text-sm font-semibold text-slate-500 tracking-wide flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-orange-300" />
+                临超期
+              </h3>
               {(stats.expiring + stats.overdue) > 0 && (
                 <span className="inline-flex items-center justify-center min-w-[1.25rem] h-5 rounded-full bg-slate-100 text-slate-500 text-xs font-semibold px-1.5 tabular-nums">
                   {stats.expiring + stats.overdue}
