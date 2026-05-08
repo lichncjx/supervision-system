@@ -335,74 +335,94 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card className="stagger-5">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-lg">待处理</h3>
-              <Link href="/process">
-                <Button variant="link" size="sm">查看全部</Button>
-              </Link>
+        <div className="stagger-5 rounded-xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50/50 p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <h3 className="font-bold text-slate-800">待处理</h3>
+              {pendingProcesses.length > 0 && (
+                <span className="inline-flex items-center justify-center min-w-[1.25rem] h-5 rounded-full bg-purple-100 text-purple-700 text-xs font-semibold px-1.5 tabular-nums">
+                  {pendingProcesses.length}
+                </span>
+              )}
             </div>
+            <Link href="/process" className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium text-slate-500 bg-slate-100 hover:bg-slate-200 hover:text-slate-700 transition-colors">
+              查看全部 <span className="text-slate-400">→</span>
+            </Link>
+          </div>
 
-            {pendingProcesses.length === 0 ? (
-              <div className="text-center text-gray-500 py-10">暂无待处理事项</div>
-            ) : (
-              <div className="space-y-3">
-                {pendingProcesses.slice(0, 5).map((work) => (
+          {pendingProcesses.length === 0 ? (
+            <div className="text-center text-slate-400 py-10 text-sm">暂无待处理事项</div>
+          ) : (
+            <div className="space-y-2">
+              {pendingProcesses.slice(0, 5).map((work) => {
+                const borderColor = canApproveWork(user, work)
+                  ? 'border-l-amber-400 bg-amber-50/30'
+                  : canHandleWork(user, work)
+                  ? 'border-l-purple-400 bg-purple-50/20'
+                  : 'border-l-sky-400 bg-sky-50/20'
+                return (
                   <Link key={work.id} href={`/${work.type === '重点' ? 'priority' : work.type === '主要' ? 'main' : 'todo'}/${work.id}`}>
-                    <div className="border-l-2 border-l-slate-300 rounded-lg p-3 hover:bg-slate-50 hover:translate-x-0.5 transition min-w-0">
-                      <div className="font-medium break-words">{work.title}</div>
-                      <div className="text-sm text-gray-500 mt-1 flex items-center gap-2">
-                        <span>{work.type}工作</span>
+                    <div className={`border-l-2 rounded-lg p-3 hover:translate-x-0.5 transition min-w-0 ${borderColor}`}>
+                      <div className="text-sm font-medium text-slate-700 break-words leading-snug">{work.title}</div>
+                      <div className="text-xs text-slate-500 mt-1.5 flex items-center gap-2">
+                        <span className="text-slate-400">{work.type}工作</span>
                         <StatusBadge status={work.status} />
-                        {canApproveWork(user, work) && <span className="text-yellow-600 font-medium">待审批</span>}
-                        {canHandleWork(user, work) && <span className="text-purple-600 font-medium">待办理</span>}
+                        {canApproveWork(user, work) && <span className="text-amber-600 font-medium text-xs">待审批</span>}
+                        {canHandleWork(user, work) && <span className="text-purple-600 font-medium text-xs">待办理</span>}
                       </div>
                       {work.rejectReason && (
-                        <div className="text-sm text-red-600 mt-1 break-words">
+                        <div className="text-xs text-rose-600 mt-1.5 break-words bg-rose-50/50 rounded px-2 py-1">
                           退回人：{work.rejectedBy || '-'}；退回原因：{work.rejectReason}
                         </div>
                       )}
                     </div>
                   </Link>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="stagger-6">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-lg">临超期</h3>
-              <Link href="/alert">
-                <Button variant="link" size="sm">查看全部</Button>
-              </Link>
+                )
+              })}
             </div>
+          )}
+        </div>
 
-            {alertWorks.length === 0 ? (
-              <div className="text-center text-gray-500 py-10">暂无临超期事项</div>
-            ) : (
-              <div className="space-y-3">
-                {alertWorks.slice(0, 5).map((work) => {
-                  const date = work.completeTime || work.planCompleteTime;
-                  return (
-                    <Link key={work.id} href={`/${work.type === '重点' ? 'priority' : work.type === '主要' ? 'main' : 'todo'}/${work.id}`}>
-                      <div className="border-l-2 border-l-slate-300 rounded-lg p-3 hover:bg-slate-50 hover:translate-x-0.5 transition min-w-0">
-                        <div className="font-medium break-words">{work.title}</div>
-                        <div className="text-sm text-gray-500 mt-1 flex items-center gap-2 flex-wrap">
-                          <span>{work.type}工作</span>
-                          <StatusBadge status={work.status} />
-                          <span>计划完成：{date || '-'}</span>
-                        </div>
+        <div className="stagger-6 rounded-xl border border-slate-200/80 bg-gradient-to-br from-white to-amber-50/20 p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <h3 className="font-bold text-slate-800">临超期</h3>
+              {alertWorks.length > 0 && (
+                <span className="inline-flex items-center justify-center min-w-[1.25rem] h-5 rounded-full bg-orange-100 text-orange-700 text-xs font-semibold px-1.5 tabular-nums">
+                  {alertWorks.length}
+                </span>
+              )}
+            </div>
+            <Link href="/alert" className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium text-slate-500 bg-slate-100 hover:bg-slate-200 hover:text-slate-700 transition-colors">
+              查看全部 <span className="text-slate-400">→</span>
+            </Link>
+          </div>
+
+          {alertWorks.length === 0 ? (
+            <div className="text-center text-slate-400 py-10 text-sm">暂无临超期事项</div>
+          ) : (
+            <div className="space-y-2">
+              {alertWorks.slice(0, 5).map((work) => {
+                const date = work.completeTime || work.planCompleteTime
+                const borderColor = isOverdueWork(work)
+                  ? 'border-l-rose-400 bg-rose-50/30'
+                  : 'border-l-orange-400 bg-orange-50/20'
+                return (
+                  <Link key={work.id} href={`/${work.type === '重点' ? 'priority' : work.type === '主要' ? 'main' : 'todo'}/${work.id}`}>
+                    <div className={`border-l-2 rounded-lg p-3 hover:translate-x-0.5 transition min-w-0 ${borderColor}`}>
+                      <div className="text-sm font-medium text-slate-700 break-words leading-snug">{work.title}</div>
+                      <div className="text-xs text-slate-500 mt-1.5 flex items-center gap-2 flex-wrap">
+                        <span className="text-slate-400">{work.type}工作</span>
+                        <StatusBadge status={work.status} />
+                        <span className="text-slate-400">计划完成：{date || '-'}</span>
                       </div>
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                    </div>
+                  </Link>
+                )
+              })}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
