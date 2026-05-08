@@ -134,7 +134,7 @@ export default function DashboardPage() {
     )
   ).slice(0, 5);
 
-  const expiringWorks = visibleWorks.filter((work) => isExpiringWork(work)).slice(0, 5);
+  const alertWorks = sortWorksByDueDate(visibleWorks.filter((work) => isExpiringWork(work) || isOverdueWork(work)));
 
   return (
     <div className="space-y-6">
@@ -356,7 +356,7 @@ export default function DashboardPage() {
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-lg">待我处理</h3>
+              <h3 className="font-bold text-lg">待处理</h3>
               <Link href="/process">
                 <Button variant="link" size="sm">查看全部</Button>
               </Link>
@@ -392,17 +392,17 @@ export default function DashboardPage() {
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-lg">近期到期</h3>
-              <Link href="/status/expiring">
+              <h3 className="font-bold text-lg">临超期</h3>
+              <Link href="/alert">
                 <Button variant="link" size="sm">查看全部</Button>
               </Link>
             </div>
 
-            {expiringWorks.length === 0 ? (
-              <div className="text-center text-gray-500 py-10">近期没有即将到期事项</div>
+            {alertWorks.length === 0 ? (
+              <div className="text-center text-gray-500 py-10">暂无临超期事项</div>
             ) : (
               <div className="space-y-3">
-                {expiringWorks.slice(0, 5).map((work) => {
+                {alertWorks.slice(0, 5).map((work) => {
                   const date = work.completeTime || work.planCompleteTime;
                   return (
                     <Link key={work.id} href={`/${work.type === '重点' ? 'priority' : work.type === '主要' ? 'main' : 'todo'}/${work.id}`}>
