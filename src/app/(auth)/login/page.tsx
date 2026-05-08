@@ -51,10 +51,10 @@ export default function LoginPage() {
       <div className="max-w-md w-full space-y-8 p-8 bg-gradient-to-br from-white to-slate-50/50 rounded-xl shadow-lg stagger-1">
         <div>
           <h1 className="text-2xl font-bold text-center text-slate-800">
-            公司督办管理系统（禁止上传涉密信息）
+            督办管理系统
           </h1>
-          <p className="mt-2 text-center text-slate-500">
-            请登录您的账号
+          <p className="mt-2 text-center text-sm text-rose-500 font-medium">
+            禁止上传涉密信息
           </p>
         </div>
 
@@ -118,14 +118,6 @@ export default function LoginPage() {
             {isLoading ? '登录中...' : '登录'}
           </Button>
 
-          <div className="text-center text-sm text-slate-400 space-y-1">
-            <p>系统管理员：admin / 123456</p>
-            <p>督办管理员：supervisor / 123456</p>
-            <p>公司主要领导：president / 123456</p>
-            <p>公司主管领导：vice_president / 123456</p>
-            <p>部门领导：dept_leader / 123456</p>
-            <p>部门主管：dept_manager / 123456</p>
-         </div>
         </form>
       </div>
     </div>
