@@ -1,6 +1,5 @@
 'use client';
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Upload, Download } from 'lucide-react';
 
@@ -35,15 +34,12 @@ export function WorkAttachmentPanel({
   onDelete,
 }: WorkAttachmentPanelProps) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>附件管理</CardTitle>
-      </CardHeader>
-      <CardContent>
+    <div className="rounded-xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50/50 p-5">
+      <h3 className="font-semibold text-slate-800 mb-3">附件管理</h3>
         <div className="flex items-center justify-between mb-4">
           <span className="text-sm font-medium">附件列表</span>
           {canUpload && (
-            <label className="inline-flex items-center text-sm text-blue-600 cursor-pointer hover:text-blue-800">
+            <label className="inline-flex items-center text-sm text-sky-600 cursor-pointer hover:text-sky-700">
               <Upload className="h-4 w-4 mr-1" />
               <span>上传附件</span>
               <input
@@ -64,10 +60,10 @@ export function WorkAttachmentPanel({
         {attachments && attachments.length > 0 ? (
           <div className="space-y-2">
             {attachments.map((att) => (
-              <div key={att.id} className="flex items-center justify-between rounded border p-2 text-sm">
+              <div key={att.id} className="flex items-center justify-between rounded-lg bg-white/60 border border-slate-200 p-3 text-sm">
                 <div className="min-w-0">
                   <div className="font-medium break-words">{att.fileName}</div>
-                  <div className="text-xs text-gray-500">
+                  <div className="text-xs text-slate-500">
                     {att.userName || '-'}　
                     {att.uploadedAt ? new Date(att.uploadedAt).toLocaleString() : '-'}　
                     {formatFileSize(att.fileSize)}
@@ -75,7 +71,7 @@ export function WorkAttachmentPanel({
                 </div>
                 <div className="flex gap-2 ml-2">
                   <a href={`/api/attachments/${att.id}/download`} target="_blank" rel="noopener noreferrer">
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" className="rounded-full">
                       <Download className="h-4 w-4 mr-1" />
                       下载
                     </Button>
@@ -84,6 +80,7 @@ export function WorkAttachmentPanel({
                     <Button
                       variant="outline"
                       size="sm"
+                      className="rounded-full"
                       onClick={() => {
                         if (confirm('确定要删除这个附件吗？')) {
                           onDelete(att.id);
@@ -98,9 +95,9 @@ export function WorkAttachmentPanel({
             ))}
           </div>
         ) : (
-          <p className="text-gray-500 text-sm">暂无附件</p>
+          <p className="text-slate-500 text-sm">暂无附件</p>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

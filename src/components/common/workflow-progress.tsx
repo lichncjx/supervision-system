@@ -25,7 +25,7 @@ export function WorkflowProgress({ work }: { work: Work }) {
                 isDone ? 'bg-green-50 border-green-200 text-green-700' : '',
                 isCurrent ? 'bg-blue-50 border-blue-200 text-blue-700' : '',
                 isReturned ? 'bg-red-50 border-red-200 text-red-700' : '',
-                step.status === 'pending' ? 'bg-gray-50 border-gray-200 text-gray-500' : '',
+                step.status === 'pending' ? 'bg-slate-50 border-slate-200 text-slate-400' : '',
               ].join(' ')}
             >
               {isDone ? (

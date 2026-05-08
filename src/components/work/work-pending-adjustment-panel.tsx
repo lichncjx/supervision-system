@@ -1,6 +1,5 @@
 'use client';
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { type Work } from '@/lib/work-store';
 
 interface WorkPendingAdjustmentPanelProps {
@@ -13,11 +12,9 @@ export function WorkPendingAdjustmentPanel({ work }: WorkPendingAdjustmentPanelP
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>待审批调整内容</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-2 text-sm">
+    <div className="rounded-xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50/50 p-5">
+      <h3 className="font-semibold text-slate-800 mb-4">待审批调整内容</h3>
+      <div className="space-y-2 text-sm">
         <div className="text-purple-600 break-words whitespace-pre-wrap">
           调整原因：{work.pendingAdjustmentReason || '-'}
         </div>
@@ -44,12 +41,12 @@ export function WorkPendingAdjustmentPanel({ work }: WorkPendingAdjustmentPanelP
             <p className="font-medium mt-2">调整后节点：</p>
             <div className="space-y-2">
               {work.pendingAdjustment.nodes.map((node: any, index: number) => (
-                <div key={node.id} className="border rounded p-2 bg-gray-50">
+                <div key={node.id} className="border rounded p-2 bg-slate-50/50">
                   <div className="font-medium break-words">
                     {index + 1}. {node.title}
                   </div>
                   {node.children && node.children.length > 0 && (
-                    <div className="pl-4 mt-1 space-y-1 text-sm text-gray-600">
+                    <div className="pl-4 mt-1 space-y-1 text-sm text-slate-600">
                       {node.children.map((child: any, childIndex: number) => (
                         <div key={child.id} className="break-words">
                           {index + 1}.{childIndex + 1} {child.title}
@@ -63,7 +60,7 @@ export function WorkPendingAdjustmentPanel({ work }: WorkPendingAdjustmentPanelP
             </div>
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

@@ -124,12 +124,12 @@ export function WorkActionDialogs({
             <div>
               <label className="text-sm font-medium">
                 公司审批领导
-                <span className="text-xs text-gray-400 ml-1">（负责本次调整审批的公司领导）</span>
+                <span className="text-xs text-slate-400 ml-1">（负责本次调整审批的公司领导）</span>
               </label>
               <select
                 value={approvalLeaderId}
                 onChange={(e) => setApprovalLeaderId(e.target.value)}
-                className="w-full border rounded-md p-2"
+                className="rounded-lg border-slate-200 bg-white/60"
               >
                 <option value="">请选择公司审批领导</option>
                 {companyLeaders.map((leader) => (
@@ -195,7 +195,7 @@ export function WorkActionDialogs({
                       <select
                         value={editForm.departmentId || ''}
                         onChange={(e) => setEditForm((prev: any) => ({ ...prev, departmentId: Number(e.target.value) }))}
-                        className="w-full border rounded-md p-2"
+                        className="rounded-lg border-slate-200 bg-white/60"
                       >
                         {departments.map((d) => (
                           <option key={d.id} value={d.id}>
@@ -238,7 +238,7 @@ export function WorkActionDialogs({
                     <label className="text-sm font-medium block mb-2">工作节点</label>
                     <div className="space-y-3">
                       {editForm.nodes && editForm.nodes.length > 0 && editForm.nodes.map((node: any, _index: number) => (
-                        <div key={node.id} className="border rounded p-3 bg-gray-50">
+                        <div key={node.id} className="border rounded p-3 bg-slate-50/50">
                           <div className="flex items-center gap-2">
                             <Input
                               value={node.title}
@@ -329,7 +329,7 @@ export function WorkActionDialogs({
                             proposedLeaderRole: selected?.role || '',
                           }));
                         }}
-                        className="w-full border rounded-md p-2"
+                        className="rounded-lg border-slate-200 bg-white/60"
                       >
                         <option value="">请选择事项提出领导</option>
                         {companyLeaders.map((leader) => (
@@ -356,7 +356,7 @@ export function WorkActionDialogs({
                       />
                     </div>
                     <div className="md:col-span-2">
-                      <label className="text-sm font-medium">主责部门<span className="text-xs text-gray-400 ml-1">（可多选，支持搜索）</span></label>
+                      <label className="text-sm font-medium">主责部门<span className="text-xs text-slate-400 ml-1">（可多选，支持搜索）</span></label>
                       <MultiSearchSelect
                         className="mt-2"
                         options={departmentOptions}
@@ -378,7 +378,7 @@ export function WorkActionDialogs({
                       />
                     </div>
                     <div className="md:col-span-2">
-                      <label className="text-sm font-medium">主责责任人<span className="text-xs text-gray-400 ml-1">（可多选，支持搜索）</span></label>
+                      <label className="text-sm font-medium">主责责任人<span className="text-xs text-slate-400 ml-1">（可多选，支持搜索）</span></label>
                       <MultiSearchSelect
                         className="mt-2"
                         options={responsiblePersonOptions}
@@ -393,7 +393,7 @@ export function WorkActionDialogs({
                       />
                     </div>
                     <div className="md:col-span-2">
-                      <label className="text-sm font-medium">配合部门<span className="text-xs text-gray-400 ml-1">（可多选，支持搜索）</span></label>
+                      <label className="text-sm font-medium">配合部门<span className="text-xs text-slate-400 ml-1">（可多选，支持搜索）</span></label>
                       <MultiSearchSelect
                         className="mt-2"
                         options={departmentOptions}
@@ -415,7 +415,7 @@ export function WorkActionDialogs({
                       />
                     </div>
                     <div className="md:col-span-2">
-                      <label className="text-sm font-medium">配合责任人<span className="text-xs text-gray-400 ml-1">（可多选，支持搜索）</span></label>
+                      <label className="text-sm font-medium">配合责任人<span className="text-xs text-slate-400 ml-1">（可多选，支持搜索）</span></label>
                       <MultiSearchSelect
                         className="mt-2"
                         options={cooperatePersonOptions}
@@ -493,12 +493,12 @@ export function WorkActionDialogs({
             <div>
               <label className="text-sm font-medium">
                 公司审批领导
-                <span className="text-xs text-gray-400 ml-1">（负责本次取消审批的公司领导）</span>
+                <span className="text-xs text-slate-400 ml-1">（负责本次取消审批的公司领导）</span>
               </label>
               <select
                 value={approvalLeaderId}
                 onChange={(e) => setApprovalLeaderId(e.target.value)}
-                className="w-full border rounded-md p-2"
+                className="rounded-lg border-slate-200 bg-white/60"
               >
                 <option value="">请选择公司审批领导</option>
                 {companyLeaders.map((leader) => (
