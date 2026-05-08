@@ -88,25 +88,9 @@
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
 }
-
-:root {
-  --stat-approving: oklch(0.75 0.15 85);
-  --stat-handling: oklch(0.60 0.18 300);
-  --stat-inprogress: oklch(0.60 0.12 230);
-  --stat-completed: oklch(0.60 0.16 150);
-  --stat-expiring: oklch(0.70 0.16 60);
-  --stat-overdue: oklch(0.55 0.20 20);
-  --dashboard-accent: oklch(0.55 0.2 250);
-}
-
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
 }
 
 .stagger-1 { animation: fadeInUp 0.4s ease-out both; animation-delay: 0.05s; }
