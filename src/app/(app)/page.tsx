@@ -29,12 +29,11 @@ export default function DashboardPage() {
   const [noticeEditing, setNoticeEditing] = useState(false);
   const [stats, setStats] = useState({
     total: 0,
-    pendingApproval: 0,
-    pendingHandle: 0,
-    pendingProcess: 0,
+    approving: 0,
+    handling: 0,
     inProgress: 0,
     completed: 0,
-    expired: 0,
+    overdue: 0,
     expiring: 0,
     priority: 0,
     main: 0,
@@ -54,27 +53,26 @@ export default function DashboardPage() {
       try {
         const newWorks = await getVisibleWorks(user);
         setVisibleWorks(newWorks);
-        const expiredCount = newWorks.filter((w) => isOverdueWork(w)).length;
-        const expiringCount = newWorks.filter((w) => isExpiringWork(w)).length;
+        const overdue = newWorks.filter((w) => isOverdueWork(w)).length;
+        const expiring = newWorks.filter((w) => isExpiringWork(w)).length;
 
         const response = await fetch('/api/dashboard/summary', { credentials: 'include' });
         if (response.ok) {
           const data = await response.json();
           setStats({
             total: data.priorityTotal + data.mainTotal + data.todoTotal,
-            pendingApproval: data.pendingApprove,
-            pendingHandle: data.pendingHandle,
-            pendingProcess: data.pendingProcess,
+            approving: data.approving,
+            handling: data.handling,
             inProgress: data.inProgress,
             completed: data.completed,
-            expired: expiredCount,
-            expiring: expiringCount,
+            overdue,
+            expiring,
             priority: data.priorityTotal,
             main: data.mainTotal,
             todo: data.todoTotal,
           });
         } else {
-          setStats((prev) => ({ ...prev, expired: expiredCount, expiring: expiringCount }));
+          setStats((prev) => ({ ...prev, overdue, expiring }));
         }
       } catch (error) {
         console.error('Failed to load stats:', error);
@@ -136,7 +134,7 @@ export default function DashboardPage() {
     )
   ).slice(0, 5);
 
-  const expiringWorks = visibleWorks.filter((work) => isExpiringWork(work)).slice(0, 5);
+  const alertWorks = sortWorksByDueDate(visibleWorks.filter((work) => isExpiringWork(work) || isOverdueWork(work)));
 
   return (
     <div className="space-y-6">
@@ -222,24 +220,24 @@ export default function DashboardPage() {
       </Card>
 
       <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-        <Link href="/status/pending" className="block">
+        <Link href="/status/approving" className="block">
           <Card className="hover:shadow-md transition cursor-pointer">
             <CardContent className="p-4 flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-500">待我审批</p>
-                <p className="text-2xl font-bold text-yellow-600">{stats.pendingApproval}</p>
+                <p className="text-2xl font-bold text-yellow-600">{stats.approving}</p>
               </div>
               <Clock className="h-6 w-6 text-yellow-600" />
             </CardContent>
           </Card>
         </Link>
 
-        <Link href="/status/processing" className="block">
+        <Link href="/status/handling" className="block">
           <Card className="hover:shadow-md transition cursor-pointer">
             <CardContent className="p-4 flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-500">待我办理</p>
-                <p className="text-2xl font-bold text-purple-600">{stats.pendingHandle}</p>
+                <p className="text-2xl font-bold text-purple-600">{stats.handling}</p>
               </div>
               <Clock className="h-6 w-6 text-purple-600" />
             </CardContent>
@@ -287,7 +285,7 @@ export default function DashboardPage() {
             <CardContent className="p-4 flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-500">超期</p>
-                <p className="text-2xl font-bold text-red-600">{stats.expired}</p>
+                <p className="text-2xl font-bold text-red-600">{stats.overdue}</p>
               </div>
               <AlertCircle className="h-6 w-6 text-red-600" />
             </CardContent>
@@ -358,8 +356,8 @@ export default function DashboardPage() {
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-lg">待我处理</h3>
-              <Link href="/approval">
+              <h3 className="font-bold text-lg">待处理</h3>
+              <Link href="/process">
                 <Button variant="link" size="sm">查看全部</Button>
               </Link>
             </div>
@@ -394,17 +392,17 @@ export default function DashboardPage() {
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-lg">近期到期</h3>
-              <Link href="/status/expiring">
+              <h3 className="font-bold text-lg">临超期</h3>
+              <Link href="/alert">
                 <Button variant="link" size="sm">查看全部</Button>
               </Link>
             </div>
 
-            {expiringWorks.length === 0 ? (
-              <div className="text-center text-gray-500 py-10">近期没有即将到期事项</div>
+            {alertWorks.length === 0 ? (
+              <div className="text-center text-gray-500 py-10">暂无临超期事项</div>
             ) : (
               <div className="space-y-3">
-                {expiringWorks.slice(0, 5).map((work) => {
+                {alertWorks.slice(0, 5).map((work) => {
                   const date = work.completeTime || work.planCompleteTime;
                   return (
                     <Link key={work.id} href={`/${work.type === '重点' ? 'priority' : work.type === '主要' ? 'main' : 'todo'}/${work.id}`}>

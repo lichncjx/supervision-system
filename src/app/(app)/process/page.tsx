@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useSearchAndPagination } from '@/hooks/use-search-pagination';
 import Link from 'next/link';
 import { ClipboardCheck, Eye, CheckCircle, XCircle } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
@@ -9,7 +10,6 @@ import {
   approveWork,
   canApproveWork,
   canHandleWork,
-  canProcessWork,
   getActionName,
   getVisibleWorks,
   rejectWork,
@@ -19,11 +19,14 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { StatusBadge } from '@/components/common/badges';
+import { WorkListPagination } from '@/components/work/work-list-pagination';
+import { WorkSearchBar } from '@/components/work/work-search-bar';
 
 export default function ApprovalPage() {
   const { user } = useAuth();
   const [works, setWorks] = useState<Work[]>([]);
-  const [tab, setTab] = useState<'pending' | 'all'>('pending');
+  const [tab, setTab] = useState<'approving' | 'handling' | 'all'>('approving');
+  const [keyword, setKeyword] = useState('');
   const [departments, setDepartments] = useState<Array<{ id: number; name: string; code: string; isBusiness: boolean }>>([]);
 
   useEffect(() => {
@@ -44,16 +47,26 @@ export default function ApprovalPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
+  const approvingCount = useMemo(
+    () => (user ? works.filter((w) => canApproveWork(user, w)).length : 0),
+    [works, user]
+  );
+  const handlingCount = useMemo(
+    () => (user ? works.filter((w) => canHandleWork(user, w)).length : 0),
+    [works, user]
+  );
+
+  const baseList = useMemo(() => {
+    if (!user) return [];
+    const approving = sortWorksByDueDate(works.filter((w) => canApproveWork(user, w)));
+    const handling = sortWorksByDueDate(works.filter((w) => canHandleWork(user, w)));
+    return tab === 'approving' ? approving : tab === 'handling' ? handling : works;
+  }, [works, tab, user]);
+
+  const { list, total, totalPages, page, setPage, pageSize, setPageSize } =
+    useSearchAndPagination(baseList, keyword, [tab, keyword]);
+
   if (!user) return null;
-
-  const canEnter = !!user;
-
-  if (!canEnter) {
-    return <div className="p-8 text-center text-red-600">无权限访问待我处理</div>;
-  }
-
-  const pending = sortWorksByDueDate(works.filter((w) => canProcessWork(user, w)));
-  const list = tab === 'pending' ? pending : works;
 
   const handleApprove = async (work: Work) => {
     if (!user) return;
@@ -91,28 +104,34 @@ export default function ApprovalPage() {
       </h1>
 
       <div className="flex gap-2 border-b">
-        <button onClick={() => setTab('pending')} className={`px-4 py-2 ${tab === 'pending' ? 'border-b-2 border-blue-600 text-blue-600' : ''}`}>
-          待我处理（{pending.length}）
+        <button onClick={() => setTab('approving')} className={`px-4 py-2 ${tab === 'approving' ? 'border-b-2 border-blue-600 text-blue-600' : ''}`}>
+          待我审批（{approvingCount}）
+        </button>
+        <button onClick={() => setTab('handling')} className={`px-4 py-2 ${tab === 'handling' ? 'border-b-2 border-blue-600 text-blue-600' : ''}`}>
+          待我办理（{handlingCount}）
         </button>
         <button onClick={() => setTab('all')} className={`px-4 py-2 ${tab === 'all' ? 'border-b-2 border-blue-600 text-blue-600' : ''}`}>
           全部事项
         </button>
       </div>
 
+      <WorkSearchBar keyword={keyword} onKeywordChange={setKeyword} total={total} page={page} totalPages={totalPages} />
+
       <Card>
         <CardContent className="p-0">
           {list.length === 0 ? (
             <div className="py-16 text-center text-gray-500">暂无数据</div>
           ) : (
+            <>
             <div className="divide-y">
               {list.map((work) => (
                 <div key={work.id} className="p-4 flex items-center justify-between hover:bg-gray-50">
                   <div>
                     <div className="font-medium">{work.title}</div>
                     <div className="text-sm text-gray-500 mt-1">
-                      类型：{work.type}　
-                      操作：{getActionName(work.action)}　
-                      状态：<StatusBadge status={work.status} />　
+                      类型：{work.type}
+                      操作：{getActionName(work.action)}
+                      状态：<StatusBadge status={work.status} />
                       部门：{departments.find((d) => d.id === work.departmentId)?.name || '-'}
                     </div>
                     {work.type === '待办' && (
@@ -193,6 +212,15 @@ export default function ApprovalPage() {
                 </div>
               ))}
             </div>
+            <WorkListPagination
+              page={page}
+              pageSize={pageSize}
+              total={total}
+              totalPages={totalPages}
+              onPageChange={setPage}
+              onPageSizeChange={(newSize) => { setPageSize(newSize); setPage(1); }}
+            />
+            </>
           )}
         </CardContent>
       </Card>

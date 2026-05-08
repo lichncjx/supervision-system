@@ -185,17 +185,15 @@ export async function GET(request: NextRequest) {
         : {},
     })
 
-    let pendingApproveCount = 0
-    let pendingHandleCount = 0
-    let pendingProcessCount = 0
+    let approving = 0
+    let handling = 0
 
     for (const workItem of allRelevantWorks) {
       const canApprove = canApproveWorkOnServer(currentUser, workItem)
       const canHandle = canHandleWorkOnServer(currentUser, workItem)
 
-      if (canApprove) pendingApproveCount++
-      if (canHandle) pendingHandleCount++
-      if (canApprove || canHandle) pendingProcessCount++
+      if (canApprove) approving++
+      if (canHandle) handling++
     }
 
     const [
@@ -274,9 +272,8 @@ export async function GET(request: NextRequest) {
       priorityTotal,
       mainTotal,
       todoTotal,
-      pendingApprove: pendingApproveCount,
-      pendingHandle: pendingHandleCount,
-      pendingProcess: pendingProcessCount,
+      approving,
+      handling,
       inProgress: inProgressList,
       completed: completedList,
       cancelled: cancelledList,

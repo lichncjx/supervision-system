@@ -4,8 +4,8 @@ export type WorkType = '重点' | '主要' | '待办';
 
 export type WorkStatusFilter =
   | 'all'
-  | 'pending'
-  | 'processing'
+  | 'approving'
+  | 'handling'
   | 'inProgress'
   | 'completed'
   | 'rejected'
@@ -403,8 +403,8 @@ export async function queryWorks(user: User | null | undefined, query: WorkQuery
   }
 
   if (query.status && query.status !== 'all') {
-    if (query.status === 'pending') {
-      list = list.filter((w) => isPendingStatus(w.status));
+    if (query.status === 'approving') {
+      list = list.filter((w) => isPendingApprovalStatus(w.status));
     }
 
     if (query.status === 'inProgress') {
@@ -809,10 +809,6 @@ export function getWorkflowRecordDescription(
   return '';
 }
 
-export function isPendingStatus(status: Status) {
-  return isPendingApprovalStatus(status);
-}
-
 export function isInProgressStatus(status: Status) {
   return [
     'in_progress',
@@ -931,13 +927,13 @@ export function isExpiringWork(work: Work) {
   return diff >= 0 && diff <= 15 * 24 * 60 * 60 * 1000;
 }
 
-export type WorkFilter = 'all' | 'pending' | 'inProgress' | 'completed' | 'overdue' | 'expiring';
+export type WorkFilter = 'all' | 'approving' | 'inProgress' | 'completed' | 'overdue' | 'expiring';
 
 export async function getFilteredWorks(user: User | null | undefined, filter: WorkFilter): Promise<Work[]> {
   const list = await getVisibleWorks(user);
 
   if (filter === 'all') return list;
-  if (filter === 'pending') return list.filter((w) => isPendingStatus(w.status));
+  if (filter === 'approving') return list.filter((w) => isPendingApprovalStatus(w.status));
   if (filter === 'inProgress') return list.filter((w) => isInProgressStatus(w.status));
   if (filter === 'completed') return list.filter((w) => w.status === 'completed');
   if (filter === 'overdue') return list.filter((w) => isOverdueWork(w));
@@ -1242,15 +1238,15 @@ export async function getStats(user: User | null | undefined) {
 
   return {
     total: list.length,
-    pendingApproval: list.filter((w) => isPendingStatus(w.status)).length,
+    approving: list.filter((w) => isPendingApprovalStatus(w.status)).length,
     inProgress: list.filter((w) => isInProgressStatus(w.status)).length,
     completed: list.filter((w) => w.status === 'completed').length,
-    expired: list.filter((w) => isOverdueWork(w)).length,
+    overdue: list.filter((w) => isOverdueWork(w)).length,
     expiring: list.filter((w) => isExpiringWork(w)).length,
     priority: list.filter((w) => w.type === '重点').length,
     main: list.filter((w) => w.type === '主要').length,
     todo: list.filter((w) => w.type === '待办').length,
-    pendingHandle: pendingHandleList.length,
+    handling: pendingHandleList.length,
   };
 }
 

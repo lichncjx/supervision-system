@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useMemo, useRef } from 'react';
+import { useSearchAndPagination } from '@/hooks/use-search-pagination';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
@@ -24,8 +25,6 @@ export default function ItemListPage() {
   const [statusFilter, setStatusFilter] = useState<WorkStatusFilter>('all');
   const [monthFilter, setMonthFilter] = useState('');
   const [departments, setDepartments] = useState<Array<{ id: number; name: string; code: string; isBusiness: boolean }>>([]);
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
   const companyLevel = isCompanyLevel(user?.role, user?.departmentId);
 
   useEffect(() => {
@@ -114,10 +113,6 @@ export default function ItemListPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, type, departmentFilter, statusFilter, keyword]);
 
-  useEffect(() => {
-    setPage(1);
-  }, [keyword, departmentFilter, statusFilter, monthFilter, type]);
-
   const filteredList = useMemo(() => {
     if (monthFilter) {
       return list.filter((work) => getWorkMonth(work) === monthFilter);
@@ -125,13 +120,8 @@ export default function ItemListPage() {
     return list;
   }, [list, monthFilter]);
 
-  const total = filteredList.length;
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const pagedList = useMemo(() => {
-    const start = (page - 1) * pageSize;
-    const end = start + pageSize;
-    return filteredList.slice(start, end);
-  }, [filteredList, page, pageSize]);
+  const { list: pagedList, total, totalPages, page, setPage, pageSize, setPageSize } =
+    useSearchAndPagination(filteredList, '', [keyword, departmentFilter, statusFilter, monthFilter, type]);
 
   const getDepartmentName = (id: number) => {
     return departments.find((d) => d.id === id)?.name || '-';

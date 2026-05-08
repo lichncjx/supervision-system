@@ -9,6 +9,7 @@ import {
   ListTodo,
   CheckSquare,
   ClipboardCheck,
+  AlertTriangle,
   Settings,
   User,
   LogOut,
@@ -36,7 +37,8 @@ const navItems = [
   { href: '/priority', label: '重点工作', icon: Star, color: 'text-red-600' },
   { href: '/main', label: '主要工作', icon: ListTodo, color: 'text-blue-600' },
   { href: '/todo', label: '待办事项', icon: CheckSquare, color: 'text-green-600' },
-  { href: '/approval', label: '待我处理', icon: ClipboardCheck },
+  { href: '/process', label: '待处理', icon: ClipboardCheck },
+  { href: '/alert', label: '临超期', icon: AlertTriangle },
   { href: '/admin', label: '系统管理', icon: Settings, requireAdmin: true },
   { href: '/logs', label: '操作日志', icon: FileText, requireSupervisor: true },
 ];
@@ -150,7 +152,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                 onClick={() => setPasswordDialogOpen(true)}
               >
                 <KeyRound className="h-4 w-4 mr-1" />
-                改密
+                修改密码
               </Button>
               <Button variant="outline" size="sm" onClick={handleLogout}>
                 <LogOut className="h-4 w-4 mr-1" />

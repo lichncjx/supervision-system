@@ -463,7 +463,7 @@ export default function AdminPage() {
 
                   <Button size="sm" variant="outline" onClick={() => openAdminPasswordDialog(u)}>
                     <KeyRound className="h-4 w-4 mr-1" />
-                    改密
+                    修改密码
                   </Button>
 
                   <Button size="sm" variant="outline" onClick={() => handleToggleActive(u)}>
