@@ -1,10 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
 import { Eye } from 'lucide-react';
 import { StatusBadge } from '@/components/common/badges';
 import { ExpandableText } from '@/components/common/expandable-text';
+import { workTypeColors } from '@/lib/status-colors';
 import type { Work } from '@/lib/work-store';
 
 interface TodoWorkListItemProps {
@@ -14,57 +14,63 @@ interface TodoWorkListItemProps {
 }
 
 export function TodoWorkListItem({ item, routeType, getDepartmentName }: TodoWorkListItemProps) {
+  const c = workTypeColors.todo;
+
   return (
-    <div className="space-y-2">
-      <div className="font-medium text-gray-900 break-words whitespace-pre-wrap overflow-hidden">
+    <div className={`rounded-xl border border-slate-200/80 bg-gradient-to-br ${c.gradient} p-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200`}>
+      <div className="text-sm font-semibold text-slate-800 break-words leading-snug">
         {item.workItem || item.title}
       </div>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm text-gray-600">
-        <div className="break-words whitespace-pre-wrap overflow-hidden">
-          <span className="text-gray-500">事项提出领导：</span>
-          {item.proposedLeader || '-'}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs mt-2">
+        <div className="break-words">
+          <span className="text-slate-400">事项提出领导：</span>
+          <span className="text-slate-600">{item.proposedLeader || '-'}</span>
         </div>
-        <div className="break-words whitespace-pre-wrap overflow-hidden">
-          <span className="text-gray-500">事项提出场景：</span>
-          {item.proposedScene || '-'}
-        </div>
-        <div>
-          <span className="text-gray-500">主责部门：</span>
-          {item.departmentIds && item.departmentIds.length > 0
-            ? item.departmentIds.map((id: number) => getDepartmentName(id)).join('、')
-            : getDepartmentName(item.departmentId ?? 0)}
+        <div className="break-words">
+          <span className="text-slate-400">事项提出场景：</span>
+          <span className="text-slate-600">{item.proposedScene || '-'}</span>
         </div>
         <div>
-          <span className="text-gray-500">主责责任人：</span>
-          {item.responsiblePersons && item.responsiblePersons.length > 0
-            ? item.responsiblePersons.join('、')
-            : item.responsiblePerson || '-'}
+          <span className="text-slate-400">主责部门：</span>
+          <span className="text-slate-600">
+            {item.departmentIds && item.departmentIds.length > 0
+              ? item.departmentIds.map((id: number) => getDepartmentName(id)).join('、')
+              : getDepartmentName(item.departmentId ?? 0)}
+          </span>
         </div>
         <div>
-          <span className="text-gray-500">计划完成时间：</span>
-          {item.planCompleteTime || '-'}
+          <span className="text-slate-400">主责责任人：</span>
+          <span className="text-slate-600">
+            {item.responsiblePersons && item.responsiblePersons.length > 0
+              ? item.responsiblePersons.join('、')
+              : item.responsiblePerson || '-'}
+          </span>
         </div>
-        <div className="break-words whitespace-pre-wrap overflow-hidden text-sm text-gray-600 max-w-full">
-          <span className="text-gray-500">进展情况：</span>
+        <div>
+          <span className="text-slate-400">计划完成时间：</span>
+          <span className="text-slate-600">{item.planCompleteTime || '-'}</span>
+        </div>
+        <div className="break-words text-xs text-slate-600 max-w-full">
+          <span className="text-slate-400">进展情况：</span>
           <ExpandableText text={item.progress} />
         </div>
         <div>
-          <span className="text-gray-500">状态：</span>
+          <span className="text-slate-400">状态：</span>
           <StatusBadge status={item.status} />
         </div>
         {item.adjustHistory && item.adjustHistory.length > 0 && (
-          <div className="text-sm text-purple-600 break-words">
+          <div className="text-xs text-purple-600 bg-purple-50/50 rounded px-2 py-1 break-words">
             原计划完成时间：{item.adjustHistory[item.adjustHistory.length - 1].fromTime || '-'}；
             现计划完成时间：{item.adjustHistory[item.adjustHistory.length - 1].toTime || '-'}
           </div>
         )}
       </div>
-      <div className="mt-2 flex justify-end">
+      <div className="mt-3 flex justify-end">
         <Link href={`/${routeType}/${item.id}`}>
-          <Button variant="outline" size="sm">
-            <Eye className="h-4 w-4 mr-1" />
+          <span className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-sm font-medium hover:-translate-y-0.5 transition-all ${c.button}`}>
+            <Eye className="h-3.5 w-3.5" />
             查看
-          </Button>
+          </span>
         </Link>
       </div>
     </div>

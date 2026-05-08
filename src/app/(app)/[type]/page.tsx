@@ -4,16 +4,17 @@ import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { useSearchAndPagination } from '@/hooks/use-search-pagination';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { useAuth } from '@/components/providers/auth-provider';
 import { isCompanyLevel, getDepartments } from '@/lib/auth';
 import { getVisibleWorks, queryWorks, type Work, type WorkType, type WorkStatusFilter } from '@/lib/work-store';
+import { workTypeColors } from '@/lib/status-colors';
 import { Plus, Download, Upload, FileSpreadsheet } from 'lucide-react';
 import { WorkListToolbar } from '@/components/work/work-list-toolbar';
 import { PriorityMainWorkListItem } from '@/components/work/priority-main-work-list-item';
 import { TodoWorkListItem } from '@/components/work/todo-work-list-item';
 import { WorkListPagination } from '@/components/work/work-list-pagination';
+
+const pillButton = 'inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:-translate-y-0.5 transition-all';
 
 export default function ItemListPage() {
   const params = useParams<{ type: string }>();
@@ -54,11 +55,8 @@ export default function ItemListPage() {
     待办: '待办事项',
   };
 
-  const colorMap: Record<WorkType, string> = {
-    重点: 'text-red-600',
-    主要: 'text-blue-600',
-    待办: 'text-green-600',
-  };
+  const routeKey = routeType === 'priority' ? 'priority' as const : routeType === 'main' ? 'main' as const : 'todo' as const;
+  const c = workTypeColors[routeKey];
 
   const canCreate =
     type === '待办'
@@ -210,7 +208,7 @@ export default function ItemListPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = ''; // 由 Content-Disposition 决定文件名
+      a.download = '';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -222,27 +220,25 @@ export default function ItemListPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className={`text-2xl font-bold ${colorMap[type]}`}>{titleMap[type]}</h1>
+      <div className="stagger-1 flex items-center justify-between">
+        <h1 className={`text-2xl font-bold ${c.text}`}>{titleMap[type]}</h1>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handleDownloadTemplate}>
-            <FileSpreadsheet className="h-4 w-4 mr-2" />
+          <button onClick={handleDownloadTemplate} className={pillButton}>
+            <FileSpreadsheet className="h-3.5 w-3.5" />
             下载模板
-          </Button>
-          <Button variant="outline" onClick={() => importInputRef.current?.click()}>
-            <Upload className="h-4 w-4 mr-2" />
+          </button>
+          <button onClick={() => importInputRef.current?.click()} className={pillButton}>
+            <Upload className="h-3.5 w-3.5" />
             导入
-          </Button>
-          <Button variant="outline" onClick={handleExport}>
-            <Download className="h-4 w-4 mr-2" />
+          </button>
+          <button onClick={handleExport} className={pillButton}>
+            <Download className="h-3.5 w-3.5" />
             导出
-          </Button>
+          </button>
           {canCreate && (
-            <Link href={`/${routeType}/new`}>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                新建{titleMap[type]}
-              </Button>
+            <Link href={`/${routeType}/new`} className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm font-medium hover:-translate-y-0.5 transition-all ${c.button}`}>
+              <Plus className="h-3.5 w-3.5" />
+              新建{titleMap[type]}
             </Link>
           )}
         </div>
@@ -273,47 +269,45 @@ export default function ItemListPage() {
         onRefresh={load}
       />
 
-      <div className="text-sm text-gray-500">
+      <div className="stagger-2 text-sm text-slate-500">
         当前共筛选出 {total} 项{titleMap[type]}，当前第 {page} / {totalPages} 页
       </div>
 
-      <Card>
-        <CardContent className="p-0">
-          {total === 0 ? (
-            <div className="py-16 text-center text-gray-500">暂无{titleMap[type]}</div>
-          ) : (
-            <>
-              <div className="divide-y">
-                {pagedList.map((item) => (
-                  <div key={item.id} className="p-4 hover:bg-gray-50">
-                    {isPriorityOrMain ? (
-                      <PriorityMainWorkListItem
-                        item={item}
-                        routeType={routeType}
-                        getDepartmentName={getDepartmentName}
-                      />
-                    ) : (
-                      <TodoWorkListItem
-                        item={item}
-                        routeType={routeType}
-                        getDepartmentName={getDepartmentName}
-                      />
-                    )}
-                  </div>
-                ))}
-              </div>
-              <WorkListPagination
-                page={page}
-                pageSize={pageSize}
-                total={total}
-                totalPages={totalPages}
-                onPageChange={setPage}
-                onPageSizeChange={handlePageSizeChange}
-              />
-            </>
-          )}
-        </CardContent>
-      </Card>
+      <div className="stagger-3 rounded-xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50/50 overflow-hidden">
+        {total === 0 ? (
+          <div className="py-16 text-center text-slate-400 text-sm">暂无{titleMap[type]}</div>
+        ) : (
+          <>
+            <div className="divide-y divide-slate-100">
+              {pagedList.map((item) => (
+                <div key={item.id} className="p-4">
+                  {isPriorityOrMain ? (
+                    <PriorityMainWorkListItem
+                      item={item}
+                      routeType={routeType}
+                      getDepartmentName={getDepartmentName}
+                    />
+                  ) : (
+                    <TodoWorkListItem
+                      item={item}
+                      routeType={routeType}
+                      getDepartmentName={getDepartmentName}
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+            <WorkListPagination
+              page={page}
+              pageSize={pageSize}
+              total={total}
+              totalPages={totalPages}
+              onPageChange={setPage}
+              onPageSizeChange={handlePageSizeChange}
+            />
+          </>
+        )}
+      </div>
     </div>
   );
 }

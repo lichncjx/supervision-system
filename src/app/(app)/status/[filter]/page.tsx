@@ -20,8 +20,7 @@ import {
 import { getDepartments, isCompanyLevel, isSupervisionAdmin } from '@/lib/auth';
 import { StatusBadge } from '@/components/common/badges';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { workTypeColors } from '@/lib/status-colors';
 
 type StatusPageFilter =
   | 'all'
@@ -70,6 +69,8 @@ const getMonthLabel = (month: string) => {
   return `${year}年${Number(m)}月`;
 };
 
+const selectClass = 'rounded-full border border-slate-200 h-10 px-4 text-sm text-slate-600 bg-slate-50';
+
 export default function StatusFilterPage() {
   const params = useParams<{ filter: string }>();
   const filter = params?.filter || 'all';
@@ -94,6 +95,18 @@ export default function StatusFilterPage() {
 
   const getDepartmentName = (id: number) => {
     return departments.find((d) => d.id === id)?.name || '-';
+  };
+
+  const getTypeAccent = (t: string) => {
+    if (t === '重点') return 'border-l-2 border-l-rose-400 bg-rose-50/20';
+    if (t === '主要') return 'border-l-2 border-l-sky-400 bg-sky-50/20';
+    return 'border-l-2 border-l-emerald-400 bg-emerald-50/20';
+  };
+
+  const getTypeText = (t: string) => {
+    if (t === '重点') return workTypeColors.priority.text;
+    if (t === '主要') return workTypeColors.main.text;
+    return workTypeColors.todo.text;
   };
 
   React.useEffect(() => {
@@ -154,154 +167,121 @@ export default function StatusFilterPage() {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4">
-          <Link href="/">
-            <Button variant="outline" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              返回首页
-            </Button>
+          <Link href="/" className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">
+            <ArrowLeft className="h-4 w-4" />
+            返回首页
           </Link>
-          <h1 className="text-2xl font-bold">无权限访问</h1>
+          <h1 className="text-2xl font-bold text-slate-900">无权限访问</h1>
         </div>
-        <Card>
-          <CardContent className="p-8 text-center text-gray-500">
-            只有督办管理员可以访问综合查询页面
-          </CardContent>
-        </Card>
+        <div className="rounded-xl border border-slate-200/80 bg-white/70 backdrop-blur-sm p-8 text-center text-slate-400 text-sm">
+          只有督办管理员可以访问综合查询页面
+        </div>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Link href="/">
-          <Button variant="outline" size="sm">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            返回首页
-          </Button>
+      <div className="stagger-1 flex items-center gap-4">
+        <Link href="/" className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">
+          <ArrowLeft className="h-4 w-4" />
+          返回首页
         </Link>
-        <h1 className="text-2xl font-bold">{filterTitle[safeFilter]}</h1>
+        <h1 className="text-2xl font-bold text-slate-900">{filterTitle[safeFilter]}</h1>
       </div>
 
-      <Card>
-        <CardContent className="p-4">
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-            <Input
-              value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
-              placeholder="搜索事项名称..."
-              className="max-w-sm"
-            />
+      <div className="stagger-2 rounded-xl border border-slate-200/80 bg-white/70 backdrop-blur-sm p-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+          <Input
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+            placeholder="搜索事项名称..."
+            className="rounded-full"
+          />
 
-            <select
-              value={monthFilter}
-              onChange={(e) => setMonthFilter(e.target.value)}
-              className="border rounded-md px-3 py-2 text-sm"
-            >
-              <option value="">全部月份</option>
-              {monthOptions.map((month) => (
-                <option key={month} value={month}>
-                  {getMonthLabel(month)}
-                </option>
+          <select value={monthFilter} onChange={(e) => setMonthFilter(e.target.value)} className={selectClass}>
+            <option value="">全部月份</option>
+            {monthOptions.map((month) => (
+              <option key={month} value={month}>{getMonthLabel(month)}</option>
+            ))}
+          </select>
+
+          <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as WorkType | '全部')} className={selectClass}>
+            <option value="全部">全部类型</option>
+            <option value="重点">重点工作</option>
+            <option value="主要">主要工作</option>
+            <option value="待办">待办事项</option>
+          </select>
+
+          {companyLevel && (
+            <select value={departmentFilter} onChange={(e) => setDepartmentFilter(e.target.value === '全部' ? '全部' : Number(e.target.value))} className={selectClass}>
+              <option value="全部">全部部门</option>
+              {departments.filter((d) => d.id !== 1).map((dept) => (
+                <option key={dept.id} value={dept.id}>{dept.name}</option>
               ))}
             </select>
+          )}
 
-            <select
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value as WorkType | '全部')}
-              className="border rounded-md px-3 py-2 text-sm"
-            >
-              <option value="全部">全部类型</option>
-              <option value="重点">重点工作</option>
-              <option value="主要">主要工作</option>
-              <option value="待办">待办事项</option>
-            </select>
+          <button
+            onClick={() => { setKeyword(''); setMonthFilter(''); setTypeFilter('全部'); setDepartmentFilter('全部'); }}
+            className="rounded-full border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 px-4 py-2 text-sm font-medium transition-colors"
+          >
+            重置
+          </button>
+        </div>
+        <div className="text-sm text-slate-500 mt-3">
+          共 {list.length} 项
+        </div>
+      </div>
 
-            {companyLevel && (
-              <select
-                value={departmentFilter}
-                onChange={(e) =>
-                  setDepartmentFilter(e.target.value === '全部' ? '全部' : Number(e.target.value))
-                }
-                className="border rounded-md px-3 py-2 text-sm"
-              >
-                <option value="全部">全部部门</option>
-                {departments
-                  .filter((d) => d.id !== 1)
-                  .map((dept) => (
-                    <option key={dept.id} value={dept.id}>
-                      {dept.name}
-                    </option>
-                  ))}
-              </select>
-            )}
-
-            <Button
-              variant="outline"
-              onClick={() => {
-                setKeyword('');
-                setMonthFilter('');
-                setTypeFilter('全部');
-                setDepartmentFilter('全部');
-              }}
-            >
-              重置
-            </Button>
+      <div className="stagger-3 rounded-xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50/50 overflow-hidden">
+        {finalList.length === 0 ? (
+          <div className="py-16 text-center text-slate-400 text-sm">
+            暂无{filterTitle[safeFilter]}
           </div>
-          <div className="text-sm text-gray-500 mt-3">
-            共 {list.length} 项
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardContent className="p-0">
-          {finalList.length === 0 ? (
-            <div className="py-16 text-center text-gray-500">
-              暂无{filterTitle[safeFilter]}
-            </div>
-          ) : (
-            <div className="divide-y">
-              {finalList.map((work) => (
-                <div key={work.id} className="p-4 flex items-center justify-between hover:bg-gray-50 gap-4 min-w-0">
-                  <div className="min-w-0">
-                    <div className="font-medium break-words">
-                      {work.title}
-                      {work.isInnovation && (
-                        <span className="ml-2 inline-flex items-center rounded bg-purple-100 px-2 py-0.5 text-xs text-purple-700">
-                          创新工作
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="text-sm text-gray-500 mt-1 break-words">
-                      类型：{work.type}　
-                      状态：<StatusBadge status={work.status} />　
-                      责任部门：{work.departmentIds && work.departmentIds.length > 0
-                          ? work.departmentIds.map((id: number) => getDepartmentName(id)).join('、')
-                          : getDepartmentName(work.departmentId ?? 0)}　
-                      计划完成时间：{getWorkDueDate(work) || '-'}
-                    </div>
-
-                    {work.progress && (
-                      <div className="text-sm text-gray-600 mt-1 break-words whitespace-pre-wrap overflow-hidden">
-                        进展情况：{work.progress}
-                      </div>
+        ) : (
+          <div className="divide-y divide-slate-100">
+            {finalList.map((work) => (
+              <div key={work.id} className={`flex items-start justify-between gap-4 min-w-0 rounded-lg hover:translate-x-0.5 transition ${getTypeAccent(work.type)}`}>
+                <div className="p-4 min-w-0">
+                  <div className="text-sm font-medium text-slate-700 break-words leading-snug">
+                    {work.title}
+                    {work.isInnovation && (
+                      <span className="ml-2 inline-flex items-center rounded-full bg-purple-50 text-purple-700 border border-purple-100 px-2.5 py-0.5 text-xs font-medium">
+                        创新工作
+                      </span>
                     )}
                   </div>
 
-                  <Link href={`/${getRouteType(work.type)}/${work.id}`}>
-                    <Button variant="outline" size="sm">
-                      <Eye className="h-4 w-4 mr-1" />
-                      查看
-                    </Button>
-                  </Link>
+                  <div className="text-xs text-slate-500 mt-1.5 flex items-center gap-2 flex-wrap">
+                    <span className={`font-medium ${getTypeText(work.type)}`}>{work.type}</span>
+                    <StatusBadge status={work.status} />
+                    <span className="text-slate-400">
+                      责任部门：{work.departmentIds && work.departmentIds.length > 0
+                        ? work.departmentIds.map((id: number) => getDepartmentName(id)).join('、')
+                        : getDepartmentName(work.departmentId ?? 0)}
+                    </span>
+                    <span className="text-slate-400">计划完成时间：{getWorkDueDate(work) || '-'}</span>
+                  </div>
+
+                  {work.progress && (
+                    <div className="text-xs text-slate-600 mt-1 break-words">
+                      进展情况：{work.progress}
+                    </div>
+                  )}
                 </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+
+                <Link href={`/${getRouteType(work.type)}/${work.id}`} className="shrink-0 pr-4 py-4">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-slate-50 border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:-translate-y-0.5 transition-all">
+                    <Eye className="h-3.5 w-3.5" />
+                    查看
+                  </span>
+                </Link>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

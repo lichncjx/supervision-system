@@ -1,9 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
 import { Eye } from 'lucide-react';
 import { StatusBadge } from '@/components/common/badges';
+import { workTypeColors } from '@/lib/status-colors';
 import type { Work } from '@/lib/work-store';
 
 interface PriorityMainWorkListItemProps {
@@ -13,59 +13,62 @@ interface PriorityMainWorkListItemProps {
 }
 
 export function PriorityMainWorkListItem({ item, routeType, getDepartmentName }: PriorityMainWorkListItemProps) {
+  const isPriority = item.type === '重点';
+  const c = isPriority ? workTypeColors.priority : workTypeColors.main;
+
   return (
-    <div className="space-y-2">
-      <div className="font-medium text-gray-900 break-words whitespace-pre-wrap overflow-hidden">
+    <div className={`rounded-xl border border-slate-200/80 bg-gradient-to-br ${c.gradient} p-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200`}>
+      <div className="text-sm font-semibold text-slate-800 break-words leading-snug">
         {item.workItem || item.title}
-        {item.type === '重点' && item.isInnovation && (
-          <span className="ml-2 inline-flex items-center rounded bg-purple-100 px-2 py-0.5 text-xs text-purple-700">
+        {item.isInnovation && (
+          <span className="ml-2 inline-flex items-center rounded-full bg-purple-50 text-purple-700 border border-purple-100 px-2.5 py-0.5 text-xs font-medium">
             创新工作
           </span>
         )}
       </div>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm text-gray-600">
-        <div className="break-words whitespace-pre-wrap overflow-hidden">
-          <span className="text-gray-500">工作节点：</span>
-          {item.workNode || '-'}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs mt-2">
+        <div className="break-words">
+          <span className="text-slate-400">工作节点：</span>
+          <span className="text-slate-600">{item.workNode || '-'}</span>
         </div>
         <div>
-          <span className="text-gray-500">计划完成时间：</span>
-          {item.completeTime || '-'}
+          <span className="text-slate-400">计划完成时间：</span>
+          <span className="text-slate-600">{item.completeTime || '-'}</span>
         </div>
         <div>
-          <span className="text-gray-500">完成形式：</span>
-          {item.completeForm || '-'}
+          <span className="text-slate-400">完成形式：</span>
+          <span className="text-slate-600">{item.completeForm || '-'}</span>
         </div>
         <div>
-          <span className="text-gray-500">责任部门：</span>
-          {getDepartmentName(item.departmentId ?? 0)}
+          <span className="text-slate-400">责任部门：</span>
+          <span className="text-slate-600">{getDepartmentName(item.departmentId ?? 0)}</span>
         </div>
         <div>
-          <span className="text-gray-500">责任领导：</span>
-          {item.deptLeaderName || item.responsibleLeader || '-'}
+          <span className="text-slate-400">责任领导：</span>
+          <span className="text-slate-600">{item.deptLeaderName || item.responsibleLeader || '-'}</span>
         </div>
         <div>
-          <span className="text-gray-500">主管人员：</span>
-          {item.deptManagerName || item.supervisor || '-'}
+          <span className="text-slate-400">主管人员：</span>
+          <span className="text-slate-600">{item.deptManagerName || item.supervisor || '-'}</span>
         </div>
         <div>
-          <span className="text-gray-500">状态：</span>
+          <span className="text-slate-400">状态：</span>
           <StatusBadge status={item.status} />
         </div>
         {item.adjustHistory && item.adjustHistory.length > 0 && (
-          <div className="text-sm text-purple-600 break-words">
+          <div className="text-xs text-purple-600 bg-purple-50/50 rounded px-2 py-1 break-words">
             原计划完成时间：{item.adjustHistory[item.adjustHistory.length - 1].fromTime || '-'}；
             现计划完成时间：{item.adjustHistory[item.adjustHistory.length - 1].toTime || '-'}
           </div>
         )}
       </div>
       {item.nodes && item.nodes.length > 0 && (
-        <div className="mt-2 text-sm text-gray-600 space-y-1">
+        <div className="mt-2 text-xs text-slate-600 space-y-1">
           {item.nodes.map((node: any) => (
             <div key={node.id} className="break-words">
               <div>节点：{node.title}{node.completeTime ? `（节点完成时间：${node.completeTime}）` : ''}</div>
               {node.children && node.children.length > 0 && (
-                <div className="pl-4 text-gray-500">
+                <div className="pl-4 text-slate-500">
                   {node.children.map((child: any) => (
                     <div key={child.id} className="break-words">
                       - {child.title}
@@ -78,12 +81,12 @@ export function PriorityMainWorkListItem({ item, routeType, getDepartmentName }:
           ))}
         </div>
       )}
-      <div className="mt-2 flex justify-end">
+      <div className="mt-3 flex justify-end">
         <Link href={`/${routeType}/${item.id}`}>
-          <Button variant="outline" size="sm">
-            <Eye className="h-4 w-4 mr-1" />
+          <span className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-sm font-medium hover:-translate-y-0.5 transition-all ${c.button}`}>
+            <Eye className="h-3.5 w-3.5" />
             查看
-          </Button>
+          </span>
         </Link>
       </div>
     </div>
