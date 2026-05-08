@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useSearchAndPagination } from '@/hooks/use-search-pagination';
 import Link from 'next/link';
 import { AlertTriangle, Eye } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
@@ -16,11 +17,14 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { StatusBadge } from '@/components/common/badges';
+import { WorkListPagination } from '@/components/work/work-list-pagination';
+import { WorkSearchBar } from '@/components/work/work-search-bar';
 
 export default function AlertPage() {
   const { user } = useAuth();
   const [works, setWorks] = useState<Work[]>([]);
   const [tab, setTab] = useState<'expiring' | 'overdue' | 'all'>('expiring');
+  const [keyword, setKeyword] = useState('');
   const [departments, setDepartments] = useState<Array<{ id: number; name: string; code: string; isBusiness: boolean }>>([]);
 
   useEffect(() => {
@@ -41,11 +45,25 @@ export default function AlertPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
-  if (!user) return null;
+  const expiringCount = useMemo(
+    () => works.filter((w) => isExpiringWork(w)).length,
+    [works]
+  );
+  const overdueCount = useMemo(
+    () => works.filter((w) => isOverdueWork(w)).length,
+    [works]
+  );
 
-  const expiring = sortWorksByDueDate(works.filter((w) => isExpiringWork(w)));
-  const overdue = sortWorksByDueDate(works.filter((w) => isOverdueWork(w)));
-  const list = tab === 'expiring' ? expiring : tab === 'overdue' ? overdue : works;
+  const baseList = useMemo(() => {
+    const expiring = sortWorksByDueDate(works.filter((w) => isExpiringWork(w)));
+    const overdue = sortWorksByDueDate(works.filter((w) => isOverdueWork(w)));
+    return tab === 'expiring' ? expiring : tab === 'overdue' ? overdue : works;
+  }, [works, tab]);
+
+  const { list, total, totalPages, page, setPage, pageSize, setPageSize } =
+    useSearchAndPagination(baseList, keyword, [tab, keyword]);
+
+  if (!user) return null;
 
   const getRouteType = (work: Work) => {
     if (work.type === '重点') return 'priority';
@@ -62,21 +80,24 @@ export default function AlertPage() {
 
       <div className="flex gap-2 border-b">
         <button onClick={() => setTab('expiring')} className={`px-4 py-2 ${tab === 'expiring' ? 'border-b-2 border-red-600 text-red-600' : ''}`}>
-          临期（{expiring.length}）
+          临期（{expiringCount}）
         </button>
         <button onClick={() => setTab('overdue')} className={`px-4 py-2 ${tab === 'overdue' ? 'border-b-2 border-red-600 text-red-600' : ''}`}>
-          超期（{overdue.length}）
+          超期（{overdueCount}）
         </button>
         <button onClick={() => setTab('all')} className={`px-4 py-2 ${tab === 'all' ? 'border-b-2 border-blue-600 text-blue-600' : ''}`}>
           全部事项
         </button>
       </div>
 
+      <WorkSearchBar keyword={keyword} onKeywordChange={setKeyword} total={total} page={page} totalPages={totalPages} />
+
       <Card>
         <CardContent className="p-0">
           {list.length === 0 ? (
             <div className="py-16 text-center text-gray-500">暂无数据</div>
           ) : (
+            <>
             <div className="divide-y">
               {list.map((work) => (
                 <div key={work.id} className="p-4 flex items-center justify-between hover:bg-gray-50">
@@ -107,6 +128,15 @@ export default function AlertPage() {
                 </div>
               ))}
             </div>
+            <WorkListPagination
+              page={page}
+              pageSize={pageSize}
+              total={total}
+              totalPages={totalPages}
+              onPageChange={setPage}
+              onPageSizeChange={(newSize) => { setPageSize(newSize); setPage(1); }}
+            />
+            </>
           )}
         </CardContent>
       </Card>
