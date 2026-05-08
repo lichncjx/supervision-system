@@ -229,7 +229,7 @@ export default function StatusFilterPage() {
         ) : (
           <div className="divide-y divide-slate-100">
             {finalList.map((work) => (
-              <div key={work.id} className="p-4 flex items-start justify-between gap-4 min-w-0 hover:bg-slate-50/50 transition-colors">
+              <div key={work.id} className="p-4 flex items-start justify-between gap-4 min-w-0 rounded-lg hover:bg-slate-50/50 hover:translate-x-0.5 transition">
                 <div className="min-w-0">
                   <div className="text-sm font-medium text-slate-700 break-words leading-snug">
                     {work.title}
