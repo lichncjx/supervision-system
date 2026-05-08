@@ -35,7 +35,7 @@ export function WorkAttachmentPanel({
 }: WorkAttachmentPanelProps) {
   return (
     <div className="rounded-xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50/50 p-5">
-      <h3 className="font-semibold text-slate-800 mb-3">附件管理</h3>
+      <h3 className="font-semibold text-slate-800 mb-4">附件管理</h3>
         <div className="flex items-center justify-between mb-4">
           <span className="text-sm font-medium">附件列表</span>
           {canUpload && (
@@ -97,7 +97,6 @@ export function WorkAttachmentPanel({
         ) : (
           <p className="text-slate-500 text-sm">暂无附件</p>
         )}
-      </div>
     </div>
   );
 }
