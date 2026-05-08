@@ -339,9 +339,9 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <h3 className="font-bold text-slate-800">待处理</h3>
-              {pendingProcesses.length > 0 && (
+              {(stats.approving + stats.handling) > 0 && (
                 <span className="inline-flex items-center justify-center min-w-[1.25rem] h-5 rounded-full bg-purple-100 text-purple-700 text-xs font-semibold px-1.5 tabular-nums">
-                  {pendingProcesses.length}
+                  {stats.approving + stats.handling}
                 </span>
               )}
             </div>
@@ -387,9 +387,9 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <h3 className="font-bold text-slate-800">临超期</h3>
-              {alertWorks.length > 0 && (
+              {(stats.expiring + stats.overdue) > 0 && (
                 <span className="inline-flex items-center justify-center min-w-[1.25rem] h-5 rounded-full bg-orange-100 text-orange-700 text-xs font-semibold px-1.5 tabular-nums">
-                  {alertWorks.length}
+                  {stats.expiring + stats.overdue}
                 </span>
               )}
             </div>
