@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchAndPagination } from '@/hooks/use-search-pagination';
 import Link from 'next/link';
 import { statusColors } from '@/lib/status-colors';
-import { ClipboardCheck, Eye, CheckCircle, XCircle } from 'lucide-react';
+import { ClipboardCheck, Eye, CheckCircle, XCircle, Play } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { getDepartments } from '@/lib/auth';
 import {
@@ -207,6 +207,7 @@ export default function ApprovalPage() {
                       {!canApproveWork(user!, work) && canHandleWork(user!, work) && (
                         <Link href={`/${getRouteType(work)}/${work.id}`}>
                           <span className="inline-flex items-center gap-1 rounded-full bg-sky-50 border border-sky-200 px-3 py-1.5 text-sm font-medium text-sky-600 hover:bg-sky-100 hover:-translate-y-0.5 transition-all">
+                            <Play className="h-3.5 w-3.5" />
                             处理
                           </span>
                         </Link>
