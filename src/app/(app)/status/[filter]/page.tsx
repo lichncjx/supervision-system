@@ -20,7 +20,7 @@ import {
 import { getDepartments, isCompanyLevel, isSupervisionAdmin } from '@/lib/auth';
 import { StatusBadge } from '@/components/common/badges';
 import { Input } from '@/components/ui/input';
-import { workTypeColors } from '@/lib/status-colors';
+import { getWorkTypeAccent, getWorkTypeText } from '@/lib/status-colors';
 
 type StatusPageFilter =
   | 'all'
@@ -97,17 +97,6 @@ export default function StatusFilterPage() {
     return departments.find((d) => d.id === id)?.name || '-';
   };
 
-  const getTypeAccent = (t: string) => {
-    if (t === '重点') return 'border-l-2 border-l-rose-400 bg-rose-50/20';
-    if (t === '主要') return 'border-l-2 border-l-sky-400 bg-sky-50/20';
-    return 'border-l-2 border-l-emerald-400 bg-emerald-50/20';
-  };
-
-  const getTypeText = (t: string) => {
-    if (t === '重点') return workTypeColors.priority.text;
-    if (t === '主要') return workTypeColors.main.text;
-    return workTypeColors.todo.text;
-  };
 
   React.useEffect(() => {
     const loadDepartments = async () => {
@@ -242,7 +231,7 @@ export default function StatusFilterPage() {
         ) : (
           <div className="divide-y divide-slate-100">
             {finalList.map((work) => (
-              <div key={work.id} className={`flex items-start justify-between gap-4 min-w-0 rounded-lg hover:translate-x-0.5 transition ${getTypeAccent(work.type)}`}>
+              <div key={work.id} className={`flex items-start justify-between gap-4 min-w-0 rounded-lg hover:translate-x-0.5 transition ${getWorkTypeAccent(work.type)}`}>
                 <div className="p-4 min-w-0">
                   <div className="text-sm font-medium text-slate-700 break-words leading-snug">
                     {work.title}
@@ -254,7 +243,7 @@ export default function StatusFilterPage() {
                   </div>
 
                   <div className="text-xs text-slate-500 mt-1.5 flex items-center gap-2 flex-wrap">
-                    <span className={`font-medium ${getTypeText(work.type)}`}>{work.type}</span>
+                    <span className={`font-medium ${getWorkTypeText(work.type)}`}>{work.type}</span>
                     <StatusBadge status={work.status} />
                     <span className="text-slate-400">
                       责任部门：{work.departmentIds && work.departmentIds.length > 0

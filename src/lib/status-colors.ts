@@ -64,6 +64,7 @@ export const workTypeColors = {
     gradient: 'from-red-50 to-rose-50/30',
     progress: 'bg-rose-500',
     button: 'bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100',
+    left: 'border-l-2 border-l-rose-400 bg-rose-50/20',
     icon: '★',
   },
   main: {
@@ -71,6 +72,7 @@ export const workTypeColors = {
     gradient: 'from-blue-50 to-sky-50/30',
     progress: 'bg-sky-500',
     button: 'bg-sky-50 text-sky-600 border-sky-200 hover:bg-sky-100',
+    left: 'border-l-2 border-l-sky-400 bg-sky-50/20',
     icon: '●',
   },
   todo: {
@@ -78,9 +80,22 @@ export const workTypeColors = {
     gradient: 'from-emerald-50 to-teal-50/30',
     progress: 'bg-emerald-500',
     button: 'bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100',
+    left: 'border-l-2 border-l-emerald-400 bg-emerald-50/20',
     icon: '✓',
   },
 } as const;
+
+export function getWorkTypeAccent(type: string): string {
+  if (type === '重点') return workTypeColors.priority.left;
+  if (type === '主要') return workTypeColors.main.left;
+  return workTypeColors.todo.left;
+}
+
+export function getWorkTypeText(type: string): string {
+  if (type === '重点') return workTypeColors.priority.text;
+  if (type === '主要') return workTypeColors.main.text;
+  return workTypeColors.todo.text;
+}
 
 export type StatusColorKey = keyof typeof statusColors;
 export type ExpiryColorKey = keyof typeof expiryColors;

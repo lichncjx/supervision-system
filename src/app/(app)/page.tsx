@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { statusColors, expiryColors, workTypeColors } from '@/lib/status-colors';
+import { statusColors, expiryColors, workTypeColors, getWorkTypeAccent } from '@/lib/status-colors';
 
 const pillColors = { ...statusColors, ...expiryColors };
 import { Textarea } from '@/components/ui/textarea';
@@ -317,9 +317,7 @@ export default function DashboardPage() {
             <div className="space-y-2">
               {alertWorks.slice(0, 5).map((work) => {
                 const date = work.completeTime || work.planCompleteTime
-                const borderColor = isOverdueWork(work)
-                  ? expiryColors.overdue.left
-                  : expiryColors.expiring.left
+                const borderColor = getWorkTypeAccent(work.type)
                 return (
                   <Link key={work.id} href={`/${work.type === '重点' ? 'priority' : work.type === '主要' ? 'main' : 'todo'}/${work.id}`}>
                     <div className={`border-l-2 rounded-lg p-3 hover:translate-x-0.5 transition min-w-0 ${borderColor}`}>
@@ -360,11 +358,7 @@ export default function DashboardPage() {
           ) : (
             <div className="space-y-2">
               {pendingProcesses.slice(0, 5).map((work) => {
-                const borderColor = canApproveWork(user, work)
-                  ? statusColors.approving.left
-                  : canHandleWork(user, work)
-                  ? statusColors.handling.left
-                  : statusColors.inProgress.left
+                const borderColor = getWorkTypeAccent(work.type)
                 return (
                   <Link key={work.id} href={`/${work.type === '重点' ? 'priority' : work.type === '主要' ? 'main' : 'todo'}/${work.id}`}>
                     <div className={`border-l-2 rounded-lg p-3 hover:translate-x-0.5 transition min-w-0 ${borderColor}`}>

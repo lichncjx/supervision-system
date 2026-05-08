@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchAndPagination } from '@/hooks/use-search-pagination';
 import Link from 'next/link';
-import { statusColors } from '@/lib/status-colors';
+import { getWorkTypeAccent } from '@/lib/status-colors';
 import { ClipboardCheck, Eye, CheckCircle, XCircle, Play } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { getDepartments } from '@/lib/auth';
@@ -138,13 +138,7 @@ export default function ApprovalPage() {
           <>
             <div className="divide-y divide-slate-100">
               {list.map((work) => {
-                const isApproving = canApproveWork(user!, work);
-                const isHandling = !isApproving && canHandleWork(user!, work);
-                const borderClass = isApproving
-                  ? statusColors.approving.left
-                  : isHandling
-                  ? statusColors.handling.left
-                  : statusColors.inProgress.left;
+                const borderClass = getWorkTypeAccent(work.type);
 
                 return (
                   <div key={work.id} className={`flex items-start justify-between hover:translate-x-0.5 transition min-w-0 ${borderClass}`}>
