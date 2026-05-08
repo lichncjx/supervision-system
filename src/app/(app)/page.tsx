@@ -275,36 +275,65 @@ export default function DashboardPage() {
         </Card>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Link href="/priority" className="block">
-          <Card className="hover:shadow-md transition cursor-pointer">
-            <CardContent className="p-6">
-              <p className="text-red-600 font-bold">重点工作</p>
-              <p className="text-3xl font-bold mt-3">{stats.priority}</p>
-              <p className="text-sm text-gray-500 mt-2">查看重点工作事项</p>
-            </CardContent>
-          </Card>
-        </Link>
+      <div className="stagger-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+        {[
+          {
+            href: '/priority',
+            label: '重点工作',
+            total: stats.priority,
+            completed: stats.priorityCompleted,
+            color: 'rose' as const,
+            gradient: 'from-red-50 to-rose-50/30',
+            icon: '★',
+          },
+          {
+            href: '/main',
+            label: '主要工作',
+            total: stats.main,
+            completed: stats.mainCompleted,
+            color: 'sky' as const,
+            gradient: 'from-blue-50 to-sky-50/30',
+            icon: '●',
+          },
+          {
+            href: '/todo',
+            label: '待办事项',
+            total: stats.todo,
+            completed: stats.todoCompleted,
+            color: 'emerald' as const,
+            gradient: 'from-emerald-50 to-teal-50/30',
+            icon: '✓',
+          },
+        ].map(({ href, label, total, completed, color, gradient, icon }) => {
+          const rate = total > 0 ? Math.round((completed / total) * 100) : 0
+          const colorMap = {
+            rose: { text: 'text-rose-600', progress: 'bg-rose-500', dot: 'bg-rose-500' },
+            sky: { text: 'text-sky-600', progress: 'bg-sky-500', dot: 'bg-sky-500' },
+            emerald: { text: 'text-emerald-600', progress: 'bg-emerald-500', dot: 'bg-emerald-500' },
+          }
+          const c = colorMap[color]
 
-        <Link href="/main" className="block">
-          <Card className="hover:shadow-md transition cursor-pointer">
-            <CardContent className="p-6">
-              <p className="text-blue-600 font-bold">主要工作</p>
-              <p className="text-3xl font-bold mt-3">{stats.main}</p>
-              <p className="text-sm text-gray-500 mt-2">查看主要工作事项</p>
-            </CardContent>
-          </Card>
-        </Link>
-
-        <Link href="/todo" className="block">
-          <Card className="hover:shadow-md transition cursor-pointer">
-            <CardContent className="p-6">
-              <p className="text-green-600 font-bold">待办事项</p>
-              <p className="text-3xl font-bold mt-3">{stats.todo}</p>
-              <p className="text-sm text-gray-500 mt-2">查看待办事项</p>
-            </CardContent>
-          </Card>
-        </Link>
+          return (
+            <Link key={href} href={href} className="block group">
+              <div className={`rounded-xl border border-slate-200/80 bg-gradient-to-br ${gradient} p-5 hover:shadow-lg hover:-translate-y-1 transition-all duration-200`}>
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-medium text-slate-600">{label}</span>
+                  <span className={`text-lg ${c.text}`}>{icon}</span>
+                </div>
+                <p className={`text-4xl font-extrabold ${c.text} tabular-nums`}>{total}</p>
+                <div className="mt-3 flex items-center gap-2">
+                  <span className="text-sm font-semibold text-slate-700 tabular-nums">{rate}%</span>
+                  <div className="h-2 flex-1 rounded-full bg-slate-200 overflow-hidden">
+                    <div className={`h-full rounded-full ${c.progress} transition-all`} style={{ width: `${rate}%` }} />
+                  </div>
+                </div>
+                <p className="mt-2 text-xs text-slate-500">
+                  已完成 {completed}/{total}
+                </p>
+              </div>
+            </Link>
+          )
+        })}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
