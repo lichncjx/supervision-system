@@ -1,10 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Building, Settings, Users, Plus, Trash2, Power, KeyRound, Eye, EyeOff } from 'lucide-react';
+import { Building2, Settings, ShieldCheck, Users, Plus, Trash2, Power, KeyRound, Eye, EyeOff, Pencil } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { getRoleName, type Role } from '@/lib/auth';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -327,7 +326,7 @@ export default function AdminPage() {
             <p className="text-sm text-slate-500">部门数量</p>
             <p className="text-3xl font-bold">{departments.length}</p>
           </div>
-          <Building className="h-8 w-8 text-blue-600" />
+          <Building2 className="h-8 w-8 text-blue-600" />
         </div>
 
         <div className="bg-gradient-to-br from-white to-slate-50/50 rounded-xl p-6 flex items-center justify-between border border-slate-200/80 hover:shadow-md transition-shadow">
@@ -343,60 +342,63 @@ export default function AdminPage() {
             <p className="text-sm text-slate-500">角色数量</p>
             <p className="text-3xl font-bold">6</p>
           </div>
-          <Settings className="h-8 w-8 text-purple-600" />
+          <ShieldCheck className="h-8 w-8 text-purple-600" />
         </div>
       </div>
 
       <div className="rounded-xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50/50 overflow-hidden">
         <h2 className="font-semibold text-slate-800 px-5 pt-5">新增用户账号</h2>
-        <div className="p-5 grid grid-cols-1 md:grid-cols-6 gap-3 items-end">
-          <div>
-            <label className="text-sm font-medium">姓名</label>
-            <Input
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              placeholder="如：张三"
-            />
-          </div>
-
-          <div>
-            <label className="text-sm font-medium">用户名</label>
-            <Input
-              value={form.username}
-              onChange={(e) => setForm({ ...form, username: e.target.value })}
-              placeholder="如：zhangsan"
-            />
-          </div>
-
-          <div>
-            <label className="text-sm font-medium">初始密码</label>
-            <div className="relative">
+        <div className="p-5">
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="flex-1 min-w-[120px]">
+              <label className="block text-xs font-medium text-slate-400 mb-1">姓名</label>
               <Input
-                type={showCreatePassword ? 'text' : 'password'}
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-                placeholder="默认123456"
-                className="pr-10"
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                placeholder="如：张三"
+                className="rounded-full"
               />
-              <button
-                type="button"
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500"
-                onClick={() => setShowCreatePassword(!showCreatePassword)}
-              >
-                {showCreatePassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
             </div>
-          </div>
 
-          <div>
-            <label className="text-sm font-medium">角色</label>
-            <select
-              className="rounded-full border-slate-200 bg-slate-50 h-10 px-4 w-full text-sm text-slate-600"
-              value={form.role}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  role: e.target.value as Role,
+            <div className="flex-1 min-w-[120px]">
+              <label className="block text-xs font-medium text-slate-400 mb-1">用户名</label>
+              <Input
+                value={form.username}
+                onChange={(e) => setForm({ ...form, username: e.target.value })}
+                placeholder="如：zhangsan"
+                className="rounded-full"
+              />
+            </div>
+
+            <div className="flex-1 min-w-[140px]">
+              <label className="block text-xs font-medium text-slate-400 mb-1">初始密码</label>
+              <div className="relative">
+                <Input
+                  type={showCreatePassword ? 'text' : 'password'}
+                  value={form.password}
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  placeholder="默认123456"
+                  className="pr-10 rounded-full"
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  onClick={() => setShowCreatePassword(!showCreatePassword)}
+                >
+                  {showCreatePassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+
+            <div className="w-[140px]">
+              <label className="block text-xs font-medium text-slate-400 mb-1">角色</label>
+              <select
+                className="rounded-full border-slate-200 bg-slate-50 h-10 px-4 w-full text-sm text-slate-600"
+                value={form.role}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    role: e.target.value as Role,
                   departmentId:
                     e.target.value === 'ADMIN' ||
                     e.target.value === 'SUPERVISOR' ||
@@ -415,8 +417,8 @@ export default function AdminPage() {
             </select>
           </div>
 
-          <div>
-            <label className="text-sm font-medium">所属部门</label>
+          <div className="w-[150px]">
+            <label className="block text-xs font-medium text-slate-400 mb-1">所属部门</label>
             <select
               className="rounded-full border-slate-200 bg-slate-50 h-10 px-4 w-full text-sm text-slate-600"
               value={form.departmentId}
@@ -433,10 +435,11 @@ export default function AdminPage() {
             </select>
           </div>
 
-          <Button className="rounded-full" onClick={handleAddUser}>
-            <Plus className="h-4 w-4 mr-1" />
+          <button onClick={handleAddUser} className="inline-flex items-center gap-1.5 rounded-full bg-slate-800 px-5 py-2.5 text-sm font-medium text-white hover:bg-slate-900 transition-colors">
+            <Plus className="h-4 w-4" />
             新增
-          </Button>
+          </button>
+        </div>
         </div>
       </div>
 
@@ -457,40 +460,36 @@ export default function AdminPage() {
         <div className="p-5">
           <div className="space-y-3">
             {pagedUsers.map((u) => (
-              <div key={u.id} className="flex items-center justify-between p-4 rounded-xl border border-slate-200">
-                <div>
-                  <p className="font-medium">
-                    {u.name}
-                    {!u.isActive && <span className="ml-2 text-red-600 text-sm">已停用</span>}
-                    {u.isProtected && <Badge className="ml-2" variant="outline">内置账号</Badge>}
-                  </p>
-                  <p className="text-sm text-slate-500">
-                    用户名：{u.username}
+              <div key={u.id} className="group flex items-center gap-4 px-4 py-3 rounded-xl border border-slate-100 hover:border-slate-200 hover:bg-white hover:shadow-sm transition-all duration-200">
+                <div className={`shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold ${u.isActive ? 'bg-slate-100 text-slate-600 ring-1 ring-slate-200' : 'bg-red-50 text-red-500 ring-1 ring-red-200'}`}>
+                  {u.name.charAt(0)}
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold text-slate-800">{u.name}</span>
+                    {!u.isActive && <span className="text-[10px] font-medium text-red-500 bg-red-50 px-1.5 py-0.5 rounded-full">已停用</span>}
+                    {u.isProtected && <span className="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full">内置账号</span>}
+                    <span className="text-xs text-slate-400">@{u.username}</span>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    {u.departmentName} · <span className="text-slate-500">{getRoleName(u.role)}</span>
                   </p>
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <Badge variant="outline">{getRoleName(u.role)}</Badge>
-                  <span className="text-sm text-slate-500">{u.departmentName}</span>
-
-                  <Button size="sm" variant="outline" className="rounded-full" onClick={() => openEditDialog(u)}>
-                    编辑
-                  </Button>
-
-                  <Button size="sm" variant="outline" className="rounded-full" onClick={() => openAdminPasswordDialog(u)}>
-                    <KeyRound className="h-4 w-4 mr-1" />
-                    修改密码
-                  </Button>
-
-                  <Button size="sm" variant="outline" className="rounded-full" onClick={() => handleToggleActive(u)}>
-                    <Power className="h-4 w-4 mr-1" />
-                    {u.isActive ? '停用' : '启用'}
-                  </Button>
-
-                  <Button size="sm" variant="destructive" className="rounded-full" onClick={() => handleDelete(u)} disabled={u.isProtected}>
-                    <Trash2 className="h-4 w-4 mr-1" />
-                    删除
-                  </Button>
+                <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button onClick={() => openEditDialog(u)} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors" title="编辑">
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                  <button onClick={() => openAdminPasswordDialog(u)} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors" title="修改密码">
+                    <KeyRound className="w-4 h-4" />
+                  </button>
+                  <button onClick={() => handleToggleActive(u)} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors" title={u.isActive ? '停用' : '启用'}>
+                    <Power className="w-4 h-4" />
+                  </button>
+                  <button onClick={() => handleDelete(u)} disabled={u.isProtected} className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors disabled:opacity-20 disabled:hover:bg-transparent" title="删除">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
             ))}
@@ -519,16 +518,26 @@ export default function AdminPage() {
       </div>
 
       <div className="rounded-xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50/50 overflow-hidden">
-        <h2 className="font-semibold text-slate-800 px-5 pt-5">部门列表（固定17个）</h2>
+        <h2 className="font-semibold text-slate-800 px-5 pt-5">部门列表</h2>
         <div className="p-5">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {departments.map((dept) => (
-              <div key={dept.id} className="p-4 bg-white/60 border border-slate-200 rounded-xl">
-                <p className="font-medium">{dept.name}</p>
-                <p className="text-sm text-slate-500">
-                  ID: {dept.id} / {dept.code}
-                  {!dept.isBusiness && <span className="ml-2 text-slate-400">(非业务部门)</span>}
-                </p>
+          <div className="flex flex-wrap gap-2">
+            {departments.map((dept, i) => (
+              <div
+                key={dept.id}
+                className="group inline-flex items-center gap-2.5 pl-3 pr-4 py-2.5 rounded-full border border-slate-200/80 bg-white/60 hover:bg-white hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
+                style={{ animationDelay: `${i * 40}ms` }}
+              >
+                <span className="text-[11px] font-bold tracking-wider text-slate-400 font-mono tabular-nums">
+                  {dept.code}
+                </span>
+                <span className="text-sm font-medium text-slate-700">{dept.name}</span>
+                <span
+                  className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                    dept.isBusiness
+                      ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.3)]'
+                      : 'bg-slate-300'
+                  }`}
+                />
               </div>
             ))}
           </div>
