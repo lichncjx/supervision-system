@@ -20,7 +20,7 @@ import { StatusBadge } from '@/components/common/badges';
 export default function AlertPage() {
   const { user } = useAuth();
   const [works, setWorks] = useState<Work[]>([]);
-  const [tab, setTab] = useState<'alert' | 'all'>('alert');
+  const [tab, setTab] = useState<'expiring' | 'overdue' | 'all'>('expiring');
   const [departments, setDepartments] = useState<Array<{ id: number; name: string; code: string; isBusiness: boolean }>>([]);
 
   useEffect(() => {
@@ -43,8 +43,9 @@ export default function AlertPage() {
 
   if (!user) return null;
 
-  const alert = sortWorksByDueDate(works.filter((w) => isExpiringWork(w) || isOverdueWork(w)));
-  const list = tab === 'alert' ? alert : works;
+  const expiring = sortWorksByDueDate(works.filter((w) => isExpiringWork(w)));
+  const overdue = sortWorksByDueDate(works.filter((w) => isOverdueWork(w)));
+  const list = tab === 'expiring' ? expiring : tab === 'overdue' ? overdue : works;
 
   const getRouteType = (work: Work) => {
     if (work.type === '重点') return 'priority';
@@ -60,8 +61,11 @@ export default function AlertPage() {
       </h1>
 
       <div className="flex gap-2 border-b">
-        <button onClick={() => setTab('alert')} className={`px-4 py-2 ${tab === 'alert' ? 'border-b-2 border-red-600 text-red-600' : ''}`}>
-          临超期（{alert.length}）
+        <button onClick={() => setTab('expiring')} className={`px-4 py-2 ${tab === 'expiring' ? 'border-b-2 border-red-600 text-red-600' : ''}`}>
+          临期（{expiring.length}）
+        </button>
+        <button onClick={() => setTab('overdue')} className={`px-4 py-2 ${tab === 'overdue' ? 'border-b-2 border-red-600 text-red-600' : ''}`}>
+          超期（{overdue.length}）
         </button>
         <button onClick={() => setTab('all')} className={`px-4 py-2 ${tab === 'all' ? 'border-b-2 border-blue-600 text-blue-600' : ''}`}>
           全部事项

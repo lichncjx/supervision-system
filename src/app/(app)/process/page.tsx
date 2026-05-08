@@ -9,7 +9,6 @@ import {
   approveWork,
   canApproveWork,
   canHandleWork,
-  canProcessWork,
   getActionName,
   getVisibleWorks,
   rejectWork,
@@ -23,7 +22,7 @@ import { StatusBadge } from '@/components/common/badges';
 export default function ApprovalPage() {
   const { user } = useAuth();
   const [works, setWorks] = useState<Work[]>([]);
-  const [tab, setTab] = useState<'pending' | 'all'>('pending');
+  const [tab, setTab] = useState<'approving' | 'handling' | 'all'>('approving');
   const [departments, setDepartments] = useState<Array<{ id: number; name: string; code: string; isBusiness: boolean }>>([]);
 
   useEffect(() => {
@@ -52,8 +51,9 @@ export default function ApprovalPage() {
     return <div className="p-8 text-center text-red-600">无权限访问待我处理</div>;
   }
 
-  const pending = sortWorksByDueDate(works.filter((w) => canProcessWork(user, w)));
-  const list = tab === 'pending' ? pending : works;
+  const approving = sortWorksByDueDate(works.filter((w) => canApproveWork(user, w)));
+  const handling = sortWorksByDueDate(works.filter((w) => canHandleWork(user, w)));
+  const list = tab === 'approving' ? approving : tab === 'handling' ? handling : works;
 
   const handleApprove = async (work: Work) => {
     if (!user) return;
@@ -91,8 +91,11 @@ export default function ApprovalPage() {
       </h1>
 
       <div className="flex gap-2 border-b">
-        <button onClick={() => setTab('pending')} className={`px-4 py-2 ${tab === 'pending' ? 'border-b-2 border-blue-600 text-blue-600' : ''}`}>
-          待我处理（{pending.length}）
+        <button onClick={() => setTab('approving')} className={`px-4 py-2 ${tab === 'approving' ? 'border-b-2 border-blue-600 text-blue-600' : ''}`}>
+          待我审批（{approving.length}）
+        </button>
+        <button onClick={() => setTab('handling')} className={`px-4 py-2 ${tab === 'handling' ? 'border-b-2 border-blue-600 text-blue-600' : ''}`}>
+          待我办理（{handling.length}）
         </button>
         <button onClick={() => setTab('all')} className={`px-4 py-2 ${tab === 'all' ? 'border-b-2 border-blue-600 text-blue-600' : ''}`}>
           全部事项
