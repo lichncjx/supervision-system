@@ -3,11 +3,7 @@ import prisma from '@/lib/prisma';
 import { verifyToken } from '@/lib/server-auth';
 import { formatDate, processNodesForDisplay, processAdjustHistory, convertToDateTime } from '@/lib/utils';
 import { Role } from '@prisma/client';
-
-const ROLES_CAN_VIEW_ALL: Role[] = [Role.ADMIN, Role.SUPERVISOR, Role.VICE_PRESIDENT, Role.PRESIDENT];
-const ROLES_CAN_EDIT_ALL: Role[] = [Role.ADMIN, Role.SUPERVISOR];
-const ROLES_CAN_EDIT_DEPT: Role[] = [Role.DEPARTMENT_MANAGER, Role.DEPARTMENT_LEADER];
-const ALLOWED_EDIT_STATUS: string[] = ['DRAFT', 'REJECTED'];
+import { canEditWorkItem, canViewWorkItem } from '@/lib/server-permissions';
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -58,10 +54,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: '事项不存在' }, { status: 404 });
     }
 
-    if (!ROLES_CAN_VIEW_ALL.includes(currentUser.role)) {
-      if (work.departmentId !== currentUser.departmentId) {
-        return NextResponse.json({ error: '无权限访问此事项' }, { status: 403 });
-      }
+    if (!canViewWorkItem(currentUser, work)) {
+      return NextResponse.json({ error: '无权限访问此事项' }, { status: 403 });
     }
 
 
@@ -72,6 +66,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       type: work.type === 'PRIORITY' ? '重点' : work.type === 'MAIN' ? '主要' : '待办',
       status: work.status,
       departmentId: work.departmentId,
+      departmentIds: work.departmentIds as number[] || [],
       departmentName: work.department?.name || '-',
       creatorId: work.creatorId,
       creatorName: work.creator?.name || '-',
@@ -161,18 +156,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: '事项不存在' }, { status: 404 });
     }
 
-    if (!ALLOWED_EDIT_STATUS.includes(work.status)) {
-      return NextResponse.json({ error: '只能修改草稿或已退回状态的事项' }, { status: 403 });
-    }
-
-    if (!ROLES_CAN_EDIT_ALL.includes(currentUser.role)) {
-      if (ROLES_CAN_EDIT_DEPT.includes(currentUser.role)) {
-        if (work.departmentId !== currentUser.departmentId) {
-          return NextResponse.json({ error: '只能修改本部门事项' }, { status: 403 });
-        }
-      } else {
-        return NextResponse.json({ error: '权限不足' }, { status: 403 });
-      }
+    if (!canEditWorkItem(currentUser, work)) {
+      return NextResponse.json({ error: '只能修改草稿或已退回状态的本权限事项' }, { status: 403 });
     }
 
     const body = await request.json();

@@ -3,8 +3,8 @@ import prisma from '@/lib/prisma';
 import { verifyToken } from '@/lib/server-auth';
 import { formatDate, processNodesForDisplay, processAdjustHistory, convertToDateTime } from '@/lib/utils';
 import { Role, WorkItemType, WorkItemStatus } from '@prisma/client';
+import { buildWorkVisibilityWhere } from '@/lib/server-permissions';
 
-const ROLES_CAN_VIEW_ALL: Role[] = [Role.ADMIN, Role.SUPERVISOR, Role.VICE_PRESIDENT, Role.PRESIDENT];
 const ROLES_CAN_CREATE_ALL: Role[] = [Role.ADMIN, Role.SUPERVISOR];
 const ROLES_CAN_CREATE_TODO_ONLY: Role[] = [Role.VICE_PRESIDENT, Role.PRESIDENT];
 const ROLES_CAN_CREATE_DEPT: Role[] = [Role.DEPARTMENT_MANAGER, Role.DEPARTMENT_LEADER];
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
     const departmentId = searchParams.get('departmentId');
     const keyword = searchParams.get('keyword');
 
-    let where: any = {};
+    const filters: any[] = [buildWorkVisibilityWhere(currentUser)];
 
     if (type) {
       let workType: WorkItemType;
@@ -50,31 +50,38 @@ export async function GET(request: NextRequest) {
       } else {
         return NextResponse.json({ error: '无效的事项类型' }, { status: 400 });
       }
-      where.type = workType;
+      filters.push({ type: workType });
     }
 
     if (status) {
-      where.status = status;
+      filters.push({ status });
     }
 
-    if (!ROLES_CAN_VIEW_ALL.includes(currentUser.role)) {
-      where.departmentId = currentUser.departmentId;
-    }
-
-    if (departmentId && ROLES_CAN_VIEW_ALL.includes(currentUser.role)) {
-      where.departmentId = Number(departmentId);
+    if (departmentId) {
+      const id = Number(departmentId);
+      filters.push({
+        OR: [
+          { departmentId: id },
+          { departmentIds: { has: id } },
+          { cooperateDepartmentIds: { has: id } },
+        ],
+      });
     }
 
     if (keyword) {
-      where.OR = [
-        { title: { contains: keyword, mode: 'insensitive' } },
-        { workItem: { contains: keyword, mode: 'insensitive' } },
-        { businessCategory: { contains: keyword, mode: 'insensitive' } },
-        { proposedScene: { contains: keyword, mode: 'insensitive' } },
-        { progress: { contains: keyword, mode: 'insensitive' } },
-        { workPlan: { contains: keyword, mode: 'insensitive' } },
-      ];
+      filters.push({
+        OR: [
+          { title: { contains: keyword, mode: 'insensitive' } },
+          { workItem: { contains: keyword, mode: 'insensitive' } },
+          { businessCategory: { contains: keyword, mode: 'insensitive' } },
+          { proposedScene: { contains: keyword, mode: 'insensitive' } },
+          { progress: { contains: keyword, mode: 'insensitive' } },
+          { workPlan: { contains: keyword, mode: 'insensitive' } },
+        ],
+      });
     }
+
+    const where = filters.length > 1 ? { AND: filters } : filters[0];
 
     const works = await prisma.workItem.findMany({
       where,

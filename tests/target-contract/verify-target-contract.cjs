@@ -202,17 +202,14 @@ async function verifyWorksVisibility(baseUrl, loginByUsername, userByUsername, w
       .map((work) => work.id)
       .sort((a, b) => a - b);
 
-    const expectedFailure = ['vp_a', 'vp_b', 'president', 'dept_leader_b', 'dept_manager_b1'].includes(userDef.username);
     record({
       role: userDef.username,
       endpoint: 'GET /api/works',
       actual: actualIds,
       expected: expectedIds,
-      expectedFailure,
+      expectedFailure: false,
       note: [
-        expectedFailure
-          ? 'Target: visibility follows docs/权限规则.md. Company leaders see proposed/assigned/current-approval scope only; department users see responsible/cooperate department scope. Current /api/works uses broad company role scope and departmentId-only department scope.'
-          : '',
+        'Phase 2 closeout: /api/works now follows target visibility scope for company leaders and department responsible/cooperate departments.',
         responseError(response) ? `Non-array response: ${JSON.stringify(responseError(response))}` : '',
       ].filter(Boolean).join(' '),
     });
@@ -241,9 +238,9 @@ async function verifyTargetPermissionFacts(baseUrl, loginByUsername, works) {
       endpoint: 'target fact: VP_A cannot see VP_B work by default',
       actual: { visible: vpASeesVpB.visible },
       expected: { visible: false },
-      expectedFailure: true,
+      expectedFailure: false,
       note: [
-        'Target: VICE_PRESIDENT does not see another VP’s work by default. Current company-level /api/works scope returns all work items to VICE_PRESIDENT.',
+        'Phase 2 closeout: VICE_PRESIDENT no longer sees another VP work by default.',
         vpASeesVpB.responseError ? `Non-array response: ${JSON.stringify(vpASeesVpB.responseError)}` : '',
       ].filter(Boolean).join(' '),
     },
@@ -259,9 +256,9 @@ async function verifyTargetPermissionFacts(baseUrl, loginByUsername, works) {
       endpoint: 'target fact: responsibleDepartmentIds grant visibility',
       actual: { visible: managerBSeesResponsible.visible },
       expected: { visible: true },
-      expectedFailure: true,
+      expectedFailure: false,
       note: [
-        'Target: responsibleDepartmentIds/departmentIds grant organization visibility. Current /api/works department user scope only filters scalar departmentId.',
+        'Phase 2 closeout: responsibleDepartmentIds/departmentIds grant organization visibility.',
         managerBSeesResponsible.responseError ? `Non-array response: ${JSON.stringify(managerBSeesResponsible.responseError)}` : '',
       ].filter(Boolean).join(' '),
     },
@@ -270,9 +267,9 @@ async function verifyTargetPermissionFacts(baseUrl, loginByUsername, works) {
       endpoint: 'target fact: cooperateDepartmentIds grant visibility',
       actual: { visible: managerBSeesCooperate.visible },
       expected: { visible: true },
-      expectedFailure: true,
+      expectedFailure: false,
       note: [
-        'Target: cooperateDepartmentIds grant organization visibility. Current /api/works department user scope only filters scalar departmentId.',
+        'Phase 2 closeout: cooperateDepartmentIds grant organization visibility.',
         managerBSeesCooperate.responseError ? `Non-array response: ${JSON.stringify(managerBSeesCooperate.responseError)}` : '',
       ].filter(Boolean).join(' '),
     },
@@ -289,11 +286,11 @@ async function verifyCompletionRate(baseUrl, loginByUsername, deptByCode, works)
 
   const expectedFailureByDeptCode = {
     TDA: false,
-    TDB: true,
+    TDB: false,
   };
   const noteByDeptCode = {
     TDA: 'Target: completion-rate uses responsible department ownership and excludes cooperate departments. Current fixture for department A currently matches this target case, so it should pass.',
-    TDB: 'Target: completion-rate uses responsibleDepartmentIds for ownership and excludes cooperate departments. Current completion-rate API uses scalar departmentId, so the department B multi-responsible case remains an expected failure.',
+    TDB: 'Phase 2 closeout: completion-rate uses responsibleDepartmentIds/departmentIds for ownership and excludes cooperate departments, including the department B multi-responsible case.',
   };
 
   for (const code of ['TDA', 'TDB']) {

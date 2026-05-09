@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getUserFromToken } from '@/lib/server-auth';
-
-function isCompanyLevelRole(role: string): boolean {
-  const companyRoles: string[] = ['ADMIN', 'SUPERVISOR', 'VICE_PRESIDENT', 'PRESIDENT'];
-  return companyRoles.includes(role);
-}
+import {
+  buildWorkVisibilityWhere,
+  getResponsibleDepartmentIds,
+  isDepartmentLevelRole,
+  isGlobalViewRole,
+} from '@/lib/server-permissions';
 
 interface DepartmentStats {
   departmentId: number;
@@ -26,6 +27,7 @@ interface DepartmentStats {
 async function getDepartmentStats(
   departmentId: number,
   departmentName: string,
+  visibilityWhere: any,
   typeFilter?: string,
   startDate?: Date,
   endDate?: Date
@@ -38,42 +40,51 @@ async function getDepartmentStats(
     dateFilter.lte = end;
   }
 
-  const baseWhere: any = { departmentId };
+  const filters: any[] = [
+    visibilityWhere,
+    {
+      OR: [
+        { departmentId },
+        { departmentIds: { has: departmentId } },
+      ],
+    },
+  ];
+
   if (Object.keys(dateFilter).length > 0) {
-    baseWhere.createdAt = dateFilter;
+    filters.push({ createdAt: dateFilter });
   }
 
-  const priorityWhere = { ...baseWhere, type: 'PRIORITY' as const };
-  const mainWhere = { ...baseWhere, type: 'MAIN' as const };
-  const todoWhere = { ...baseWhere, type: 'TODO' as const };
+  if (typeFilter) {
+    filters.push({ type: typeFilter.toUpperCase() });
+  }
 
-  const overdueCondition = {
-    status: { notIn: ['COMPLETED', 'CANCELLED'] as const },
-    OR: [
-      { type: { in: ['PRIORITY', 'MAIN'] as const }, completeTime: { lt: new Date() } },
-      { type: 'TODO' as const, planCompleteTime: { lt: new Date() } },
-    ],
+  const works = await prisma.workItem.findMany({
+    where: { AND: filters },
+  });
+
+  const responsibleWorks = works.filter((work) =>
+    getResponsibleDepartmentIds(work).includes(departmentId)
+  );
+
+  const priority = responsibleWorks.filter((work) => work.type === 'PRIORITY');
+  const main = responsibleWorks.filter((work) => work.type === 'MAIN');
+  const todo = responsibleWorks.filter((work) => work.type === 'TODO');
+  const isCompleted = (work: (typeof responsibleWorks)[number]) => work.status === 'COMPLETED';
+  const isCancelled = (work: (typeof responsibleWorks)[number]) => work.status === 'CANCELLED';
+  const isOverdue = (work: (typeof responsibleWorks)[number]) => {
+    if (isCompleted(work) || isCancelled(work)) return false;
+    const due = work.type === 'TODO' ? work.planCompleteTime : work.completeTime;
+    return due ? due < new Date() : false;
   };
 
-  const [
-    priorityTotal,
-    priorityCompleted,
-    mainTotal,
-    mainCompleted,
-    todoTotal,
-    todoCompleted,
-    cancelled,
-    overdue,
-  ] = await Promise.all([
-    prisma.workItem.count({ where: priorityWhere }),
-    prisma.workItem.count({ where: { ...priorityWhere, status: 'COMPLETED' } }),
-    prisma.workItem.count({ where: mainWhere }),
-    prisma.workItem.count({ where: { ...mainWhere, status: 'COMPLETED' } }),
-    prisma.workItem.count({ where: todoWhere }),
-    prisma.workItem.count({ where: { ...todoWhere, status: 'COMPLETED' } }),
-    prisma.workItem.count({ where: { ...baseWhere, status: 'CANCELLED' } }),
-    prisma.workItem.count({ where: { ...baseWhere, ...overdueCondition } }),
-  ]);
+  const priorityTotal = priority.length;
+  const priorityCompleted = priority.filter(isCompleted).length;
+  const mainTotal = main.length;
+  const mainCompleted = main.filter(isCompleted).length;
+  const todoTotal = todo.length;
+  const todoCompleted = todo.filter(isCompleted).length;
+  const cancelled = responsibleWorks.filter(isCancelled).length;
+  const overdue = responsibleWorks.filter(isOverdue).length;
 
   const total = priorityTotal + mainTotal + todoTotal;
   const completed = priorityCompleted + mainCompleted + todoCompleted;
@@ -109,7 +120,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: '登录已过期' }, { status: 401 });
     }
 
-    const isCompanyLevel = isCompanyLevelRole(currentUser.role);
+    const visibilityWhere = buildWorkVisibilityWhere(currentUser);
 
     const { searchParams } = new URL(request.url);
     const typeFilter = searchParams.get('type');
@@ -120,22 +131,40 @@ export async function GET(request: NextRequest) {
     const endDate = endDateStr ? new Date(endDateStr) : undefined;
 
     let departments;
-    if (isCompanyLevel) {
+    if (isGlobalViewRole(currentUser.role)) {
       departments = await prisma.department.findMany({
         where: { isBusiness: true },
         select: { id: true, name: true },
         orderBy: { name: 'asc' },
       });
-    } else {
+    } else if (isDepartmentLevelRole(currentUser.role)) {
       const dept = await prisma.department.findUnique({
         where: { id: currentUser.departmentId },
         select: { id: true, name: true },
       });
       departments = dept ? [dept] : [];
+    } else {
+      const visibleWorks = await prisma.workItem.findMany({
+        where: visibilityWhere,
+        select: {
+          departmentId: true,
+          departmentIds: true,
+        },
+      });
+      const departmentIds = Array.from(
+        new Set(visibleWorks.flatMap((work) => getResponsibleDepartmentIds(work)))
+      );
+      departments = departmentIds.length > 0
+        ? await prisma.department.findMany({
+            where: { id: { in: departmentIds }, isBusiness: true },
+            select: { id: true, name: true },
+            orderBy: { name: 'asc' },
+          })
+        : [];
     }
 
     const statsPromises = departments.map((dept) =>
-      getDepartmentStats(dept.id, dept.name, typeFilter || undefined, startDate, endDate)
+      getDepartmentStats(dept.id, dept.name, visibilityWhere, typeFilter || undefined, startDate, endDate)
     );
 
     const stats = await Promise.all(statsPromises);
