@@ -17,8 +17,70 @@ interface ImportRow {
 }
 
 function isCompanyLevelRole(role: string): boolean {
-  const companyRoles: string[] = ['ADMIN', 'SUPERVISOR', 'VICE_PRESIDENT', 'PRESIDENT'];
-  return companyRoles.includes(role);
+  return role === Role.ADMIN || role === Role.SUPERVISOR;
+}
+
+function isDepartmentImportRole(role: string): boolean {
+  return role === Role.DEPARTMENT_LEADER || role === Role.DEPARTMENT_MANAGER;
+}
+
+function getImportResponsibleDepartmentIds(data: any): number[] {
+  if (Array.isArray(data.departmentIds) && data.departmentIds.length > 0) {
+    return data.departmentIds;
+  }
+  return data.departmentId ? [data.departmentId] : [];
+}
+
+function validateImportScope(
+  currentUser: { id: number; role: string; departmentId: number },
+  row: ImportRow,
+): ValidationError | null {
+  const responsibleDepartmentIds = getImportResponsibleDepartmentIds(row.data);
+
+  if (isCompanyLevelRole(currentUser.role)) {
+    return null;
+  }
+
+  if (isDepartmentImportRole(currentUser.role)) {
+    if (!responsibleDepartmentIds.includes(currentUser.departmentId)) {
+      return {
+        row: row.row,
+        field: '主责部门',
+        value: row.data.departmentName || row.data.departmentNames?.join('/') || '',
+        reason: '部门用户只能导入主责部门包含本部门的事项；配合部门不能替代主责部门授权',
+      };
+    }
+    return null;
+  }
+
+  if (currentUser.role === Role.VICE_PRESIDENT || currentUser.role === Role.PRESIDENT) {
+    if (row.data.type !== 'TODO') {
+      return {
+        row: row.row,
+        field: '事项类型',
+        value: row.data.type,
+        reason: '公司领导普通导入仅允许导入本人提出或本人审批的待办事项',
+      };
+    }
+
+    const leaderIds = [row.data.proposedLeaderId, row.data.approvalLeaderId].filter(Boolean);
+    if (!leaderIds.includes(currentUser.id)) {
+      return {
+        row: row.row,
+        field: '事项提出领导/指定审批领导',
+        value: `${row.data.proposedLeaderName || ''}/${row.data.approvalLeaderName || ''}`,
+        reason: '公司领导不能默认全局导入其他领导负责的事项',
+      };
+    }
+    return null;
+  }
+
+  return {
+    row: row.row,
+    field: '权限',
+    value: currentUser.role,
+    reason: '当前角色无普通 Excel 导入权限',
+  };
 }
 
 function parseExcelDate(value: any): string | null {
@@ -98,9 +160,9 @@ async function validateAndParseExcel(
   });
   const leaderNameToId = new Map(companyLeaders.map((u) => [u.name, u.id]));
 
-  for (let i = 1; i < jsonData.length; i++) {
+  for (let i = 0; i < jsonData.length; i++) {
     const row = jsonData[i] as any;
-    const rowNum = i + 1;
+    const rowNum = i + 2;
 
     const getCell = (field: string): string => {
       const key = headerMap[field];
@@ -147,10 +209,6 @@ async function validateAndParseExcel(
           where: { departmentId: deptId, role: Role.DEPARTMENT_LEADER, isActive: true },
           select: { id: true, name: true },
         });
-        const deptLeaderNames = deptLeaders.map((u) => u.name);
-        if (responsibleLeader && !deptLeaderNames.includes(responsibleLeader)) {
-          errors.push({ row: rowNum, field: '责任领导', value: responsibleLeader, reason: `不是${departmentName}的部门领导` });
-        }
         // Phase 2: 从姓名解析 deptLeaderId（唯一匹配前提）
         const matchedDeptLeaders = deptLeaders.filter(u => u.name === responsibleLeader);
         const deptLeaderId = matchedDeptLeaders.length === 1 ? matchedDeptLeaders[0].id : null;
@@ -221,10 +279,6 @@ async function validateAndParseExcel(
           where: { departmentId: deptId, role: Role.DEPARTMENT_LEADER, isActive: true },
           select: { id: true, name: true },
         });
-        const deptLeaderNames = deptLeaders.map((u) => u.name);
-        if (responsibleLeader && !deptLeaderNames.includes(responsibleLeader)) {
-          errors.push({ row: rowNum, field: '责任领导', value: responsibleLeader, reason: `不是${departmentName}的部门领导` });
-        }
         // Phase 2: 从姓名解析 deptLeaderId（唯一匹配前提）
         const matchedDeptLeaders = deptLeaders.filter(u => u.name === responsibleLeader);
         const deptLeaderId = matchedDeptLeaders.length === 1 ? matchedDeptLeaders[0].id : null;
@@ -415,28 +469,19 @@ export async function POST(
       );
     }
 
-    for (const row of rows) {
-      if (type === 'priority' || type === 'PRIORITY' || type === 'main' || type === 'MAIN') {
-        if (!isCompanyLevelRole(currentUser.role)) {
-          if (row.data.departmentId !== currentUser.departmentId) {
-            return NextResponse.json(
-              {
-                success: false,
-                error: '导入失败',
-                details: [
-                  {
-                    row: row.row,
-                    field: '责任部门',
-                    value: row.data.departmentName,
-                    reason: `您无权向${row.data.departmentName}导入事项，部门用户只能导入本部门事项`,
-                  },
-                ],
-              },
-              { status: 403 }
-            );
-          }
-        }
-      }
+    const scopeErrors = rows
+      .map((row) => validateImportScope(currentUser, row))
+      .filter((error): error is ValidationError => Boolean(error));
+
+    if (scopeErrors.length > 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: '导入失败',
+          details: scopeErrors,
+        },
+        { status: 403 }
+      );
     }
 
     const now = new Date();
@@ -449,6 +494,7 @@ export async function POST(
           status: WorkItemStatus.DRAFT,
           creatorId: currentUser.id,
           departmentId: data.departmentId,
+          departmentIds: [data.departmentId],
           businessCategory: data.businessCategory || null,
           workItem: data.workItem,
           isInnovation: data.isInnovation || false,

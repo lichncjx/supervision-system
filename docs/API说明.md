@@ -137,3 +137,29 @@ GET /api/dashboard?limit=5
 1. `GET /api/dashboard/summary` 保留兼容，并与 `GET /api/dashboard.summary` 复用同一个 summary 计算 helper。
 2. 第四阶段只移除首页全量事项拉取，不强制合并完成率接口。
 3. `GET /api/dashboard/completion-rate` 和 `GET /api/excel/completion-rate` 继续按第二阶段主责部门完成率口径独立提供。
+
+## 七、普通 Excel 导入导出
+
+### `GET /api/excel/export`
+
+普通事项导出接口。第五阶段后：
+
+1. 数据范围与 `GET /api/works` 可见范围一致。
+2. `ADMIN` / `SUPERVISOR` 可导出全局。
+3. 部门角色只能导出本部门主责或配合相关事项。
+4. `VICE_PRESIDENT` / `PRESIDENT` 不默认导出其他公司领导负责事项。
+5. 状态文案来自统一状态元数据。
+6. 主责部门通过 `getResponsibleDepartmentIds(work)` 输出，兼容 `departmentIds` / `departmentId`。
+7. 配合部门通过 `getCooperateDepartmentIds(work)` 输出。
+8. 业务责任人姓名字段仅用于展示导出，不参与权限判断。
+
+### `POST /api/excel/import/[type]`
+
+普通事项导入接口，`type` 支持 `priority`、`main`、`todo`。第五阶段后：
+
+1. 普通导入默认创建 `DRAFT`，不得绕过 workflow 直接写入审批中、进行中、已完成等状态。
+2. 部门用户导入时，主责部门必须包含当前用户部门。
+3. 配合部门可以填写其他部门，但不能替代主责部门授权。
+4. `responsiblePersons` / `cooperatePersons` / `responsibleLeader` / `responsiblePerson` 均按姓名文本处理，不校验系统用户。
+5. 当前 schema 尚未提供 `responsibleDepartmentIds`，导入仍写入 `departmentIds` 并保留 `departmentId` 兼容。
+6. 本轮不新增 `Member`、`DepartmentMember`、`WorkParticipant`。
