@@ -18,7 +18,6 @@ export type WorkStatusFilter =
   | 'handling'
   | 'inProgress'
   | 'completed'
-  | 'rejected'
   | 'cancelled'
   | 'overdue'
   | 'expiring';
@@ -335,14 +334,12 @@ function isCompanyVisibleWork(work: Work) {
   }
 
   const companyVisibleStatuses: Status[] = [
-    'pending_company',
-    'approved',
+    'proposing',
     'in_progress',
     'adjusting',
     'cancelling',
-    'pending_main_leader_cancel',
+    'completing',
     'completed',
-    'rejected',
     'cancelled',
   ];
 
@@ -408,10 +405,6 @@ export async function queryWorks(user: User | null | undefined, query: WorkQuery
 
     if (query.status === 'completed') {
       list = list.filter((w) => w.status === 'completed');
-    }
-
-    if (query.status === 'rejected') {
-      list = list.filter((w) => w.status === 'rejected');
     }
 
     if (query.status === 'cancelled') {
@@ -566,7 +559,7 @@ export async function deleteWork(id: number): Promise<void> {
 }
 
 export async function resubmitRejectedWork(work: Work, user: User, patch: WorkEditablePatch) {
-  // Step 1: Update content fields (keep status as REJECTED)
+  // Step 1: Update content fields. Returned items now remain DRAFT with reject traces.
   await updateWork(work.id, {
     ...patch,
     title: patch.title || patch.workItem || work.title,
@@ -641,13 +634,13 @@ export function getCurrentProcessDescription(
 
   if (currentApproverId) {
     switch (normalizedStatus) {
-      case 'pending_company':
+      case 'proposing':
         return '待指定公司领导审批';
       case 'adjusting':
         return '调整申请待指定公司领导审批';
       case 'cancelling':
         return '取消申请待指定公司领导审批';
-      case 'pending_complete':
+      case 'completing':
         return '完成申请待指定公司领导审批';
       default:
         break;
@@ -679,7 +672,7 @@ export function getWorkflowRecordDescription(
   }
 
   if (normalizedAction === 'evidence') {
-    if (normalizedNewStatus === 'pending_complete') {
+    if (normalizedNewStatus === 'completing') {
       return '提交完成申请，进入完成审批流程';
     }
     return '提交见证材料';
@@ -703,17 +696,8 @@ export function getWorkflowRecordDescription(
       if (normalizedNewStatus === 'cancelling') {
         return '取消申请审批通过，继续流转至下一审批节点';
       }
-      if (normalizedNewStatus === 'pending_main_leader_cancel') {
-        return '公司主管领导审批通过，流转至公司主要领导审批';
-      }
       if (normalizedNewStatus === 'cancelled') {
         return '取消申请审批通过，事项已取消';
-      }
-    }
-
-    if (normalizedOldStatus === 'pending_main_leader_cancel') {
-      if (normalizedNewStatus === 'cancelled') {
-        return '公司主要领导审批通过，取消申请生效，事项已取消';
       }
     }
 
@@ -723,33 +707,18 @@ export function getWorkflowRecordDescription(
 
     const statusChangeDesc: Record<string, Record<string, string>> = {
       draft: {
-        pending_dept: '提交审批，流转至部门领导审批',
-        pending_company: '提交审批，流转至公司领导审批',
+        proposing: '提交审批，进入立项审批中',
       },
-      pending_dept: {
-        pending_company: '部门领导审批通过，流转至公司领导审批',
-        rejected: '部门领导审批退回',
+      pending_decompose: {
+        proposing: '分解方案提交审批',
       },
-      pending_company: {
-        approved: '公司领导审批通过，事项已立项',
+      proposing: {
         in_progress: '公司领导审批通过，事项进入进行中',
-        rejected: '公司领导审批退回',
-      },
-      approved: {
-        pending_evidence_dept: '提交见证材料，待部门领导审批',
-        in_progress: '进入执行阶段',
       },
       in_progress: {
-        pending_complete: '提交完成申请',
+        completing: '提交完成申请',
       },
-      pending_evidence_dept: {
-        pending_evidence_company: '部门领导审批通过，流转至公司领导审批',
-        approved: '部门领导审批通过',
-      },
-      pending_evidence_company: {
-        completed: '公司领导审批通过，事项已完成',
-      },
-      pending_complete: {
+      completing: {
         completed: '完成审批通过，事项已完成',
       },
     };
@@ -839,15 +808,11 @@ export function isPendingApprovalStatus(status: Status) {
 
 export function isSupervisorTrackingWork(work: Work) {
   const trackingStatuses: Status[] = [
-    'pending_dept',
-    'pending_company',
     'pending_decompose',
-    'pending_evidence_dept',
-    'pending_evidence_company',
-    'rejected',
+    'proposing',
     'adjusting',
     'cancelling',
-    'pending_main_leader_cancel',
+    'completing',
   ];
 
   return trackingStatuses.includes(work.status);
@@ -924,11 +889,11 @@ export function canHandleWork(user: User | null | undefined, work: Work) {
     return true;
   }
 
-  // 重点/主要工作已立项，待责任部门上传见证材料
+  // 重点/主要工作进行中，待责任部门上传见证材料
   // 当前按部门角色泛化判断，未来可增加 deptManagerId 精确匹配
   if (
     (work.type === '重点' || work.type === '主要') &&
-    work.status === 'approved' &&
+    work.status === 'in_progress' &&
     (user.role === 'DEPARTMENT_MANAGER' || user.role === 'DEPARTMENT_LEADER') &&
     isWorkRelatedToDepartment(work, user.departmentId)
   ) {
@@ -956,13 +921,10 @@ export function canApproveWork(user: User | null | undefined, work: Work) {
   if (!user) return false;
 
   const pendingStatuses: Status[] = [
-    'pending_dept',
-    'pending_company',
-    'pending_evidence_dept',
-    'pending_evidence_company',
-    'cancelling',
-    'pending_main_leader_cancel',
+    'proposing',
     'adjusting',
+    'cancelling',
+    'completing',
   ];
 
   if (!pendingStatuses.includes(work.status)) {
@@ -977,24 +939,20 @@ export function canApproveWork(user: User | null | undefined, work: Work) {
     return (
       isWorkRelatedToDepartment(work, user.departmentId) &&
       (
-        work.status === 'pending_dept' ||
-        work.status === 'pending_evidence_dept' ||
+        work.status === 'proposing' ||
         work.status === 'adjusting' ||
-        work.status === 'cancelling'
+        work.status === 'cancelling' ||
+        work.status === 'completing'
       )
     );
   }
 
-  if (work.status === 'pending_company' || work.status === 'pending_evidence_company') {
+  if (work.status === 'proposing' || work.status === 'completing') {
     return isSelectedCompanyApprover(user, work);
   }
 
   if (work.status === 'cancelling' || work.status === 'adjusting') {
     return isSelectedCompanyApprover(user, work);
-  }
-
-  if (work.status === 'pending_main_leader_cancel') {
-    return user.role === 'PRESIDENT';
   }
 
   return false;
@@ -1024,14 +982,14 @@ function isSelectedCompanyApprover(user: User, work: Work) {
   }
 
   // 待办事项公司审批：以 proposedLeaderId 为准
-  if (work.type === '待办' && work.status === 'pending_company' && work.proposedLeaderId) {
+  if (work.type === '待办' && work.status === 'proposing' && work.proposedLeaderId) {
     return work.proposedLeaderId === user.id;
   }
 
   // 重点/主要工作公司审批：回退到角色匹配（VICE_PRESIDENT）
   if (
     (work.type === '重点' || work.type === '主要') &&
-    (work.status === 'pending_company' || work.status === 'pending_evidence_company')
+    (work.status === 'proposing' || work.status === 'completing')
   ) {
     return user.role === 'VICE_PRESIDENT';
   }
@@ -1217,11 +1175,10 @@ export function getWorkflowSteps(work: Work): WorkflowStep[] {
 
   let currentIndex = 0;
 
-  if (work.status === 'pending_dept') currentIndex = 1;
-  else if (work.status === 'pending_decompose') currentIndex = 1;
-  else if (work.status === 'pending_company' || work.status === 'cancelling' || work.status === 'pending_main_leader_cancel') currentIndex = 2;
-  else if (work.status === 'in_progress' || work.status === 'approved') currentIndex = 3;
-  else if (work.status === 'pending_evidence_dept' || work.status === 'pending_evidence_company') currentIndex = 4;
+  if (work.status === 'pending_decompose') currentIndex = 1;
+  else if (work.status === 'proposing' || work.status === 'cancelling' || work.status === 'adjusting') currentIndex = 2;
+  else if (work.status === 'in_progress') currentIndex = 3;
+  else if (work.status === 'completing') currentIndex = 4;
   else if (work.status === 'completed') currentIndex = labels.length - 1;
   else if (isReturnStatus(work.status)) currentIndex = Math.max(0, labels.length - 2);
   else if (work.status === 'cancelled') currentIndex = labels.length - 1;

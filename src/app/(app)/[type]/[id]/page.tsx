@@ -212,7 +212,7 @@ export default function WorkDetailPage() {
       !isWorkStatusReturned(work.status)
     ) ||
     (
-      // Phase 3B: deptManagerId（含 rejected，用于退回后补充材料）
+      // Phase 3B: deptManagerId（含退回后补充材料）
       (work.type === '重点' || work.type === '主要') &&
       user.id === work.deptManagerId &&
       !isWorkStatusTerminal(work.status)

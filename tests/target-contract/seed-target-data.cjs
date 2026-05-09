@@ -6,11 +6,10 @@ const {
   departments,
   users,
   buildWorkItems,
-  targetStatusByLegacy,
 } = require('./target-contract-data.cjs');
 const {
   assertLocalOrTestEnvironment,
-  assertResetApproved,
+  assertResetConfirmed,
   assertSafeDatabaseUrl,
   printEnvironmentSummary,
 } = require('./target-contract-safety.cjs');
@@ -71,7 +70,7 @@ async function seedWorks(deptByKey, userByKey) {
     const work = await prisma.workItem.create({
       data: scenario.data,
     });
-    created.push({ ...scenario, id: work.id, legacyStatus: work.status, targetStatus: targetStatusByLegacy[work.status] || work.status });
+    created.push({ ...scenario, id: work.id, targetStatus: work.status });
   }
 
   return created;
@@ -81,7 +80,7 @@ async function main() {
   printEnvironmentSummary('[target-contract-seed]');
   assertLocalOrTestEnvironment();
   assertSafeDatabaseUrl();
-  assertResetApproved();
+  assertResetConfirmed();
 
   console.log('[target-contract-seed] clearing test data...');
   await clearData();
@@ -102,7 +101,6 @@ async function main() {
     works: works.map((work) => ({
       key: work.key,
       id: work.id,
-      legacyStatus: work.legacyStatus,
       targetStatus: work.targetStatus,
     })),
   }, null, 2));

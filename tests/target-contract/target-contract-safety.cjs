@@ -102,7 +102,7 @@ function printEnvironmentSummary(prefix = '[target-contract]') {
   console.log(JSON.stringify(getEnvironmentSummary(), null, 2));
 }
 
-function assertResetApproved() {
+function assertResetConfirmed() {
   if (process.env.TARGET_CONTRACT_RESET !== '1') {
     throw new Error('TARGET_CONTRACT_RESET=1 is required because this script clears test data.');
   }
@@ -110,7 +110,7 @@ function assertResetApproved() {
 
 module.exports = {
   assertLocalOrTestEnvironment,
-  assertResetApproved,
+  assertResetConfirmed,
   assertSafeBaseUrl,
   assertSafeDatabaseUrl,
   getEnvironmentSummary,

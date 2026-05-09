@@ -14,14 +14,11 @@ import { getWorkStatusLabel, normalizeWorkStatus } from '@/lib/work-status'
 const EXPIRING_DAYS = 7
 
 const IN_PROGRESS_STATUSES: WorkItemStatus[] = [
-  WorkItemStatus.APPROVED,
   WorkItemStatus.IN_PROGRESS,
 ]
 
 const COMPLETING_STATUSES: WorkItemStatus[] = [
-  WorkItemStatus.PENDING_COMPLETE,
-  WorkItemStatus.PENDING_EVIDENCE_DEPT,
-  WorkItemStatus.PENDING_EVIDENCE_COMPANY,
+  WorkItemStatus.COMPLETING,
 ]
 
 const COMPLETED_STATUSES: WorkItemStatus[] = [WorkItemStatus.COMPLETED]

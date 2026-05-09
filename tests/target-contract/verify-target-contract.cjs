@@ -323,9 +323,7 @@ function expectedDashboardSummary(user, works) {
     pendingHandlingCount: summary.handling,
     myActionRequiredCount: summary.actionRequired,
     inProgressCount: summary.inProgress,
-    completingCount: visible.filter((work) =>
-      ['PENDING_COMPLETE', 'PENDING_EVIDENCE_DEPT', 'PENDING_EVIDENCE_COMPANY'].includes(work.status)
-    ).length,
+    completingCount: visible.filter((work) => work.status === 'COMPLETING').length,
     completedCount: summary.completed,
     cancelledCount: summary.cancelled,
     expiringCount: summary.expiring,

@@ -1,20 +1,14 @@
 const targetStateGroups = {
-  DRAFT: ['DRAFT', 'REJECTED'],
+  DRAFT: ['DRAFT'],
   PENDING_DECOMPOSE: ['PENDING_DECOMPOSE'],
-  PROPOSING: ['PENDING_DEPT', 'PENDING_COMPANY'],
-  IN_PROGRESS: ['APPROVED', 'IN_PROGRESS'],
+  PROPOSING: ['PROPOSING'],
+  IN_PROGRESS: ['IN_PROGRESS'],
   ADJUSTING: ['ADJUSTING'],
-  CANCELLING: ['CANCELLING', 'PENDING_MAIN_LEADER_CANCEL'],
-  COMPLETING: ['PENDING_COMPLETE', 'PENDING_EVIDENCE_DEPT', 'PENDING_EVIDENCE_COMPANY'],
+  CANCELLING: ['CANCELLING'],
+  COMPLETING: ['COMPLETING'],
   COMPLETED: ['COMPLETED'],
   CANCELLED: ['CANCELLED'],
 };
-
-const targetStatusByLegacy = Object.fromEntries(
-  Object.entries(targetStateGroups).flatMap(([targetStatus, legacyStatuses]) =>
-    legacyStatuses.map((legacyStatus) => [legacyStatus, targetStatus])
-  )
-);
 
 const departments = [
   { key: 'leadership', name: '测试公司领导组', code: 'TLD', isBusiness: false },
@@ -69,7 +63,7 @@ function buildWorkItems(ctx) {
         type: 'PRIORITY',
         title: 'TC-普通重点工作-A',
         workItem: 'TC-普通重点工作-A',
-        status: 'APPROVED',
+        status: 'IN_PROGRESS',
         departmentId: dept.deptA.id,
         creatorId: user.deptManagerA1.id,
         firstSubmitterId: user.deptManagerA1.id,
@@ -178,7 +172,9 @@ function buildWorkItems(ctx) {
         type: 'PRIORITY',
         title: 'TC-立项审批中-部门节点-A',
         workItem: 'TC-立项审批中-部门节点-A',
-        status: 'PENDING_DEPT',
+        status: 'PROPOSING',
+        beforeApprovalStatus: 'DRAFT',
+        approvalType: 'PROPOSE',
         departmentId: dept.deptA.id,
         creatorId: user.deptManagerA1.id,
         firstSubmitterId: user.deptManagerA1.id,
@@ -199,7 +195,9 @@ function buildWorkItems(ctx) {
         type: 'MAIN',
         title: 'TC-立项审批中-公司节点-A',
         workItem: 'TC-立项审批中-公司节点-A',
-        status: 'PENDING_COMPANY',
+        status: 'PROPOSING',
+        beforeApprovalStatus: 'DRAFT',
+        approvalType: 'PROPOSE',
         departmentId: dept.deptA.id,
         creatorId: user.deptLeaderA.id,
         firstSubmitterId: user.deptLeaderA.id,
@@ -241,6 +239,8 @@ function buildWorkItems(ctx) {
         title: 'TC-调整中事项-A',
         workItem: 'TC-调整中事项-A',
         status: 'ADJUSTING',
+        beforeApprovalStatus: 'IN_PROGRESS',
+        approvalType: 'ADJUST',
         action: 'ADJUST',
         departmentId: dept.deptA.id,
         creatorId: user.deptManagerA2.id,
@@ -263,6 +263,8 @@ function buildWorkItems(ctx) {
         title: 'TC-取消中事项-主要领导节点',
         workItem: 'TC-取消中事项-主要领导节点',
         status: 'CANCELLING',
+        beforeApprovalStatus: 'IN_PROGRESS',
+        approvalType: 'CANCEL',
         action: 'CANCEL',
         needMainLeaderCancel: true,
         departmentId: dept.deptA.id,
@@ -285,7 +287,9 @@ function buildWorkItems(ctx) {
         type: 'TODO',
         title: 'TC-完成中待办-A',
         workItem: 'TC-完成中待办-A',
-        status: 'PENDING_COMPLETE',
+        status: 'COMPLETING',
+        beforeApprovalStatus: 'IN_PROGRESS',
+        approvalType: 'COMPLETE',
         departmentId: dept.deptA.id,
         departmentIds: [dept.deptA.id],
         creatorId: user.deptManagerA1.id,
@@ -306,7 +310,9 @@ function buildWorkItems(ctx) {
         type: 'PRIORITY',
         title: 'TC-完成中重点工作-A',
         workItem: 'TC-完成中重点工作-A',
-        status: 'PENDING_EVIDENCE_COMPANY',
+        status: 'COMPLETING',
+        beforeApprovalStatus: 'IN_PROGRESS',
+        approvalType: 'COMPLETE',
         departmentId: dept.deptA.id,
         creatorId: user.deptManagerA1.id,
         firstSubmitterId: user.deptManagerA1.id,
@@ -440,7 +446,7 @@ function buildWorkItems(ctx) {
 }
 
 function getTargetStatus(work) {
-  return targetStatusByLegacy[work.status] || work.status;
+  return work.status;
 }
 
 function getDueDate(work) {
@@ -582,7 +588,6 @@ module.exports = {
   users,
   buildWorkItems,
   targetStateGroups,
-  targetStatusByLegacy,
   getTargetStatus,
   getResponsibleDepartmentIds,
   canViewWork,
