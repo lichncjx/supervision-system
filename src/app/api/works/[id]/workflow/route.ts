@@ -70,6 +70,7 @@ export async function POST(
         result = await rejectWorkItem(workItemId, user, rejectReason);
         break;
       case 'evidence':
+      case 'complete':
         if (!proof) {
           return NextResponse.json({ error: '请提供见证材料说明' }, { status: 400 });
         }

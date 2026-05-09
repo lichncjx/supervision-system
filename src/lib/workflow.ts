@@ -1,11 +1,18 @@
-import { Role, WorkItemStatus, WorkItemType } from '@prisma/client';
+import {
+  ActionType,
+  ApprovalType,
+  Prisma,
+  Role,
+  WorkItemStatus,
+  WorkItemType,
+} from '@prisma/client';
 import prisma from '@/lib/prisma';
-
-export interface WorkflowResult {
-  success: boolean;
-  error?: string;
-  workItem?: any;
-}
+import {
+  canApproveWorkItem,
+  canHandleWorkItem,
+  isWorkMainResponsibleDepartment,
+  type PermissionWorkItem,
+} from '@/lib/server-permissions';
 
 export interface UserSession {
   userId: number;
@@ -14,23 +21,79 @@ export interface UserSession {
   departmentId: number;
 }
 
-export async function createWorkflowRecord(
+export interface WorkflowResult {
+  success: boolean;
+  workItem?: any;
+  error?: string;
+}
+
+type WorkflowWorkItem = NonNullable<Awaited<ReturnType<typeof findWorkItem>>>;
+
+interface ApproverAssignment {
+  currentApproverId: number | null;
+  currentApproverRole: Role | null;
+}
+
+const APPROVAL_STATUSES: WorkItemStatus[] = [
+  WorkItemStatus.PROPOSING,
+  WorkItemStatus.ADJUSTING,
+  WorkItemStatus.CANCELLING,
+  WorkItemStatus.COMPLETING,
+];
+
+const APPROVAL_TARGET_STATUS: Record<ApprovalType, WorkItemStatus> = {
+  [ApprovalType.PROPOSE]: WorkItemStatus.IN_PROGRESS,
+  [ApprovalType.ADJUST]: WorkItemStatus.IN_PROGRESS,
+  [ApprovalType.CANCEL]: WorkItemStatus.CANCELLED,
+  [ApprovalType.COMPLETE]: WorkItemStatus.COMPLETED,
+};
+
+function toPermissionUser(user: UserSession) {
+  return {
+    id: user.userId,
+    role: user.role,
+    departmentId: user.departmentId,
+  };
+}
+
+function isApprovalStatus(status: WorkItemStatus) {
+  return APPROVAL_STATUSES.includes(status);
+}
+
+function isDepartmentRole(role: Role) {
+  return role === Role.DEPARTMENT_MANAGER || role === Role.DEPARTMENT_LEADER;
+}
+
+function isCompanyLeaderRole(role: Role) {
+  return role === Role.VICE_PRESIDENT || role === Role.PRESIDENT;
+}
+
+async function findWorkItem(workItemId: number) {
+  return prisma.workItem.findUnique({
+    where: { id: workItemId },
+  });
+}
+
+async function getWorkItem(workItemId: number): Promise<WorkflowWorkItem | null> {
+  return findWorkItem(workItemId);
+}
+
+async function createWorkflowRecord(
   workItemId: number,
   actionType: string,
-  initiatorId: number,
+  operatorId: number,
+  _operatorName: string,
+  operatorRole: Role,
   statusBefore: WorkItemStatus,
   statusAfter: WorkItemStatus,
-  approverId?: number | null,
-  approverRole?: Role | null,
-  comment?: string
+  comment?: string,
 ) {
   return prisma.workflowRecord.create({
     data: {
       workItemId,
       actionType,
-      initiatorId,
-      approverId,
-      approvalRole: approverRole,
+      initiatorId: operatorId,
+      approvalRole: operatorRole,
       statusBefore,
       statusAfter,
       comment,
@@ -38,675 +101,557 @@ export async function createWorkflowRecord(
   });
 }
 
-export async function logOperation(
+async function logOperation(
   userId: number,
   userName: string,
   userRole: Role,
-  action: string,
-  targetId: number,
-  description: string
+  operationType: string,
+  module: string,
+  description: string,
+  targetId?: number,
 ) {
   return prisma.operationLog.create({
     data: {
       userId,
       userName,
       userRole,
-      action,
-      module: 'works',
+      action: operationType,
+      module,
+      description,
       targetId,
       targetType: 'workItem',
-      description,
     },
   });
 }
 
-export function canUserApprove(user: UserSession, workItem: any): boolean {
-  if (user.role === Role.ADMIN || user.role === Role.SUPERVISOR) {
+function departmentLeaderAssignment(): ApproverAssignment {
+  return {
+    currentApproverId: null,
+    currentApproverRole: Role.DEPARTMENT_LEADER,
+  };
+}
+
+function companyLeaderAssignment(
+  workItem: WorkflowWorkItem,
+  source: 'propose' | 'approval' = 'approval',
+): ApproverAssignment {
+  const leaderId =
+    source === 'propose'
+      ? workItem.proposedLeaderId ?? workItem.approvalLeaderId
+      : workItem.approvalLeaderId ?? workItem.proposedLeaderId;
+
+  return {
+    currentApproverId: leaderId ?? null,
+    currentApproverRole: Role.VICE_PRESIDENT,
+  };
+}
+
+async function presidentAssignment(): Promise<ApproverAssignment> {
+  const president = await prisma.user.findFirst({
+    where: {
+      role: Role.PRESIDENT,
+      isActive: true,
+    },
+    orderBy: { id: 'asc' },
+    select: { id: true },
+  });
+
+  return {
+    currentApproverId: president?.id ?? null,
+    currentApproverRole: Role.PRESIDENT,
+  };
+}
+
+function getProposalFirstApprover(workItem: WorkflowWorkItem, user: UserSession): ApproverAssignment {
+  if (user.role === Role.DEPARTMENT_MANAGER) {
+    return departmentLeaderAssignment();
+  }
+
+  if (user.role === Role.DEPARTMENT_LEADER) {
+    return companyLeaderAssignment(workItem, 'propose');
+  }
+
+  if (isCompanyLeaderRole(user.role)) {
+    return companyLeaderAssignment(workItem, 'propose');
+  }
+
+  return departmentLeaderAssignment();
+}
+
+function getProcessFirstApprover(workItem: WorkflowWorkItem, user: UserSession): ApproverAssignment {
+  if (user.role === Role.DEPARTMENT_MANAGER) {
+    return departmentLeaderAssignment();
+  }
+
+  if (user.role === Role.DEPARTMENT_LEADER) {
+    return companyLeaderAssignment(workItem, 'approval');
+  }
+
+  return companyLeaderAssignment(workItem, 'approval');
+}
+
+function shouldEscalateCancelToPresident(workItem: WorkflowWorkItem) {
+  return workItem.type === WorkItemType.PRIORITY && workItem.needMainLeaderCancel === true;
+}
+
+function isDepartmentApprovalNode(workItem: WorkflowWorkItem) {
+  return workItem.currentApproverRole === Role.DEPARTMENT_LEADER;
+}
+
+function isPresidentApprovalNode(workItem: WorkflowWorkItem) {
+  return workItem.currentApproverRole === Role.PRESIDENT;
+}
+
+async function getNextApprovalAssignment(
+  workItem: WorkflowWorkItem,
+  approvalType: ApprovalType,
+): Promise<ApproverAssignment | null> {
+  if (approvalType === ApprovalType.PROPOSE) {
+    if (isDepartmentApprovalNode(workItem)) {
+      return companyLeaderAssignment(workItem, 'propose');
+    }
+    return null;
+  }
+
+  if (approvalType === ApprovalType.ADJUST || approvalType === ApprovalType.COMPLETE) {
+    if (isDepartmentApprovalNode(workItem)) {
+      return companyLeaderAssignment(workItem, 'approval');
+    }
+    return null;
+  }
+
+  if (approvalType === ApprovalType.CANCEL) {
+    if (isDepartmentApprovalNode(workItem)) {
+      return companyLeaderAssignment(workItem, 'approval');
+    }
+
+    if (shouldEscalateCancelToPresident(workItem) && !isPresidentApprovalNode(workItem)) {
+      return presidentAssignment();
+    }
+
+    return null;
+  }
+
+  return null;
+}
+
+function canUserHandle(user: UserSession, workItem: PermissionWorkItem) {
+  return canHandleWorkItem(toPermissionUser(user), workItem);
+}
+
+function canUserCancelDraft(user: UserSession, workItem: WorkflowWorkItem) {
+  if (workItem.creatorId === user.userId) return true;
+  if ((workItem.firstSubmitterId ?? workItem.creatorId) === user.userId) return true;
+  return canUserHandle(user, workItem);
+}
+
+function ensureMainResponsibleDepartment(user: UserSession, workItem: WorkflowWorkItem) {
+  return (
+    isDepartmentRole(user.role) &&
+    isWorkMainResponsibleDepartment(workItem, user.departmentId)
+  );
+}
+
+function rejectableBeforeStatus(workItem: WorkflowWorkItem): WorkItemStatus | null {
+  return workItem.beforeApprovalStatus ?? null;
+}
+
+export function canUserApprove(workItem: PermissionWorkItem, user: UserSession): boolean {
+  return canApproveWorkItem(toPermissionUser(user), workItem);
+}
+
+export function canUserSubmit(workItem: PermissionWorkItem, user: UserSession): boolean {
+  if (String(workItem.status).toUpperCase() !== WorkItemStatus.DRAFT) {
     return false;
   }
 
-  if (workItem.currentApproverId && workItem.currentApproverId === user.userId) {
-    return true;
-  }
-
-  if (workItem.currentApproverRole && workItem.currentApproverRole === user.role) {
-    if (user.role === Role.DEPARTMENT_LEADER) {
-      return workItem.departmentId === user.departmentId;
-    }
-    return true;
-  }
-
-  if (!workItem.currentApproverId && !workItem.currentApproverRole) {
-    if (
-      (workItem.type === WorkItemType.PRIORITY || workItem.type === WorkItemType.MAIN) &&
-      (
-        workItem.status === WorkItemStatus.PROPOSING ||
-        workItem.status === WorkItemStatus.COMPLETING
-      )
-    ) {
-      return user.role === Role.VICE_PRESIDENT;
-    }
-
-    if (
-      workItem.type === WorkItemType.TODO &&
-      workItem.status === WorkItemStatus.PROPOSING &&
-      workItem.proposedLeaderId
-    ) {
-      return workItem.proposedLeaderId === user.userId;
-    }
-  }
-
-  return false;
+  if (workItem.creatorId === user.userId) return true;
+  if ((workItem.firstSubmitterId ?? workItem.creatorId) === user.userId) return true;
+  return canHandleWorkItem(toPermissionUser(user), workItem);
 }
 
-export function canUserSubmit(user: UserSession, workItem: any): boolean {
+export async function submitForApproval(
+  workItemId: number,
+  user: UserSession,
+  comment?: string,
+): Promise<WorkflowResult> {
+  const workItem = await getWorkItem(workItemId);
+  if (!workItem) {
+    return { success: false, error: '事项不存在' };
+  }
+
   if (workItem.status !== WorkItemStatus.DRAFT) {
-    return false;
+    return { success: false, error: '只有草稿事项可以提交审批' };
   }
 
-  if (workItem.creatorId !== user.userId) {
-    return false;
+  if (!canUserSubmit(workItem, user)) {
+    return { success: false, error: '无权提交该事项' };
   }
 
-  return true;
-}
+  const oldStatus = workItem.status;
 
-export async function submitForApproval(workItemId: number, user: UserSession, comment?: string): Promise<WorkflowResult> {
-  const workItem = await prisma.workItem.findUnique({
-    where: { id: workItemId },
-    include: { creator: true },
-  });
-
-  if (!workItem) {
-    return { success: false, error: '事项不存在' };
-  }
-
-  if (!canUserSubmit(user, workItem)) {
-    return { success: false, error: '无权提交此事项' };
-  }
-
-  let newStatus: WorkItemStatus = workItem.status;
-  let newApproverRole: Role | null = null;
-  let newApproverId: number | null = null;
-
-  if (workItem.type === WorkItemType.TODO) {
-    if (user.role === Role.VICE_PRESIDENT || user.role === Role.PRESIDENT) {
-      newStatus = WorkItemStatus.PENDING_DECOMPOSE;
-      newApproverRole = null;
-      newApproverId = null;
-    } else if (user.role === Role.DEPARTMENT_MANAGER) {
-      if (!workItem.proposedLeaderId) {
-        return { success: false, error: '部门发起待办事项必须填写提出领导' };
-      }
-      newStatus = WorkItemStatus.PROPOSING;
-      newApproverRole = Role.DEPARTMENT_LEADER;
-      newApproverId = null;
-    } else if (user.role === Role.DEPARTMENT_LEADER) {
-      if (!workItem.proposedLeaderId) {
-        return { success: false, error: '部门发起待办事项必须填写提出领导' };
-      }
-      newStatus = WorkItemStatus.PROPOSING;
-      newApproverId = workItem.proposedLeaderId;
-      newApproverRole = null;
-    } else {
-      return { success: false, error: '无权提交待办事项' };
-    }
-  } else {
-    if (user.role === Role.DEPARTMENT_MANAGER) {
-      newStatus = WorkItemStatus.PROPOSING;
-      newApproverRole = Role.DEPARTMENT_LEADER;
-      newApproverId = null;
-    } else if (user.role === Role.DEPARTMENT_LEADER) {
-      newStatus = WorkItemStatus.PROPOSING;
-      newApproverRole = Role.VICE_PRESIDENT;
-      newApproverId = null;
-    } else {
-      return { success: false, error: '无权提交此类型事项' };
-    }
-  }
-
-  // firstSubmitterId: 仅在首次进入正式审批链路（PROPOSING）时写入，
-  // 之后不再覆盖。PENDING_DECOMPOSE 不触发写入。
-  // 写入后退回再重新提交不会改变该字段。
-  const entersApprovalChain =
-    newStatus === WorkItemStatus.PROPOSING;
-  const shouldSetFirstSubmitter = entersApprovalChain && !workItem.firstSubmitterId;
-
-  const updated = await prisma.workItem.update({
-    where: { id: workItemId },
-    data: {
-      status: newStatus,
-      currentApproverRole: newApproverRole,
-      currentApproverId: newApproverId,
-      ...(shouldSetFirstSubmitter ? { firstSubmitterId: user.userId } : {}),
-    },
-  });
-
-  await createWorkflowRecord(
-    workItemId,
-    'submit',
-    user.userId,
-    workItem.status,
-    newStatus,
-    undefined,
-    newApproverRole,
-    comment
-  );
-
-  await logOperation(
-    user.userId,
-    user.userName,
-    user.role,
-    'submit',
-    workItemId,
-    `提交审批：${workItem.title}`
-  );
-
-  return { success: true, workItem: updated };
-}
-
-export async function approveWorkItem(workItemId: number, user: UserSession, comment?: string): Promise<WorkflowResult> {
-  const workItem = await prisma.workItem.findUnique({
-    where: { id: workItemId },
-    include: { creator: true },
-  });
-
-  if (!workItem) {
-    return { success: false, error: '事项不存在' };
-  }
-
-  if (!canUserApprove(user, workItem)) {
-    return { success: false, error: '无权审批此事项' };
-  }
-
-  let newStatus: WorkItemStatus = workItem.status;
-  let newApproverRole: Role | null = null;
-  let newApproverId: number | null = null;
-
-  if (workItem.status === WorkItemStatus.PROPOSING) {
-    if (workItem.currentApproverRole === Role.DEPARTMENT_LEADER) {
-      if (!workItem.proposedLeaderId) {
-        return { success: false, error: '待办事项缺少提出领导，无法提交公司审批' };
-      }
-      newStatus = WorkItemStatus.PROPOSING;
-      if (workItem.type === WorkItemType.TODO) {
-        newApproverId = workItem.proposedLeaderId;
-        newApproverRole = null;
-      } else {
-        newApproverId = null;
-        newApproverRole = Role.VICE_PRESIDENT;
-      }
-    } else {
-      newStatus = WorkItemStatus.IN_PROGRESS;
-      newApproverRole = null;
-      newApproverId = null;
-    }
-  } else if (workItem.status === WorkItemStatus.COMPLETING) {
-    if (workItem.currentApproverRole === Role.DEPARTMENT_LEADER) {
-      newStatus = WorkItemStatus.COMPLETING;
-      newApproverRole = Role.VICE_PRESIDENT;
-      newApproverId = null;
-    } else {
-      newStatus = WorkItemStatus.COMPLETED;
-      newApproverRole = null;
-      newApproverId = null;
-    }
-  } else if (workItem.status === WorkItemStatus.ADJUSTING) {
-    if (workItem.type === WorkItemType.TODO) {
-      if (user.role === Role.DEPARTMENT_LEADER && workItem.currentApproverRole === Role.DEPARTMENT_LEADER) {
-        newStatus = WorkItemStatus.ADJUSTING;
-        newApproverRole = null;
-        newApproverId = workItem.proposedLeaderId;
-      } else if ((user.role === Role.VICE_PRESIDENT || user.role === Role.PRESIDENT) &&
-        (workItem.currentApproverId === user.userId || !workItem.currentApproverId)) {
-        newStatus = WorkItemStatus.IN_PROGRESS;
-        newApproverRole = null;
-        newApproverId = null;
-      } else {
-        return { success: false, error: '无权审批调整申请' };
-      }
-    } else {
-      if (user.role === Role.DEPARTMENT_LEADER) {
-        newStatus = WorkItemStatus.ADJUSTING;
-        newApproverRole = Role.VICE_PRESIDENT;
-        newApproverId = null;
-      } else if (user.role === Role.VICE_PRESIDENT) {
-        newStatus = WorkItemStatus.IN_PROGRESS;
-        newApproverRole = null;
-        newApproverId = null;
-      } else {
-        return { success: false, error: '无权审批调整申请' };
-      }
-    }
-  } else if (workItem.status === WorkItemStatus.CANCELLING) {
-    if (workItem.type === WorkItemType.TODO) {
-      if (user.role === Role.DEPARTMENT_LEADER && workItem.currentApproverRole === Role.DEPARTMENT_LEADER) {
-        newStatus = WorkItemStatus.CANCELLING;
-        newApproverRole = null;
-        newApproverId = workItem.proposedLeaderId;
-      } else if ((user.role === Role.VICE_PRESIDENT || user.role === Role.PRESIDENT) && workItem.currentApproverId === user.userId) {
-        newStatus = WorkItemStatus.CANCELLED;
-        newApproverRole = null;
-        newApproverId = null;
-      } else {
-        return { success: false, error: '无权审批取消申请' };
-      }
-    } else if (workItem.type === WorkItemType.MAIN) {
-      if (user.role === Role.DEPARTMENT_LEADER && workItem.currentApproverRole === Role.DEPARTMENT_LEADER) {
-        newStatus = WorkItemStatus.CANCELLING;
-        newApproverRole = Role.VICE_PRESIDENT;
-        newApproverId = null;
-      } else if (user.role === Role.VICE_PRESIDENT && workItem.currentApproverRole === Role.VICE_PRESIDENT) {
-        newStatus = WorkItemStatus.CANCELLED;
-        newApproverRole = null;
-        newApproverId = null;
-      } else {
-        return { success: false, error: '无权审批取消申请' };
-      }
-    } else if (workItem.type === WorkItemType.PRIORITY) {
-      if (user.role === Role.DEPARTMENT_LEADER) {
-        newStatus = WorkItemStatus.CANCELLING;
-        newApproverRole = Role.VICE_PRESIDENT;
-        newApproverId = null;
-      } else if (user.role === Role.VICE_PRESIDENT) {
-        newStatus = WorkItemStatus.CANCELLING;
-        newApproverRole = Role.PRESIDENT;
-        newApproverId = null;
-      } else if (user.role === Role.PRESIDENT) {
-        newStatus = WorkItemStatus.CANCELLED;
-        newApproverRole = null;
-        newApproverId = null;
-      } else {
-        return { success: false, error: '无权审批取消申请' };
-      }
-    }
-  } else {
-    return { success: false, error: '当前状态不允许审批' };
-  }
-
-  const updated = await prisma.workItem.update({
-    where: { id: workItemId },
-    data: {
-      status: newStatus,
-      currentApproverRole: newApproverRole,
-      currentApproverId: newApproverId,
-    },
-  });
-
-  await createWorkflowRecord(
-    workItemId,
-    'approve',
-    user.userId,
-    workItem.status,
-    newStatus,
-    user.userId,
-    user.role,
-    comment
-  );
-
-  await logOperation(
-    user.userId,
-    user.userName,
-    user.role,
-    'approve',
-    workItemId,
-    `审批通过：${workItem.title}`
-  );
-
-  return { success: true, workItem: updated };
-}
-
-export async function rejectWorkItem(workItemId: number, user: UserSession, rejectReason: string): Promise<WorkflowResult> {
-  const workItem = await prisma.workItem.findUnique({
-    where: { id: workItemId },
-    include: { creator: true },
-  });
-
-  if (!workItem) {
-    return { success: false, error: '事项不存在' };
-  }
-
-  if (!canUserApprove(user, workItem)) {
-    return { success: false, error: '无权退回此事项' };
-  }
-
-  let newStatus: WorkItemStatus;
-
-  if (workItem.status === WorkItemStatus.PROPOSING) {
-    newStatus = WorkItemStatus.DRAFT;
-  } else if (workItem.status === WorkItemStatus.COMPLETING) {
-    newStatus = WorkItemStatus.IN_PROGRESS;
-  } else if (workItem.status === WorkItemStatus.ADJUSTING) {
-    newStatus = WorkItemStatus.IN_PROGRESS;
-  } else if (workItem.status === WorkItemStatus.CANCELLING) {
-    newStatus = WorkItemStatus.IN_PROGRESS;
-  } else {
-    return { success: false, error: '当前状态不允许退回' };
-  }
-
-  const updated = await prisma.workItem.update({
-    where: { id: workItemId },
-    data: {
-      status: newStatus,
-      rejectReason,
-      rejectedFromStatus: workItem.status,
-      currentApproverRole: null,
-      currentApproverId: null,
-    },
-  });
-
-  await createWorkflowRecord(
-    workItemId,
-    'reject',
-    user.userId,
-    workItem.status,
-    newStatus,
-    user.userId,
-    user.role,
-    rejectReason
-  );
-
-  await logOperation(
-    user.userId,
-    user.userName,
-    user.role,
-    'reject',
-    workItemId,
-    `审批退回：${workItem.title}，原因：${rejectReason}`
-  );
-
-  return { success: true, workItem: updated };
-}
-
-export async function submitEvidence(workItemId: number, user: UserSession, proof: string, comment?: string): Promise<WorkflowResult> {
-  if (user.role === Role.ADMIN || user.role === Role.SUPERVISOR) {
-    return { success: false, error: '无权提交见证材料' };
-  }
-
-  const workItem = await prisma.workItem.findUnique({
-    where: { id: workItemId },
-    include: { creator: true },
-  });
-
-  if (!workItem) {
-    return { success: false, error: '事项不存在' };
-  }
-
-  if (workItem.type === WorkItemType.TODO) {
-    if (workItem.status !== WorkItemStatus.IN_PROGRESS) {
-      return { success: false, error: '当前状态不允许提交见证材料' };
-    }
-    if (!workItem.proposedLeaderId) {
-      return { success: false, error: '待办事项缺少提出领导' };
-    }
-    const newApproverId = workItem.proposedLeaderId;
+  if (
+    workItem.type === WorkItemType.TODO &&
+    (user.role === Role.VICE_PRESIDENT || user.role === Role.PRESIDENT)
+  ) {
     const updated = await prisma.workItem.update({
       where: { id: workItemId },
       data: {
-        status: WorkItemStatus.COMPLETING,
-        proof,
-        currentApproverId: newApproverId,
+        status: WorkItemStatus.PENDING_DECOMPOSE,
+        action: ActionType.TODO_DECOMPOSE,
+        beforeApprovalStatus: null,
+        approvalType: null,
+        currentApproverId: null,
         currentApproverRole: null,
+        rejectReason: null,
+        rejectedFromStatus: null,
       },
     });
+
     await createWorkflowRecord(
       workItemId,
-      'evidence',
-      user.userId,
-      workItem.status,
-      WorkItemStatus.COMPLETING,
-      undefined,
-      null,
-      comment
-    );
-    await logOperation(
+      'submit',
       user.userId,
       user.userName,
       user.role,
-      'evidence',
-      workItemId,
-      `提交见证材料：${workItem.title}`
+      oldStatus,
+      updated.status,
+      comment || '提交待办分解',
     );
+    await logOperation(user.userId, user.userName, user.role, 'submit', 'workflow', `提交事项: ${workItem.title}`, workItemId);
+
+    return { success: true, workItem: updated };
+  }
+
+  const approver = getProposalFirstApprover(workItem, user);
+  const updated = await prisma.workItem.update({
+    where: { id: workItemId },
+    data: {
+      status: WorkItemStatus.PROPOSING,
+      action: ActionType.CREATE,
+      beforeApprovalStatus: oldStatus,
+      approvalType: ApprovalType.PROPOSE,
+      currentApproverId: approver.currentApproverId,
+      currentApproverRole: approver.currentApproverRole,
+      firstSubmitterId: workItem.firstSubmitterId ?? user.userId,
+      rejectReason: null,
+      rejectedFromStatus: null,
+    },
+  });
+
+  await createWorkflowRecord(
+    workItemId,
+    'submit',
+    user.userId,
+    user.userName,
+    user.role,
+    oldStatus,
+    updated.status,
+    comment || '提交审批',
+  );
+  await logOperation(user.userId, user.userName, user.role, 'submit', 'workflow', `提交事项: ${workItem.title}`, workItemId);
+
+  return { success: true, workItem: updated };
+}
+
+export async function approveWorkItem(
+  workItemId: number,
+  user: UserSession,
+  comment?: string,
+): Promise<WorkflowResult> {
+  const workItem = await getWorkItem(workItemId);
+  if (!workItem) {
+    return { success: false, error: '事项不存在' };
+  }
+
+  if (!isApprovalStatus(workItem.status)) {
+    return { success: false, error: '当前状态不允许审批' };
+  }
+
+  if (!canApproveWorkItem(toPermissionUser(user), workItem)) {
+    return { success: false, error: '无权审批该事项' };
+  }
+
+  if (!workItem.approvalType) {
+    return { success: false, error: '审批类型缺失，无法继续流转' };
+  }
+
+  const oldStatus = workItem.status;
+  const nextApprover = await getNextApprovalAssignment(workItem, workItem.approvalType);
+
+  if (nextApprover) {
+    const updated = await prisma.workItem.update({
+      where: { id: workItemId },
+      data: {
+        currentApproverId: nextApprover.currentApproverId,
+        currentApproverRole: nextApprover.currentApproverRole,
+      },
+    });
+
+    await createWorkflowRecord(
+      workItemId,
+      'approve',
+      user.userId,
+      user.userName,
+      user.role,
+      oldStatus,
+      updated.status,
+      comment || '审批通过，流转至下一节点',
+    );
+    await logOperation(user.userId, user.userName, user.role, 'approve', 'workflow', `审批通过: ${workItem.title}`, workItemId);
+
+    return { success: true, workItem: updated };
+  }
+
+  const targetStatus = APPROVAL_TARGET_STATUS[workItem.approvalType];
+  const updated = await prisma.workItem.update({
+    where: { id: workItemId },
+    data: {
+      status: targetStatus,
+      beforeApprovalStatus: null,
+      approvalType: null,
+      currentApproverId: null,
+      currentApproverRole: null,
+    },
+  });
+
+  await createWorkflowRecord(
+    workItemId,
+    'approve',
+    user.userId,
+    user.userName,
+    user.role,
+    oldStatus,
+    updated.status,
+    comment || '审批通过',
+  );
+  await logOperation(user.userId, user.userName, user.role, 'approve', 'workflow', `审批通过: ${workItem.title}`, workItemId);
+
+  return { success: true, workItem: updated };
+}
+
+export async function rejectWorkItem(
+  workItemId: number,
+  user: UserSession,
+  rejectReason: string,
+): Promise<WorkflowResult> {
+  const workItem = await getWorkItem(workItemId);
+  if (!workItem) {
+    return { success: false, error: '事项不存在' };
+  }
+
+  if (!isApprovalStatus(workItem.status)) {
+    return { success: false, error: '当前状态不允许退回' };
+  }
+
+  if (!canApproveWorkItem(toPermissionUser(user), workItem)) {
+    return { success: false, error: '无权退回该事项' };
+  }
+
+  const targetStatus = rejectableBeforeStatus(workItem);
+  if (!targetStatus) {
+    return { success: false, error: '退回前状态缺失，无法退回' };
+  }
+
+  const oldStatus = workItem.status;
+  const updated = await prisma.workItem.update({
+    where: { id: workItemId },
+    data: {
+      status: targetStatus,
+      beforeApprovalStatus: null,
+      approvalType: null,
+      currentApproverId: null,
+      currentApproverRole: null,
+      rejectReason,
+      rejectedFromStatus: oldStatus,
+    },
+  });
+
+  await createWorkflowRecord(
+    workItemId,
+    'reject',
+    user.userId,
+    user.userName,
+    user.role,
+    oldStatus,
+    updated.status,
+    rejectReason,
+  );
+  await logOperation(user.userId, user.userName, user.role, 'reject', 'workflow', `退回事项: ${workItem.title}`, workItemId);
+
+  return { success: true, workItem: updated };
+}
+
+export async function submitEvidence(
+  workItemId: number,
+  user: UserSession,
+  proof: string,
+  comment?: string,
+): Promise<WorkflowResult> {
+  const workItem = await getWorkItem(workItemId);
+  if (!workItem) {
+    return { success: false, error: '事项不存在' };
+  }
+
+  if (workItem.status !== WorkItemStatus.IN_PROGRESS) {
+    return { success: false, error: '只有进行中事项可以提交完成申请' };
+  }
+
+  if (!canUserHandle(user, workItem)) {
+    return { success: false, error: '无权提交完成申请' };
+  }
+
+  const oldStatus = workItem.status;
+  const approver =
+    workItem.type === WorkItemType.TODO
+      ? companyLeaderAssignment(workItem, 'approval')
+      : getProcessFirstApprover(workItem, user);
+
+  const updated = await prisma.workItem.update({
+    where: { id: workItemId },
+    data: {
+      status: WorkItemStatus.COMPLETING,
+      action: ActionType.COMPLETE,
+      proof,
+      beforeApprovalStatus: oldStatus,
+      approvalType: ApprovalType.COMPLETE,
+      currentApproverId: approver.currentApproverId,
+      currentApproverRole: approver.currentApproverRole,
+    },
+  });
+
+  await createWorkflowRecord(
+    workItemId,
+    'evidence',
+    user.userId,
+    user.userName,
+    user.role,
+    oldStatus,
+    updated.status,
+    comment || '提交完成申请',
+  );
+  await logOperation(user.userId, user.userName, user.role, 'evidence', 'workflow', `提交完成申请: ${workItem.title}`, workItemId);
+
+  return { success: true, workItem: updated };
+}
+
+export async function submitAdjust(
+  workItemId: number,
+  user: UserSession,
+  adjustReason: string,
+  comment?: string,
+): Promise<WorkflowResult> {
+  const workItem = await getWorkItem(workItemId);
+  if (!workItem) {
+    return { success: false, error: '事项不存在' };
+  }
+
+  if (workItem.status !== WorkItemStatus.IN_PROGRESS) {
+    return { success: false, error: '只有进行中事项可以申请调整' };
+  }
+
+  if (!canUserHandle(user, workItem)) {
+    return { success: false, error: '无权申请调整' };
+  }
+
+  const oldStatus = workItem.status;
+  const approver = getProcessFirstApprover(workItem, user);
+  const updated = await prisma.workItem.update({
+    where: { id: workItemId },
+    data: {
+      status: WorkItemStatus.ADJUSTING,
+      action: ActionType.ADJUST,
+      adjustReason,
+      beforeApprovalStatus: oldStatus,
+      approvalType: ApprovalType.ADJUST,
+      currentApproverId: approver.currentApproverId,
+      currentApproverRole: approver.currentApproverRole,
+    },
+  });
+
+  await createWorkflowRecord(
+    workItemId,
+    'adjust',
+    user.userId,
+    user.userName,
+    user.role,
+    oldStatus,
+    updated.status,
+    comment || '申请调整',
+  );
+  await logOperation(user.userId, user.userName, user.role, 'adjust', 'workflow', `申请调整: ${workItem.title}`, workItemId);
+
+  return { success: true, workItem: updated };
+}
+
+export async function submitCancel(
+  workItemId: number,
+  user: UserSession,
+  cancelReason: string,
+  comment?: string,
+): Promise<WorkflowResult> {
+  const workItem = await getWorkItem(workItemId);
+  if (!workItem) {
+    return { success: false, error: '事项不存在' };
+  }
+
+  if (workItem.status === WorkItemStatus.DRAFT) {
+    if (!canUserCancelDraft(user, workItem)) {
+      return { success: false, error: '无权取消该草稿事项' };
+    }
+
+    const updated = await prisma.workItem.update({
+      where: { id: workItemId },
+      data: {
+        status: WorkItemStatus.CANCELLED,
+        action: ActionType.CANCEL,
+        cancelReason,
+        beforeApprovalStatus: null,
+        approvalType: null,
+        currentApproverId: null,
+        currentApproverRole: null,
+      },
+    });
+
+    await createWorkflowRecord(
+      workItemId,
+      'cancel',
+      user.userId,
+      user.userName,
+      user.role,
+      workItem.status,
+      updated.status,
+      comment || '取消草稿事项',
+    );
+    await logOperation(user.userId, user.userName, user.role, 'cancel', 'workflow', `取消事项: ${workItem.title}`, workItemId);
+
     return { success: true, workItem: updated };
   }
 
   if (workItem.status !== WorkItemStatus.IN_PROGRESS) {
-    return { success: false, error: '当前状态不允许提交见证材料' };
+    return { success: false, error: '只有草稿或进行中事项可以申请取消' };
   }
 
-  if (user.role === Role.VICE_PRESIDENT || user.role === Role.PRESIDENT) {
-    return { success: false, error: '公司领导不允许提交部门见证材料' };
-  }
-
-  const isOwnDepartment = workItem.departmentId === user.departmentId;
-  if (user.role === Role.DEPARTMENT_LEADER && !isOwnDepartment) {
-    return { success: false, error: '无权操作其他部门事项' };
-  }
-
-  if (user.role === Role.DEPARTMENT_MANAGER) {
-    if (workItem.creatorId !== user.userId && !isOwnDepartment) {
-      return { success: false, error: '无权操作其他部门事项' };
-    }
-  }
-
-  let newStatus: WorkItemStatus;
-  let newApproverRole: Role | null;
-
-  if (user.role === Role.DEPARTMENT_MANAGER) {
-    newStatus = WorkItemStatus.COMPLETING;
-    newApproverRole = Role.DEPARTMENT_LEADER;
-  } else if (user.role === Role.DEPARTMENT_LEADER) {
-    newStatus = WorkItemStatus.COMPLETING;
-    newApproverRole = Role.VICE_PRESIDENT;
-  } else {
-    return { success: false, error: '无权提交见证材料' };
-  }
-
-  const updated = await prisma.workItem.update({
-    where: { id: workItemId },
-    data: {
-      status: newStatus,
-      proof,
-      currentApproverRole: newApproverRole,
-      currentApproverId: null,
-    },
-  });
-
-  await createWorkflowRecord(
-    workItemId,
-    'evidence',
-    user.userId,
-    workItem.status,
-    newStatus,
-    undefined,
-    newApproverRole,
-    comment
-  );
-
-  await logOperation(
-    user.userId,
-    user.userName,
-    user.role,
-    'evidence',
-    workItemId,
-    `提交见证材料：${workItem.title}`
-  );
-
-  return { success: true, workItem: updated };
-}
-
-export async function submitAdjust(workItemId: number, user: UserSession, adjustReason: string, comment?: string): Promise<WorkflowResult> {
-  if (user.role === Role.ADMIN || user.role === Role.SUPERVISOR) {
-    return { success: false, error: '无权申请调整' };
-  }
-
-  const workItem = await prisma.workItem.findUnique({
-    where: { id: workItemId },
-    include: { creator: true },
-  });
-
-  if (!workItem) {
-    return { success: false, error: '事项不存在' };
-  }
-
-  if (workItem.status !== WorkItemStatus.IN_PROGRESS) {
-    return { success: false, error: '当前状态不允许申请调整' };
-  }
-
-  const isOwnDepartment = workItem.departmentId === user.departmentId;
-  if (user.role === Role.DEPARTMENT_LEADER && !isOwnDepartment) {
-    return { success: false, error: '无权操作其他部门事项' };
-  }
-
-  if (user.role === Role.DEPARTMENT_MANAGER) {
-    if (workItem.creatorId !== user.userId && !isOwnDepartment) {
-      return { success: false, error: '无权操作其他部门事项' };
-    }
-  }
-
-  let newStatus: WorkItemStatus;
-  let newApproverRole: Role | null;
-  let newApproverId: number | null;
-
-  if (workItem.type === WorkItemType.TODO) {
-    if (user.role === Role.DEPARTMENT_MANAGER) {
-      newStatus = WorkItemStatus.ADJUSTING;
-      newApproverRole = Role.DEPARTMENT_LEADER;
-      newApproverId = null;
-    } else if (user.role === Role.DEPARTMENT_LEADER) {
-      if (!workItem.proposedLeaderId) {
-        return { success: false, error: '待办事项缺少提出领导，无法申请调整' };
-      }
-      newStatus = WorkItemStatus.ADJUSTING;
-      newApproverId = workItem.proposedLeaderId;
-      newApproverRole = null;
-    } else {
-      return { success: false, error: '无权申请调整' };
-    }
-  } else {
-    if (user.role === Role.DEPARTMENT_MANAGER) {
-      newStatus = WorkItemStatus.ADJUSTING;
-      newApproverRole = Role.DEPARTMENT_LEADER;
-      newApproverId = null;
-    } else if (user.role === Role.DEPARTMENT_LEADER) {
-      newStatus = WorkItemStatus.ADJUSTING;
-      newApproverRole = Role.VICE_PRESIDENT;
-      newApproverId = null;
-    } else {
-      return { success: false, error: '无权申请调整' };
-    }
-  }
-
-  const updated = await prisma.workItem.update({
-    where: { id: workItemId },
-    data: {
-      status: newStatus,
-      adjustReason,
-      currentApproverRole: newApproverRole,
-      currentApproverId: newApproverId,
-    },
-  });
-
-  await createWorkflowRecord(
-    workItemId,
-    'adjust',
-    user.userId,
-    workItem.status,
-    newStatus,
-    undefined,
-    newApproverRole,
-    comment
-  );
-
-  await logOperation(
-    user.userId,
-    user.userName,
-    user.role,
-    'adjust',
-    workItemId,
-    `申请调整：${workItem.title}，原因：${adjustReason}`
-  );
-
-  return { success: true, workItem: updated };
-}
-
-export async function submitCancel(workItemId: number, user: UserSession, cancelReason: string, comment?: string): Promise<WorkflowResult> {
-  if (user.role === Role.ADMIN || user.role === Role.SUPERVISOR) {
+  if (!canUserHandle(user, workItem)) {
     return { success: false, error: '无权申请取消' };
   }
 
-  const workItem = await prisma.workItem.findUnique({
-    where: { id: workItemId },
-    include: { creator: true },
-  });
-
-  if (!workItem) {
-    return { success: false, error: '事项不存在' };
+  if (!ensureMainResponsibleDepartment(user, workItem)) {
+    return { success: false, error: '只有主责部门可以申请取消' };
   }
 
-  if (workItem.status !== WorkItemStatus.IN_PROGRESS) {
-    return { success: false, error: '当前状态不允许申请取消' };
-  }
-
-  const isOwnDepartment = workItem.departmentId === user.departmentId;
-  if (user.role === Role.DEPARTMENT_LEADER && !isOwnDepartment) {
-    return { success: false, error: '无权操作其他部门事项' };
-  }
-
-  if (user.role === Role.DEPARTMENT_MANAGER) {
-    if (workItem.creatorId !== user.userId && !isOwnDepartment) {
-      return { success: false, error: '无权操作其他部门事项' };
-    }
-  }
-
-  let newStatus: WorkItemStatus;
-  let newApproverRole: Role | null;
-  let newApproverId: number | null;
-
-  if (workItem.type === WorkItemType.TODO) {
-    if (user.role === Role.VICE_PRESIDENT || user.role === Role.PRESIDENT) {
-      if (workItem.proposedLeaderId === user.userId) {
-        newStatus = WorkItemStatus.CANCELLING;
-        newApproverRole = Role.DEPARTMENT_LEADER;
-        newApproverId = null;
-      } else {
-        return { success: false, error: '无权申请取消' };
-      }
-    } else if (user.role === Role.DEPARTMENT_MANAGER) {
-      newStatus = WorkItemStatus.CANCELLING;
-      newApproverRole = Role.DEPARTMENT_LEADER;
-      newApproverId = null;
-    } else if (user.role === Role.DEPARTMENT_LEADER) {
-      if (!workItem.proposedLeaderId) {
-        return { success: false, error: '待办事项缺少提出领导，无法申请取消' };
-      }
-      newStatus = WorkItemStatus.CANCELLING;
-      newApproverId = workItem.proposedLeaderId;
-      newApproverRole = null;
-    } else {
-      return { success: false, error: '无权申请取消' };
-    }
-  } else {
-    if (user.role === Role.DEPARTMENT_MANAGER) {
-      newStatus = WorkItemStatus.CANCELLING;
-      newApproverRole = Role.DEPARTMENT_LEADER;
-      newApproverId = null;
-    } else if (user.role === Role.DEPARTMENT_LEADER) {
-      newStatus = WorkItemStatus.CANCELLING;
-      newApproverRole = Role.VICE_PRESIDENT;
-      newApproverId = null;
-    } else {
-      return { success: false, error: '无权申请取消' };
-    }
-  }
-
+  const oldStatus = workItem.status;
+  const approver = getProcessFirstApprover(workItem, user);
   const updated = await prisma.workItem.update({
     where: { id: workItemId },
     data: {
-      status: newStatus,
+      status: WorkItemStatus.CANCELLING,
+      action: ActionType.CANCEL,
       cancelReason,
-      currentApproverRole: newApproverRole,
-      currentApproverId: newApproverId,
+      beforeApprovalStatus: oldStatus,
+      approvalType: ApprovalType.CANCEL,
+      currentApproverId: approver.currentApproverId,
+      currentApproverRole: approver.currentApproverRole,
     },
   });
 
@@ -714,86 +659,59 @@ export async function submitCancel(workItemId: number, user: UserSession, cancel
     workItemId,
     'cancel',
     user.userId,
-    workItem.status,
-    newStatus,
-    undefined,
-    newApproverRole,
-    comment
-  );
-
-  await logOperation(
-    user.userId,
     user.userName,
     user.role,
-    'cancel',
-    workItemId,
-    `申请取消：${workItem.title}，原因：${cancelReason}`
+    oldStatus,
+    updated.status,
+    comment || '申请取消',
   );
+  await logOperation(user.userId, user.userName, user.role, 'cancel', 'workflow', `申请取消: ${workItem.title}`, workItemId);
 
   return { success: true, workItem: updated };
 }
 
-export async function decomposeTodo(workItemId: number, user: UserSession, nodes: any[], comment?: string): Promise<WorkflowResult> {
-  if (user.role === Role.ADMIN || user.role === Role.SUPERVISOR) {
-    return { success: false, error: '无权分解待办事项' };
-  }
-
-  const workItem = await prisma.workItem.findUnique({
-    where: { id: workItemId },
-    include: { creator: true },
-  });
-
+export async function decomposeTodo(
+  workItemId: number,
+  user: UserSession,
+  nodes: any[],
+  comment?: string,
+): Promise<WorkflowResult> {
+  const workItem = await getWorkItem(workItemId);
   if (!workItem) {
     return { success: false, error: '事项不存在' };
+  }
+
+  if (workItem.type !== WorkItemType.TODO) {
+    return { success: false, error: '只有待办事项可以分解' };
   }
 
   if (workItem.status !== WorkItemStatus.PENDING_DECOMPOSE) {
-    return { success: false, error: '当前状态不允许分解' };
+    return { success: false, error: '只有待分解事项可以提交分解方案' };
   }
 
-  const isOwnDepartment = workItem.departmentId === user.departmentId;
-  if (user.role === Role.DEPARTMENT_LEADER && !isOwnDepartment) {
-    return { success: false, error: '无权操作其他部门事项' };
+  if (!canUserHandle(user, workItem)) {
+    return { success: false, error: '无权分解该待办事项' };
   }
 
-  if (user.role === Role.DEPARTMENT_MANAGER) {
-    if (workItem.creatorId !== user.userId && !isOwnDepartment) {
-      return { success: false, error: '无权操作其他部门事项' };
-    }
+  if (!ensureMainResponsibleDepartment(user, workItem)) {
+    return { success: false, error: '只有主责部门可以分解该待办事项' };
   }
 
-  let newStatus: WorkItemStatus;
-  let newApproverRole: Role | null;
-  let newApproverId: number | null;
-
-  if (user.role === Role.DEPARTMENT_MANAGER) {
-    newStatus = WorkItemStatus.PROPOSING;
-    newApproverRole = Role.DEPARTMENT_LEADER;
-    newApproverId = null;
-  } else if (user.role === Role.DEPARTMENT_LEADER) {
-    if (!workItem.proposedLeaderId) {
-      return { success: false, error: '待办事项缺少提出领导，无法提交公司审批' };
-    }
-    newStatus = WorkItemStatus.PROPOSING;
-    newApproverId = workItem.proposedLeaderId || null;
-    newApproverRole = null;
-  } else {
-    return { success: false, error: '无权分解待办事项' };
-  }
-
-  // firstSubmitterId: 仅在首次进入正式审批链路时写入，之后不再覆盖。
-  const entersApprovalChain =
-    newStatus === WorkItemStatus.PROPOSING;
-  const shouldSetFirstSubmitter = entersApprovalChain && !workItem.firstSubmitterId;
-
+  const oldStatus = workItem.status;
+  const approver = getProposalFirstApprover(workItem, user);
   const updated = await prisma.workItem.update({
     where: { id: workItemId },
     data: {
-      status: newStatus,
-      nodes: JSON.stringify(nodes),
-      currentApproverRole: newApproverRole,
-      currentApproverId: newApproverId,
-      ...(shouldSetFirstSubmitter ? { firstSubmitterId: user.userId } : {}),
+      nodes: nodes as Prisma.InputJsonValue,
+      status: WorkItemStatus.PROPOSING,
+      action: ActionType.TODO_DECOMPOSE,
+      beforeApprovalStatus: oldStatus,
+      approvalType: ApprovalType.PROPOSE,
+      currentApproverId: approver.currentApproverId,
+      currentApproverRole: approver.currentApproverRole,
+      firstSubmitterId: workItem.firstSubmitterId ?? user.userId,
+      rejectReason: null,
+      rejectedFromStatus: null,
     },
   });
 
@@ -801,44 +719,40 @@ export async function decomposeTodo(workItemId: number, user: UserSession, nodes
     workItemId,
     'decompose',
     user.userId,
-    workItem.status,
-    newStatus,
-    undefined,
-    newApproverRole,
-    comment
-  );
-
-  await logOperation(
-    user.userId,
     user.userName,
     user.role,
-    'decompose',
-    workItemId,
-    `分解待办事项：${workItem.title}`
+    oldStatus,
+    updated.status,
+    comment || '提交待办分解方案',
   );
+  await logOperation(user.userId, user.userName, user.role, 'decompose', 'workflow', `分解待办: ${workItem.title}`, workItemId);
 
   return { success: true, workItem: updated };
 }
 
-export async function getWorkflowRecords(workItemId: number): Promise<any[]> {
+export async function getWorkflowRecords(workItemId: number) {
   const records = await prisma.workflowRecord.findMany({
     where: { workItemId },
-    orderBy: { createdAt: 'asc' },
     include: {
-      initiator: { select: { id: true, name: true, role: true } },
-      approver: { select: { id: true, name: true, role: true } },
+      initiator: {
+        select: {
+          name: true,
+          role: true,
+        },
+      },
     },
+    orderBy: { createdAt: 'asc' },
   });
 
-  return records.map(r => ({
-    id: r.id,
-    action: r.actionType,
-    initiatorId: r.initiatorId,
-    initiatorName: r.initiator?.name || '',
-    initiatorRole: r.initiator?.role || '',
-    previousStatus: r.statusBefore,
-    newStatus: r.statusAfter,
-    comment: r.comment,
-    createdAt: r.createdAt.toISOString(),
+  return records.map((record) => ({
+    id: record.id,
+    action: record.actionType,
+    initiatorId: record.initiatorId,
+    initiatorName: record.initiator?.name || '',
+    initiatorRole: record.initiator?.role || record.approvalRole,
+    previousStatus: record.statusBefore,
+    newStatus: record.statusAfter,
+    comment: record.comment,
+    createdAt: record.createdAt,
   }));
 }
