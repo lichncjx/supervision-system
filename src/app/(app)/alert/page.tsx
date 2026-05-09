@@ -123,7 +123,7 @@ export default function AlertPage() {
                       <div className="text-sm font-medium text-slate-700 break-words leading-snug">{work.title}</div>
                       <div className="text-xs text-slate-500 mt-1.5 flex items-center gap-2 flex-wrap">
                         <span className={`font-medium ${getWorkTypeText(work.type)}`}>{work.type}</span>
-                        <StatusBadge status={work.status} />
+                        <StatusBadge status={work.status} work={work} />
                         <span className="text-slate-400">责任部门：{departments.find((d) => d.id === work.departmentId)?.name || '-'}</span>
                         <span className="text-slate-400">计划完成时间：{work.completeTime || work.planCompleteTime || '-'}</span>
                       </div>

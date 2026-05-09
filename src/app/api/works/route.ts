@@ -3,11 +3,120 @@ import prisma from '@/lib/prisma';
 import { verifyToken } from '@/lib/server-auth';
 import { formatDate, processNodesForDisplay, processAdjustHistory, convertToDateTime } from '@/lib/utils';
 import { Role, WorkItemType, WorkItemStatus } from '@prisma/client';
-import { buildWorkVisibilityWhere } from '@/lib/server-permissions';
+import { buildWorkVisibilityWhere, canHandleWorkItem } from '@/lib/server-permissions';
 
 const ROLES_CAN_CREATE_ALL: Role[] = [Role.ADMIN, Role.SUPERVISOR];
 const ROLES_CAN_CREATE_TODO_ONLY: Role[] = [Role.VICE_PRESIDENT, Role.PRESIDENT];
 const ROLES_CAN_CREATE_DEPT: Role[] = [Role.DEPARTMENT_MANAGER, Role.DEPARTMENT_LEADER];
+const EXPIRING_DAYS = 7;
+const APPROVING_STATUSES = [
+  WorkItemStatus.PROPOSING,
+  WorkItemStatus.ADJUSTING,
+  WorkItemStatus.CANCELLING,
+  WorkItemStatus.COMPLETING,
+];
+const TERMINAL_STATUSES: WorkItemStatus[] = [WorkItemStatus.COMPLETED, WorkItemStatus.CANCELLED];
+
+function getDueDate(work: { type: WorkItemType; completeTime: Date | null; planCompleteTime: Date | null }) {
+  return work.type === WorkItemType.TODO ? work.planCompleteTime : work.completeTime;
+}
+
+function isOverdueWork(work: { type: WorkItemType; status: WorkItemStatus; completeTime: Date | null; planCompleteTime: Date | null }, now: Date) {
+  if (TERMINAL_STATUSES.includes(work.status)) return false;
+  const dueDate = getDueDate(work);
+  return dueDate ? dueDate < now : false;
+}
+
+function isExpiringWork(work: { type: WorkItemType; status: WorkItemStatus; completeTime: Date | null; planCompleteTime: Date | null }, now: Date) {
+  if (TERMINAL_STATUSES.includes(work.status)) return false;
+  const dueDate = getDueDate(work);
+  if (!dueDate) return false;
+  const deadline = new Date(now);
+  deadline.setDate(deadline.getDate() + EXPIRING_DAYS);
+  return dueDate >= now && dueDate <= deadline;
+}
+
+function parseJsonField<T>(value: unknown, fallback: T): T {
+  if (!value) return fallback;
+  if (typeof value !== 'string') return value as T;
+  try {
+    return JSON.parse(value) as T;
+  } catch {
+    return fallback;
+  }
+}
+
+function normalizeStatusQuery(status: string | null) {
+  if (!status) return null;
+  const normalized = status.trim();
+  const lower = normalized.toLowerCase();
+  if (!normalized) return null;
+
+  if (lower === 'draft') {
+    return {
+      kind: 'where' as const,
+      where: {
+        status: WorkItemStatus.DRAFT,
+        rejectReason: null,
+        rejectedFromStatus: null,
+      },
+    };
+  }
+
+  if (lower === 'returneddraft' || lower === 'returned_draft') {
+    return {
+      kind: 'where' as const,
+      where: {
+        status: WorkItemStatus.DRAFT,
+        OR: [
+          { rejectReason: { not: null } },
+          { rejectedFromStatus: { not: null } },
+        ],
+      },
+    };
+  }
+
+  if (lower === 'pendingdecompose' || lower === 'pending_decompose') {
+    return { kind: 'where' as const, where: { status: WorkItemStatus.PENDING_DECOMPOSE } };
+  }
+
+  const exact = Object.values(WorkItemStatus).find((value) => value === normalized.toUpperCase());
+  if (exact) return { kind: 'where' as const, where: { status: exact } };
+
+  if (lower === 'approving') {
+    return { kind: 'where' as const, where: { status: { in: APPROVING_STATUSES } } };
+  }
+
+  if (lower === 'inprogress' || lower === 'in_progress') {
+    return { kind: 'where' as const, where: { status: WorkItemStatus.IN_PROGRESS } };
+  }
+
+  if (lower === 'completed') {
+    return { kind: 'where' as const, where: { status: WorkItemStatus.COMPLETED } };
+  }
+
+  if (lower === 'cancelled') {
+    return { kind: 'where' as const, where: { status: WorkItemStatus.CANCELLED } };
+  }
+
+  if (lower === 'handling') {
+    return {
+      kind: 'post' as const,
+      where: { status: { in: [WorkItemStatus.DRAFT, WorkItemStatus.PENDING_DECOMPOSE, WorkItemStatus.IN_PROGRESS] } },
+      postFilter: 'handling' as const,
+    };
+  }
+
+  if (lower === 'overdue' || lower === 'expiring') {
+    return {
+      kind: 'post' as const,
+      where: { status: { notIn: TERMINAL_STATUSES } },
+      postFilter: lower as 'overdue' | 'expiring',
+    };
+  }
+
+  return { kind: 'invalid' as const };
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -53,8 +162,12 @@ export async function GET(request: NextRequest) {
       filters.push({ type: workType });
     }
 
-    if (status) {
-      filters.push({ status });
+    const statusFilter = normalizeStatusQuery(status);
+    if (statusFilter?.kind === 'invalid') {
+      return NextResponse.json({ error: '无效的状态筛选' }, { status: 400 });
+    }
+    if (statusFilter?.kind === 'where' || statusFilter?.kind === 'post') {
+      filters.push(statusFilter.where);
     }
 
     if (departmentId) {
@@ -95,9 +208,18 @@ export async function GET(request: NextRequest) {
       },
     });
 
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const filteredWorks = statusFilter?.kind === 'post'
+      ? works.filter((work) => {
+        if (statusFilter.postFilter === 'handling') return canHandleWorkItem(currentUser, work);
+        if (statusFilter.postFilter === 'overdue') return isOverdueWork(work, today);
+        if (statusFilter.postFilter === 'expiring') return isExpiringWork(work, today);
+        return true;
+      })
+      : works;
 
-
-    const result = works.map((work) => ({
+    const result = filteredWorks.map((work) => ({
       id: work.id,
       title: work.title,
       type: work.type === 'PRIORITY' ? '重点' : work.type === 'MAIN' ? '主要' : '待办',
@@ -135,8 +257,12 @@ export async function GET(request: NextRequest) {
       currentApproverId: work.currentApproverId,
       currentApproverRole: work.currentApproverRole,
       firstSubmitterId: work.firstSubmitterId,
-      nodes: work.nodes ? processNodesForDisplay(JSON.parse(String(work.nodes))) : [],
-      adjustHistory: work.adjustHistory ? processAdjustHistory(work.adjustHistory as any[]) : [],
+      rejectReason: work.rejectReason,
+      rejectedFromStatus: work.rejectedFromStatus,
+      beforeApprovalStatus: work.beforeApprovalStatus,
+      approvalType: work.approvalType,
+      nodes: processNodesForDisplay(parseJsonField(work.nodes, [])),
+      adjustHistory: processAdjustHistory(parseJsonField(work.adjustHistory, [])),
       createdAt: work.createdAt.toISOString(),
       updatedAt: work.updatedAt.toISOString(),
     }));

@@ -105,7 +105,7 @@ export function WorkOperationPanel({
         <div className="space-y-2">
           <div>
             <span className="text-sm text-slate-500">当前状态：</span>
-            <StatusBadge status={work.status} />
+            <StatusBadge status={work.status} work={work} />
           </div>
           <div>
             <span className="text-sm text-slate-500">当前环节：</span>

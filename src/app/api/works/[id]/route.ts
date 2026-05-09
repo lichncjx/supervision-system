@@ -97,6 +97,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       currentApproverId: work.currentApproverId,
       currentApproverRole: work.currentApproverRole,
       firstSubmitterId: work.firstSubmitterId,
+      rejectReason: work.rejectReason,
+      rejectedFromStatus: work.rejectedFromStatus,
+      beforeApprovalStatus: work.beforeApprovalStatus,
+      approvalType: work.approvalType,
       nodes: work.nodes ? processNodesForDisplay(JSON.parse(String(work.nodes))) : [],
       adjustHistory: work.adjustHistory ? processAdjustHistory(work.adjustHistory as any[]) : [],
       attachments: work.attachments.map((a) => ({
@@ -290,9 +294,6 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     // approvalLeaderId: 默认等于 proposedLeaderId，特殊情况才单独指定
     if (body.approvalLeaderId !== undefined) updateData.approvalLeaderId = body.approvalLeaderId || null;
     if (body.nodes !== undefined) updateData.nodes = JSON.stringify(body.nodes);
-    if (body.status !== undefined) updateData.status = body.status;
-    if (body.rejectReason !== undefined) updateData.rejectReason = body.rejectReason;
-    if (body.rejectedFromStatus !== undefined) updateData.rejectedFromStatus = body.rejectedFromStatus;
 
     const updatedWork = await prisma.workItem.update({
       where: { id: workId },

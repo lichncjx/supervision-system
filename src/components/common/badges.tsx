@@ -3,8 +3,10 @@
 import { Badge } from "@/components/ui/badge";
 import {
   getWorkStatusBadgeClass,
+  getWorkDisplayStatusLabel,
   getWorkStatusLabel,
   isWorkStatusTerminal,
+  type ReturnedDraftLike,
 } from "@/lib/work-status";
 
 export function getStatusColor(status: string): string {
@@ -56,12 +58,13 @@ export function getDateColor(priorityDate: string | null, actualDate: string | n
 
 interface StatusBadgeProps {
   status: string;
+  work?: ReturnedDraftLike;
 }
 
-export function StatusBadge({ status }: StatusBadgeProps) {
+export function StatusBadge({ status, work }: StatusBadgeProps) {
   return (
     <Badge className={getStatusColor(status)}>
-      {getStatusLabel(status)}
+      {getWorkDisplayStatusLabel(status, work)}
     </Badge>
   );
 }

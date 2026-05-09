@@ -37,7 +37,7 @@ import { WorkPendingAdjustmentPanel } from '@/components/work/work-pending-adjus
 import { StatusBadge } from '@/components/common/badges';
 import { WorkflowProgress } from '@/components/common/workflow-progress';
 import { ExpandableText } from '@/components/common/expandable-text';
-import { isWorkStatusReturned, isWorkStatusTerminal } from '@/lib/work-status';
+import { isReturnedDraftWork, isWorkStatusTerminal } from '@/lib/work-status';
 
 export default function WorkDetailPage() {
   const params = useParams<{ type: string; id: string }>();
@@ -193,7 +193,7 @@ export default function WorkDetailPage() {
 
   const canHandleReturnedCreate =
     user &&
-    isWorkStatusReturned(work.status) &&
+    isReturnedDraftWork(work) &&
     (
       user.role === 'ADMIN' ||
       // firstSubmitterId ?? creatorId 的 fallback 仅用于兼容历史数据
@@ -209,7 +209,7 @@ export default function WorkDetailPage() {
       (user.role === 'DEPARTMENT_MANAGER' || user.role === 'DEPARTMENT_LEADER') &&
       isCurrentUserRelatedDepartment() &&
       !isWorkStatusTerminal(work.status) &&
-      !isWorkStatusReturned(work.status)
+      !isReturnedDraftWork(work)
     ) ||
     (
       // Phase 3B: deptManagerId（含退回后补充材料）
@@ -219,7 +219,7 @@ export default function WorkDetailPage() {
     )
   );
 
-  const canSubmitDraft = user && work.status === 'draft' && (
+  const canSubmitDraft = user && work.status === 'draft' && !isReturnedDraftWork(work) && (
     user.role === 'ADMIN' ||
     user.id === work.creatorId
   );
@@ -642,7 +642,7 @@ export default function WorkDetailPage() {
           )}
           <div>
             <span className="text-sm text-slate-500">当前状态：</span>
-            <StatusBadge status={work.status} />
+            <StatusBadge status={work.status} work={work} />
           </div>
           <div>
             <span className="text-sm text-slate-500">当前环节：</span>
@@ -832,7 +832,7 @@ export default function WorkDetailPage() {
           </div>
           <div>
             <span className="text-sm text-slate-500">当前状态：</span>
-            <StatusBadge status={work.status} />
+            <StatusBadge status={work.status} work={work} />
           </div>
           <div>
             <span className="text-sm text-slate-500">当前环节：</span>

@@ -1,28 +1,24 @@
 # API 说明
 
-本文档记录当前首页相关调用链和 Dashboard API 设计。
+## 首页调用链
 
-## 一、首页当前调用链
-
-第四阶段后，首页 `src/app/(app)/page.tsx` 已改为：
+PR 6.3 后首页调用链为：
 
 | 调用 | 用途 | 说明 |
 | --- | --- | --- |
-| `GET /api/dashboard` | 首页卡片统计、临超期轻量列表、待处理轻量列表 | 首页不再通过 `/api/works` 或 `getVisibleWorks(user)` 拉取完整事项后计算列表 |
-| `GET /api/excel/completion-rate` | 管理员 / 督办导出完成率 | 仅用于导出按钮，未并入 Dashboard 聚合接口 |
+| `GET /api/dashboard` | 首页卡片统计、临超期轻量列表、待处理轻量列表 | 首页不再通过 `/api/works` 或 `getVisibleWorks(user)` 拉全量事项后前端计算列表 |
+| `GET /api/excel/completion-rate` | 管理员 / 督办导出完成率 | 仍独立提供，未并入 `GET /api/dashboard` |
 
-`GET /api/dashboard/summary` 仍保留兼容旧调用，但首页不再依赖它。
+`GET /api/dashboard/summary` 继续保留兼容，并与 `GET /api/dashboard.summary` 复用同一套 summary 计算 helper。
 
-## 二、`GET /api/dashboard`
+## GET /api/dashboard
 
 ```http
 GET /api/dashboard
 GET /api/dashboard?limit=5
 ```
 
-`limit` 控制每个轻量列表最多返回条数，默认 5，最大 100。target-contract 使用 `limit=100` 验证完整列表口径，首页使用默认 5。
-
-接口返回：
+返回结构：
 
 ```ts
 {
@@ -44,7 +40,6 @@ GET /api/dashboard?limit=5
     expiringCount: number;
     overdueCount: number;
 
-    // 兼容旧 summary 字段
     approving: number;
     handling: number;
     inProgress: number;
@@ -62,7 +57,11 @@ GET /api/dashboard?limit=5
 }
 ```
 
-`WorkDashboardItem` 是首页轻量列表项，不返回完整 `WorkItem`：
+`inProgressCount` 只统计 `IN_PROGRESS`，`completingCount` 只统计 `COMPLETING`。`thisMonthDue` 仅为 `expiring` 的兼容别名。
+
+## WorkDashboardItem
+
+首页轻量列表不返回完整 `WorkItem`：
 
 ```ts
 {
@@ -86,80 +85,35 @@ GET /api/dashboard?limit=5
 }
 ```
 
-说明：
+不得返回 `nodes`、`proof`、`attachments`、`workflowRecords`、长文本详情等详情页字段。
 
-1. `prisma/schema.prisma` 中当前不存在 `planEndDate` 字段。重点工作、主要工作当前使用 `completeTime` 表示计划完成时间；待办事项当前使用 `planCompleteTime`。
-2. `dueTime` 是接口派生展示字段，不是数据库字段。
-3. 轻量列表不得返回 `nodes`、`workPlan`、`proof`、`attachments`、`workflowRecords`、长文本描述等详情页字段。
+## GET /api/works 状态筛选
 
-## 三、统计字段来源
+`status` 查询参数支持当前 9 状态和派生筛选：
 
-| 字段 | 来源 |
+| 参数 | 口径 |
 | --- | --- |
-| `total` | 当前用户可见事项总数 |
-| `priorityTotal` / `mainTotal` / `todoTotal` | 当前用户可见范围内按事项类型统计 |
-| `priorityCompleted` / `mainCompleted` / `todoCompleted` | 当前用户可见范围内按事项类型统计 `COMPLETED` |
-| `pendingApprovalCount` | 复用 `canApproveWorkItem(user, work)` |
-| `pendingHandlingCount` | 复用 `canHandleWorkItem(user, work)` |
-| `myActionRequiredCount` | `pendingApprovalCount + pendingHandlingCount` |
-| `inProgressCount` | 当前 15 状态中兼容 `APPROVED` + `IN_PROGRESS` |
-| `completingCount` | 当前 15 状态中兼容 `PENDING_COMPLETE` + `PENDING_EVIDENCE_DEPT` + `PENDING_EVIDENCE_COMPANY` |
-| `completedCount` | `COMPLETED` |
-| `cancelledCount` | `CANCELLED` |
-| `overdueCount` | 可见范围内未完成、未取消且超过计划时间 |
-| `expiringCount` | 可见范围内未完成、未取消且计划时间在当前时间起 7 天内 |
+| `DRAFT` / `draft` | 普通草稿，不包含退回待修改 |
+| `returnedDraft` / `returned_draft` | `DRAFT` + 退回痕迹 |
+| `PENDING_DECOMPOSE` / `pendingDecompose` | 待分解 |
+| `approving` | `PROPOSING` / `ADJUSTING` / `CANCELLING` / `COMPLETING` |
+| `handling` | `canHandleWorkItem(user, work)` |
+| `IN_PROGRESS` / `inProgress` | 进行中 |
+| `COMPLETED` / `completed` | 已完成 |
+| `CANCELLED` / `cancelled` | 已取消 |
+| `expiring` | 非终态且计划时间在 7 天窗口内 |
+| `overdue` | 非终态且计划时间早于当前日期 |
 
-## 四、轻量列表口径
+旧状态值 `APPROVED`、`REJECTED`、`PENDING_DEPT`、`PENDING_COMPANY`、`PENDING_COMPLETE`、`PENDING_EVIDENCE_DEPT`、`PENDING_EVIDENCE_COMPANY`、`PENDING_MAIN_LEADER_CANCEL` 不再接受为当前筛选值。
 
-`lists.expiringAndOverdue`：
+## 退回待修改
 
-1. 只返回当前用户可见事项。
-2. 只返回临期或超期事项。
-3. 排除 `COMPLETED` / `CANCELLED`。
-4. 按超期优先、计划完成时间升序排序。
+“退回待修改”不是 `WorkItemStatus`。接口和页面通过 `DRAFT` 加退回痕迹派生展示：`rejectReason`、`rejectedFromStatus`、`rejectedAt`，或最新 workflow record 为 `reject` / `rejected`。
 
-`lists.myActionRequired`：
+普通编辑接口 `PUT /api/works/[id]` 不写入 `status`、`beforeApprovalStatus`、`approvalType`、`rejectReason`、`rejectedFromStatus`；状态流转必须通过 workflow 接口。
 
-1. 普通用户只返回 `canApproveWorkItem` 或 `canHandleWorkItem` 为 true 的事项。
-2. `actionType=approval` 表示待审批，`actionType=handling` 表示待办理。
-3. `SUPERVISOR` 暂不混入“督办跟踪”特殊口径；该拆分作为后续遗留项记录。
+## 普通 Excel 导入导出
 
-## 五、角色与部门口径
+`GET /api/excel/export` 的数据范围与 `/api/works` 可见范围一致，并使用统一状态元数据输出状态文案。导出状态筛选同样不接受旧状态值。
 
-1. `ADMIN`、`SUPERVISOR`：全局统计和全局临超期列表。
-2. `DEPARTMENT_MANAGER`、`DEPARTMENT_LEADER`：本部门主责或配合相关事项可见；待办理仍只按主责部门判断。
-3. `VICE_PRESIDENT`：围绕其提出、分管、当前审批或明确授权范围统计，不默认继承其他副总事项。
-4. `PRESIDENT`：围绕本人提出、当前审批、主要领导审批事项统计；不默认全局统计。
-5. TODO 多主责部门通过统一 helper `getResponsibleDepartmentIds(work)` 兼容 `responsibleDepartmentIds` -> `departmentIds` -> `departmentId`；当前阶段不修改 Prisma schema。
-
-## 六、兼容策略
-
-1. `GET /api/dashboard/summary` 保留兼容，并与 `GET /api/dashboard.summary` 复用同一个 summary 计算 helper。
-2. 第四阶段只移除首页全量事项拉取，不强制合并完成率接口。
-3. `GET /api/dashboard/completion-rate` 和 `GET /api/excel/completion-rate` 继续按第二阶段主责部门完成率口径独立提供。
-
-## 七、普通 Excel 导入导出
-
-### `GET /api/excel/export`
-
-普通事项导出接口。第五阶段后：
-
-1. 数据范围与 `GET /api/works` 可见范围一致。
-2. `ADMIN` / `SUPERVISOR` 可导出全局。
-3. 部门角色只能导出本部门主责或配合相关事项。
-4. `VICE_PRESIDENT` / `PRESIDENT` 不默认导出其他公司领导负责事项。
-5. 状态文案来自统一状态元数据。
-6. 主责部门通过 `getResponsibleDepartmentIds(work)` 输出，兼容 `departmentIds` / `departmentId`。
-7. 配合部门通过 `getCooperateDepartmentIds(work)` 输出。
-8. 业务责任人姓名字段仅用于展示导出，不参与权限判断。
-
-### `POST /api/excel/import/[type]`
-
-普通事项导入接口，`type` 支持 `priority`、`main`、`todo`。第五阶段后：
-
-1. 普通导入默认创建 `DRAFT`，不得绕过 workflow 直接写入审批中、进行中、已完成等状态。
-2. 部门用户导入时，主责部门必须包含当前用户部门。
-3. 配合部门可以填写其他部门，但不能替代主责部门授权。
-4. `responsiblePersons` / `cooperatePersons` / `responsibleLeader` / `responsiblePerson` 均按姓名文本处理，不校验系统用户。
-5. 当前 schema 尚未提供 `responsibleDepartmentIds`，导入仍写入 `departmentIds` 并保留 `departmentId` 兼容。
-6. 本轮不新增 `Member`、`DepartmentMember`、`WorkParticipant`。
+`POST /api/excel/import/[type]` 普通导入默认创建 `DRAFT`，状态列仅允许空、`DRAFT` 或“草稿”；审批中、进行中、终态和旧状态不得通过普通导入写入，必须通过 workflow 流转。

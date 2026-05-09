@@ -1,10 +1,11 @@
 import { isCompanyLevel, type User } from '@/lib/auth';
 import {
   getWorkStatusDescription,
+  getWorkDisplayStatusLabel,
   getWorkStatusLabel,
   isWorkStatusInPendingApprovalFilter,
   isWorkStatusInProgress,
-  isWorkStatusReturned,
+  isReturnedDraftWork,
   normalizeWorkStatus,
   shouldCountWorkStatusForDeadline,
   type WorkStatusValue,
@@ -14,6 +15,9 @@ export type WorkType = '重点' | '主要' | '待办';
 
 export type WorkStatusFilter =
   | 'all'
+  | 'draft'
+  | 'returnedDraft'
+  | 'pendingDecompose'
   | 'approving'
   | 'handling'
   | 'inProgress'
@@ -306,7 +310,8 @@ export function transformWorkFromAPI(work: any): Work {
     // 退回/调整/取消/附件
     rejectReason: work.rejectReason || work.reject_reason,
     rejectedAt: work.rejectedAt || work.rejected_at,
-    rejectedFrom: work.rejectedFrom || work.rejected_from_status,
+    rejectedFrom: normalizeWorkStatus(work.rejectedFrom || work.rejected_from_status || work.rejectedFromStatus) || undefined,
+    rejectedFromStatus: normalizeWorkStatus(work.rejectedFromStatus || work.rejected_from_status) || null,
     adjustReason: work.adjustReason || work.adjust_reason,
     cancelReason: work.cancelReason || work.cancel_reason,
     createdAt: work.createdAt || work.created_at,
@@ -397,6 +402,22 @@ export async function queryWorks(user: User | null | undefined, query: WorkQuery
   if (query.status && query.status !== 'all') {
     if (query.status === 'approving') {
       list = list.filter((w) => isPendingApprovalStatus(w.status));
+    }
+
+    if (query.status === 'handling') {
+      list = list.filter((w) => canHandleWork(user, w));
+    }
+
+    if (query.status === 'draft') {
+      list = list.filter((w) => w.status === 'draft' && !isReturnedDraftWork(w));
+    }
+
+    if (query.status === 'returnedDraft') {
+      list = list.filter((w) => isReturnedDraftWork(w));
+    }
+
+    if (query.status === 'pendingDecompose') {
+      list = list.filter((w) => w.status === 'pending_decompose');
     }
 
     if (query.status === 'inProgress') {
@@ -526,10 +547,6 @@ export async function updateWork(id: number, patch: Partial<Work>): Promise<Work
   if (patch.progress !== undefined) data.progress = patch.progress;
   if (patch.approvalLeaderId !== undefined) data.approvalLeaderId = patch.approvalLeaderId;
   if (patch.nodes !== undefined) data.nodes = patch.nodes;
-  if (patch.status !== undefined) data.status = patch.status;
-  if (patch.rejectReason !== undefined) data.rejectReason = patch.rejectReason;
-  if (patch.rejectedFromStatus !== undefined) data.rejectedFromStatus = patch.rejectedFromStatus;
-
   const response = await fetch(`/api/works/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -584,6 +601,10 @@ export async function resubmitRejectedWork(work: Work, user: User, patch: WorkEd
 
 export function getStatusName(status: string) {
   return getWorkStatusLabel(status);
+}
+
+export function getWorkDisplayStatusName(work: Pick<Work, 'status' | 'rejectReason' | 'rejectedFromStatus' | 'rejectedAt'>) {
+  return getWorkDisplayStatusLabel(work.status, work);
 }
 
 export function getActionName(action: string) {
@@ -798,8 +819,8 @@ function isWorkRelatedToDepartment(work: Work, departmentId?: number) {
   return getWorkDepartmentIds(work).includes(Number(departmentId));
 }
 
-export function isReturnStatus(status: Status) {
-  return isWorkStatusReturned(status);
+export function isReturnedDraft(work: Pick<Work, 'status' | 'rejectReason' | 'rejectedFromStatus' | 'rejectedAt'>) {
+  return isReturnedDraftWork(work);
 }
 
 export function isPendingApprovalStatus(status: Status) {
@@ -834,18 +855,23 @@ export function isExpiringWork(work: Work) {
 
   const diff = target.getTime() - today.getTime();
 
-  return diff >= 0 && diff <= 15 * 24 * 60 * 60 * 1000;
+  return diff >= 0 && diff <= 7 * 24 * 60 * 60 * 1000;
 }
 
-export type WorkFilter = 'all' | 'approving' | 'inProgress' | 'completed' | 'overdue' | 'expiring';
+export type WorkFilter = WorkStatusFilter;
 
 export async function getFilteredWorks(user: User | null | undefined, filter: WorkFilter): Promise<Work[]> {
   const list = await getVisibleWorks(user);
 
   if (filter === 'all') return list;
+  if (filter === 'draft') return list.filter((w) => w.status === 'draft' && !isReturnedDraftWork(w));
+  if (filter === 'returnedDraft') return list.filter((w) => isReturnedDraftWork(w));
+  if (filter === 'pendingDecompose') return list.filter((w) => w.status === 'pending_decompose');
   if (filter === 'approving') return list.filter((w) => isPendingApprovalStatus(w.status));
+  if (filter === 'handling') return list.filter((w) => canHandleWork(user, w));
   if (filter === 'inProgress') return list.filter((w) => isInProgressStatus(w.status));
   if (filter === 'completed') return list.filter((w) => w.status === 'completed');
+  if (filter === 'cancelled') return list.filter((w) => w.status === 'cancelled');
   if (filter === 'overdue') return list.filter((w) => isOverdueWork(w));
   if (filter === 'expiring') return list.filter((w) => isExpiringWork(w));
 
@@ -865,13 +891,18 @@ export function canHandleWork(user: User | null | undefined, work: Work) {
   }
 
   // 本人创建的草稿，使用 creatorId 判断
+  if (isReturnedDraftWork(work)) {
+    const submitterId = work.firstSubmitterId ?? work.creatorId;
+    return submitterId === user.id;
+  }
+
   if (work.status === 'draft' && work.creatorId === user.id) {
     return true;
   }
 
   // 被退回后，仅首次提交审批人（firstSubmitterId）可以处理
   // firstSubmitterId ?? creatorId 的 fallback 仅用于兼容引入该字段前的历史数据
-  if (isReturnStatus(work.status)) {
+  if (isReturnedDraftWork(work)) {
     const submitterId = work.firstSubmitterId ?? work.creatorId;
     return submitterId === user.id;
   }
@@ -935,8 +966,17 @@ export function canApproveWork(user: User | null | undefined, work: Work) {
     return false;
   }
 
-  if (user.role === 'DEPARTMENT_LEADER') {
+  if (work.currentApproverId) {
+    return work.currentApproverId === user.id;
+  }
+
+  if (work.currentApproverRole && work.currentApproverRole !== user.role) {
+    return false;
+  }
+
+  if (user.role === 'DEPARTMENT_LEADER' || user.role === 'DEPARTMENT_MANAGER') {
     return (
+      work.currentApproverRole === user.role &&
       isWorkRelatedToDepartment(work, user.departmentId) &&
       (
         work.status === 'proposing' ||
@@ -947,11 +987,7 @@ export function canApproveWork(user: User | null | undefined, work: Work) {
     );
   }
 
-  if (work.status === 'proposing' || work.status === 'completing') {
-    return isSelectedCompanyApprover(user, work);
-  }
-
-  if (work.status === 'cancelling' || work.status === 'adjusting') {
+  if (work.status === 'proposing' || work.status === 'completing' || work.status === 'cancelling' || work.status === 'adjusting') {
     return isSelectedCompanyApprover(user, work);
   }
 
@@ -1180,11 +1216,11 @@ export function getWorkflowSteps(work: Work): WorkflowStep[] {
   else if (work.status === 'in_progress') currentIndex = 3;
   else if (work.status === 'completing') currentIndex = 4;
   else if (work.status === 'completed') currentIndex = labels.length - 1;
-  else if (isReturnStatus(work.status)) currentIndex = Math.max(0, labels.length - 2);
+  else if (isReturnedDraftWork(work)) currentIndex = Math.max(0, labels.length - 2);
   else if (work.status === 'cancelled') currentIndex = labels.length - 1;
 
   return labels.map((label, index) => {
-    if (isReturnStatus(work.status) && index === currentIndex) {
+    if (isReturnedDraftWork(work) && index === currentIndex) {
       return { label: `${label}（退回待处理）`, status: 'returned' };
     }
 

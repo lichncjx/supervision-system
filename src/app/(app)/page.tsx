@@ -338,7 +338,7 @@ export default function DashboardPage() {
                       <div className="text-sm font-medium text-slate-700 break-words leading-snug">{work.title}</div>
                       <div className="text-xs text-slate-500 mt-1.5 flex items-center gap-2 flex-wrap">
                         <span className={`font-medium ${typeColor.text}`}>{work.typeLabel || work.type}</span>
-                        <StatusBadge status={work.status} />
+                        <StatusBadge status={work.status} work={work} />
                         <span className="text-slate-400">计划完成时间：{date || '-'}</span>
                       </div>
                     </div>
@@ -380,7 +380,7 @@ export default function DashboardPage() {
                       <div className="text-sm font-medium text-slate-700 break-words leading-snug">{work.title}</div>
                       <div className="text-xs text-slate-500 mt-1.5 flex items-center gap-2 flex-wrap">
                         <span className={`font-medium ${typeColor.text}`}>{work.typeLabel || work.type}</span>
-                        <StatusBadge status={work.status} />
+                        <StatusBadge status={work.status} work={work} />
                         {work.actionType === 'approval' && <span className="text-purple-600 font-medium text-xs">待审批</span>}
                         {work.actionType === 'handling' && <span className="text-indigo-600 font-medium text-xs">待办理</span>}
                       </div>

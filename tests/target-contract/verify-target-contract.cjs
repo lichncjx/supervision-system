@@ -777,6 +777,53 @@ async function verifyExcelImport(baseUrl, loginByUsername, deptByCode, userByUse
     expectedFailure: false,
     note: 'Phase 5: ordinary import defaults to DRAFT and treats responsible/cooperate persons as display text only.',
   });
+
+  const invalidStatusHeaders = [
+    ...todoHeaders,
+    '当前状态',
+  ];
+  const invalidStatusRows = [
+    invalidStatusHeaders,
+    [
+      userByUsername.vp_a.name,
+      userByUsername.vp_a.name,
+      'target-contract import status',
+      'TC-导入非法状态-APPROVED',
+      '2026-05-01',
+      'TDA',
+      '非法状态责任人',
+      'TDB',
+      '非法状态配合人',
+      '验证普通导入不能绕过 workflow',
+      '2026-12-31',
+      '未开始',
+      'APPROVED',
+    ],
+  ];
+  const invalidStatusResponse = await requestMultipart(
+    baseUrl,
+    '/api/excel/import/todo',
+    'invalid-status.xlsx',
+    buildWorkbookBuffer(invalidStatusRows),
+    loginByUsername.dept_manager_a1.cookies
+  );
+
+  record({
+    role: 'dept_manager_a1',
+    endpoint: 'POST /api/excel/import/todo rejects old/non-draft status',
+    actual: {
+      statusCode: invalidStatusResponse.statusCode,
+      success: invalidStatusResponse.body?.success,
+      exists: Boolean(await prisma.workItem.findFirst({ where: { title: 'TC-导入非法状态-APPROVED' } })),
+    },
+    expected: {
+      statusCode: 400,
+      success: false,
+      exists: false,
+    },
+    expectedFailure: false,
+    note: 'PR 6.3: ordinary Excel import only accepts empty status or DRAFT/草稿; old and non-draft states must go through workflow.',
+  });
 }
 
 const WORKFLOW_TEST_PREFIX = 'TC-WF-';
@@ -1575,6 +1622,122 @@ async function verifyWorkflowTransitions(baseUrl, loginByUsername, deptByCode, u
   });
 }
 
+async function verifyStateFilters(baseUrl, loginByUsername, deptByCode, userByUsername) {
+  await prisma.workItem.deleteMany({
+    where: { title: { startsWith: 'TC-STATE-' } },
+  });
+
+  const returnedDraft = await prisma.workItem.create({
+    data: {
+      type: 'MAIN',
+      title: 'TC-STATE-returned-draft',
+      workItem: 'TC-STATE-returned-draft',
+      status: 'DRAFT',
+      departmentId: deptByCode.TDA.id,
+      departmentIds: [deptByCode.TDA.id],
+      creatorId: userByUsername.dept_manager_a2.id,
+      firstSubmitterId: userByUsername.dept_manager_a1.id,
+      proposedLeaderId: userByUsername.vp_a.id,
+      approvalLeaderId: userByUsername.vp_a.id,
+      rejectReason: 'target-contract returned draft',
+      rejectedFromStatus: 'PROPOSING',
+      completeTime: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    },
+  });
+
+  const oldStatusResponse = await request(baseUrl, 'GET', '/api/works?status=APPROVED', null, loginByUsername.admin.cookies);
+  record({
+    role: 'admin',
+    endpoint: 'GET /api/works rejects legacy status filter',
+    actual: { statusCode: oldStatusResponse.statusCode },
+    expected: { statusCode: 400 },
+    expectedFailure: false,
+    note: 'PR 6.3: /api/works status filter only accepts 9 current states or documented derived filters.',
+  });
+
+  const inProgressResponse = await request(baseUrl, 'GET', '/api/works?status=inProgress', null, loginByUsername.admin.cookies);
+  const inProgressStatuses = Array.isArray(inProgressResponse.body)
+    ? Array.from(new Set(inProgressResponse.body.map((item) => item.status))).sort()
+    : [];
+  record({
+    role: 'admin',
+    endpoint: 'GET /api/works status=inProgress',
+    actual: { statusCode: inProgressResponse.statusCode, statuses: inProgressStatuses },
+    expected: { statusCode: 200, statuses: ['IN_PROGRESS'] },
+    expectedFailure: false,
+    note: 'PR 6.3: inProgress no longer includes APPROVED.',
+  });
+
+  const approvingResponse = await request(baseUrl, 'GET', '/api/works?status=approving', null, loginByUsername.admin.cookies);
+  const approvingStatuses = Array.isArray(approvingResponse.body)
+    ? Array.from(new Set(approvingResponse.body.map((item) => item.status))).sort()
+    : [];
+  record({
+    role: 'admin',
+    endpoint: 'GET /api/works status=approving',
+    actual: { statusCode: approvingResponse.statusCode, statuses: approvingStatuses },
+    expected: {
+      statusCode: 200,
+      statuses: ['ADJUSTING', 'CANCELLING', 'COMPLETING', 'PROPOSING'],
+    },
+    expectedFailure: false,
+    note: 'PR 6.3: approving covers PROPOSING/ADJUSTING/CANCELLING/COMPLETING only.',
+  });
+
+  const returnedResponse = await request(baseUrl, 'GET', '/api/works?status=returnedDraft', null, loginByUsername.dept_manager_a1.cookies);
+  const returnedIds = Array.isArray(returnedResponse.body) ? returnedResponse.body.map((item) => item.id) : [];
+  const returnedItem = Array.isArray(returnedResponse.body)
+    ? returnedResponse.body.find((item) => item.id === returnedDraft.id)
+    : null;
+  record({
+    role: 'dept_manager_a1',
+    endpoint: 'GET /api/works status=returnedDraft',
+    actual: {
+      statusCode: returnedResponse.statusCode,
+      containsReturnedDraft: returnedIds.includes(returnedDraft.id),
+      status: returnedItem?.status,
+      rejectedFromStatus: returnedItem?.rejectedFromStatus,
+    },
+    expected: {
+      statusCode: 200,
+      containsReturnedDraft: true,
+      status: 'DRAFT',
+      rejectedFromStatus: 'PROPOSING',
+    },
+    expectedFailure: false,
+    note: 'PR 6.3: returned draft is derived from DRAFT plus reject traces, not a database status.',
+  });
+
+  const handlingOtherUserResponse = await request(baseUrl, 'GET', '/api/works?status=handling', null, loginByUsername.dept_manager_a2.cookies);
+  const handlingOtherUserIds = Array.isArray(handlingOtherUserResponse.body)
+    ? handlingOtherUserResponse.body.map((item) => item.id)
+    : [];
+  record({
+    role: 'dept_manager_a2',
+    endpoint: 'GET /api/works status=handling excludes others returned draft',
+    actual: {
+      statusCode: handlingOtherUserResponse.statusCode,
+      containsReturnedDraft: handlingOtherUserIds.includes(returnedDraft.id),
+    },
+    expected: {
+      statusCode: 200,
+      containsReturnedDraft: false,
+    },
+    expectedFailure: false,
+    note: 'PR 6.3: returned draft handling belongs to firstSubmitterId, not every same-department user.',
+  });
+
+  const exportOldStatus = await requestBinary(baseUrl, 'GET', '/api/excel/export?status=APPROVED', loginByUsername.admin.cookies);
+  record({
+    role: 'admin',
+    endpoint: 'GET /api/excel/export rejects legacy status filter',
+    actual: { statusCode: exportOldStatus.statusCode },
+    expected: { statusCode: 400 },
+    expectedFailure: false,
+    note: 'PR 6.3: ordinary Excel export does not accept legacy state filters.',
+  });
+}
+
 async function main() {
   const { baseUrl } = parseArgs();
   printEnvironmentSummary('[target-contract-verify]');
@@ -1600,6 +1763,7 @@ async function main() {
   await verifyExcelExport(baseUrl, loginByUsername, userByUsername, works);
   await verifyExcelImport(baseUrl, loginByUsername, deptByCode, userByUsername);
   await verifyWorkflowTransitions(baseUrl, loginByUsername, deptByCode, userByUsername);
+  await verifyStateFilters(baseUrl, loginByUsername, deptByCode, userByUsername);
 
   const totals = results.reduce(
     (acc, item) => {
