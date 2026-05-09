@@ -12,6 +12,7 @@ import {
   getWorkflowRecords,
 } from '@/lib/workflow';
 import { UserSession } from '@/lib/workflow';
+import { canViewWorkItem } from '@/lib/server-permissions';
 
 export async function POST(
   request: NextRequest,
@@ -145,12 +146,8 @@ export async function GET(
       return NextResponse.json({ error: '事项不存在' }, { status: 404 });
     }
 
-    const ROLES_CAN_VIEW_ALL = ['ADMIN', 'SUPERVISOR', 'VICE_PRESIDENT', 'PRESIDENT'];
-
-    if (!ROLES_CAN_VIEW_ALL.includes(currentUser.role)) {
-      if (workItem.departmentId !== currentUser.departmentId) {
-        return NextResponse.json({ error: '无权查看该事项审批记录' }, { status: 403 });
-      }
+    if (!canViewWorkItem(currentUser, workItem)) {
+      return NextResponse.json({ error: '无权查看该事项审批记录' }, { status: 403 });
     }
 
     const records = await getWorkflowRecords(workItemId);

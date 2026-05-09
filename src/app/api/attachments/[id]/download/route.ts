@@ -34,7 +34,19 @@ export async function GET(
       where: { id: attachmentId },
       include: {
         workItem: {
-          select: { departmentId: true, creatorId: true, type: true, deptManagerId: true },
+          select: {
+            departmentId: true,
+            departmentIds: true,
+            cooperateDepartmentIds: true,
+            creatorId: true,
+            proposedLeaderId: true,
+            approvalLeaderId: true,
+            currentApproverId: true,
+            currentApproverRole: true,
+            needMainLeaderCancel: true,
+            type: true,
+            deptManagerId: true,
+          },
         },
       },
     });
@@ -46,8 +58,15 @@ export async function GET(
     if (attachment.workItem) {
       const permWorkItem: AttPermWorkItem = {
         departmentId: attachment.workItem.departmentId,
+        departmentIds: attachment.workItem.departmentIds,
+        cooperateDepartmentIds: attachment.workItem.cooperateDepartmentIds,
         status: '', // download 不校验状态
         creatorId: attachment.workItem.creatorId,
+        proposedLeaderId: attachment.workItem.proposedLeaderId,
+        approvalLeaderId: attachment.workItem.approvalLeaderId,
+        currentApproverId: attachment.workItem.currentApproverId,
+        currentApproverRole: attachment.workItem.currentApproverRole,
+        needMainLeaderCancel: attachment.workItem.needMainLeaderCancel,
         type: attachment.workItem.type,
         deptManagerId: attachment.workItem.deptManagerId,
       };

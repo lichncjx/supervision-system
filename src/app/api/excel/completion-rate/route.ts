@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import * as XLSX from 'xlsx';
 import prisma from '@/lib/prisma';
 import { getUserFromToken, isSupervisionAdmin } from '@/lib/server-auth';
+import { getResponsibleDepartmentIds } from '@/lib/server-permissions';
 
 async function getDepartmentStatsForExcel(
   departmentId: number,
@@ -18,31 +19,46 @@ async function getDepartmentStatsForExcel(
     dateFilter.lte = end;
   }
 
-  const baseWhere: any = { departmentId };
+  const filters: any[] = [
+    {
+      OR: [
+        { departmentId },
+        { departmentIds: { has: departmentId } },
+      ],
+    },
+  ];
+
   if (Object.keys(dateFilter).length > 0) {
-    baseWhere.createdAt = dateFilter;
+    filters.push({ createdAt: dateFilter });
   }
 
-  const priorityWhere = { ...baseWhere, type: 'PRIORITY' as const };
-  const mainWhere = { ...baseWhere, type: 'MAIN' as const };
-  const todoWhere = { ...baseWhere, type: 'TODO' as const };
+  const works = await prisma.workItem.findMany({
+    where: { AND: filters },
+  });
 
-  const overdueCondition = {
-    status: { notIn: ['COMPLETED', 'CANCELLED'] as const },
-    OR: [
-      { type: { in: ['PRIORITY', 'MAIN'] as const }, completeTime: { lt: new Date() } },
-      { type: 'TODO' as const, planCompleteTime: { lt: new Date() } },
-    ],
+  const responsibleWorks = works.filter((work) =>
+    getResponsibleDepartmentIds(work).includes(departmentId)
+  );
+
+  const priority = responsibleWorks.filter((work) => work.type === 'PRIORITY');
+  const main = responsibleWorks.filter((work) => work.type === 'MAIN');
+  const todo = responsibleWorks.filter((work) => work.type === 'TODO');
+  const isCompleted = (work: (typeof responsibleWorks)[number]) => work.status === 'COMPLETED';
+  const isCancelled = (work: (typeof responsibleWorks)[number]) => work.status === 'CANCELLED';
+  const isOverdue = (work: (typeof responsibleWorks)[number]) => {
+    if (isCompleted(work) || isCancelled(work)) return false;
+    const due = work.type === 'TODO' ? work.planCompleteTime : work.completeTime;
+    return due ? due < new Date() : false;
   };
 
-  const priorityTotal = await prisma.workItem.count({ where: priorityWhere });
-  const priorityCompleted = await prisma.workItem.count({ where: { ...priorityWhere, status: 'COMPLETED' } });
-  const mainTotal = await prisma.workItem.count({ where: mainWhere });
-  const mainCompleted = await prisma.workItem.count({ where: { ...mainWhere, status: 'COMPLETED' } });
-  const todoTotal = await prisma.workItem.count({ where: todoWhere });
-  const todoCompleted = await prisma.workItem.count({ where: { ...todoWhere, status: 'COMPLETED' } });
-  const cancelled = await prisma.workItem.count({ where: { ...baseWhere, status: 'CANCELLED' } });
-  const overdue = await prisma.workItem.count({ where: { ...baseWhere, ...overdueCondition } });
+  const priorityTotal = priority.length;
+  const priorityCompleted = priority.filter(isCompleted).length;
+  const mainTotal = main.length;
+  const mainCompleted = main.filter(isCompleted).length;
+  const todoTotal = todo.length;
+  const todoCompleted = todo.filter(isCompleted).length;
+  const cancelled = responsibleWorks.filter(isCancelled).length;
+  const overdue = responsibleWorks.filter(isOverdue).length;
 
   const total = priorityTotal + mainTotal + todoTotal;
   const completed = priorityCompleted + mainCompleted + todoCompleted;

@@ -72,7 +72,21 @@ export async function POST(request: NextRequest) {
 
     const workItem = await prisma.workItem.findUnique({
       where: { id: workItemId },
-      select: { id: true, departmentId: true, status: true, creatorId: true, type: true, deptManagerId: true },
+      select: {
+        id: true,
+        departmentId: true,
+        departmentIds: true,
+        cooperateDepartmentIds: true,
+        status: true,
+        creatorId: true,
+        proposedLeaderId: true,
+        approvalLeaderId: true,
+        currentApproverId: true,
+        currentApproverRole: true,
+        needMainLeaderCancel: true,
+        type: true,
+        deptManagerId: true,
+      },
     });
 
     if (!workItem) {
@@ -81,8 +95,15 @@ export async function POST(request: NextRequest) {
 
     const permWorkItem: AttPermWorkItem = {
       departmentId: workItem.departmentId,
+      departmentIds: workItem.departmentIds,
+      cooperateDepartmentIds: workItem.cooperateDepartmentIds,
       status: workItem.status,
       creatorId: workItem.creatorId,
+      proposedLeaderId: workItem.proposedLeaderId,
+      approvalLeaderId: workItem.approvalLeaderId,
+      currentApproverId: workItem.currentApproverId,
+      currentApproverRole: workItem.currentApproverRole,
+      needMainLeaderCancel: workItem.needMainLeaderCancel,
       type: workItem.type,
       deptManagerId: workItem.deptManagerId,
     };
