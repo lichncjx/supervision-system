@@ -103,7 +103,7 @@ function pickSummaryFields(value) {
     completed: value.completed,
     cancelled: value.cancelled,
     overdue: value.overdue,
-    expiring: value.thisMonthDue,
+    expiring: value.expiring ?? value.thisMonthDue,
   };
 }
 
@@ -170,9 +170,6 @@ function expectedRoleSummary(user, works) {
 }
 
 async function verifyDashboardSummary(baseUrl, loginByUsername, userByUsername, works) {
-  const knownCurrentEndpointGap =
-    'Target: summary follows docs/首页统计口径.md using target 9-state groups, organization visibility, my approval/handling, expiring/overdue. Current /api/dashboard/summary uses legacy status groups, departmentId-only totals, broad company role scope, and thisMonthDue instead of target expiring.';
-
   for (const userDef of users) {
     const loginInfo = loginByUsername[userDef.username];
     const dbUser = userByUsername[userDef.username];
@@ -184,8 +181,8 @@ async function verifyDashboardSummary(baseUrl, loginByUsername, userByUsername, 
       endpoint: 'GET /api/dashboard/summary',
       actual,
       expected,
-      expectedFailure: true,
-      note: knownCurrentEndpointGap,
+      expectedFailure: false,
+      note: 'Target: summary follows docs/首页统计口径.md using target status groups, organization visibility, my approval/handling, expiring/overdue.',
     });
   }
 }
