@@ -1,6 +1,7 @@
 require('dotenv').config();
 
 const http = require('http');
+const XLSX = require('xlsx');
 const { PrismaClient } = require('@prisma/client');
 const {
   users,
@@ -77,6 +78,95 @@ function request(baseUrl, method, path, data = null, cookies = []) {
       req.destroy(new Error(`Request timed out: ${method} ${path}`));
     });
     if (body) req.write(body);
+    req.end();
+  });
+}
+
+function requestBinary(baseUrl, method, path, cookies = []) {
+  const url = new URL(path, baseUrl);
+
+  return new Promise((resolve, reject) => {
+    const req = http.request(
+      {
+        protocol: url.protocol,
+        hostname: url.hostname,
+        port: url.port || (url.protocol === 'https:' ? 443 : 80),
+        method,
+        path: `${url.pathname}${url.search}`,
+        headers: {
+          Cookie: cookies.join('; '),
+        },
+      },
+      (res) => {
+        const chunks = [];
+        res.on('data', (chunk) => chunks.push(chunk));
+        res.on('end', () => {
+          resolve({
+            statusCode: res.statusCode,
+            headers: res.headers,
+            body: Buffer.concat(chunks),
+          });
+        });
+      }
+    );
+    req.on('error', reject);
+    req.setTimeout(15000, () => {
+      req.destroy(new Error(`Request timed out: ${method} ${path}`));
+    });
+    req.end();
+  });
+}
+
+function requestMultipart(baseUrl, path, fileName, fileBuffer, cookies = []) {
+  const url = new URL(path, baseUrl);
+  const boundary = `----target-contract-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  const chunks = [
+    Buffer.from(`--${boundary}\r\n`),
+    Buffer.from(`Content-Disposition: form-data; name="file"; filename="${fileName}"\r\n`),
+    Buffer.from('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet\r\n\r\n'),
+    fileBuffer,
+    Buffer.from(`\r\n--${boundary}--\r\n`),
+  ];
+  const body = Buffer.concat(chunks);
+
+  return new Promise((resolve, reject) => {
+    const req = http.request(
+      {
+        protocol: url.protocol,
+        hostname: url.hostname,
+        port: url.port || (url.protocol === 'https:' ? 443 : 80),
+        method: 'POST',
+        path: `${url.pathname}${url.search}`,
+        headers: {
+          Cookie: cookies.join('; '),
+          'Content-Type': `multipart/form-data; boundary=${boundary}`,
+          'Content-Length': body.length,
+        },
+      },
+      (res) => {
+        const responseChunks = [];
+        res.on('data', (chunk) => responseChunks.push(chunk));
+        res.on('end', () => {
+          const text = Buffer.concat(responseChunks).toString('utf8');
+          let parsed = text;
+          try {
+            parsed = text ? JSON.parse(text) : null;
+          } catch {
+            parsed = text;
+          }
+          resolve({
+            statusCode: res.statusCode,
+            headers: res.headers,
+            body: parsed,
+          });
+        });
+      }
+    );
+    req.on('error', reject);
+    req.setTimeout(15000, () => {
+      req.destroy(new Error(`Request timed out: POST ${path}`));
+    });
+    req.write(body);
     req.end();
   });
 }
@@ -161,6 +251,19 @@ function responseError(response) {
     statusCode: response.statusCode,
     body: response.body,
   };
+}
+
+function parseWorkbookRows(buffer) {
+  const workbook = XLSX.read(buffer, { type: 'buffer' });
+  const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+  return XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+}
+
+function buildWorkbookBuffer(rows) {
+  const worksheet = XLSX.utils.aoa_to_sheet(rows);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, '数据');
+  return XLSX.write(workbook, { bookType: 'xlsx', type: 'buffer' });
 }
 
 const results = [];
@@ -497,6 +600,187 @@ async function verifyCompletionRate(baseUrl, loginByUsername, deptByCode, works)
   }
 }
 
+async function verifyExcelExport(baseUrl, loginByUsername, userByUsername, works) {
+  for (const userDef of users) {
+    const loginInfo = loginByUsername[userDef.username];
+    const dbUser = userByUsername[userDef.username];
+    const response = await requestBinary(baseUrl, 'GET', '/api/excel/export', loginInfo.cookies);
+    const rows = response.statusCode === 200 ? parseWorkbookRows(response.body) : [];
+    const headers = rows[0] || [];
+    const dataRows = rows.slice(1);
+    const exportedTitles = dataRows.map((row) => row[4]).filter(Boolean).sort();
+    const expectedTitles = works
+      .filter((work) => canViewWork(dbUser, work))
+      .map((work) => work.workItem || work.title)
+      .sort();
+
+    record({
+      role: userDef.username,
+      endpoint: 'GET /api/excel/export visibility',
+      actual: response.statusCode === 200
+        ? { statusCode: response.statusCode, titles: exportedTitles }
+        : { statusCode: response.statusCode },
+      expected: { statusCode: 200, titles: expectedTitles },
+      expectedFailure: false,
+      note: 'Phase 5: ordinary Excel export follows the same visible scope as GET /api/works.',
+    });
+
+    const largeFieldHeaders = headers.filter((header) =>
+      ['nodes', 'proof', 'attachments', 'workflowRecords'].includes(String(header))
+    );
+    record({
+      role: userDef.username,
+      endpoint: 'GET /api/excel/export lightweight fields',
+      actual: {
+        largeFieldHeaders,
+        hasStatusLabel: dataRows.every((row) => row[2] && !Object.keys(require('@prisma/client').WorkItemStatus).includes(String(row[2]))),
+      },
+      expected: {
+        largeFieldHeaders: [],
+        hasStatusLabel: true,
+      },
+      expectedFailure: false,
+      note: 'Phase 5: ordinary Excel export uses status labels and does not expose detail-only large fields.',
+    });
+  }
+
+  const adminResponse = await requestBinary(baseUrl, 'GET', '/api/excel/export', loginByUsername.admin.cookies);
+  const rows = parseWorkbookRows(adminResponse.body);
+  const dataRows = rows.slice(1);
+  const byTitle = Object.fromEntries(dataRows.map((row) => [row[4], row]));
+
+  record({
+    role: 'admin',
+    endpoint: 'GET /api/excel/export department/person fields',
+    actual: {
+      multiResponsibleDepartments: byTitle['TC-多主责部门待办-AB']?.[9],
+      multiCooperateDepartments: byTitle['TC-多配合部门待办-BC']?.[12],
+      responsiblePersons: byTitle['TC-多主责部门待办-AB']?.[11],
+      cooperatePersons: byTitle['TC-多配合部门待办-BC']?.[13],
+    },
+    expected: {
+      multiResponsibleDepartments: 'TDA/TDB',
+      multiCooperateDepartments: 'TDB/TDC',
+      responsiblePersons: '业务主责人A/业务主责人B',
+      cooperatePersons: '业务配合人B/业务配合人C',
+    },
+    expectedFailure: false,
+    note: 'Phase 5: ordinary Excel export uses responsible department IDs, cooperate department IDs, and text person fields for display only.',
+  });
+}
+
+async function verifyExcelImport(baseUrl, loginByUsername, deptByCode, userByUsername) {
+  const todoHeaders = [
+    '事项提出领导',
+    '指定审批领导',
+    '事项提出场景',
+    '待办事项',
+    '形成时间',
+    '主责部门',
+    '主责责任人',
+    '配合部门',
+    '配合责任人',
+    '工作计划',
+    '计划完成时间',
+    '进展情况',
+  ];
+  const invalidRows = [
+    todoHeaders,
+    [
+      userByUsername.vp_a.name,
+      userByUsername.vp_a.name,
+      'target-contract import',
+      'TC-导入越权待办-B',
+      '2026-05-01',
+      'TDB',
+      '重名主责人',
+      'TDA',
+      '重名配合人',
+      '验证部门用户不能跨主责部门导入',
+      '2026-12-31',
+      '未开始',
+    ],
+  ];
+  const invalidResponse = await requestMultipart(
+    baseUrl,
+    '/api/excel/import/todo',
+    'invalid.xlsx',
+    buildWorkbookBuffer(invalidRows),
+    loginByUsername.dept_manager_a1.cookies
+  );
+
+  record({
+    role: 'dept_manager_a1',
+    endpoint: 'POST /api/excel/import/todo rejects unrelated responsible department',
+    actual: {
+      statusCode: invalidResponse.statusCode,
+      success: invalidResponse.body?.success,
+      exists: Boolean(await prisma.workItem.findFirst({ where: { title: 'TC-导入越权待办-B' } })),
+    },
+    expected: {
+      statusCode: 403,
+      success: false,
+      exists: false,
+    },
+    expectedFailure: false,
+    note: 'Phase 5: department users cannot import work whose responsible departments do not include their own department.',
+  });
+
+  const validRows = [
+    todoHeaders,
+    [
+      userByUsername.vp_a.name,
+      userByUsername.vp_a.name,
+      'target-contract import',
+      'TC-导入允许待办-A配合B',
+      '2026-05-01',
+      'TDA',
+      '重名主责人/非系统人员',
+      'TDB',
+      '重名配合人/非系统人员',
+      '验证姓名文本不要求匹配系统用户',
+      '2026-12-31',
+      '未开始',
+    ],
+  ];
+  const validResponse = await requestMultipart(
+    baseUrl,
+    '/api/excel/import/todo',
+    'valid.xlsx',
+    buildWorkbookBuffer(validRows),
+    loginByUsername.dept_manager_a1.cookies
+  );
+  const imported = await prisma.workItem.findFirst({
+    where: { title: 'TC-导入允许待办-A配合B' },
+    orderBy: { id: 'desc' },
+  });
+
+  record({
+    role: 'dept_manager_a1',
+    endpoint: 'POST /api/excel/import/todo accepts own responsible department with external cooperate department',
+    actual: {
+      statusCode: validResponse.statusCode,
+      success: validResponse.body?.success,
+      status: imported?.status,
+      departmentIds: imported?.departmentIds || [],
+      cooperateDepartmentIds: imported?.cooperateDepartmentIds || [],
+      responsiblePersons: imported?.responsiblePersons || [],
+      cooperatePersons: imported?.cooperatePersons || [],
+    },
+    expected: {
+      statusCode: 200,
+      success: true,
+      status: 'DRAFT',
+      departmentIds: [deptByCode.TDA.id],
+      cooperateDepartmentIds: [deptByCode.TDB.id],
+      responsiblePersons: ['重名主责人', '非系统人员'],
+      cooperatePersons: ['重名配合人', '非系统人员'],
+    },
+    expectedFailure: false,
+    note: 'Phase 5: ordinary import defaults to DRAFT and treats responsible/cooperate persons as display text only.',
+  });
+}
+
 async function main() {
   const { baseUrl } = parseArgs();
   printEnvironmentSummary('[target-contract-verify]');
@@ -519,6 +803,8 @@ async function main() {
   await verifyWorksVisibility(baseUrl, loginByUsername, userByUsername, works);
   await verifyTargetPermissionFacts(baseUrl, loginByUsername, works);
   await verifyCompletionRate(baseUrl, loginByUsername, deptByCode, works);
+  await verifyExcelExport(baseUrl, loginByUsername, userByUsername, works);
+  await verifyExcelImport(baseUrl, loginByUsername, deptByCode, userByUsername);
 
   const totals = results.reduce(
     (acc, item) => {
