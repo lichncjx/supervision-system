@@ -3,6 +3,7 @@ import * as XLSX from 'xlsx';
 import prisma from '@/lib/prisma';
 import { getUserFromToken } from '@/lib/server-auth';
 import { WorkItemStatus } from '@prisma/client';
+import { getWorkStatusLabel } from '@/lib/work-status';
 
 function isCompanyLevelRole(role: string): boolean {
   const companyRoles: string[] = ['ADMIN', 'SUPERVISOR', 'VICE_PRESIDENT', 'PRESIDENT'];
@@ -10,24 +11,7 @@ function isCompanyLevelRole(role: string): boolean {
 }
 
 function getStatusText(status: WorkItemStatus): string {
-  const statusMap: Record<WorkItemStatus, string> = {
-    DRAFT: '草稿',
-    PENDING_DECOMPOSE: '待分解',
-    PENDING_DEPT: '待部门审批',
-    PENDING_COMPANY: '待公司审批',
-    PENDING_COMPLETE: '待完成',
-    APPROVED: '已审批',
-    IN_PROGRESS: '进行中',
-    PENDING_EVIDENCE_DEPT: '待部门见证材料',
-    PENDING_EVIDENCE_COMPANY: '待公司见证材料',
-    ADJUSTING: '调整中',
-    CANCELLING: '取消中',
-    PENDING_MAIN_LEADER_CANCEL: '待主要领导取消审批',
-    COMPLETED: '已完成',
-    CANCELLED: '已取消',
-    REJECTED: '已退回',
-  };
-  return statusMap[status] || String(status);
+  return getWorkStatusLabel(status);
 }
 
 function getTypeText(type: string): string {

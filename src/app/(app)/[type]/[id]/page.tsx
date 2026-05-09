@@ -25,7 +25,7 @@ import {
   getCurrentProcessDescription,
 } from '@/lib/work-store';
 import { Button } from '@/components/ui/button';
-import { statusColors, workTypeColors } from '@/lib/status-colors';
+import { workTypeColors } from '@/lib/status-colors';
 import { WorkAttachmentPanel } from '@/components/work/work-attachment-panel';
 import { WorkOperationPanel } from '@/components/work/work-operation-panel';
 import { WorkWorkflowRecords } from '@/components/work/work-workflow-records';
@@ -37,6 +37,7 @@ import { WorkPendingAdjustmentPanel } from '@/components/work/work-pending-adjus
 import { StatusBadge } from '@/components/common/badges';
 import { WorkflowProgress } from '@/components/common/workflow-progress';
 import { ExpandableText } from '@/components/common/expandable-text';
+import { isWorkStatusReturned, isWorkStatusTerminal } from '@/lib/work-status';
 
 export default function WorkDetailPage() {
   const params = useParams<{ type: string; id: string }>();
@@ -192,7 +193,7 @@ export default function WorkDetailPage() {
 
   const canHandleReturnedCreate =
     user &&
-    work.status === 'rejected' &&
+    isWorkStatusReturned(work.status) &&
     (
       user.role === 'ADMIN' ||
       // firstSubmitterId ?? creatorId 的 fallback 仅用于兼容历史数据
@@ -207,13 +208,14 @@ export default function WorkDetailPage() {
     (
       (user.role === 'DEPARTMENT_MANAGER' || user.role === 'DEPARTMENT_LEADER') &&
       isCurrentUserRelatedDepartment() &&
-      !['completed', 'cancelled', 'rejected'].includes(work.status)
+      !isWorkStatusTerminal(work.status) &&
+      !isWorkStatusReturned(work.status)
     ) ||
     (
       // Phase 3B: deptManagerId（含 rejected，用于退回后补充材料）
       (work.type === '重点' || work.type === '主要') &&
       user.id === work.deptManagerId &&
-      !['completed', 'cancelled'].includes(work.status)
+      !isWorkStatusTerminal(work.status)
     )
   );
 
