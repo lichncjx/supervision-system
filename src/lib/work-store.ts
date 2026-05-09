@@ -1,4 +1,14 @@
 import { isCompanyLevel, type User } from '@/lib/auth';
+import {
+  getWorkStatusDescription,
+  getWorkStatusLabel,
+  isWorkStatusInPendingApprovalFilter,
+  isWorkStatusInProgress,
+  isWorkStatusReturned,
+  normalizeWorkStatus,
+  shouldCountWorkStatusForDeadline,
+  type WorkStatusValue,
+} from '@/lib/work-status';
 
 export type WorkType = '重点' | '主要' | '待办';
 
@@ -20,22 +30,7 @@ export interface WorkQuery {
   keyword?: string;
 }
 
-export type Status =
-  | 'draft'
-  | 'pending_dept'
-  | 'pending_company'
-  | 'approved'
-  | 'in_progress'
-  | 'pending_decompose'
-  | 'pending_complete'
-  | 'pending_evidence_dept'
-  | 'pending_evidence_company'
-  | 'pending_main_leader_cancel'
-  | 'completed'
-  | 'rejected'
-  | 'adjusting'
-  | 'cancelling'
-  | 'cancelled';
+export type Status = WorkStatusValue;
 
 export type ActionType =
   | 'create'
@@ -294,7 +289,7 @@ export function transformWorkFromAPI(work: any): Work {
     // 待办事项 - 配合责任人姓名数组
     cooperatePersons: extractNameArray(work.cooperatePersons || work.cooperate_persons),
     // 事项基本信息
-    status: work.status?.toLowerCase() as Status || 'draft',
+    status: normalizeWorkStatus(work.status) || 'draft',
     action: normalizeAction(work.action || work.action_type),
     needCeo: work.type === '重点',
     isInnovation: work.isInnovation || work.is_innovation,
@@ -595,25 +590,7 @@ export async function resubmitRejectedWork(work: Work, user: User, patch: WorkEd
 
 
 export function getStatusName(status: string) {
-  const normalized = status.toLowerCase();
-  const map: Record<string, string> = {
-    draft: '草稿',
-    pending_dept: '待部门审批',
-    pending_company: '待公司审批',
-    approved: '已审批',
-    in_progress: '进行中',
-    pending_decompose: '待分解',
-    pending_complete: '待完成',
-    pending_evidence_dept: '待部门见证审批',
-    pending_evidence_company: '待公司见证审批',
-    pending_main_leader_cancel: '待一把手审批取消',
-    completed: '已完成',
-    rejected: '已退回',
-    adjusting: '调整审批中',
-    cancelling: '取消审批中',
-    cancelled: '已取消',
-  };
-  return map[normalized] || status;
+  return getWorkStatusLabel(status);
 }
 
 export function getActionName(action: string) {
@@ -677,25 +654,7 @@ export function getCurrentProcessDescription(
     }
   }
 
-  const statusMap: Record<string, string> = {
-    draft: '草稿，待提交',
-    pending_dept: '待部门领导审批',
-    pending_company: '待公司主管领导审批',
-    approved: '已立项，待上传见证材料',
-    in_progress: '进行中',
-    pending_evidence_dept: '见证材料待部门领导审批',
-    pending_evidence_company: '见证材料待公司主管领导审批',
-    pending_complete: '完成申请待公司领导审批',
-    adjusting: '调整审批中',
-    cancelling: '取消审批中',
-    pending_main_leader_cancel: '重点工作取消申请待公司主要领导审批',
-    completed: '已完成',
-    cancelled: '已取消',
-    rejected: '已退回，待修改后重新提交',
-    pending_decompose: '待分解',
-  };
-
-  return statusMap[normalizedStatus] || status;
+  return getWorkStatusDescription(normalizedStatus);
 }
 
 export function getWorkflowRecordDescription(
@@ -810,12 +769,7 @@ export function getWorkflowRecordDescription(
 }
 
 export function isInProgressStatus(status: Status) {
-  return [
-    'in_progress',
-    'approved',
-    'adjusting',
-    'cancelling',
-  ].includes(status);
+  return isWorkStatusInProgress(status);
 }
 
 export function getWorkDueDate(work: Work) {
@@ -826,7 +780,7 @@ export function isOverdueWork(work: Work) {
   const date = getWorkDueDate(work);
   if (!date) return false;
 
-  if (['completed', 'cancelled', 'rejected'].includes(work.status)) {
+  if (!shouldCountWorkStatusForDeadline(work.status)) {
     return false;
   }
 
@@ -876,20 +830,11 @@ function isWorkRelatedToDepartment(work: Work, departmentId?: number) {
 }
 
 export function isReturnStatus(status: Status) {
-  return [
-    'rejected',
-  ].includes(status);
+  return isWorkStatusReturned(status);
 }
 
 export function isPendingApprovalStatus(status: Status) {
-  return [
-    'pending_dept',
-    'pending_company',
-    'pending_evidence_dept',
-    'pending_evidence_company',
-    'cancelling',
-    'pending_main_leader_cancel',
-  ].includes(status);
+  return isWorkStatusInPendingApprovalFilter(status);
 }
 
 export function isSupervisorTrackingWork(work: Work) {
@@ -912,7 +857,7 @@ export function isExpiringWork(work: Work) {
   const date = getWorkDueDate(work);
   if (!date) return false;
 
-  if (['completed', 'cancelled', 'rejected'].includes(work.status)) {
+  if (!shouldCountWorkStatusForDeadline(work.status)) {
     return false;
   }
 

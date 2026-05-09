@@ -1,3 +1,5 @@
+import { getWorkStatusVisualGroup } from '@/lib/work-status';
+
 export const statusColors = {
   approving: {
     pill: 'bg-purple-50 text-purple-700 border-purple-100',
@@ -98,12 +100,7 @@ export function getWorkTypeText(type: string): string {
 }
 
 export function getStatusAccent(status: string): string {
-  if (['pending_dept', 'pending_company', 'pending_complete'].includes(status)) return statusColors.approving.left;
-  if (['pending_decompose', 'pending_evidence_dept', 'pending_evidence_company', 'adjusting'].includes(status)) return statusColors.handling.left;
-  if (['in_progress', 'approved'].includes(status)) return statusColors.inProgress.left;
-  if (status === 'completed') return statusColors.completed.left;
-  if (['rejected', 'pending_main_leader_cancel'].includes(status)) return statusColors.rejected.left;
-  return statusColors.cancelled.left;
+  return statusColors[getWorkStatusVisualGroup(status)].left;
 }
 
 export type StatusColorKey = keyof typeof statusColors;
