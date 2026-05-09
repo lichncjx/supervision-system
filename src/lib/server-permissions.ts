@@ -1,33 +1,124 @@
 
-import { Role, User, WorkItem } from '@prisma/client'
+import { Prisma, Role, User, WorkItem } from '@prisma/client'
 import prisma from './prisma'
+import {
+  getTargetWorkItemStatus,
+  isTargetApprovalStatus,
+} from './work-item-status'
 
 const COMPANY_ROLES: Role[] = [Role.ADMIN, Role.SUPERVISOR, Role.VICE_PRESIDENT, Role.PRESIDENT]
+const GLOBAL_VIEW_ROLES: Role[] = [Role.ADMIN, Role.SUPERVISOR]
 const DEPT_ROLES: Role[] = [Role.DEPARTMENT_MANAGER, Role.DEPARTMENT_LEADER]
 const IMPORT_EXPORT_ROLES: Role[] = [Role.ADMIN, Role.SUPERVISOR, Role.DEPARTMENT_MANAGER, Role.DEPARTMENT_LEADER]
 
-export async function canAccessWorkItem(user: User, workItem: WorkItem): Promise<boolean> {
-  // 公司级角色（ADMIN/SUPERVISOR/VICE_PRESIDENT/PRESIDENT）可以查看所有事项
-  if (isCompanyLevelRole(user.role)) {
+type WorkItemWithFutureFields = WorkItem & {
+  responsibleDepartmentIds?: number[] | null
+}
+
+function normalizeIds(values: unknown): number[] {
+  if (!Array.isArray(values)) return []
+  return values
+    .map((value) => Number(value))
+    .filter((value) => Number.isFinite(value) && value > 0)
+}
+
+export function getResponsibleDepartmentIds(workItem: WorkItemWithFutureFields): number[] {
+  const futureIds = normalizeIds(workItem.responsibleDepartmentIds)
+  if (futureIds.length > 0) return futureIds
+
+  const currentIds = normalizeIds(workItem.departmentIds)
+  if (currentIds.length > 0) return currentIds
+
+  return workItem.departmentId ? [workItem.departmentId] : []
+}
+
+export function getCooperateDepartmentIds(workItem: WorkItem): number[] {
+  return normalizeIds(workItem.cooperateDepartmentIds)
+}
+
+export function isMainResponsibleDepartment(workItem: WorkItemWithFutureFields, departmentId: number): boolean {
+  return getResponsibleDepartmentIds(workItem).includes(departmentId)
+}
+
+export function isWorkRelatedToDepartment(workItem: WorkItemWithFutureFields, departmentId: number): boolean {
+  return (
+    isMainResponsibleDepartment(workItem, departmentId) ||
+    getCooperateDepartmentIds(workItem).includes(departmentId)
+  )
+}
+
+export function canViewWorkItem(user: User, workItem: WorkItemWithFutureFields): boolean {
+  if (isGlobalViewRole(user.role)) {
     return true
   }
 
-  // 单选部门匹配
-  if (workItem.departmentId === user.departmentId) {
-    return true
+  if (isDepartmentLevelRole(user.role)) {
+    return isWorkRelatedToDepartment(workItem, user.departmentId)
   }
 
-  // 多选部门匹配（待办事项的 departmentIds）
-  if (workItem.departmentIds.includes(user.departmentId)) {
-    return true
+  if (user.role === Role.VICE_PRESIDENT) {
+    return (
+      workItem.proposedLeaderId === user.id ||
+      workItem.approvalLeaderId === user.id ||
+      workItem.currentApproverId === user.id
+    )
   }
 
-  // 配合部门匹配（待办事项的 cooperateDepartmentIds）
-  if (workItem.cooperateDepartmentIds.includes(user.departmentId)) {
-    return true
+  if (user.role === Role.PRESIDENT) {
+    return (
+      workItem.proposedLeaderId === user.id ||
+      workItem.approvalLeaderId === user.id ||
+      workItem.currentApproverId === user.id ||
+      workItem.currentApproverRole === Role.PRESIDENT ||
+      workItem.needMainLeaderCancel === true
+    )
   }
 
   return false
+}
+
+export function canAccessWorkItem(user: User, workItem: WorkItemWithFutureFields): boolean {
+  return canViewWorkItem(user, workItem)
+}
+
+export function buildWorkItemVisibilityWhere(user: User): Prisma.WorkItemWhereInput {
+  if (isGlobalViewRole(user.role)) {
+    return {}
+  }
+
+  if (isDepartmentLevelRole(user.role)) {
+    return {
+      OR: [
+        { departmentId: user.departmentId },
+        { departmentIds: { has: user.departmentId } },
+        { cooperateDepartmentIds: { has: user.departmentId } },
+      ],
+    }
+  }
+
+  if (user.role === Role.VICE_PRESIDENT) {
+    return {
+      OR: [
+        { proposedLeaderId: user.id },
+        { approvalLeaderId: user.id },
+        { currentApproverId: user.id },
+      ],
+    }
+  }
+
+  if (user.role === Role.PRESIDENT) {
+    return {
+      OR: [
+        { proposedLeaderId: user.id },
+        { approvalLeaderId: user.id },
+        { currentApproverId: user.id },
+        { currentApproverRole: Role.PRESIDENT },
+        { needMainLeaderCancel: true },
+      ],
+    }
+  }
+
+  return { id: -1 }
 }
 
 export async function canEditWorkItem(user: User, workItem: WorkItem): Promise<boolean> {
@@ -46,7 +137,15 @@ export async function canEditWorkItem(user: User, workItem: WorkItem): Promise<b
   return false
 }
 
-export async function canApproveWorkItem(user: User, workItem: WorkItem): Promise<boolean> {
+export function canApproveWorkItem(user: User, workItem: WorkItemWithFutureFields): boolean {
+  if (!isTargetApprovalStatus(workItem.status)) {
+    return false
+  }
+
+  if (user.role === Role.ADMIN || user.role === Role.SUPERVISOR) {
+    return false
+  }
+
   if (!workItem.currentApproverId && !workItem.currentApproverRole) {
     return false
   }
@@ -56,24 +155,44 @@ export async function canApproveWorkItem(user: User, workItem: WorkItem): Promis
   }
 
   if (workItem.currentApproverRole === user.role) {
-    if (workItem.currentApproverRole === Role.DEPARTMENT_LEADER) {
-      return workItem.departmentId === user.departmentId
+    if (isDepartmentLevelRole(user.role)) {
+      return isMainResponsibleDepartment(workItem, user.departmentId)
     }
 
-    if (workItem.currentApproverRole === Role.VICE_PRESIDENT) {
-      return user.role === Role.VICE_PRESIDENT
-    }
-
-    if (workItem.currentApproverRole === Role.PRESIDENT) {
-      return user.role === Role.PRESIDENT
-    }
+    return true
   }
 
   return false
 }
 
+export function canHandleWorkItem(user: User, workItem: WorkItemWithFutureFields): boolean {
+  if (user.role === Role.ADMIN || user.role === Role.SUPERVISOR) {
+    return false
+  }
+
+  if (!isDepartmentLevelRole(user.role)) {
+    return false
+  }
+
+  if (!isMainResponsibleDepartment(workItem, user.departmentId)) {
+    return false
+  }
+
+  const targetStatus = getTargetWorkItemStatus(workItem.status)
+
+  if (targetStatus === 'DRAFT') {
+    if (workItem.status === 'REJECTED' && workItem.firstSubmitterId) {
+      return workItem.firstSubmitterId === user.id
+    }
+
+    return true
+  }
+
+  return targetStatus === 'PENDING_DECOMPOSE' || targetStatus === 'IN_PROGRESS'
+}
+
 export async function getDepartmentIdsForUser(user: User): Promise<number[]> {
-  if (isCompanyLevelRole(user.role)) {
+  if (isGlobalViewRole(user.role)) {
     const departments = await prisma.department.findMany({
       where: { isBusiness: true },
       select: { id: true },
@@ -86,6 +205,10 @@ export async function getDepartmentIdsForUser(user: User): Promise<number[]> {
 
 export function isCompanyLevelRole(role: Role): boolean {
   return COMPANY_ROLES.includes(role)
+}
+
+export function isGlobalViewRole(role: Role): boolean {
+  return GLOBAL_VIEW_ROLES.includes(role)
 }
 
 export function isDepartmentLevelRole(role: Role): boolean {

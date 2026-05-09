@@ -1,156 +1,49 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { getUserFromToken } from '@/lib/server-auth'
-import { WorkItemStatus, WorkItemType, User, Role } from '@prisma/client'
+import { WorkItemType, type WorkItemStatus } from '@prisma/client'
+import {
+  canApproveWorkItem,
+  canHandleWorkItem,
+  canViewWorkItem,
+  buildWorkItemVisibilityWhere,
+} from '@/lib/server-permissions'
+import {
+  getTargetWorkItemStatus,
+  getWorkItemDueDate,
+  isTargetInProgressStatus,
+  isTargetTerminalStatus,
+} from '@/lib/work-item-status'
 
-function isCompanyLevelRole(role: string): boolean {
-  const companyRoles: string[] = ['ADMIN', 'SUPERVISOR', 'VICE_PRESIDENT', 'PRESIDENT']
-  return companyRoles.includes(role)
+const EXPIRING_DAYS = 7
+
+function isOverdueWorkItem(workItem: {
+  status: WorkItemStatus
+  type: WorkItemType
+  completeTime: Date | null
+  planCompleteTime: Date | null
+}, now: Date): boolean {
+  if (isTargetTerminalStatus(workItem.status)) return false
+
+  const dueDate = getWorkItemDueDate(workItem)
+  return dueDate ? dueDate < now : false
 }
 
-function isWorkRelatedToDepartment(workItem: any, departmentId: number): boolean {
-  if (workItem.departmentId === departmentId) return true
-  if (workItem.departmentIds && workItem.departmentIds.includes(departmentId)) return true
-  if (workItem.cooperateDepartmentIds && workItem.cooperateDepartmentIds.includes(departmentId)) return true
-  return false
-}
+function isExpiringWorkItem(workItem: {
+  status: WorkItemStatus
+  type: WorkItemType
+  completeTime: Date | null
+  planCompleteTime: Date | null
+}, now: Date): boolean {
+  if (isTargetTerminalStatus(workItem.status)) return false
 
-function canApproveWorkOnServer(user: User, workItem: any): boolean {
-  const pendingStatuses = [
-    WorkItemStatus.PENDING_DEPT,
-    WorkItemStatus.PENDING_COMPANY,
-    WorkItemStatus.PENDING_EVIDENCE_DEPT,
-    WorkItemStatus.PENDING_EVIDENCE_COMPANY,
-    WorkItemStatus.CANCELLING,
-    WorkItemStatus.PENDING_MAIN_LEADER_CANCEL,
-    WorkItemStatus.ADJUSTING,
-  ]
+  const dueDate = getWorkItemDueDate(workItem)
+  if (!dueDate) return false
 
-  if (!pendingStatuses.includes(workItem.status)) {
-    return false
-  }
+  const deadline = new Date(now)
+  deadline.setDate(deadline.getDate() + EXPIRING_DAYS)
 
-  if (user.role === Role.ADMIN || user.role === Role.SUPERVISOR) {
-    return false
-  }
-
-  if (user.role === Role.DEPARTMENT_LEADER) {
-    return (
-      isWorkRelatedToDepartment(workItem, user.departmentId) &&
-      (
-        workItem.status === WorkItemStatus.PENDING_DEPT ||
-        workItem.status === WorkItemStatus.PENDING_EVIDENCE_DEPT ||
-        workItem.status === WorkItemStatus.ADJUSTING ||
-        workItem.status === WorkItemStatus.CANCELLING
-      )
-    )
-  }
-
-  if (
-    workItem.status === WorkItemStatus.PENDING_COMPANY ||
-    workItem.status === WorkItemStatus.PENDING_EVIDENCE_COMPANY
-  ) {
-    return isSelectedCompanyApproverOnServer(user, workItem)
-  }
-
-  if (
-    workItem.status === WorkItemStatus.CANCELLING ||
-    workItem.status === WorkItemStatus.ADJUSTING
-  ) {
-    return isSelectedCompanyApproverOnServer(user, workItem)
-  }
-
-  if (workItem.status === WorkItemStatus.PENDING_MAIN_LEADER_CANCEL) {
-    return user.role === Role.PRESIDENT
-  }
-
-  return false
-}
-
-function isSelectedCompanyApproverOnServer(user: User, workItem: any): boolean {
-  if (user.role === Role.ADMIN || user.role === Role.SUPERVISOR) {
-    return false
-  }
-
-  if (workItem.currentApproverId) {
-    return workItem.currentApproverId === user.id
-  }
-
-  if (workItem.currentApproverRole) {
-    return workItem.currentApproverRole === user.role
-  }
-
-  if (
-    (workItem.action === 'ADJUST' || workItem.action === 'CANCEL') &&
-    workItem.approvalLeaderId
-  ) {
-    return workItem.approvalLeaderId === user.id
-  }
-
-  if (
-    workItem.type === WorkItemType.TODO &&
-    workItem.status === WorkItemStatus.PENDING_COMPANY &&
-    workItem.proposedLeaderId
-  ) {
-    return workItem.proposedLeaderId === user.id
-  }
-
-  if (
-    (workItem.type === WorkItemType.PRIORITY || workItem.type === WorkItemType.MAIN) &&
-    (
-      workItem.status === WorkItemStatus.PENDING_COMPANY ||
-      workItem.status === WorkItemStatus.PENDING_EVIDENCE_COMPANY
-    )
-  ) {
-    return user.role === Role.VICE_PRESIDENT
-  }
-
-  return false
-}
-
-function canHandleWorkOnServer(user: User, workItem: any): boolean {
-  if (user.role === Role.ADMIN || user.role === Role.SUPERVISOR) {
-    return false
-  }
-
-  if (workItem.status === WorkItemStatus.DRAFT && workItem.creatorId === user.id) {
-    return true
-  }
-
-  if (workItem.status === WorkItemStatus.REJECTED) {
-    // firstSubmitterId ?? creatorId 的 fallback 仅用于兼容历史数据
-    const submitterId = workItem.firstSubmitterId ?? workItem.creatorId;
-    return submitterId === user.id;
-  }
-
-  if (
-    workItem.type === 'TODO' &&
-    workItem.status === WorkItemStatus.PENDING_DECOMPOSE &&
-    (user.role === Role.DEPARTMENT_MANAGER || user.role === Role.DEPARTMENT_LEADER) &&
-    isWorkRelatedToDepartment(workItem, user.departmentId)
-  ) {
-    return true
-  }
-
-  if (
-    (workItem.type === 'PRIORITY' || workItem.type === 'MAIN') &&
-    workItem.status === WorkItemStatus.APPROVED &&
-    (user.role === Role.DEPARTMENT_MANAGER || user.role === Role.DEPARTMENT_LEADER) &&
-    isWorkRelatedToDepartment(workItem, user.departmentId)
-  ) {
-    return true
-  }
-
-  if (
-    workItem.type === 'TODO' &&
-    workItem.status === WorkItemStatus.IN_PROGRESS &&
-    (user.role === Role.DEPARTMENT_MANAGER || user.role === Role.DEPARTMENT_LEADER) &&
-    isWorkRelatedToDepartment(workItem, user.departmentId)
-  ) {
-    return true
-  }
-
-  return false
+  return dueDate >= now && dueDate <= deadline
 }
 
 export async function GET(request: NextRequest) {
@@ -165,135 +58,40 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: '登录已过期' }, { status: 401 })
     }
 
-    const isCompanyLevel = isCompanyLevelRole(currentUser.role)
-    const departmentIdFilter = isCompanyLevel ? undefined : currentUser.departmentId
-
-    const whereClause: any = departmentIdFilter
-      ? { departmentId: departmentIdFilter }
-      : {}
-
+    const visibilityWhere = buildWorkItemVisibilityWhere(currentUser)
     const allRelevantWorks = await prisma.workItem.findMany({
-      where: departmentIdFilter
-        ? {
-            OR: [
-              { departmentId: departmentIdFilter },
-              { departmentIds: { has: departmentIdFilter } },
-              { cooperateDepartmentIds: { has: departmentIdFilter } },
-              { currentApproverId: currentUser.id },
-            ],
-          }
-        : {},
+      where: visibilityWhere,
     })
+    const visibleWorks = allRelevantWorks.filter((workItem) =>
+      canViewWorkItem(currentUser, workItem)
+    )
+    const now = new Date()
 
-    let approving = 0
-    let handling = 0
-
-    for (const workItem of allRelevantWorks) {
-      const canApprove = canApproveWorkOnServer(currentUser, workItem)
-      const canHandle = canHandleWorkOnServer(currentUser, workItem)
-
-      if (canApprove) approving++
-      if (canHandle) handling++
-    }
-
-    const [
-      priorityTotal,
-      mainTotal,
-      todoTotal,
-      inProgressList,
-      completedList,
-      cancelledList,
-      overdueList,
-      thisMonthList,
-      priorityCompleted,
-      mainCompleted,
-      todoCompleted,
-    ] = await Promise.all([
-      prisma.workItem.count({
-        where: { ...whereClause, type: 'PRIORITY' },
-      }),
-      prisma.workItem.count({
-        where: { ...whereClause, type: 'MAIN' },
-      }),
-      prisma.workItem.count({
-        where: { ...whereClause, type: 'TODO' },
-      }),
-      prisma.workItem.count({
-        where: { ...whereClause, status: WorkItemStatus.IN_PROGRESS },
-      }),
-      prisma.workItem.count({
-        where: { ...whereClause, status: WorkItemStatus.COMPLETED },
-      }),
-      prisma.workItem.count({
-        where: { ...whereClause, status: WorkItemStatus.CANCELLED },
-      }),
-      prisma.workItem.count({
-        where: {
-          ...whereClause,
-          status: {
-            notIn: [WorkItemStatus.COMPLETED, WorkItemStatus.CANCELLED],
-          },
-          OR: [
-            {
-              type: { in: ['PRIORITY', 'MAIN'] },
-              completeTime: { lt: new Date() },
-            },
-            {
-              type: 'TODO',
-              planCompleteTime: { lt: new Date() },
-            },
-          ],
-        },
-      }),
-      prisma.workItem.count({
-        where: {
-          ...whereClause,
-          status: {
-            notIn: [WorkItemStatus.COMPLETED, WorkItemStatus.CANCELLED],
-          },
-          OR: [
-            {
-              type: { in: ['PRIORITY', 'MAIN'] },
-              completeTime: {
-                gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-                lt: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1),
-              },
-            },
-            {
-              type: 'TODO',
-              planCompleteTime: {
-                gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-                lt: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1),
-              },
-            },
-          ],
-        },
-      }),
-      prisma.workItem.count({
-        where: { ...whereClause, type: 'PRIORITY', status: WorkItemStatus.COMPLETED },
-      }),
-      prisma.workItem.count({
-        where: { ...whereClause, type: 'MAIN', status: WorkItemStatus.COMPLETED },
-      }),
-      prisma.workItem.count({
-        where: { ...whereClause, type: 'TODO', status: WorkItemStatus.COMPLETED },
-      }),
-    ])
+    const priorityWorks = visibleWorks.filter((workItem) => workItem.type === WorkItemType.PRIORITY)
+    const mainWorks = visibleWorks.filter((workItem) => workItem.type === WorkItemType.MAIN)
+    const todoWorks = visibleWorks.filter((workItem) => workItem.type === WorkItemType.TODO)
+    const completedWorks = visibleWorks.filter(
+      (workItem) => getTargetWorkItemStatus(workItem.status) === 'COMPLETED'
+    )
+    const expiringWorks = visibleWorks.filter((workItem) => isExpiringWorkItem(workItem, now))
 
     return NextResponse.json({
-      priorityTotal,
-      mainTotal,
-      todoTotal,
-      approving,
-      handling,
-      inProgress: inProgressList,
-      completed: completedList,
-      cancelled: cancelledList,
-      overdue: overdueList,
-      thisMonthDue: thisMonthList,
-      priorityCompleted,
-      mainCompleted,
-      todoCompleted,
+      priorityTotal: priorityWorks.length,
+      mainTotal: mainWorks.length,
+      todoTotal: todoWorks.length,
+      approving: visibleWorks.filter((workItem) => canApproveWorkItem(currentUser, workItem)).length,
+      handling: visibleWorks.filter((workItem) => canHandleWorkItem(currentUser, workItem)).length,
+      inProgress: visibleWorks.filter((workItem) => isTargetInProgressStatus(workItem.status)).length,
+      completed: completedWorks.length,
+      cancelled: visibleWorks.filter(
+        (workItem) => getTargetWorkItemStatus(workItem.status) === 'CANCELLED'
+      ).length,
+      overdue: visibleWorks.filter((workItem) => isOverdueWorkItem(workItem, now)).length,
+      expiring: expiringWorks.length,
+      thisMonthDue: expiringWorks.length,
+      priorityCompleted: priorityWorks.filter((workItem) => completedWorks.includes(workItem)).length,
+      mainCompleted: mainWorks.filter((workItem) => completedWorks.includes(workItem)).length,
+      todoCompleted: todoWorks.filter((workItem) => completedWorks.includes(workItem)).length,
     })
   } catch (error) {
     console.error('Dashboard summary error:', error)
