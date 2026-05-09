@@ -779,6 +779,802 @@ async function verifyExcelImport(baseUrl, loginByUsername, deptByCode, userByUse
   });
 }
 
+const WORKFLOW_TEST_PREFIX = 'TC-WF-';
+
+async function cleanupWorkflowContractWorks() {
+  await prisma.workItem.deleteMany({
+    where: {
+      title: {
+        startsWith: WORKFLOW_TEST_PREFIX,
+      },
+    },
+  });
+}
+
+function workflowBaseData({ title, type, status, creator, dept, vp, needMainLeaderCancel = false }) {
+  const dueDate = new Date();
+  dueDate.setHours(12, 0, 0, 0);
+  dueDate.setDate(dueDate.getDate() + 30);
+
+  return {
+    type,
+    title,
+    workItem: title,
+    status,
+    departmentId: dept.id,
+    departmentIds: type === 'TODO' ? [dept.id] : [],
+    cooperateDepartmentIds: [],
+    creatorId: creator.id,
+    firstSubmitterId: status === 'DRAFT' || status === 'PENDING_DECOMPOSE' ? null : creator.id,
+    proposedLeaderId: vp.id,
+    approvalLeaderId: vp.id,
+    needMainLeaderCancel,
+    completeTime: type === 'TODO' ? null : dueDate,
+    planCompleteTime: type === 'TODO' ? dueDate : null,
+    completeForm: 'target-contract workflow',
+    nodes: JSON.stringify([{ title: 'workflow-node', completeTime: dueDate.toISOString() }]),
+    responsibleLeader: '测试责任领导',
+    supervisor: '测试责任人',
+    deptLeaderId: null,
+    deptManagerId: creator.id,
+    deptLeaderName: '测试A部门领导',
+    deptManagerName: creator.name,
+    responsiblePersons: type === 'TODO' ? ['测试主责人'] : [],
+    cooperatePersons: [],
+    action: status === 'PENDING_DECOMPOSE' ? 'TODO_DECOMPOSE' : 'CREATE',
+    currentApproverId: null,
+    currentApproverRole: null,
+    beforeApprovalStatus: null,
+    approvalType: null,
+    isInnovation: false,
+  };
+}
+
+async function createWorkflowWork(options) {
+  const work = await prisma.workItem.create({
+    data: workflowBaseData(options),
+  });
+  return work.id;
+}
+
+function pickWorkflowState(work) {
+  return {
+    status: work.status,
+    beforeApprovalStatus: work.beforeApprovalStatus,
+    approvalType: work.approvalType,
+    currentApproverId: work.currentApproverId,
+    currentApproverRole: work.currentApproverRole,
+    rejectedFromStatus: work.rejectedFromStatus,
+  };
+}
+
+async function latestWorkflowRecord(workId) {
+  const recordItem = await prisma.workflowRecord.findFirst({
+    where: { workItemId: workId },
+    orderBy: [{ id: 'desc' }],
+  });
+  return recordItem
+    ? {
+        actionType: recordItem.actionType,
+        statusBefore: recordItem.statusBefore,
+        statusAfter: recordItem.statusAfter,
+      }
+    : null;
+}
+
+async function runWorkflowStep(baseUrl, loginByUsername, username, workId, payload) {
+  const response = await request(
+    baseUrl,
+    'POST',
+    `/api/works/${workId}/workflow`,
+    payload,
+    loginByUsername[username].cookies
+  );
+  const work = await prisma.workItem.findUnique({ where: { id: workId } });
+  return {
+    statusCode: response.statusCode,
+    success: response.body?.success === true,
+    work: pickWorkflowState(work),
+    record: await latestWorkflowRecord(workId),
+  };
+}
+
+async function verifyWorkflowTransitions(baseUrl, loginByUsername, deptByCode, userByUsername) {
+  await cleanupWorkflowContractWorks();
+
+  const deptA = deptByCode.TDA;
+  const manager = userByUsername.dept_manager_a1;
+  const vp = userByUsername.vp_a;
+  const president = userByUsername.president;
+
+  const submitNodes = [{ title: '分解节点', completeTime: new Date().toISOString(), children: [] }];
+
+  const normalApproveId = await createWorkflowWork({
+    title: `${WORKFLOW_TEST_PREFIX}普通立项通过`,
+    type: 'PRIORITY',
+    status: 'DRAFT',
+    creator: manager,
+    dept: deptA,
+    vp,
+    president,
+  });
+  const normalSubmit = await runWorkflowStep(baseUrl, loginByUsername, 'dept_manager_a1', normalApproveId, { action: 'submit' });
+  const normalDeptApprove = await runWorkflowStep(baseUrl, loginByUsername, 'dept_leader_a', normalApproveId, { action: 'approve' });
+  const normalCompanyApprove = await runWorkflowStep(baseUrl, loginByUsername, 'vp_a', normalApproveId, { action: 'approve' });
+
+  record({
+    role: 'workflow',
+    endpoint: 'POST /api/works/[id]/workflow DRAFT -> PROPOSING -> IN_PROGRESS',
+    actual: { normalSubmit, normalDeptApprove, normalCompanyApprove },
+    expected: {
+      normalSubmit: {
+        statusCode: 200,
+        success: true,
+        work: {
+          status: 'PROPOSING',
+          beforeApprovalStatus: 'DRAFT',
+          approvalType: 'PROPOSE',
+          currentApproverId: null,
+          currentApproverRole: 'DEPARTMENT_LEADER',
+          rejectedFromStatus: null,
+        },
+        record: { actionType: 'submit', statusBefore: 'DRAFT', statusAfter: 'PROPOSING' },
+      },
+      normalDeptApprove: {
+        statusCode: 200,
+        success: true,
+        work: {
+          status: 'PROPOSING',
+          beforeApprovalStatus: 'DRAFT',
+          approvalType: 'PROPOSE',
+          currentApproverId: vp.id,
+          currentApproverRole: 'VICE_PRESIDENT',
+          rejectedFromStatus: null,
+        },
+        record: { actionType: 'approve', statusBefore: 'PROPOSING', statusAfter: 'PROPOSING' },
+      },
+      normalCompanyApprove: {
+        statusCode: 200,
+        success: true,
+        work: {
+          status: 'IN_PROGRESS',
+          beforeApprovalStatus: null,
+          approvalType: null,
+          currentApproverId: null,
+          currentApproverRole: null,
+          rejectedFromStatus: null,
+        },
+        record: { actionType: 'approve', statusBefore: 'PROPOSING', statusAfter: 'IN_PROGRESS' },
+      },
+    },
+    note: 'PR 6.2: ordinary proposal approval keeps PROPOSING across nodes, then clears approval helper fields.',
+  });
+
+  const normalRejectId = await createWorkflowWork({
+    title: `${WORKFLOW_TEST_PREFIX}普通立项退回`,
+    type: 'MAIN',
+    status: 'DRAFT',
+    creator: manager,
+    dept: deptA,
+    vp,
+    president,
+  });
+  const normalRejectSubmit = await runWorkflowStep(baseUrl, loginByUsername, 'dept_manager_a1', normalRejectId, { action: 'submit' });
+  const normalReject = await runWorkflowStep(baseUrl, loginByUsername, 'dept_leader_a', normalRejectId, {
+    action: 'reject',
+    rejectReason: 'target-contract reject draft',
+  });
+
+  record({
+    role: 'workflow',
+    endpoint: 'POST /api/works/[id]/workflow PROPOSING reject -> DRAFT',
+    actual: { normalRejectSubmit, normalReject },
+    expected: {
+      normalRejectSubmit: {
+        statusCode: 200,
+        success: true,
+        work: {
+          status: 'PROPOSING',
+          beforeApprovalStatus: 'DRAFT',
+          approvalType: 'PROPOSE',
+          currentApproverId: null,
+          currentApproverRole: 'DEPARTMENT_LEADER',
+          rejectedFromStatus: null,
+        },
+        record: { actionType: 'submit', statusBefore: 'DRAFT', statusAfter: 'PROPOSING' },
+      },
+      normalReject: {
+        statusCode: 200,
+        success: true,
+        work: {
+          status: 'DRAFT',
+          beforeApprovalStatus: null,
+          approvalType: null,
+          currentApproverId: null,
+          currentApproverRole: null,
+          rejectedFromStatus: 'PROPOSING',
+        },
+        record: { actionType: 'reject', statusBefore: 'PROPOSING', statusAfter: 'DRAFT' },
+      },
+    },
+    note: 'PR 6.2: proposal reject returns to beforeApprovalStatus instead of REJECTED.',
+  });
+
+  const decomposeApproveId = await createWorkflowWork({
+    title: `${WORKFLOW_TEST_PREFIX}待分解通过`,
+    type: 'TODO',
+    status: 'PENDING_DECOMPOSE',
+    creator: vp,
+    dept: deptA,
+    vp,
+    president,
+  });
+  const decomposeSubmit = await runWorkflowStep(baseUrl, loginByUsername, 'dept_manager_a1', decomposeApproveId, {
+    action: 'decompose',
+    nodes: submitNodes,
+  });
+  const decomposeDeptApprove = await runWorkflowStep(baseUrl, loginByUsername, 'dept_leader_a', decomposeApproveId, { action: 'approve' });
+  const decomposeCompanyApprove = await runWorkflowStep(baseUrl, loginByUsername, 'vp_a', decomposeApproveId, { action: 'approve' });
+
+  record({
+    role: 'workflow',
+    endpoint: 'POST /api/works/[id]/workflow PENDING_DECOMPOSE -> PROPOSING -> IN_PROGRESS',
+    actual: { decomposeSubmit, decomposeDeptApprove, decomposeCompanyApprove },
+    expected: {
+      decomposeSubmit: {
+        statusCode: 200,
+        success: true,
+        work: {
+          status: 'PROPOSING',
+          beforeApprovalStatus: 'PENDING_DECOMPOSE',
+          approvalType: 'PROPOSE',
+          currentApproverId: null,
+          currentApproverRole: 'DEPARTMENT_LEADER',
+          rejectedFromStatus: null,
+        },
+        record: { actionType: 'decompose', statusBefore: 'PENDING_DECOMPOSE', statusAfter: 'PROPOSING' },
+      },
+      decomposeDeptApprove: {
+        statusCode: 200,
+        success: true,
+        work: {
+          status: 'PROPOSING',
+          beforeApprovalStatus: 'PENDING_DECOMPOSE',
+          approvalType: 'PROPOSE',
+          currentApproverId: vp.id,
+          currentApproverRole: 'VICE_PRESIDENT',
+          rejectedFromStatus: null,
+        },
+        record: { actionType: 'approve', statusBefore: 'PROPOSING', statusAfter: 'PROPOSING' },
+      },
+      decomposeCompanyApprove: {
+        statusCode: 200,
+        success: true,
+        work: {
+          status: 'IN_PROGRESS',
+          beforeApprovalStatus: null,
+          approvalType: null,
+          currentApproverId: null,
+          currentApproverRole: null,
+          rejectedFromStatus: null,
+        },
+        record: { actionType: 'approve', statusBefore: 'PROPOSING', statusAfter: 'IN_PROGRESS' },
+      },
+    },
+    note: 'PR 6.2: decomposed todo uses PROPOSING and returns to PENDING_DECOMPOSE when rejected.',
+  });
+
+  const decomposeRejectId = await createWorkflowWork({
+    title: `${WORKFLOW_TEST_PREFIX}待分解退回`,
+    type: 'TODO',
+    status: 'PENDING_DECOMPOSE',
+    creator: vp,
+    dept: deptA,
+    vp,
+    president,
+  });
+  const decomposeRejectSubmit = await runWorkflowStep(baseUrl, loginByUsername, 'dept_manager_a1', decomposeRejectId, {
+    action: 'decompose',
+    nodes: submitNodes,
+  });
+  const decomposeReject = await runWorkflowStep(baseUrl, loginByUsername, 'dept_leader_a', decomposeRejectId, {
+    action: 'reject',
+    rejectReason: 'target-contract reject decompose',
+  });
+
+  record({
+    role: 'workflow',
+    endpoint: 'POST /api/works/[id]/workflow PENDING_DECOMPOSE proposal reject',
+    actual: { decomposeRejectSubmit, decomposeReject },
+    expected: {
+      decomposeRejectSubmit: {
+        statusCode: 200,
+        success: true,
+        work: {
+          status: 'PROPOSING',
+          beforeApprovalStatus: 'PENDING_DECOMPOSE',
+          approvalType: 'PROPOSE',
+          currentApproverId: null,
+          currentApproverRole: 'DEPARTMENT_LEADER',
+          rejectedFromStatus: null,
+        },
+        record: { actionType: 'decompose', statusBefore: 'PENDING_DECOMPOSE', statusAfter: 'PROPOSING' },
+      },
+      decomposeReject: {
+        statusCode: 200,
+        success: true,
+        work: {
+          status: 'PENDING_DECOMPOSE',
+          beforeApprovalStatus: null,
+          approvalType: null,
+          currentApproverId: null,
+          currentApproverRole: null,
+          rejectedFromStatus: 'PROPOSING',
+        },
+        record: { actionType: 'reject', statusBefore: 'PROPOSING', statusAfter: 'PENDING_DECOMPOSE' },
+      },
+    },
+    note: 'PR 6.2: beforeApprovalStatus preserves PENDING_DECOMPOSE reject target.',
+  });
+
+  const adjustApproveId = await createWorkflowWork({
+    title: `${WORKFLOW_TEST_PREFIX}调整通过`,
+    type: 'PRIORITY',
+    status: 'IN_PROGRESS',
+    creator: manager,
+    dept: deptA,
+    vp,
+    president,
+  });
+  const adjustSubmit = await runWorkflowStep(baseUrl, loginByUsername, 'dept_manager_a1', adjustApproveId, {
+    action: 'adjust',
+    adjustReason: 'target-contract adjust',
+  });
+  const adjustDeptApprove = await runWorkflowStep(baseUrl, loginByUsername, 'dept_leader_a', adjustApproveId, { action: 'approve' });
+  const adjustCompanyApprove = await runWorkflowStep(baseUrl, loginByUsername, 'vp_a', adjustApproveId, { action: 'approve' });
+
+  record({
+    role: 'workflow',
+    endpoint: 'POST /api/works/[id]/workflow IN_PROGRESS -> ADJUSTING -> IN_PROGRESS',
+    actual: { adjustSubmit, adjustDeptApprove, adjustCompanyApprove },
+    expected: {
+      adjustSubmit: {
+        statusCode: 200,
+        success: true,
+        work: {
+          status: 'ADJUSTING',
+          beforeApprovalStatus: 'IN_PROGRESS',
+          approvalType: 'ADJUST',
+          currentApproverId: null,
+          currentApproverRole: 'DEPARTMENT_LEADER',
+          rejectedFromStatus: null,
+        },
+        record: { actionType: 'adjust', statusBefore: 'IN_PROGRESS', statusAfter: 'ADJUSTING' },
+      },
+      adjustDeptApprove: {
+        statusCode: 200,
+        success: true,
+        work: {
+          status: 'ADJUSTING',
+          beforeApprovalStatus: 'IN_PROGRESS',
+          approvalType: 'ADJUST',
+          currentApproverId: vp.id,
+          currentApproverRole: 'VICE_PRESIDENT',
+          rejectedFromStatus: null,
+        },
+        record: { actionType: 'approve', statusBefore: 'ADJUSTING', statusAfter: 'ADJUSTING' },
+      },
+      adjustCompanyApprove: {
+        statusCode: 200,
+        success: true,
+        work: {
+          status: 'IN_PROGRESS',
+          beforeApprovalStatus: null,
+          approvalType: null,
+          currentApproverId: null,
+          currentApproverRole: null,
+          rejectedFromStatus: null,
+        },
+        record: { actionType: 'approve', statusBefore: 'ADJUSTING', statusAfter: 'IN_PROGRESS' },
+      },
+    },
+    note: 'PR 6.2: adjustment approval returns to IN_PROGRESS and clears helper fields.',
+  });
+
+  const adjustRejectId = await createWorkflowWork({
+    title: `${WORKFLOW_TEST_PREFIX}调整退回`,
+    type: 'MAIN',
+    status: 'IN_PROGRESS',
+    creator: manager,
+    dept: deptA,
+    vp,
+    president,
+  });
+  const adjustRejectSubmit = await runWorkflowStep(baseUrl, loginByUsername, 'dept_manager_a1', adjustRejectId, {
+    action: 'adjust',
+    adjustReason: 'target-contract adjust reject',
+  });
+  const adjustReject = await runWorkflowStep(baseUrl, loginByUsername, 'dept_leader_a', adjustRejectId, {
+    action: 'reject',
+    rejectReason: 'target-contract reject adjust',
+  });
+
+  record({
+    role: 'workflow',
+    endpoint: 'POST /api/works/[id]/workflow ADJUSTING reject -> IN_PROGRESS',
+    actual: { adjustRejectSubmit, adjustReject },
+    expected: {
+      adjustRejectSubmit: {
+        statusCode: 200,
+        success: true,
+        work: {
+          status: 'ADJUSTING',
+          beforeApprovalStatus: 'IN_PROGRESS',
+          approvalType: 'ADJUST',
+          currentApproverId: null,
+          currentApproverRole: 'DEPARTMENT_LEADER',
+          rejectedFromStatus: null,
+        },
+        record: { actionType: 'adjust', statusBefore: 'IN_PROGRESS', statusAfter: 'ADJUSTING' },
+      },
+      adjustReject: {
+        statusCode: 200,
+        success: true,
+        work: {
+          status: 'IN_PROGRESS',
+          beforeApprovalStatus: null,
+          approvalType: null,
+          currentApproverId: null,
+          currentApproverRole: null,
+          rejectedFromStatus: 'ADJUSTING',
+        },
+        record: { actionType: 'reject', statusBefore: 'ADJUSTING', statusAfter: 'IN_PROGRESS' },
+      },
+    },
+    note: 'PR 6.2: adjustment reject restores beforeApprovalStatus.',
+  });
+
+  const cancelApproveId = await createWorkflowWork({
+    title: `${WORKFLOW_TEST_PREFIX}取消通过`,
+    type: 'MAIN',
+    status: 'IN_PROGRESS',
+    creator: manager,
+    dept: deptA,
+    vp,
+    president,
+  });
+  const cancelSubmit = await runWorkflowStep(baseUrl, loginByUsername, 'dept_manager_a1', cancelApproveId, {
+    action: 'cancel',
+    cancelReason: 'target-contract cancel',
+  });
+  const cancelDeptApprove = await runWorkflowStep(baseUrl, loginByUsername, 'dept_leader_a', cancelApproveId, { action: 'approve' });
+  const cancelCompanyApprove = await runWorkflowStep(baseUrl, loginByUsername, 'vp_a', cancelApproveId, { action: 'approve' });
+
+  record({
+    role: 'workflow',
+    endpoint: 'POST /api/works/[id]/workflow IN_PROGRESS -> CANCELLING -> CANCELLED',
+    actual: { cancelSubmit, cancelDeptApprove, cancelCompanyApprove },
+    expected: {
+      cancelSubmit: {
+        statusCode: 200,
+        success: true,
+        work: {
+          status: 'CANCELLING',
+          beforeApprovalStatus: 'IN_PROGRESS',
+          approvalType: 'CANCEL',
+          currentApproverId: null,
+          currentApproverRole: 'DEPARTMENT_LEADER',
+          rejectedFromStatus: null,
+        },
+        record: { actionType: 'cancel', statusBefore: 'IN_PROGRESS', statusAfter: 'CANCELLING' },
+      },
+      cancelDeptApprove: {
+        statusCode: 200,
+        success: true,
+        work: {
+          status: 'CANCELLING',
+          beforeApprovalStatus: 'IN_PROGRESS',
+          approvalType: 'CANCEL',
+          currentApproverId: vp.id,
+          currentApproverRole: 'VICE_PRESIDENT',
+          rejectedFromStatus: null,
+        },
+        record: { actionType: 'approve', statusBefore: 'CANCELLING', statusAfter: 'CANCELLING' },
+      },
+      cancelCompanyApprove: {
+        statusCode: 200,
+        success: true,
+        work: {
+          status: 'CANCELLED',
+          beforeApprovalStatus: null,
+          approvalType: null,
+          currentApproverId: null,
+          currentApproverRole: null,
+          rejectedFromStatus: null,
+        },
+        record: { actionType: 'approve', statusBefore: 'CANCELLING', statusAfter: 'CANCELLED' },
+      },
+    },
+    note: 'PR 6.2: cancel approval uses CANCELLING until final approval.',
+  });
+
+  const cancelRejectId = await createWorkflowWork({
+    title: `${WORKFLOW_TEST_PREFIX}取消退回`,
+    type: 'MAIN',
+    status: 'IN_PROGRESS',
+    creator: manager,
+    dept: deptA,
+    vp,
+    president,
+  });
+  const cancelRejectSubmit = await runWorkflowStep(baseUrl, loginByUsername, 'dept_manager_a1', cancelRejectId, {
+    action: 'cancel',
+    cancelReason: 'target-contract cancel reject',
+  });
+  const cancelReject = await runWorkflowStep(baseUrl, loginByUsername, 'dept_leader_a', cancelRejectId, {
+    action: 'reject',
+    rejectReason: 'target-contract reject cancel',
+  });
+
+  record({
+    role: 'workflow',
+    endpoint: 'POST /api/works/[id]/workflow CANCELLING reject -> IN_PROGRESS',
+    actual: { cancelRejectSubmit, cancelReject },
+    expected: {
+      cancelRejectSubmit: {
+        statusCode: 200,
+        success: true,
+        work: {
+          status: 'CANCELLING',
+          beforeApprovalStatus: 'IN_PROGRESS',
+          approvalType: 'CANCEL',
+          currentApproverId: null,
+          currentApproverRole: 'DEPARTMENT_LEADER',
+          rejectedFromStatus: null,
+        },
+        record: { actionType: 'cancel', statusBefore: 'IN_PROGRESS', statusAfter: 'CANCELLING' },
+      },
+      cancelReject: {
+        statusCode: 200,
+        success: true,
+        work: {
+          status: 'IN_PROGRESS',
+          beforeApprovalStatus: null,
+          approvalType: null,
+          currentApproverId: null,
+          currentApproverRole: null,
+          rejectedFromStatus: 'CANCELLING',
+        },
+        record: { actionType: 'reject', statusBefore: 'CANCELLING', statusAfter: 'IN_PROGRESS' },
+      },
+    },
+    note: 'PR 6.2: cancel reject restores IN_PROGRESS.',
+  });
+
+  const completeApproveId = await createWorkflowWork({
+    title: `${WORKFLOW_TEST_PREFIX}完成通过`,
+    type: 'TODO',
+    status: 'IN_PROGRESS',
+    creator: manager,
+    dept: deptA,
+    vp,
+    president,
+  });
+  const completeSubmit = await runWorkflowStep(baseUrl, loginByUsername, 'dept_manager_a1', completeApproveId, {
+    action: 'complete',
+    proof: 'target-contract proof',
+  });
+  const completeApprove = await runWorkflowStep(baseUrl, loginByUsername, 'vp_a', completeApproveId, { action: 'approve' });
+
+  record({
+    role: 'workflow',
+    endpoint: 'POST /api/works/[id]/workflow IN_PROGRESS -> COMPLETING -> COMPLETED',
+    actual: { completeSubmit, completeApprove },
+    expected: {
+      completeSubmit: {
+        statusCode: 200,
+        success: true,
+        work: {
+          status: 'COMPLETING',
+          beforeApprovalStatus: 'IN_PROGRESS',
+          approvalType: 'COMPLETE',
+          currentApproverId: vp.id,
+          currentApproverRole: 'VICE_PRESIDENT',
+          rejectedFromStatus: null,
+        },
+        record: { actionType: 'evidence', statusBefore: 'IN_PROGRESS', statusAfter: 'COMPLETING' },
+      },
+      completeApprove: {
+        statusCode: 200,
+        success: true,
+        work: {
+          status: 'COMPLETED',
+          beforeApprovalStatus: null,
+          approvalType: null,
+          currentApproverId: null,
+          currentApproverRole: null,
+          rejectedFromStatus: null,
+        },
+        record: { actionType: 'approve', statusBefore: 'COMPLETING', statusAfter: 'COMPLETED' },
+      },
+    },
+    note: 'PR 6.2: complete action is accepted as an alias of evidence and enters COMPLETING.',
+  });
+
+  const completeRejectId = await createWorkflowWork({
+    title: `${WORKFLOW_TEST_PREFIX}完成退回`,
+    type: 'TODO',
+    status: 'IN_PROGRESS',
+    creator: manager,
+    dept: deptA,
+    vp,
+    president,
+  });
+  const completeRejectSubmit = await runWorkflowStep(baseUrl, loginByUsername, 'dept_manager_a1', completeRejectId, {
+    action: 'complete',
+    proof: 'target-contract proof reject',
+  });
+  const completeReject = await runWorkflowStep(baseUrl, loginByUsername, 'vp_a', completeRejectId, {
+    action: 'reject',
+    rejectReason: 'target-contract reject complete',
+  });
+
+  record({
+    role: 'workflow',
+    endpoint: 'POST /api/works/[id]/workflow COMPLETING reject -> IN_PROGRESS',
+    actual: { completeRejectSubmit, completeReject },
+    expected: {
+      completeRejectSubmit: {
+        statusCode: 200,
+        success: true,
+        work: {
+          status: 'COMPLETING',
+          beforeApprovalStatus: 'IN_PROGRESS',
+          approvalType: 'COMPLETE',
+          currentApproverId: vp.id,
+          currentApproverRole: 'VICE_PRESIDENT',
+          rejectedFromStatus: null,
+        },
+        record: { actionType: 'evidence', statusBefore: 'IN_PROGRESS', statusAfter: 'COMPLETING' },
+      },
+      completeReject: {
+        statusCode: 200,
+        success: true,
+        work: {
+          status: 'IN_PROGRESS',
+          beforeApprovalStatus: null,
+          approvalType: null,
+          currentApproverId: null,
+          currentApproverRole: null,
+          rejectedFromStatus: 'COMPLETING',
+        },
+        record: { actionType: 'reject', statusBefore: 'COMPLETING', statusAfter: 'IN_PROGRESS' },
+      },
+    },
+    note: 'PR 6.2: complete reject restores IN_PROGRESS.',
+  });
+
+  const draftCancelId = await createWorkflowWork({
+    title: `${WORKFLOW_TEST_PREFIX}草稿取消`,
+    type: 'MAIN',
+    status: 'DRAFT',
+    creator: manager,
+    dept: deptA,
+    vp,
+    president,
+  });
+  const draftCancel = await runWorkflowStep(baseUrl, loginByUsername, 'dept_manager_a1', draftCancelId, {
+    action: 'cancel',
+    cancelReason: 'target-contract draft cancel',
+  });
+
+  record({
+    role: 'workflow',
+    endpoint: 'POST /api/works/[id]/workflow DRAFT -> CANCELLED',
+    actual: { draftCancel },
+    expected: {
+      draftCancel: {
+        statusCode: 200,
+        success: true,
+        work: {
+          status: 'CANCELLED',
+          beforeApprovalStatus: null,
+          approvalType: null,
+          currentApproverId: null,
+          currentApproverRole: null,
+          rejectedFromStatus: null,
+        },
+        record: { actionType: 'cancel', statusBefore: 'DRAFT', statusAfter: 'CANCELLED' },
+      },
+    },
+    note: 'PR 6.2: draft cancellation is direct and does not enter CANCELLING.',
+  });
+
+  const mainLeaderCancelId = await createWorkflowWork({
+    title: `${WORKFLOW_TEST_PREFIX}重点取消主要领导审批`,
+    type: 'PRIORITY',
+    status: 'IN_PROGRESS',
+    creator: manager,
+    dept: deptA,
+    vp,
+    president,
+    needMainLeaderCancel: true,
+  });
+  const mainCancelSubmit = await runWorkflowStep(baseUrl, loginByUsername, 'dept_manager_a1', mainLeaderCancelId, {
+    action: 'cancel',
+    cancelReason: 'target-contract priority cancel',
+  });
+  const mainCancelDeptApprove = await runWorkflowStep(baseUrl, loginByUsername, 'dept_leader_a', mainLeaderCancelId, { action: 'approve' });
+  const mainCancelCompanyApprove = await runWorkflowStep(baseUrl, loginByUsername, 'vp_a', mainLeaderCancelId, { action: 'approve' });
+  const mainCancelPresidentApprove = await runWorkflowStep(baseUrl, loginByUsername, 'president', mainLeaderCancelId, { action: 'approve' });
+
+  record({
+    role: 'workflow',
+    endpoint: 'POST /api/works/[id]/workflow priority cancel main leader node',
+    actual: {
+      mainCancelSubmit,
+      mainCancelDeptApprove,
+      mainCancelCompanyApprove,
+      mainCancelPresidentApprove,
+    },
+    expected: {
+      mainCancelSubmit: {
+        statusCode: 200,
+        success: true,
+        work: {
+          status: 'CANCELLING',
+          beforeApprovalStatus: 'IN_PROGRESS',
+          approvalType: 'CANCEL',
+          currentApproverId: null,
+          currentApproverRole: 'DEPARTMENT_LEADER',
+          rejectedFromStatus: null,
+        },
+        record: { actionType: 'cancel', statusBefore: 'IN_PROGRESS', statusAfter: 'CANCELLING' },
+      },
+      mainCancelDeptApprove: {
+        statusCode: 200,
+        success: true,
+        work: {
+          status: 'CANCELLING',
+          beforeApprovalStatus: 'IN_PROGRESS',
+          approvalType: 'CANCEL',
+          currentApproverId: vp.id,
+          currentApproverRole: 'VICE_PRESIDENT',
+          rejectedFromStatus: null,
+        },
+        record: { actionType: 'approve', statusBefore: 'CANCELLING', statusAfter: 'CANCELLING' },
+      },
+      mainCancelCompanyApprove: {
+        statusCode: 200,
+        success: true,
+        work: {
+          status: 'CANCELLING',
+          beforeApprovalStatus: 'IN_PROGRESS',
+          approvalType: 'CANCEL',
+          currentApproverId: president.id,
+          currentApproverRole: 'PRESIDENT',
+          rejectedFromStatus: null,
+        },
+        record: { actionType: 'approve', statusBefore: 'CANCELLING', statusAfter: 'CANCELLING' },
+      },
+      mainCancelPresidentApprove: {
+        statusCode: 200,
+        success: true,
+        work: {
+          status: 'CANCELLED',
+          beforeApprovalStatus: null,
+          approvalType: null,
+          currentApproverId: null,
+          currentApproverRole: null,
+          rejectedFromStatus: null,
+        },
+        record: { actionType: 'approve', statusBefore: 'CANCELLING', statusAfter: 'CANCELLED' },
+      },
+    },
+    note: 'PR 6.2: priority cancel no longer uses PENDING_MAIN_LEADER_CANCEL; main leader is a CANCELLING approval node.',
+  });
+}
+
 async function main() {
   const { baseUrl } = parseArgs();
   printEnvironmentSummary('[target-contract-verify]');
@@ -803,6 +1599,7 @@ async function main() {
   await verifyCompletionRate(baseUrl, loginByUsername, deptByCode, works);
   await verifyExcelExport(baseUrl, loginByUsername, userByUsername, works);
   await verifyExcelImport(baseUrl, loginByUsername, deptByCode, userByUsername);
+  await verifyWorkflowTransitions(baseUrl, loginByUsername, deptByCode, userByUsername);
 
   const totals = results.reduce(
     (acc, item) => {

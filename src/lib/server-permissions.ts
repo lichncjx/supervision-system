@@ -1,4 +1,4 @@
-import { Prisma, Role, User, WorkItemStatus, WorkItemType } from '@prisma/client'
+import { ApprovalType, Prisma, Role, User, WorkItemStatus, WorkItemType } from '@prisma/client'
 import prisma from './prisma'
 
 const GLOBAL_VIEW_ROLES: Role[] = [Role.ADMIN, Role.SUPERVISOR]
@@ -38,6 +38,8 @@ export interface PermissionWorkItem {
   approvalLeaderId?: number | null
   currentApproverId?: number | null
   currentApproverRole?: Role | string | null
+  beforeApprovalStatus?: WorkItemStatus | string | null
+  approvalType?: ApprovalType | string | null
   needMainLeaderCancel?: boolean | null
   deptManagerId?: number | null
 }
@@ -202,34 +204,39 @@ export function canApproveWorkItem(user: PermissionUser, workItem: PermissionWor
     return workItem.currentApproverId === user.id
   }
 
-  if (workItem.currentApproverRole && workItem.currentApproverRole !== user.role) {
+  const currentApproverRole = workItem.currentApproverRole as Role | string | null | undefined
+  if (currentApproverRole && currentApproverRole !== user.role) {
     return false
   }
 
   if (user.role === Role.DEPARTMENT_LEADER || user.role === Role.DEPARTMENT_MANAGER) {
-    return isWorkMainResponsibleDepartment(workItem, user.departmentId)
+    return (
+      currentApproverRole === user.role &&
+      isWorkMainResponsibleDepartment(workItem, user.departmentId)
+    )
   }
 
   if (user.role === Role.PRESIDENT) {
     return (
-      workItem.currentApproverRole === Role.PRESIDENT ||
-      workItem.needMainLeaderCancel === true
+      currentApproverRole === Role.PRESIDENT ||
+      (!currentApproverRole && workItem.needMainLeaderCancel === true)
     )
   }
 
   if (user.role === Role.VICE_PRESIDENT) {
-    if (workItem.currentApproverRole === Role.VICE_PRESIDENT) return true
+    if (currentApproverRole === Role.VICE_PRESIDENT) {
+      return (
+        !workItem.proposedLeaderId ||
+        workItem.proposedLeaderId === user.id ||
+        workItem.approvalLeaderId === user.id
+      )
+    }
 
     return (
-      !workItem.currentApproverRole &&
+      !currentApproverRole &&
       (
         workItem.approvalLeaderId === user.id ||
-        workItem.proposedLeaderId === user.id ||
-        (
-          (normalizeType(workItem.type) === WorkItemType.PRIORITY ||
-            normalizeType(workItem.type) === WorkItemType.MAIN) &&
-          APPROVAL_STATUSES.includes(normalizeStatus(workItem.status) as WorkItemStatus)
-        )
+        workItem.proposedLeaderId === user.id
       )
     )
   }
@@ -241,9 +248,11 @@ export function canHandleWorkItem(user: PermissionUser, workItem: PermissionWork
   if (user.role === Role.ADMIN || user.role === Role.SUPERVISOR) return false
 
   const status = normalizeStatus(workItem.status)
+  const returnedDraftOwnerId = workItem.firstSubmitterId ?? workItem.creatorId
 
   if (isDepartmentLevelRole(user.role)) {
     if (!isWorkMainResponsibleDepartment(workItem, user.departmentId)) return false
+    if (status === WorkItemStatus.DRAFT && returnedDraftOwnerId === user.id) return true
     return (
       status === WorkItemStatus.DRAFT ||
       status === WorkItemStatus.PENDING_DECOMPOSE ||
@@ -252,7 +261,7 @@ export function canHandleWorkItem(user: PermissionUser, workItem: PermissionWork
   }
 
   if (status === WorkItemStatus.DRAFT) {
-    return workItem.creatorId === user.id
+    return returnedDraftOwnerId === user.id
   }
 
   return false
