@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getDashboardSummary } from '@/lib/dashboard-data'
+import { getDashboardData } from '@/lib/dashboard-data'
 import { getUserFromToken } from '@/lib/server-auth'
 
 export async function GET(request: NextRequest) {
@@ -14,9 +14,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: '登录已过期' }, { status: 401 })
     }
 
-    return NextResponse.json(await getDashboardSummary(currentUser))
+    const { searchParams } = new URL(request.url)
+    const limit = Number(searchParams.get('limit') || undefined)
+
+    return NextResponse.json(await getDashboardData(currentUser, { limit }))
   } catch (error) {
-    console.error('Dashboard summary error:', error)
-    return NextResponse.json({ error: '获取统计失败' }, { status: 500 })
+    console.error('Dashboard error:', error)
+    return NextResponse.json({ error: '获取首页数据失败' }, { status: 500 })
   }
 }

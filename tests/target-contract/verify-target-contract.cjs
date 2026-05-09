@@ -107,6 +107,42 @@ function pickSummaryFields(value) {
   };
 }
 
+function pickDashboardSummaryFields(value) {
+  return {
+    total: value.total,
+    priorityTotal: value.priorityTotal,
+    mainTotal: value.mainTotal,
+    todoTotal: value.todoTotal,
+    priorityCompleted: value.priorityCompleted,
+    mainCompleted: value.mainCompleted,
+    todoCompleted: value.todoCompleted,
+    pendingApprovalCount: value.pendingApprovalCount,
+    pendingHandlingCount: value.pendingHandlingCount,
+    myActionRequiredCount: value.myActionRequiredCount,
+    inProgressCount: value.inProgressCount,
+    completingCount: value.completingCount,
+    completedCount: value.completedCount,
+    cancelledCount: value.cancelledCount,
+    expiringCount: value.expiringCount,
+    overdueCount: value.overdueCount,
+  };
+}
+
+function pickDashboardSummaryCompat(value) {
+  return {
+    priorityTotal: value.priorityTotal,
+    mainTotal: value.mainTotal,
+    todoTotal: value.todoTotal,
+    approving: value.pendingApprovalCount ?? value.approving,
+    handling: value.pendingHandlingCount ?? value.handling,
+    inProgress: value.inProgressCount ?? value.inProgress,
+    completed: value.completedCount ?? value.completed,
+    cancelled: value.cancelledCount ?? value.cancelled,
+    overdue: value.overdueCount ?? value.overdue,
+    expiring: value.expiringCount ?? value.expiring ?? value.thisMonthDue,
+  };
+}
+
 function format(value) {
   return JSON.stringify(value);
 }
@@ -169,6 +205,60 @@ function expectedRoleSummary(user, works) {
   };
 }
 
+function expectedDashboardSummary(user, works) {
+  const summary = expectedSummary(user, works);
+  const visible = works.filter((work) => canViewWork(user, work));
+  return {
+    total: summary.visibleTotal,
+    priorityTotal: summary.priorityTotal,
+    mainTotal: summary.mainTotal,
+    todoTotal: summary.todoTotal,
+    priorityCompleted: visible.filter((work) => work.type === 'PRIORITY' && work.status === 'COMPLETED').length,
+    mainCompleted: visible.filter((work) => work.type === 'MAIN' && work.status === 'COMPLETED').length,
+    todoCompleted: visible.filter((work) => work.type === 'TODO' && work.status === 'COMPLETED').length,
+    pendingApprovalCount: summary.approving,
+    pendingHandlingCount: summary.handling,
+    myActionRequiredCount: summary.actionRequired,
+    inProgressCount: summary.inProgress,
+    completingCount: visible.filter((work) =>
+      ['PENDING_COMPLETE', 'PENDING_EVIDENCE_DEPT', 'PENDING_EVIDENCE_COMPANY'].includes(work.status)
+    ).length,
+    completedCount: summary.completed,
+    cancelledCount: summary.cancelled,
+    expiringCount: summary.expiring,
+    overdueCount: summary.overdue,
+  };
+}
+
+function findUnexpectedDashboardKeys(items) {
+  const allowed = new Set([
+    'id',
+    'title',
+    'type',
+    'typeLabel',
+    'status',
+    'statusLabel',
+    'departmentName',
+    'departmentNames',
+    'responsibleDepartmentNames',
+    'cooperateDepartmentNames',
+    'completeTime',
+    'planCompleteTime',
+    'dueTime',
+    'isOverdue',
+    'isExpiring',
+    'actionType',
+    'currentApproverName',
+  ]);
+  return Array.from(
+    new Set(
+      items.flatMap((item) =>
+        Object.keys(item || {}).filter((key) => !allowed.has(key))
+      )
+    )
+  ).sort();
+}
+
 async function verifyDashboardSummary(baseUrl, loginByUsername, userByUsername, works) {
   for (const userDef of users) {
     const loginInfo = loginByUsername[userDef.username];
@@ -183,6 +273,94 @@ async function verifyDashboardSummary(baseUrl, loginByUsername, userByUsername, 
       expected,
       expectedFailure: false,
       note: 'Target: summary follows docs/首页统计口径.md using target status groups, organization visibility, my approval/handling, expiring/overdue.',
+    });
+  }
+}
+
+async function verifyDashboardUnified(baseUrl, loginByUsername, userByUsername, works) {
+  for (const userDef of users) {
+    const loginInfo = loginByUsername[userDef.username];
+    const dbUser = userByUsername[userDef.username];
+    const dashboardResponse = await request(baseUrl, 'GET', '/api/dashboard?limit=100', null, loginInfo.cookies);
+    const summaryResponse = await request(baseUrl, 'GET', '/api/dashboard/summary', null, loginInfo.cookies);
+    const body = dashboardResponse.body || {};
+    const summary = body.summary || {};
+    const lists = body.lists || {};
+    const expiringAndOverdue = Array.isArray(lists.expiringAndOverdue) ? lists.expiringAndOverdue : [];
+    const myActionRequired = Array.isArray(lists.myActionRequired) ? lists.myActionRequired : [];
+
+    record({
+      role: userDef.username,
+      endpoint: 'GET /api/dashboard summary target',
+      actual: dashboardResponse.statusCode === 200
+        ? pickDashboardSummaryFields(summary)
+        : { statusCode: dashboardResponse.statusCode },
+      expected: expectedDashboardSummary(dbUser, works),
+      expectedFailure: false,
+      note: 'Phase 4: unified dashboard summary uses the same target visibility, approval, handling and deadline口径.',
+    });
+
+    record({
+      role: userDef.username,
+      endpoint: 'GET /api/dashboard summary equals /api/dashboard/summary',
+      actual: dashboardResponse.statusCode === 200
+        ? pickDashboardSummaryCompat(summary)
+        : { statusCode: dashboardResponse.statusCode },
+      expected: summaryResponse.statusCode === 200
+        ? pickSummaryFields(summaryResponse.body)
+        : { statusCode: summaryResponse.statusCode },
+      expectedFailure: false,
+      note: 'Phase 4: /api/dashboard and /api/dashboard/summary share one summary calculation helper.',
+    });
+
+    const unexpectedKeys = findUnexpectedDashboardKeys([
+      ...expiringAndOverdue,
+      ...myActionRequired,
+    ]);
+    record({
+      role: userDef.username,
+      endpoint: 'GET /api/dashboard lightweight lists',
+      actual: {
+        unexpectedKeys,
+        hasLargeFields: unexpectedKeys.some((key) =>
+          ['nodes', 'workPlan', 'proof', 'attachments', 'workflowRecords', 'description'].includes(key)
+        ),
+      },
+      expected: {
+        unexpectedKeys: [],
+        hasLargeFields: false,
+      },
+      expectedFailure: false,
+      note: 'Phase 4: dashboard lists return lightweight WorkDashboardItem fields only.',
+    });
+
+    record({
+      role: userDef.username,
+      endpoint: 'GET /api/dashboard lists counts',
+      actual: {
+        expiringAndOverdue: expiringAndOverdue.length,
+        expiringAndOverdueExpected: (summary.expiringCount ?? 0) + (summary.overdueCount ?? 0),
+        expiringAndOverdueFlags: expiringAndOverdue.every((item) => item.isExpiring || item.isOverdue),
+        myActionRequired: myActionRequired.length,
+        myActionRequiredExpected: summary.myActionRequiredCount ?? 0,
+        myActionRequiredSumMatches:
+          (summary.myActionRequiredCount ?? 0) ===
+          (summary.pendingApprovalCount ?? 0) + (summary.pendingHandlingCount ?? 0),
+        myActionRequiredFlags: myActionRequired.every((item) =>
+          item.actionType === 'approval' || item.actionType === 'handling'
+        ),
+      },
+      expected: {
+        expiringAndOverdue: (summary.expiringCount ?? 0) + (summary.overdueCount ?? 0),
+        expiringAndOverdueExpected: (summary.expiringCount ?? 0) + (summary.overdueCount ?? 0),
+        expiringAndOverdueFlags: true,
+        myActionRequired: summary.myActionRequiredCount ?? 0,
+        myActionRequiredExpected: summary.myActionRequiredCount ?? 0,
+        myActionRequiredSumMatches: true,
+        myActionRequiredFlags: true,
+      },
+      expectedFailure: false,
+      note: 'Phase 4: limit=100 verifies list口径 against summary counts; homepage default limit remains 5.',
     });
   }
 }
@@ -337,6 +515,7 @@ async function main() {
 
   console.log('[target-contract-verify] comparing current APIs with target contract...');
   await verifyDashboardSummary(baseUrl, loginByUsername, userByUsername, works);
+  await verifyDashboardUnified(baseUrl, loginByUsername, userByUsername, works);
   await verifyWorksVisibility(baseUrl, loginByUsername, userByUsername, works);
   await verifyTargetPermissionFacts(baseUrl, loginByUsername, works);
   await verifyCompletionRate(baseUrl, loginByUsername, deptByCode, works);

@@ -2,25 +2,47 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { statusColors, expiryColors, workTypeColors, getWorkTypeAccent, getWorkTypeText } from '@/lib/status-colors';
+import { statusColors, expiryColors, workTypeColors } from '@/lib/status-colors';
 
 const pillColors = { ...statusColors, ...expiryColors };
 import { Textarea } from '@/components/ui/textarea';
 import { Plus, Bell, Search } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
-import {
-  getVisibleWorks,
-  canHandleWork,
-  canApproveWork,
-  canProcessWork,
-  isExpiringWork,
-  isOverdueWork,
-  sortWorksByDueDate,
-  isSupervisorTrackingWork,
-  type Work,
-} from '@/lib/work-store';
 import { StatusBadge } from '@/components/common/badges';
 import { isSupervisionAdmin } from '@/lib/auth';
+
+type DashboardWorkType = 'PRIORITY' | 'MAIN' | 'TODO';
+
+interface DashboardWorkItem {
+  id: number;
+  title: string;
+  type: DashboardWorkType;
+  typeLabel?: string;
+  status: string;
+  statusLabel?: string;
+  completeTime: string | null;
+  planCompleteTime: string | null;
+  dueTime?: string | null;
+  isOverdue: boolean;
+  isExpiring: boolean;
+  actionType: 'approval' | 'handling' | 'view';
+}
+
+function getDashboardWorkPath(work: DashboardWorkItem) {
+  if (work.type === 'PRIORITY') return 'priority';
+  if (work.type === 'MAIN') return 'main';
+  return 'todo';
+}
+
+function getDashboardTypeKey(type: DashboardWorkType) {
+  if (type === 'PRIORITY') return 'priority';
+  if (type === 'MAIN') return 'main';
+  return 'todo';
+}
+
+function getDashboardWorkDate(work: DashboardWorkItem) {
+  return work.dueTime || work.completeTime || work.planCompleteTime || null;
+}
 
 export default function DashboardPage() {
   const NOTICE_KEY = 'supervision_admin_notice';
@@ -43,7 +65,8 @@ export default function DashboardPage() {
     mainCompleted: 0,
     todoCompleted: 0,
   });
-  const [visibleWorks, setVisibleWorks] = useState<Work[]>([]);
+  const [alertWorks, setAlertWorks] = useState<DashboardWorkItem[]>([]);
+  const [pendingProcesses, setPendingProcesses] = useState<DashboardWorkItem[]>([]);
 
   useEffect(() => {
     const saved = localStorage.getItem(NOTICE_KEY) || '';
@@ -55,31 +78,27 @@ export default function DashboardPage() {
     const loadData = async () => {
       if (!user) return;
       try {
-        const newWorks = await getVisibleWorks(user);
-        setVisibleWorks(newWorks);
-        const overdue = newWorks.filter((w) => isOverdueWork(w)).length;
-        const expiring = newWorks.filter((w) => isExpiringWork(w)).length;
-
-        const response = await fetch('/api/dashboard/summary', { credentials: 'include' });
+        const response = await fetch('/api/dashboard', { credentials: 'include' });
         if (response.ok) {
           const data = await response.json();
+          const summary = data.summary || {};
           setStats({
-            total: data.priorityTotal + data.mainTotal + data.todoTotal,
-            approving: data.approving,
-            handling: data.handling,
-            inProgress: data.inProgress,
-            completed: data.completed,
-            overdue,
-            expiring,
-            priority: data.priorityTotal,
-            main: data.mainTotal,
-            todo: data.todoTotal,
-            priorityCompleted: data.priorityCompleted ?? 0,
-            mainCompleted: data.mainCompleted ?? 0,
-            todoCompleted: data.todoCompleted ?? 0,
+            total: summary.total ?? ((summary.priorityTotal ?? 0) + (summary.mainTotal ?? 0) + (summary.todoTotal ?? 0)),
+            approving: summary.pendingApprovalCount ?? summary.approving ?? 0,
+            handling: summary.pendingHandlingCount ?? summary.handling ?? 0,
+            inProgress: summary.inProgressCount ?? summary.inProgress ?? 0,
+            completed: summary.completedCount ?? summary.completed ?? 0,
+            overdue: summary.overdueCount ?? summary.overdue ?? 0,
+            expiring: summary.expiringCount ?? summary.expiring ?? 0,
+            priority: summary.priorityTotal ?? 0,
+            main: summary.mainTotal ?? 0,
+            todo: summary.todoTotal ?? 0,
+            priorityCompleted: summary.priorityCompleted ?? 0,
+            mainCompleted: summary.mainCompleted ?? 0,
+            todoCompleted: summary.todoCompleted ?? 0,
           });
-        } else {
-          setStats((prev) => ({ ...prev, overdue, expiring }));
+          setAlertWorks(data.lists?.expiringAndOverdue ?? []);
+          setPendingProcesses(data.lists?.myActionRequired ?? []);
         }
       } catch (error) {
         console.error('Failed to load stats:', error);
@@ -132,16 +151,6 @@ export default function DashboardPage() {
     user?.role === 'VICE_PRESIDENT' ||
     user?.role === 'PRESIDENT' ||
     user?.role === 'SUPERVISOR';
-
-  const pendingProcesses = sortWorksByDueDate(
-    visibleWorks.filter((work) =>
-      user?.role === 'SUPERVISOR'
-        ? isSupervisorTrackingWork(work)
-        : canProcessWork(user, work)
-    )
-  ).slice(0, 5);
-
-  const alertWorks = sortWorksByDueDate(visibleWorks.filter((work) => isExpiringWork(work) || isOverdueWork(work)));
 
   return (
     <div className="space-y-6">
@@ -320,14 +329,15 @@ export default function DashboardPage() {
           ) : (
             <div className="space-y-2">
               {alertWorks.slice(0, 5).map((work) => {
-                const date = work.completeTime || work.planCompleteTime
-                const borderColor = getWorkTypeAccent(work.type)
+                const date = getDashboardWorkDate(work)
+                const typeKey = getDashboardTypeKey(work.type)
+                const typeColor = workTypeColors[typeKey]
                 return (
-                  <Link key={work.id} href={`/${work.type === '重点' ? 'priority' : work.type === '主要' ? 'main' : 'todo'}/${work.id}`}>
-                    <div className={`border-l-2 rounded-lg p-3 hover:translate-x-0.5 transition min-w-0 ${borderColor}`}>
+                  <Link key={work.id} href={`/${getDashboardWorkPath(work)}/${work.id}`}>
+                    <div className={`border-l-2 rounded-lg p-3 hover:translate-x-0.5 transition min-w-0 ${typeColor.left}`}>
                       <div className="text-sm font-medium text-slate-700 break-words leading-snug">{work.title}</div>
                       <div className="text-xs text-slate-500 mt-1.5 flex items-center gap-2 flex-wrap">
-                        <span className={`font-medium ${getWorkTypeText(work.type)}`}>{work.type}</span>
+                        <span className={`font-medium ${typeColor.text}`}>{work.typeLabel || work.type}</span>
                         <StatusBadge status={work.status} />
                         <span className="text-slate-400">计划完成时间：{date || '-'}</span>
                       </div>
@@ -362,22 +372,18 @@ export default function DashboardPage() {
           ) : (
             <div className="space-y-2">
               {pendingProcesses.slice(0, 5).map((work) => {
-                const borderColor = getWorkTypeAccent(work.type)
+                const typeKey = getDashboardTypeKey(work.type)
+                const typeColor = workTypeColors[typeKey]
                 return (
-                  <Link key={work.id} href={`/${work.type === '重点' ? 'priority' : work.type === '主要' ? 'main' : 'todo'}/${work.id}`}>
-                    <div className={`border-l-2 rounded-lg p-3 hover:translate-x-0.5 transition min-w-0 ${borderColor}`}>
+                  <Link key={work.id} href={`/${getDashboardWorkPath(work)}/${work.id}`}>
+                    <div className={`border-l-2 rounded-lg p-3 hover:translate-x-0.5 transition min-w-0 ${typeColor.left}`}>
                       <div className="text-sm font-medium text-slate-700 break-words leading-snug">{work.title}</div>
                       <div className="text-xs text-slate-500 mt-1.5 flex items-center gap-2 flex-wrap">
-                        <span className={`font-medium ${getWorkTypeText(work.type)}`}>{work.type}</span>
+                        <span className={`font-medium ${typeColor.text}`}>{work.typeLabel || work.type}</span>
                         <StatusBadge status={work.status} />
-                        {canApproveWork(user, work) && <span className="text-purple-600 font-medium text-xs">待审批</span>}
-                        {canHandleWork(user, work) && <span className="text-indigo-600 font-medium text-xs">待办理</span>}
+                        {work.actionType === 'approval' && <span className="text-purple-600 font-medium text-xs">待审批</span>}
+                        {work.actionType === 'handling' && <span className="text-indigo-600 font-medium text-xs">待办理</span>}
                       </div>
-                      {work.rejectReason && (
-                        <div className="text-xs text-rose-600 mt-1.5 break-words bg-rose-50/50 rounded px-2 py-1">
-                          退回人：{work.rejectedBy || '-'}；退回原因：{work.rejectReason}
-                        </div>
-                      )}
                     </div>
                   </Link>
                 )
