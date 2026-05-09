@@ -1,5 +1,6 @@
 import { ApprovalType, Prisma, Role, User, WorkItemStatus, WorkItemType } from '@prisma/client'
 import prisma from './prisma'
+import { isReturnedDraftWork } from './work-status'
 
 const GLOBAL_VIEW_ROLES: Role[] = [Role.ADMIN, Role.SUPERVISOR]
 const DEPARTMENT_ROLES: Role[] = [Role.DEPARTMENT_MANAGER, Role.DEPARTMENT_LEADER]
@@ -40,6 +41,9 @@ export interface PermissionWorkItem {
   currentApproverRole?: Role | string | null
   beforeApprovalStatus?: WorkItemStatus | string | null
   approvalType?: ApprovalType | string | null
+  rejectReason?: string | null
+  rejectedFromStatus?: WorkItemStatus | string | null
+  rejectedAt?: Date | string | null
   needMainLeaderCancel?: boolean | null
   deptManagerId?: number | null
 }
@@ -249,6 +253,11 @@ export function canHandleWorkItem(user: PermissionUser, workItem: PermissionWork
 
   const status = normalizeStatus(workItem.status)
   const returnedDraftOwnerId = workItem.firstSubmitterId ?? workItem.creatorId
+  const returnedDraft = isReturnedDraftWork(workItem)
+
+  if (status === WorkItemStatus.DRAFT && returnedDraft) {
+    return returnedDraftOwnerId === user.id
+  }
 
   if (isDepartmentLevelRole(user.role)) {
     if (!isWorkMainResponsibleDepartment(workItem, user.departmentId)) return false
@@ -273,7 +282,12 @@ export function canEditWorkItem(user: PermissionUser, workItem: PermissionWorkIt
     return false
   }
 
+  const returnedDraft = isReturnedDraftWork(workItem)
+
   if (user.role === Role.ADMIN || user.role === Role.SUPERVISOR) return true
+  if (returnedDraft) {
+    return (workItem.firstSubmitterId ?? workItem.creatorId) === user.id
+  }
   if (workItem.creatorId === user.id) return true
   if ((workItem.firstSubmitterId ?? workItem.creatorId) === user.id) {
     return true

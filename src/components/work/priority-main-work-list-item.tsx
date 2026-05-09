@@ -49,7 +49,7 @@ export function PriorityMainWorkListItem({ item, routeType, getDepartmentName }:
         </div>
         <div>
           <span className="text-slate-400">状态：</span>
-          <StatusBadge status={item.status} />
+          <StatusBadge status={item.status} work={item} />
         </div>
         {item.adjustHistory && item.adjustHistory.length > 0 && (
           <div className="text-xs text-purple-600 bg-purple-50/50 rounded px-2 py-1 break-words">

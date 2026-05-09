@@ -24,24 +24,32 @@ import { getWorkTypeAccent, getWorkTypeText } from '@/lib/status-colors';
 
 type StatusPageFilter =
   | 'all'
+  | 'draft'
+  | 'returnedDraft'
+  | 'pendingDecompose'
   | 'approving'
   | 'handling'
   | 'inProgress'
   | 'completed'
+  | 'cancelled'
   | 'overdue'
   | 'expiring';
 
 const allowedFilters: StatusPageFilter[] = [
   'all',
+  'draft',
+  'returnedDraft',
+  'pendingDecompose',
   'approving',
   'handling',
   'inProgress',
   'completed',
+  'cancelled',
   'overdue',
   'expiring',
 ];
 
-const filterTitle: Record<StatusPageFilter, string> = {
+const filterTitle: Partial<Record<StatusPageFilter, string>> = {
   all: '全部事项',
   approving: '待我审批事项',
   handling: '待我办理事项',
@@ -50,6 +58,20 @@ const filterTitle: Record<StatusPageFilter, string> = {
   overdue: '超期事项',
   expiring: '临期事项',
 };
+
+Object.assign(filterTitle, {
+  all: '全部事项',
+  draft: '草稿事项',
+  returnedDraft: '退回待修改事项',
+  pendingDecompose: '待分解事项',
+  approving: '待我审批事项',
+  handling: '待我办理事项',
+  inProgress: '进行中事项',
+  completed: '已完成事项',
+  cancelled: '已取消事项',
+  overdue: '超期事项',
+  expiring: '临期事项',
+});
 
 function getRouteType(type: string) {
   if (type === '重点') return 'priority';
@@ -87,9 +109,10 @@ export default function StatusFilterPage() {
   const safeFilter: StatusPageFilter = allowedFilters.includes(filter as StatusPageFilter)
     ? (filter as StatusPageFilter)
     : 'all';
+  const safeFilterTitle = filterTitle[safeFilter] || '事项列表';
 
   const queryStatus =
-    ['all', 'inProgress', 'completed', 'overdue', 'expiring'].includes(safeFilter)
+    ['all', 'draft', 'returnedDraft', 'pendingDecompose', 'inProgress', 'completed', 'cancelled', 'overdue', 'expiring'].includes(safeFilter)
       ? (safeFilter as WorkStatusFilter)
       : 'all';
 
@@ -178,7 +201,7 @@ export default function StatusFilterPage() {
         </Link>
         <h1 className="stagger-1 flex items-center gap-3 text-2xl font-bold text-slate-800">
           <span className="w-1 h-6 rounded-full bg-slate-500" />
-          {filterTitle[safeFilter]}
+          {safeFilterTitle}
         </h1>
       </div>
 
@@ -229,7 +252,7 @@ export default function StatusFilterPage() {
       <div className="stagger-3 rounded-xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50/50 overflow-hidden">
         {finalList.length === 0 ? (
           <div className="py-16 text-center text-slate-400 text-sm">
-            暂无{filterTitle[safeFilter]}
+            暂无{safeFilterTitle}
           </div>
         ) : (
           <div className="divide-y divide-slate-100">
@@ -247,7 +270,7 @@ export default function StatusFilterPage() {
 
                   <div className="text-xs text-slate-500 mt-1.5 flex items-center gap-2 flex-wrap">
                     <span className={`font-medium ${getWorkTypeText(work.type)}`}>{work.type}</span>
-                    <StatusBadge status={work.status} />
+                    <StatusBadge status={work.status} work={work} />
                     <span className="text-slate-400">
                       责任部门：{work.departmentIds && work.departmentIds.length > 0
                         ? work.departmentIds.map((id: number) => getDepartmentName(id)).join('、')

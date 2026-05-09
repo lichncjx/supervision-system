@@ -5,11 +5,21 @@ import prisma from '@/lib/prisma'
 import { getUserFromToken } from '@/lib/server-auth'
 import {
   buildWorkVisibilityWhere,
+  canHandleWorkItem,
   canViewWorkItem,
   getCooperateDepartmentIds,
   getResponsibleDepartmentIds,
 } from '@/lib/server-permissions'
 import { getWorkStatusLabel } from '@/lib/work-status'
+
+const EXPIRING_DAYS = 7
+const APPROVING_STATUSES: WorkItemStatus[] = [
+  WorkItemStatus.PROPOSING,
+  WorkItemStatus.ADJUSTING,
+  WorkItemStatus.CANCELLING,
+  WorkItemStatus.COMPLETING,
+]
+const TERMINAL_STATUSES: WorkItemStatus[] = [WorkItemStatus.COMPLETED, WorkItemStatus.CANCELLED]
 
 function getTypeText(type: WorkItemType): string {
   if (type === WorkItemType.PRIORITY) return '重点工作'
@@ -26,12 +36,68 @@ function normalizeTypeFilter(type: string | null): WorkItemType | null {
   return null
 }
 
-function normalizeStatusFilter(status: string | null): WorkItemStatus | null {
-  if (!status) return null
+function normalizeStatusFilter(status: string | null): string | null {
+  if (!status || status === 'all') return null
   const normalized = status.toUpperCase()
   return Object.values(WorkItemStatus).includes(normalized as WorkItemStatus)
-    ? normalized as WorkItemStatus
+    ? normalized
     : null
+}
+
+function getDueDate(workItem: {
+  type: WorkItemType
+  completeTime: Date | null
+  planCompleteTime: Date | null
+}): Date | null {
+  return workItem.type === WorkItemType.TODO ? workItem.planCompleteTime : workItem.completeTime
+}
+
+function isOverdueWork(workItem: {
+  type: WorkItemType
+  status: WorkItemStatus
+  completeTime: Date | null
+  planCompleteTime: Date | null
+}, now: Date): boolean {
+  if (TERMINAL_STATUSES.includes(workItem.status)) return false
+  const dueDate = getDueDate(workItem)
+  return dueDate ? dueDate < now : false
+}
+
+function isExpiringWork(workItem: {
+  type: WorkItemType
+  status: WorkItemStatus
+  completeTime: Date | null
+  planCompleteTime: Date | null
+}, now: Date): boolean {
+  if (TERMINAL_STATUSES.includes(workItem.status)) return false
+  const dueDate = getDueDate(workItem)
+  if (!dueDate) return false
+  const deadline = new Date(now)
+  deadline.setDate(deadline.getDate() + EXPIRING_DAYS)
+  return dueDate >= now && dueDate <= deadline
+}
+
+function isValidStatusFilter(status: string | null): boolean {
+  if (!status || status === 'all') return true
+  const lower = status.toLowerCase()
+  return (
+    Boolean(normalizeStatusFilter(status)) ||
+    [
+      'draft',
+      'returneddraft',
+      'returned_draft',
+      'pendingdecompose',
+      'pending_decompose',
+      'approving',
+      'handling',
+      'inprogress',
+      'in_progress',
+      'completed',
+      'cancelled',
+      'overdue',
+      'expiring',
+    ].includes(lower)
+  )
 }
 
 function formatDate(value: Date | null): string {
@@ -79,7 +145,8 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const typeFilter = normalizeTypeFilter(searchParams.get('type'))
     const rawTypeFilter = searchParams.get('type')
-    const statusFilter = normalizeStatusFilter(searchParams.get('status'))
+    const rawStatusFilter = searchParams.get('status')?.trim() || null
+    const statusFilter = normalizeStatusFilter(rawStatusFilter)
     const departmentIdFilter = searchParams.get('departmentId')
       ? Number(searchParams.get('departmentId'))
       : null
@@ -87,6 +154,10 @@ export async function GET(request: NextRequest) {
 
     if (rawTypeFilter && !typeFilter) {
       return NextResponse.json({ error: '无效的事项类型' }, { status: 400 })
+    }
+
+    if (!isValidStatusFilter(rawStatusFilter)) {
+      return NextResponse.json({ error: '无效的状态筛选' }, { status: 400 })
     }
 
     const workItems = await prisma.workItem.findMany({
@@ -100,10 +171,33 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: 'desc' },
     })
 
+    const now = new Date()
+    now.setHours(0, 0, 0, 0)
+    const rawStatusLower = rawStatusFilter?.toLowerCase() || null
+
     const visibleItems = workItems
       .filter((workItem) => canViewWorkItem(currentUser, workItem))
       .filter((workItem) => !typeFilter || workItem.type === typeFilter)
-      .filter((workItem) => !statusFilter || workItem.status === statusFilter)
+      .filter((workItem) => {
+        if (!rawStatusFilter || rawStatusFilter === 'all') return true
+        if (rawStatusLower === 'draft') {
+          return workItem.status === WorkItemStatus.DRAFT && !workItem.rejectReason && !workItem.rejectedFromStatus
+        }
+        if (rawStatusLower === 'returneddraft' || rawStatusLower === 'returned_draft') {
+          return workItem.status === WorkItemStatus.DRAFT && Boolean(workItem.rejectReason || workItem.rejectedFromStatus)
+        }
+        if (rawStatusLower === 'pendingdecompose' || rawStatusLower === 'pending_decompose') {
+          return workItem.status === WorkItemStatus.PENDING_DECOMPOSE
+        }
+        if (rawStatusLower === 'approving') return APPROVING_STATUSES.includes(workItem.status)
+        if (rawStatusLower === 'handling') return canHandleWorkItem(currentUser, workItem)
+        if (rawStatusLower === 'inprogress' || rawStatusLower === 'in_progress') return workItem.status === WorkItemStatus.IN_PROGRESS
+        if (rawStatusLower === 'completed') return workItem.status === WorkItemStatus.COMPLETED
+        if (rawStatusLower === 'cancelled') return workItem.status === WorkItemStatus.CANCELLED
+        if (rawStatusLower === 'overdue') return isOverdueWork(workItem, now)
+        if (rawStatusLower === 'expiring') return isExpiringWork(workItem, now)
+        return !statusFilter || workItem.status === statusFilter
+      })
       .filter((workItem) => keywordMatches(workItem, keyword))
       .filter((workItem) => {
         if (!departmentIdFilter) return true

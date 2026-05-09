@@ -113,6 +113,12 @@ function parseExcelDate(value: any): string | null {
   return null;
 }
 
+function isAllowedImportedStatus(value: string): boolean {
+  const normalized = value.trim();
+  if (!normalized) return true;
+  return normalized === '草稿' || normalized.toUpperCase() === WorkItemStatus.DRAFT;
+}
+
 async function validateAndParseExcel(
   file: Buffer,
   type: string,
@@ -170,6 +176,16 @@ async function validateAndParseExcel(
       const val = row[key];
       return val !== undefined && val !== null ? String(val).trim() : '';
     };
+
+    const importedStatus = getCell('当前状态') || getCell('状态') || getCell('status') || getCell('Status');
+    if (!isAllowedImportedStatus(importedStatus)) {
+      errors.push({
+        row: rowNum,
+        field: '当前状态',
+        value: importedStatus,
+        reason: '普通导入只允许空状态或 DRAFT/草稿；审批中、进行中、终态和旧状态必须通过 workflow 流转',
+      });
+    }
 
     if (type === 'priority' || type === 'PRIORITY') {
       const businessCategory = getCell('业务类别');

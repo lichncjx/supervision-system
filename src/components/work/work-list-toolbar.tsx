@@ -74,10 +74,15 @@ export function WorkListToolbar({
 
       <select value={statusFilter} onChange={(e) => onStatusFilterChange(e.target.value as WorkStatusFilter)} className={selectClass}>
         <option value="all">全部状态</option>
-        <option value="approving">待审批</option>
+        <option value="draft">草稿</option>
+        <option value="returnedDraft">退回待修改</option>
+        <option value="pendingDecompose">待分解</option>
+        <option value="approving">审批中</option>
+        <option value="handling">待办理</option>
         <option value="inProgress">进行中</option>
         <option value="completed">已完成</option>
         <option value="cancelled">已取消</option>
+        <option value="expiring">临期</option>
         <option value="overdue">超期</option>
       </select>
 

@@ -198,8 +198,43 @@ export function getWorkStatusMeta(status: unknown): WorkStatusMeta | undefined {
   return normalized ? ALL_WORK_STATUS_META[normalized] : undefined;
 }
 
+export interface ReturnedDraftLike {
+  status?: unknown;
+  rejectReason?: unknown;
+  rejectedFromStatus?: unknown;
+  rejectedAt?: unknown;
+  workflowRecords?: Array<{
+    action?: unknown;
+    actionType?: unknown;
+  }>;
+}
+
+function hasValue(value: unknown): boolean {
+  if (value == null) return false;
+  return String(value).trim().length > 0;
+}
+
+export function isReturnedDraftWork(work: ReturnedDraftLike | null | undefined): boolean {
+  if (!work || normalizeWorkStatus(work.status) !== 'draft') return false;
+
+  if (hasValue(work.rejectReason) || hasValue(work.rejectedFromStatus) || hasValue(work.rejectedAt)) {
+    return true;
+  }
+
+  const latestRecord = Array.isArray(work.workflowRecords) ? work.workflowRecords[0] : null;
+  const latestAction = String(latestRecord?.action || latestRecord?.actionType || '').toLowerCase();
+  return latestAction === 'reject' || latestAction === 'rejected';
+}
+
 export function getWorkStatusLabel(status: unknown): string {
   return getWorkStatusMeta(status)?.label || String(status);
+}
+
+export function getWorkDisplayStatusLabel(status: unknown, work?: ReturnedDraftLike): string {
+  if (isReturnedDraftWork({ ...work, status })) {
+    return '退回待修改';
+  }
+  return getWorkStatusLabel(status);
 }
 
 export function getWorkStatusDescription(status: unknown): string {
@@ -240,10 +275,6 @@ export function isWorkStatusInProgress(status: unknown): boolean {
 
 export function shouldCountWorkStatusForDeadline(status: unknown): boolean {
   return Boolean(getWorkStatusMeta(status)?.countsForDeadline);
-}
-
-export function isWorkStatusReturned(_status: unknown): boolean {
-  return false;
 }
 
 export function isWorkStatusInPendingApprovalFilter(status: unknown): boolean {
