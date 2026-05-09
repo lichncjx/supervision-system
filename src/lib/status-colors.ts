@@ -25,12 +25,6 @@ export const statusColors = {
     left: 'border-l-2 border-l-emerald-400 bg-emerald-50/20',
     text: 'text-emerald-600',
   },
-  rejected: {
-    pill: 'bg-red-50 text-red-700 border-red-100',
-    dot: 'bg-red-500',
-    left: 'border-l-2 border-l-red-400 bg-red-50/20',
-    text: 'text-red-600',
-  },
   cancelled: {
     pill: 'bg-slate-50 text-slate-500 border-slate-200',
     dot: 'bg-slate-400',

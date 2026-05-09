@@ -77,7 +77,6 @@ export function WorkListToolbar({
         <option value="approving">待审批</option>
         <option value="inProgress">进行中</option>
         <option value="completed">已完成</option>
-        <option value="rejected">已退回</option>
         <option value="cancelled">已取消</option>
         <option value="overdue">超期</option>
       </select>

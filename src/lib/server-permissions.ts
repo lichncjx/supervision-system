@@ -11,14 +11,10 @@ const IMPORT_EXPORT_ROLES: Role[] = [
 ]
 
 const APPROVAL_STATUSES: WorkItemStatus[] = [
-  WorkItemStatus.PENDING_DEPT,
-  WorkItemStatus.PENDING_COMPANY,
-  WorkItemStatus.PENDING_COMPLETE,
-  WorkItemStatus.PENDING_EVIDENCE_DEPT,
-  WorkItemStatus.PENDING_EVIDENCE_COMPANY,
-  WorkItemStatus.PENDING_MAIN_LEADER_CANCEL,
+  WorkItemStatus.PROPOSING,
   WorkItemStatus.ADJUSTING,
   WorkItemStatus.CANCELLING,
+  WorkItemStatus.COMPLETING,
 ]
 
 const TERMINAL_STATUSES: WorkItemStatus[] = [
@@ -217,7 +213,6 @@ export function canApproveWorkItem(user: PermissionUser, workItem: PermissionWor
   if (user.role === Role.PRESIDENT) {
     return (
       workItem.currentApproverRole === Role.PRESIDENT ||
-      normalizeStatus(workItem.status) === WorkItemStatus.PENDING_MAIN_LEADER_CANCEL ||
       workItem.needMainLeaderCancel === true
     )
   }
@@ -233,10 +228,7 @@ export function canApproveWorkItem(user: PermissionUser, workItem: PermissionWor
         (
           (normalizeType(workItem.type) === WorkItemType.PRIORITY ||
             normalizeType(workItem.type) === WorkItemType.MAIN) &&
-          (
-            normalizeStatus(workItem.status) === WorkItemStatus.PENDING_COMPANY ||
-            normalizeStatus(workItem.status) === WorkItemStatus.PENDING_EVIDENCE_COMPANY
-          )
+          APPROVAL_STATUSES.includes(normalizeStatus(workItem.status) as WorkItemStatus)
         )
       )
     )
@@ -254,9 +246,7 @@ export function canHandleWorkItem(user: PermissionUser, workItem: PermissionWork
     if (!isWorkMainResponsibleDepartment(workItem, user.departmentId)) return false
     return (
       status === WorkItemStatus.DRAFT ||
-      status === WorkItemStatus.REJECTED ||
       status === WorkItemStatus.PENDING_DECOMPOSE ||
-      status === WorkItemStatus.APPROVED ||
       status === WorkItemStatus.IN_PROGRESS
     )
   }
@@ -265,22 +255,18 @@ export function canHandleWorkItem(user: PermissionUser, workItem: PermissionWork
     return workItem.creatorId === user.id
   }
 
-  if (status === WorkItemStatus.REJECTED) {
-    return (workItem.firstSubmitterId ?? workItem.creatorId) === user.id
-  }
-
   return false
 }
 
 export function canEditWorkItem(user: PermissionUser, workItem: PermissionWorkItem): boolean {
   const status = normalizeStatus(workItem.status)
-  if (status !== WorkItemStatus.DRAFT && status !== WorkItemStatus.REJECTED) {
+  if (status !== WorkItemStatus.DRAFT) {
     return false
   }
 
   if (user.role === Role.ADMIN || user.role === Role.SUPERVISOR) return true
   if (workItem.creatorId === user.id) return true
-  if (status === WorkItemStatus.REJECTED && (workItem.firstSubmitterId ?? workItem.creatorId) === user.id) {
+  if ((workItem.firstSubmitterId ?? workItem.creatorId) === user.id) {
     return true
   }
 

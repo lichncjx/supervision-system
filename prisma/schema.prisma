@@ -15,21 +15,22 @@ enum WorkItemType {
 }
 
 enum WorkItemStatus {
-  DRAFT                        @map("draft")
-  PENDING_DEPT                 @map("pending_dept")
-  PENDING_COMPANY              @map("pending_company")
-  APPROVED                     @map("approved")
-  IN_PROGRESS                  @map("in_progress")
-  PENDING_DECOMPOSE            @map("pending_decompose")
-  PENDING_COMPLETE             @map("pending_complete")
-  PENDING_EVIDENCE_DEPT        @map("pending_evidence_dept")
-  PENDING_EVIDENCE_COMPANY     @map("pending_evidence_company")
-  PENDING_MAIN_LEADER_CANCEL   @map("pending_main_leader_cancel")
-  COMPLETED                    @map("completed")
-  REJECTED                     @map("rejected")
-  ADJUSTING                    @map("adjusting")
-  CANCELLING                   @map("cancelling")
-  CANCELLED                    @map("cancelled")
+  DRAFT               @map("draft")
+  PENDING_DECOMPOSE   @map("pending_decompose")
+  PROPOSING           @map("proposing")
+  IN_PROGRESS         @map("in_progress")
+  ADJUSTING           @map("adjusting")
+  CANCELLING          @map("cancelling")
+  COMPLETING          @map("completing")
+  COMPLETED           @map("completed")
+  CANCELLED           @map("cancelled")
+}
+
+enum ApprovalType {
+  PROPOSE    @map("propose")
+  ADJUST     @map("adjust")
+  CANCEL     @map("cancel")
+  COMPLETE   @map("complete")
 }
 
 enum ActionType {
@@ -121,7 +122,7 @@ model WorkItem {
   // ---- 业务人员 ID 字段（xxxId = 真实关联字段，用于权限、流程、审批、待处理判断）----
   // creatorId: 创建事项草稿的用户（始终为当前用户，写入后不可修改）
   creatorId             Int
-  // firstSubmitterId: 首次将事项送入正式审批链路（PENDING_DEPT/PENDING_COMPANY）的操作人
+  // firstSubmitterId: 首次将事项送入正式审批链路（PROPOSING）的操作人
   // 仅在首次进入时写入，后续退回再提交不覆盖
   firstSubmitterId      Int?
   // proposedLeaderId: 待办事项的提出领导 ID（公司领导：VICE_PRESIDENT 或 PRESIDENT）
@@ -132,6 +133,8 @@ model WorkItem {
   // currentApproverId / currentApproverRole: 当前应执行审批操作的用户/角色
   currentApproverId     Int?
   currentApproverRole   Role?
+  beforeApprovalStatus  WorkItemStatus?
+  approvalType          ApprovalType?
 
   // ---- 重点/主要工作部门人员 ID 字段（xxxId = 真实关联字段，允许 NULL，有 FK 约束）----
   // deptLeaderId: 部门领导用户 ID（重点/主要工作专用，关联 DEPARTMENT_LEADER 角色用户）

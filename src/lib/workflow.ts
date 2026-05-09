@@ -80,8 +80,8 @@ export function canUserApprove(user: UserSession, workItem: any): boolean {
     if (
       (workItem.type === WorkItemType.PRIORITY || workItem.type === WorkItemType.MAIN) &&
       (
-        workItem.status === WorkItemStatus.PENDING_COMPANY ||
-        workItem.status === WorkItemStatus.PENDING_EVIDENCE_COMPANY
+        workItem.status === WorkItemStatus.PROPOSING ||
+        workItem.status === WorkItemStatus.COMPLETING
       )
     ) {
       return user.role === Role.VICE_PRESIDENT;
@@ -89,7 +89,7 @@ export function canUserApprove(user: UserSession, workItem: any): boolean {
 
     if (
       workItem.type === WorkItemType.TODO &&
-      workItem.status === WorkItemStatus.PENDING_COMPANY &&
+      workItem.status === WorkItemStatus.PROPOSING &&
       workItem.proposedLeaderId
     ) {
       return workItem.proposedLeaderId === user.userId;
@@ -100,15 +100,8 @@ export function canUserApprove(user: UserSession, workItem: any): boolean {
 }
 
 export function canUserSubmit(user: UserSession, workItem: any): boolean {
-  if (workItem.status !== WorkItemStatus.DRAFT && workItem.status !== WorkItemStatus.REJECTED) {
+  if (workItem.status !== WorkItemStatus.DRAFT) {
     return false;
-  }
-
-  if (workItem.status === WorkItemStatus.REJECTED) {
-    // firstSubmitterId ?? creatorId 的 fallback 仅用于兼容历史数据：
-    // 引入 firstSubmitterId 前已被退回的事项没有该字段，此时回退到 creatorId。
-    const submitterId = workItem.firstSubmitterId ?? workItem.creatorId;
-    return submitterId === user.userId;
   }
 
   if (workItem.creatorId !== user.userId) {
@@ -145,14 +138,14 @@ export async function submitForApproval(workItemId: number, user: UserSession, c
       if (!workItem.proposedLeaderId) {
         return { success: false, error: '部门发起待办事项必须填写提出领导' };
       }
-      newStatus = WorkItemStatus.PENDING_DEPT;
+      newStatus = WorkItemStatus.PROPOSING;
       newApproverRole = Role.DEPARTMENT_LEADER;
       newApproverId = null;
     } else if (user.role === Role.DEPARTMENT_LEADER) {
       if (!workItem.proposedLeaderId) {
         return { success: false, error: '部门发起待办事项必须填写提出领导' };
       }
-      newStatus = WorkItemStatus.PENDING_COMPANY;
+      newStatus = WorkItemStatus.PROPOSING;
       newApproverId = workItem.proposedLeaderId;
       newApproverRole = null;
     } else {
@@ -160,11 +153,11 @@ export async function submitForApproval(workItemId: number, user: UserSession, c
     }
   } else {
     if (user.role === Role.DEPARTMENT_MANAGER) {
-      newStatus = WorkItemStatus.PENDING_DEPT;
+      newStatus = WorkItemStatus.PROPOSING;
       newApproverRole = Role.DEPARTMENT_LEADER;
       newApproverId = null;
     } else if (user.role === Role.DEPARTMENT_LEADER) {
-      newStatus = WorkItemStatus.PENDING_COMPANY;
+      newStatus = WorkItemStatus.PROPOSING;
       newApproverRole = Role.VICE_PRESIDENT;
       newApproverId = null;
     } else {
@@ -172,12 +165,11 @@ export async function submitForApproval(workItemId: number, user: UserSession, c
     }
   }
 
-  // firstSubmitterId: 仅在首次进入正式审批链路（PENDING_DEPT / PENDING_COMPANY）时写入，
+  // firstSubmitterId: 仅在首次进入正式审批链路（PROPOSING）时写入，
   // 之后不再覆盖。PENDING_DECOMPOSE 不触发写入。
   // 写入后退回再重新提交不会改变该字段。
   const entersApprovalChain =
-    newStatus === WorkItemStatus.PENDING_DEPT ||
-    newStatus === WorkItemStatus.PENDING_COMPANY;
+    newStatus === WorkItemStatus.PROPOSING;
   const shouldSetFirstSubmitter = entersApprovalChain && !workItem.firstSubmitterId;
 
   const updated = await prisma.workItem.update({
@@ -231,48 +223,33 @@ export async function approveWorkItem(workItemId: number, user: UserSession, com
   let newApproverRole: Role | null = null;
   let newApproverId: number | null = null;
 
-  if (workItem.status === WorkItemStatus.PENDING_DEPT) {
-    if (workItem.type === WorkItemType.TODO) {
+  if (workItem.status === WorkItemStatus.PROPOSING) {
+    if (workItem.currentApproverRole === Role.DEPARTMENT_LEADER) {
       if (!workItem.proposedLeaderId) {
         return { success: false, error: '待办事项缺少提出领导，无法提交公司审批' };
       }
-      newStatus = WorkItemStatus.PENDING_COMPANY;
-      newApproverId = workItem.proposedLeaderId;
-      newApproverRole = null;
+      newStatus = WorkItemStatus.PROPOSING;
+      if (workItem.type === WorkItemType.TODO) {
+        newApproverId = workItem.proposedLeaderId;
+        newApproverRole = null;
+      } else {
+        newApproverId = null;
+        newApproverRole = Role.VICE_PRESIDENT;
+      }
     } else {
-      newStatus = WorkItemStatus.PENDING_COMPANY;
-      newApproverRole = Role.VICE_PRESIDENT;
-      newApproverId = null;
-    }
-  } else if (workItem.status === WorkItemStatus.PENDING_COMPANY) {
-    if (workItem.type === WorkItemType.TODO) {
       newStatus = WorkItemStatus.IN_PROGRESS;
       newApproverRole = null;
       newApproverId = null;
+    }
+  } else if (workItem.status === WorkItemStatus.COMPLETING) {
+    if (workItem.currentApproverRole === Role.DEPARTMENT_LEADER) {
+      newStatus = WorkItemStatus.COMPLETING;
+      newApproverRole = Role.VICE_PRESIDENT;
+      newApproverId = null;
     } else {
-      newStatus = WorkItemStatus.APPROVED;
+      newStatus = WorkItemStatus.COMPLETED;
       newApproverRole = null;
       newApproverId = null;
-    }
-  } else if (workItem.status === WorkItemStatus.PENDING_EVIDENCE_DEPT) {
-    newStatus = WorkItemStatus.PENDING_EVIDENCE_COMPANY;
-    newApproverRole = Role.VICE_PRESIDENT;
-    newApproverId = null;
-  } else if (workItem.status === WorkItemStatus.PENDING_EVIDENCE_COMPANY) {
-    newStatus = WorkItemStatus.COMPLETED;
-    newApproverRole = null;
-    newApproverId = null;
-  } else if (workItem.status === WorkItemStatus.PENDING_COMPLETE) {
-    if (workItem.type === WorkItemType.TODO) {
-      if (workItem.currentApproverId === user.userId) {
-        newStatus = WorkItemStatus.COMPLETED;
-        newApproverRole = null;
-        newApproverId = null;
-      } else {
-        return { success: false, error: '无权审批完成申请' };
-      }
-    } else {
-      return { success: false, error: '当前状态不允许审批' };
     }
   } else if (workItem.status === WorkItemStatus.ADJUSTING) {
     if (workItem.type === WorkItemType.TODO) {
@@ -294,7 +271,7 @@ export async function approveWorkItem(workItemId: number, user: UserSession, com
         newApproverRole = Role.VICE_PRESIDENT;
         newApproverId = null;
       } else if (user.role === Role.VICE_PRESIDENT) {
-        newStatus = WorkItemStatus.APPROVED;
+        newStatus = WorkItemStatus.IN_PROGRESS;
         newApproverRole = null;
         newApproverId = null;
       } else {
@@ -332,7 +309,7 @@ export async function approveWorkItem(workItemId: number, user: UserSession, com
         newApproverRole = Role.VICE_PRESIDENT;
         newApproverId = null;
       } else if (user.role === Role.VICE_PRESIDENT) {
-        newStatus = WorkItemStatus.PENDING_MAIN_LEADER_CANCEL;
+        newStatus = WorkItemStatus.CANCELLING;
         newApproverRole = Role.PRESIDENT;
         newApproverId = null;
       } else if (user.role === Role.PRESIDENT) {
@@ -342,14 +319,6 @@ export async function approveWorkItem(workItemId: number, user: UserSession, com
       } else {
         return { success: false, error: '无权审批取消申请' };
       }
-    }
-  } else if (workItem.status === WorkItemStatus.PENDING_MAIN_LEADER_CANCEL) {
-    if (user.role === Role.PRESIDENT) {
-      newStatus = WorkItemStatus.CANCELLED;
-      newApproverRole = null;
-      newApproverId = null;
-    } else {
-      return { success: false, error: '无权审批取消申请' };
     }
   } else {
     return { success: false, error: '当前状态不允许审批' };
@@ -403,26 +372,14 @@ export async function rejectWorkItem(workItemId: number, user: UserSession, reje
 
   let newStatus: WorkItemStatus;
 
-  if (workItem.status === WorkItemStatus.PENDING_DEPT ||
-      workItem.status === WorkItemStatus.PENDING_COMPANY) {
-    newStatus = WorkItemStatus.REJECTED;
-  } else if (workItem.status === WorkItemStatus.PENDING_EVIDENCE_DEPT ||
-             workItem.status === WorkItemStatus.PENDING_EVIDENCE_COMPANY) {
-    newStatus = WorkItemStatus.APPROVED;
+  if (workItem.status === WorkItemStatus.PROPOSING) {
+    newStatus = WorkItemStatus.DRAFT;
+  } else if (workItem.status === WorkItemStatus.COMPLETING) {
+    newStatus = WorkItemStatus.IN_PROGRESS;
   } else if (workItem.status === WorkItemStatus.ADJUSTING) {
-    if (workItem.type === WorkItemType.TODO) {
-      newStatus = WorkItemStatus.IN_PROGRESS;
-    } else {
-      newStatus = WorkItemStatus.APPROVED;
-    }
+    newStatus = WorkItemStatus.IN_PROGRESS;
   } else if (workItem.status === WorkItemStatus.CANCELLING) {
-    if (workItem.type === WorkItemType.TODO) {
-      newStatus = WorkItemStatus.IN_PROGRESS;
-    } else {
-      newStatus = WorkItemStatus.APPROVED;
-    }
-  } else if (workItem.status === WorkItemStatus.PENDING_MAIN_LEADER_CANCEL) {
-    newStatus = WorkItemStatus.APPROVED;
+    newStatus = WorkItemStatus.IN_PROGRESS;
   } else {
     return { success: false, error: '当前状态不允许退回' };
   }
@@ -486,7 +443,7 @@ export async function submitEvidence(workItemId: number, user: UserSession, proo
     const updated = await prisma.workItem.update({
       where: { id: workItemId },
       data: {
-        status: WorkItemStatus.PENDING_COMPLETE,
+        status: WorkItemStatus.COMPLETING,
         proof,
         currentApproverId: newApproverId,
         currentApproverRole: null,
@@ -497,7 +454,7 @@ export async function submitEvidence(workItemId: number, user: UserSession, proo
       'evidence',
       user.userId,
       workItem.status,
-      WorkItemStatus.PENDING_COMPLETE,
+      WorkItemStatus.COMPLETING,
       undefined,
       null,
       comment
@@ -513,7 +470,7 @@ export async function submitEvidence(workItemId: number, user: UserSession, proo
     return { success: true, workItem: updated };
   }
 
-  if (workItem.status !== WorkItemStatus.APPROVED) {
+  if (workItem.status !== WorkItemStatus.IN_PROGRESS) {
     return { success: false, error: '当前状态不允许提交见证材料' };
   }
 
@@ -536,10 +493,10 @@ export async function submitEvidence(workItemId: number, user: UserSession, proo
   let newApproverRole: Role | null;
 
   if (user.role === Role.DEPARTMENT_MANAGER) {
-    newStatus = WorkItemStatus.PENDING_EVIDENCE_DEPT;
+    newStatus = WorkItemStatus.COMPLETING;
     newApproverRole = Role.DEPARTMENT_LEADER;
   } else if (user.role === Role.DEPARTMENT_LEADER) {
-    newStatus = WorkItemStatus.PENDING_EVIDENCE_COMPANY;
+    newStatus = WorkItemStatus.COMPLETING;
     newApproverRole = Role.VICE_PRESIDENT;
   } else {
     return { success: false, error: '无权提交见证材料' };
@@ -592,7 +549,7 @@ export async function submitAdjust(workItemId: number, user: UserSession, adjust
     return { success: false, error: '事项不存在' };
   }
 
-  if (workItem.status !== WorkItemStatus.APPROVED && workItem.status !== WorkItemStatus.IN_PROGRESS) {
+  if (workItem.status !== WorkItemStatus.IN_PROGRESS) {
     return { success: false, error: '当前状态不允许申请调整' };
   }
 
@@ -687,7 +644,7 @@ export async function submitCancel(workItemId: number, user: UserSession, cancel
     return { success: false, error: '事项不存在' };
   }
 
-  if (workItem.status !== WorkItemStatus.APPROVED && workItem.status !== WorkItemStatus.IN_PROGRESS) {
+  if (workItem.status !== WorkItemStatus.IN_PROGRESS) {
     return { success: false, error: '当前状态不允许申请取消' };
   }
 
@@ -810,14 +767,14 @@ export async function decomposeTodo(workItemId: number, user: UserSession, nodes
   let newApproverId: number | null;
 
   if (user.role === Role.DEPARTMENT_MANAGER) {
-    newStatus = WorkItemStatus.PENDING_DEPT;
+    newStatus = WorkItemStatus.PROPOSING;
     newApproverRole = Role.DEPARTMENT_LEADER;
     newApproverId = null;
   } else if (user.role === Role.DEPARTMENT_LEADER) {
     if (!workItem.proposedLeaderId) {
       return { success: false, error: '待办事项缺少提出领导，无法提交公司审批' };
     }
-    newStatus = WorkItemStatus.PENDING_COMPANY;
+    newStatus = WorkItemStatus.PROPOSING;
     newApproverId = workItem.proposedLeaderId || null;
     newApproverRole = null;
   } else {
@@ -826,8 +783,7 @@ export async function decomposeTodo(workItemId: number, user: UserSession, nodes
 
   // firstSubmitterId: 仅在首次进入正式审批链路时写入，之后不再覆盖。
   const entersApprovalChain =
-    newStatus === WorkItemStatus.PENDING_DEPT ||
-    newStatus === WorkItemStatus.PENDING_COMPANY;
+    newStatus === WorkItemStatus.PROPOSING;
   const shouldSetFirstSubmitter = entersApprovalChain && !workItem.firstSubmitterId;
 
   const updated = await prisma.workItem.update({
