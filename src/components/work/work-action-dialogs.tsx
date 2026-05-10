@@ -213,11 +213,11 @@ export function WorkActionDialogs({
                       />
                     </div>
                     <div>
-                      <label className="text-sm font-medium">主管人员</label>
+                      <label className="text-sm font-medium">责任人</label>
                       <Input
-                        value={editForm.supervisor || ''}
-                        onChange={(e) => setEditForm((prev: any) => ({ ...prev, supervisor: e.target.value }))}
-                        placeholder="请输入主管人员"
+                        value={editForm.responsiblePerson || ''}
+                        onChange={(e) => setEditForm((prev: any) => ({ ...prev, responsiblePerson: e.target.value }))}
+                        placeholder="请输入责任人姓名"
                       />
                     </div>
                     <div>
@@ -384,7 +384,7 @@ export function WorkActionDialogs({
                         options={responsiblePersonOptions}
                         value={editForm.responsiblePersons || []}
                         onChange={(nextPersons) =>
-                          setEditForm((prev: any) => ({ ...prev, responsiblePersons: nextPersons, responsiblePerson: nextPersons.join('、') }))
+                          setEditForm((prev: any) => ({ ...prev, responsiblePersons: nextPersons }))
                         }
                         placeholder={(editForm.responsibleDepartmentIds || []).length > 0 ? '请选择主责责任人' : '请先选择主责部门'}
                         searchPlaceholder="搜索姓名"

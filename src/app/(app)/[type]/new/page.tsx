@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Star, ListTodo, CheckSquare } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
-import { getCompanyLeaders, getDepartments, getDepartmentLeaders, getDepartmentManagers, getUsersByDepartment } from '@/lib/auth';
+import { getCompanyLeaders, getDepartments, getUsersByDepartment } from '@/lib/auth';
 import { addWork, submitWork, type WorkType, type WorkNode } from '@/lib/work-store';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -31,8 +31,6 @@ export default function NewWorkPage() {
 
   const [companyLeaders, setCompanyLeaders] = useState<Array<{ id: number; name: string; role: string }>>([]);
   const [departments, setDepartments] = useState<Array<{ id: number; name: string; code: string; isBusiness: boolean }>>([]);
-  const [departmentLeaders, setDepartmentLeaders] = useState<Array<{ id: number; name: string; role: string; departmentId: number; departmentName?: string }>>([]);
-  const [departmentManagers, setDepartmentManagers] = useState<Array<{ id: number; name: string; role: string; departmentId: number; departmentName?: string }>>([]);
   const [departmentUsers, setDepartmentUsers] = useState<Record<number, Array<{ id: number; name: string; role: string; departmentId: number; departmentName?: string }>>>({});
 
   const canCreateTodo =
@@ -152,12 +150,8 @@ export default function NewWorkPage() {
     completeTime: '',
     completeForm: '',
     departmentId: String(user?.departmentId || 2),
-    // Phase 2: 部门领导/主管人员 ID（select value 为 userId 字符串）
-    deptLeaderId: '',
-    deptManagerId: '',
-    // 旧字段：姓名快照（双写保留，select onChange 时同步更新）
     responsibleLeader: '',
-    supervisor: '',
+    responsiblePerson: '',
   });
 
   // 待办事项表单
@@ -197,13 +191,7 @@ export default function NewWorkPage() {
     const departmentId = Number(priorityMainForm.departmentId);
     if (departmentId && isPriorityOrMain) {
       const fetchDepartmentUsers = async () => {
-        const [leaders, managers, users] = await Promise.all([
-          getDepartmentLeaders(departmentId),
-          getDepartmentManagers(departmentId),
-          getUsersByDepartment(departmentId),
-        ]);
-        setDepartmentLeaders(leaders);
-        setDepartmentManagers(managers);
+        const users = await getUsersByDepartment(departmentId);
         setDepartmentUsers((prev) => ({ ...prev, [departmentId]: users }));
       };
       fetchDepartmentUsers();
@@ -350,9 +338,7 @@ export default function NewWorkPage() {
           completeTime: priorityMainForm.completeTime,
           completeForm: priorityMainForm.completeForm,
           responsibleLeader: priorityMainForm.responsibleLeader,
-          supervisor: priorityMainForm.supervisor,
-          deptLeaderId: Number(priorityMainForm.deptLeaderId) || undefined,
-          deptManagerId: Number(priorityMainForm.deptManagerId) || undefined,
+          responsiblePerson: priorityMainForm.responsiblePerson,
         });
       } else if (isTodo) {
         createdWork = await addWork({
@@ -375,7 +361,6 @@ export default function NewWorkPage() {
           workItem: todoForm.workItem,
           formedTime: todoForm.formedTime,
           responsiblePersons: todoForm.responsiblePersons,
-          responsiblePerson: todoForm.responsiblePersons.join('、'),
           cooperateDepartmentIds: todoForm.cooperateDepartmentIds,
           cooperateDepartments: todoForm.cooperateDepartmentIds
             .map((id) => {
@@ -606,7 +591,7 @@ export default function NewWorkPage() {
                   <label className="block text-sm font-medium mb-1">责任部门</label>
                   <select
                     value={priorityMainForm.departmentId}
-                    onChange={(e) => setPriorityMainForm({ ...priorityMainForm, departmentId: e.target.value, deptLeaderId: '', deptManagerId: '', responsibleLeader: '', supervisor: '' })}
+                    onChange={(e) => setPriorityMainForm({ ...priorityMainForm, departmentId: e.target.value })}
                     className="w-full border rounded-md p-2"
                   >
                     {departments.map((d) => (
@@ -619,54 +604,26 @@ export default function NewWorkPage() {
 
                 <div>
                   <label className="block text-sm font-medium mb-1">
-                    部门领导
-                    <span className="text-xs text-gray-400 ml-1">（负责该部门事项审批的部门领导）</span>
+                    责任领导
+                    <span className="text-xs text-gray-400 ml-1">（姓名文本，仅用于展示和留痕）</span>
                   </label>
-                  <select
-                    value={priorityMainForm.deptLeaderId}
-                    onChange={(e) => {
-                      const selected = departmentLeaders.find(u => String(u.id) === e.target.value);
-                      setPriorityMainForm({
-                        ...priorityMainForm,
-                        deptLeaderId: e.target.value,
-                        responsibleLeader: selected?.name || '',
-                      });
-                    }}
-                    className="w-full border rounded-md p-2"
-                  >
-                    <option value="">请选择部门领导</option>
-                    {departmentLeaders.map((u) => (
-                      <option key={u.id} value={u.id}>
-                        {u.name}
-                      </option>
-                    ))}
-                  </select>
+                  <Input
+                    value={priorityMainForm.responsibleLeader}
+                    onChange={(e) => setPriorityMainForm({ ...priorityMainForm, responsibleLeader: e.target.value })}
+                    placeholder="请输入责任领导姓名"
+                  />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium mb-1">
-                    主管人员
-                    <span className="text-xs text-gray-400 ml-1">（负责该事项具体跟踪办理）</span>
+                    责任人
+                    <span className="text-xs text-gray-400 ml-1">（姓名文本，仅用于展示和留痕）</span>
                   </label>
-                  <select
-                    value={priorityMainForm.deptManagerId}
-                    onChange={(e) => {
-                      const selected = departmentManagers.find(u => String(u.id) === e.target.value);
-                      setPriorityMainForm({
-                        ...priorityMainForm,
-                        deptManagerId: e.target.value,
-                        supervisor: selected?.name || '',
-                      });
-                    }}
-                    className="w-full border rounded-md p-2"
-                  >
-                    <option value="">请选择主管人员</option>
-                    {departmentManagers.map((u) => (
-                      <option key={u.id} value={u.id}>
-                        {u.name}
-                      </option>
-                    ))}
-                  </select>
+                  <Input
+                    value={priorityMainForm.responsiblePerson}
+                    onChange={(e) => setPriorityMainForm({ ...priorityMainForm, responsiblePerson: e.target.value })}
+                    placeholder="请输入责任人姓名"
+                  />
                 </div>
               </>
             )}

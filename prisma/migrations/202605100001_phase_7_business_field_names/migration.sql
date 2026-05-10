@@ -1,4 +1,4 @@
-﻿-- Phase 7: normalize business field names.
+-- Phase 7: normalize business field names.
 -- Current environments are test-only, so this migration keeps the structural target
 -- simple and does not attempt production-grade data backfill.
 

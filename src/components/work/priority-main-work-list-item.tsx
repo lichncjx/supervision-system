@@ -41,11 +41,11 @@ export function PriorityMainWorkListItem({ item, routeType, getDepartmentName }:
         </div>
         <div>
           <span className="text-slate-400">责任领导：</span>
-          <span className="text-slate-600">{item.deptLeaderName || item.responsibleLeader || '-'}</span>
+          <span className="text-slate-600">{item.responsibleLeader || '-'}</span>
         </div>
         <div>
-          <span className="text-slate-400">主管人员：</span>
-          <span className="text-slate-600">{item.deptManagerName || item.supervisor || '-'}</span>
+          <span className="text-slate-400">责任人：</span>
+          <span className="text-slate-600">{item.responsiblePerson || '-'}</span>
         </div>
         <div>
           <span className="text-slate-400">状态：</span>

@@ -96,7 +96,7 @@ export interface Work {
   // departmentId: 重点/主要工作的单一主办部门
   departmentId?: number;
   departmentName?: string;
-  // responsibleDepartmentIds: 待办事项的主责部门 ID 数组（未来迁移为 responsibleDepartmentIds）
+  // responsibleDepartmentIds: 待办事项的主责部门 ID 数组
   responsibleDepartmentIds?: number[];
 
   // ---- 业务人员 ID 字段（xxxId = 真实关联字段，用于权限、流程、审批、待处理判断）----
@@ -121,34 +121,21 @@ export interface Work {
   // approvalLeader: 审批领导姓名（从 Prisma relation 解析，非独立 DB 字段）
   approvalLeader?: string;
   approvalLeaderRole?: string;
-  // responsibleLeader: 重点/主要工作的部门领导姓名（legacy，未来迁移为 deptLeaderName）
-  //   注意：仅用于展示和导出，不参与权限判断
+  // responsibleLeader: 重点/主要工作的责任领导姓名文本，仅用于展示、导入导出、历史留痕，不参与权限判断
   responsibleLeader?: string;
-  // supervisor: 重点/主要工作的主管人员/业务主管人员姓名（legacy，未来迁移为 deptManagerName）
-  //   注意：与系统角色 SUPERVISOR（督办管理员）无关，不参与权限判断
-  supervisor?: string;
-  // deptLeaderId: 部门领导用户 ID（Phase 2 新增，重点/主要工作专用）
-  deptLeaderId?: number;
-  // deptLeaderName: 部门领导姓名快照（展示优先读此字段）
-  deptLeaderName?: string;
-  // deptManagerId: 部门主管人员用户 ID（Phase 2 新增，重点/主要工作专用）
-  deptManagerId?: number;
-  // deptManagerName: 主管人员姓名快照（展示优先读此字段）
-  deptManagerName?: string;
-  // responsiblePersons: 待办事项的主责责任人姓名数组（legacy，未来迁移为 responsiblePersonNames）
-  responsiblePersons?: string[];
-  // responsiblePerson: 拼接后的主责责任人字符串（legacy，逐步弱化）
+  // responsiblePerson: 重点/主要工作的责任人/实际负责人姓名文本，仅用于展示、导入导出、历史留痕，不参与权限判断
   responsiblePerson?: string;
-  // cooperatePersons: 待办事项的配合部门责任人姓名数组（legacy，未来迁移为 cooperatePersonNames）
+  // responsiblePersons: 待办事项的主责责任人姓名数组
+  responsiblePersons?: string[];
+  // cooperatePersons: 待办事项的配合部门责任人姓名数组
   cooperatePersons?: string[];
-  // cooperatePerson: 拼接后的配合责任人字符串（legacy，逐步弱化）
-  cooperatePerson?: string;
   // cooperateDepartmentIds: 待办事项的配合部门 ID 数组
   cooperateDepartmentIds?: number[];
-  // cooperateDepartments: 配合部门名称数组（已弱化，逐步去除）
+  // cooperateDepartments: 配合部门名称数组
   cooperateDepartments?: string[];
-  // cooperateDepartment: 拼接后的配合部门字符串（legacy，逐步弱化）
+  // cooperateDepartment / cooperatePerson: 展示用拼接字符串（从前端 join 计算，非独立 DB 字段）
   cooperateDepartment?: string;
+  cooperatePerson?: string;
 
   // ---- 事项基本信息 ----
   status: Status;
@@ -204,7 +191,6 @@ export type WorkEditablePatch = Partial<Pick<
   | 'departmentId'
   | 'responsibleDepartmentIds'
   | 'responsibleLeader'
-  | 'supervisor'
   | 'proposedLeader'
   | 'proposedLeaderId'
   | 'proposedLeaderRole'
@@ -212,21 +198,17 @@ export type WorkEditablePatch = Partial<Pick<
   | 'formedTime'
   | 'responsiblePerson'
   | 'responsiblePersons'
-  | 'cooperateDepartment'
-  | 'cooperatePerson'
   | 'cooperateDepartmentIds'
   | 'cooperateDepartments'
+  | 'cooperateDepartment'
   | 'cooperatePersons'
+  | 'cooperatePerson'
   | 'workPlan'
   | 'planCompleteTime'
   | 'progress'
   | 'approvalLeader'
   | 'approvalLeaderId'
   | 'approvalLeaderRole'
-  | 'deptLeaderId'
-  | 'deptLeaderName'
-  | 'deptManagerId'
-  | 'deptManagerName'
 >>;
 
 export function transformWorkFromAPI(work: any): Work {
@@ -274,17 +256,9 @@ export function transformWorkFromAPI(work: any): Work {
     // 审批当前节点
     currentApproverId: work.currentApproverId || work.current_approver_id,
     currentApproverRole: work.currentApproverRole || work.current_approver_role,
-    // 重点/主要工作 - 部门领导姓名快照（legacy: responsibleLeader, 未来: deptLeaderName）
+    // 责任领导 / 责任人姓名文本（仅用于展示、导入导出、历史留痕，不参与权限判断）
     responsibleLeader: work.responsibleLeader || work.responsible_leader,
-    // 重点/主要工作 - 主管人员姓名快照（legacy: supervisor, 未来: deptManagerName）
-    // 注意：不是系统角色 SUPERVISOR（督办管理员）
-    supervisor: work.supervisor,
-    // Phase 2: 部门领导/主管人员 ID 和 Name
-    // deptLeaderName 优先 relation.name（实时），其次快照，最后旧字段
-    deptLeaderId: work.deptLeaderId ?? undefined,
-    deptLeaderName: extractName(work.deptLeader) || work.deptLeaderName || work.responsibleLeader || work.responsible_leader,
-    deptManagerId: work.deptManagerId ?? undefined,
-    deptManagerName: extractName(work.deptManager) || work.deptManagerName || work.supervisor,
+    responsiblePerson: work.responsiblePerson || work.responsible_person,
     // 待办事项 - 主责责任人姓名数组
     responsiblePersons: extractNameArray(work.responsiblePersons || work.responsible_persons),
     // 待办事项 - 配合部门 ID 数组
@@ -453,9 +427,6 @@ export async function queryWorks(user: User | null | undefined, query: WorkQuery
         w.proposedLeader,
         w.proposedScene,
         w.responsibleLeader,
-        w.supervisor,
-        w.deptLeaderName,
-        w.deptManagerName,
         w.responsiblePerson,
         w.progress,
         w.workPlan,
@@ -479,13 +450,9 @@ export async function addWork(work: Omit<Work, 'createdAt' | 'updatedAt'>): Prom
     completeTime: work.completeTime,
     completeForm: work.completeForm,
     isInnovation: work.isInnovation,
-    // responsibleLeader: 部门领导姓名快照（legacy，未来迁移为 deptLeaderName）
+    // 责任领导 / 责任人姓名文本
     responsibleLeader: work.responsibleLeader,
-    // supervisor: 主管人员姓名快照（legacy，未来迁移为 deptManagerName）
-    supervisor: work.supervisor,
-    // Phase 2: 部门领导/主管人员 ID
-    deptLeaderId: work.deptLeaderId,
-    deptManagerId: work.deptManagerId,
+    responsiblePerson: work.responsiblePerson,
     // proposedLeader / proposedLeaderRole 文本仅作为快照传递，服务端优先使用 proposedLeaderId
     proposedLeader: work.proposedLeader,
     proposedLeaderId: work.proposedLeaderId,
@@ -528,16 +495,13 @@ export async function updateWork(id: number, patch: Partial<Work>): Promise<Work
   if (patch.completeForm !== undefined) data.completeForm = patch.completeForm;
   if (patch.isInnovation !== undefined) data.isInnovation = patch.isInnovation;
   if (patch.responsibleLeader !== undefined) data.responsibleLeader = patch.responsibleLeader;
-  if (patch.supervisor !== undefined) data.supervisor = patch.supervisor;
-  if (patch.deptLeaderId !== undefined) data.deptLeaderId = patch.deptLeaderId;
-  if (patch.deptManagerId !== undefined) data.deptManagerId = patch.deptManagerId;
+  if (patch.responsiblePerson !== undefined) data.responsiblePerson = patch.responsiblePerson;
   if (patch.proposedLeader !== undefined) data.proposedLeader = patch.proposedLeader;
   if (patch.proposedLeaderId !== undefined) data.proposedLeaderId = patch.proposedLeaderId;
   if (patch.proposedScene !== undefined) data.proposedScene = patch.proposedScene;
   if (patch.formedTime !== undefined) data.formedTime = patch.formedTime;
   if (patch.responsibleDepartmentIds !== undefined) data.responsibleDepartmentIds = patch.responsibleDepartmentIds;
   if (patch.responsiblePersons !== undefined) data.responsiblePersons = patch.responsiblePersons;
-  if (patch.responsiblePerson !== undefined) data.responsiblePerson = patch.responsiblePerson;
   if (patch.cooperateDepartmentIds !== undefined) data.cooperateDepartmentIds = patch.cooperateDepartmentIds;
   if (patch.cooperateDepartment !== undefined) data.cooperateDepartment = patch.cooperateDepartment;
   if (patch.cooperatePersons !== undefined) data.cooperatePersons = patch.cooperatePersons;
@@ -908,7 +872,6 @@ export function canHandleWork(user: User | null | undefined, work: Work) {
   }
 
   // 以下判断依赖部门关联（departmentId / responsibleDepartmentIds / cooperateDepartmentIds）
-  // 注意：未来 deptManagerId 落地后，可在此处增加精确人员权限判断
 
   // 待办事项待分解（部门主管/部门领导可分解关联部门的待办）
   if (
@@ -921,7 +884,6 @@ export function canHandleWork(user: User | null | undefined, work: Work) {
   }
 
   // 重点/主要工作进行中，待责任部门上传见证材料
-  // 当前按部门角色泛化判断，未来可增加 deptManagerId 精确匹配
   if (
     (work.type === '重点' || work.type === '主要') &&
     work.status === 'in_progress' &&

@@ -85,7 +85,6 @@ export async function POST(request: NextRequest) {
         currentApproverRole: true,
         needMainLeaderCancel: true,
         type: true,
-        deptManagerId: true,
       },
     });
 
@@ -105,7 +104,6 @@ export async function POST(request: NextRequest) {
       currentApproverRole: workItem.currentApproverRole,
       needMainLeaderCancel: workItem.needMainLeaderCancel,
       type: workItem.type,
-      deptManagerId: workItem.deptManagerId,
     };
 
     if (!canViewAttachment(currentUser, permWorkItem)) {

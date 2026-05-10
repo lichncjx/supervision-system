@@ -47,7 +47,6 @@ export async function DELETE(
             currentApproverRole: true,
             needMainLeaderCancel: true,
             type: true,
-            deptManagerId: true,
           },
         },
       },
@@ -72,7 +71,6 @@ export async function DELETE(
         currentApproverRole: attachment.workItem.currentApproverRole,
         needMainLeaderCancel: attachment.workItem.needMainLeaderCancel,
         type: attachment.workItem.type,
-        deptManagerId: attachment.workItem.deptManagerId,
       };
       const permAttachment: AttPermAttachment = {
         userId: attachment.userId,

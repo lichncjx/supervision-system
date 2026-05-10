@@ -45,7 +45,6 @@ export async function GET(
             currentApproverRole: true,
             needMainLeaderCancel: true,
             type: true,
-            deptManagerId: true,
           },
         },
       },
@@ -68,7 +67,6 @@ export async function GET(
         currentApproverRole: attachment.workItem.currentApproverRole,
         needMainLeaderCancel: attachment.workItem.needMainLeaderCancel,
         type: attachment.workItem.type,
-        deptManagerId: attachment.workItem.deptManagerId,
       };
       if (!canViewAttachment(currentUser, permWorkItem)) {
         return NextResponse.json({ error: '无权查看该附件' }, { status: 403 });

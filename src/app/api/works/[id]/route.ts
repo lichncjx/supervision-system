@@ -1,5 +1,6 @@
 import { NextResponse, NextRequest } from 'next/server';
 import prisma from '@/lib/prisma';
+import { Role } from '@prisma/client';
 import { verifyToken } from '@/lib/server-auth';
 import { formatDate, processNodesForDisplay, processAdjustHistory, convertToDateTime } from '@/lib/utils';
 import { canEditWorkItem, canViewWorkItem } from '@/lib/server-permissions';
