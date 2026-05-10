@@ -241,6 +241,16 @@ function deepEqual(a, b) {
   return JSON.stringify(a) === JSON.stringify(b);
 }
 
+function normalizeCooperators(cooperators) {
+  if (!Array.isArray(cooperators)) return cooperators;
+  return cooperators.map((c) => ({
+    departmentId: c?.departmentId,
+    departmentName: c?.departmentName || undefined,
+    leader: c?.leader || undefined,
+    person: c?.person || undefined,
+  }));
+}
+
 function responseArray(response) {
   return Array.isArray(response.body) ? response.body : [];
 }
@@ -340,9 +350,9 @@ function findUnexpectedDashboardKeys(items) {
     'status',
     'statusLabel',
     'departmentName',
-    'departmentNames',
-    'responsibleDepartmentNames',
-    'cooperateDepartmentNames',
+    'cooperators',
+    'responsibleLeader',
+    'responsiblePerson',
     'completeTime',
     'planCompleteTime',
     'dueTime',
@@ -463,6 +473,42 @@ async function verifyDashboardUnified(baseUrl, loginByUsername, userByUsername, 
       expectedFailure: false,
       note: 'Phase 4: limit=100 verifies list口径 against summary counts; homepage default limit remains 5.',
     });
+
+    const allDashboardItems = [...expiringAndOverdue, ...myActionRequired];
+    const itemsWithCooperators = allDashboardItems.filter(
+      (item) => Array.isArray(item?.cooperators) && item.cooperators.length > 0
+    );
+    const sample = itemsWithCooperators.length > 0 ? itemsWithCooperators[0].cooperators[0] : null;
+    const hasCoops = itemsWithCooperators.length > 0;
+    const hasRespLeader = allDashboardItems.some((item) => typeof item?.responsibleLeader === 'string' && item.responsibleLeader.length > 0);
+    const hasRespPerson = allDashboardItems.some((item) => typeof item?.responsiblePerson === 'string' && item.responsiblePerson.length > 0);
+    // required cooperator keys; leader/person are optional and may be omitted via JSON undefined stripping
+    const requiredKeys = ['departmentId', 'departmentName'];
+    const hasRequiredKeys = sample ? requiredKeys.every((k) => k in sample) : true;
+    record({
+      role: userDef.username,
+      endpoint: 'GET /api/dashboard cooperators structure',
+      actual: {
+        hasCooperators: hasCoops,
+        hasResponsibleLeader: hasRespLeader,
+        hasResponsiblePerson: hasRespPerson,
+        cooperatorRequiredKeys: hasRequiredKeys,
+        cooperatorSampleKeys: sample ? Object.keys(sample).sort() : [],
+        noLegacyArrays: !allDashboardItems.some(
+          (item) => 'responsibleDepartmentNames' in (item || {}) || 'cooperateDepartmentNames' in (item || {})
+        ),
+      },
+      expected: {
+        hasCooperators: hasCoops,
+        hasResponsibleLeader: hasRespLeader,
+        hasResponsiblePerson: hasRespPerson,
+        cooperatorRequiredKeys: true,
+        cooperatorSampleKeys: sample ? Object.keys(sample).sort() : [],
+        noLegacyArrays: true,
+      },
+      expectedFailure: false,
+      note: 'Phase 8C: dashboard lightweight lists return cooperators with departmentId/departmentName; leader/person optional. Legacy arrays removed.',
+    });
   }
 }
 
@@ -485,7 +531,7 @@ async function verifyWorksVisibility(baseUrl, loginByUsername, userByUsername, w
       expected: expectedIds,
       expectedFailure: false,
       note: [
-        'Phase 2 closeout: /api/works now follows target visibility scope for company leaders and department responsible/cooperate departments.',
+        'Phase 8C: /api/works visibility uses departmentId and cooperators[].departmentId for organization scope.',
         responseError(response) ? `Non-array response: ${JSON.stringify(responseError(response))}` : '',
       ].filter(Boolean).join(' '),
     });
@@ -505,7 +551,7 @@ async function verifyTargetPermissionFacts(baseUrl, loginByUsername, works) {
 
   const vpASeesVpB = await visibleFor('vp_a', byTitle['TC-副总B负责待办-B']);
   const managerASeesNameOnly = await visibleFor('dept_manager_a1', byTitle['TC-责任人姓名不授权-B']);
-  const managerBSeesResponsible = await visibleFor('dept_manager_b1', byTitle['TC-多主责部门待办-AB']);
+  const managerBSeesResponsible = await visibleFor('dept_manager_b1', byTitle['TC-主责A配合B待办']);
   const managerBSeesCooperate = await visibleFor('dept_manager_b1', byTitle['TC-多配合部门待办-BC']);
 
   const facts = [
@@ -522,7 +568,7 @@ async function verifyTargetPermissionFacts(baseUrl, loginByUsername, works) {
     },
     {
       role: 'dept_manager_a1',
-      endpoint: 'target fact: responsiblePersons do not grant visibility',
+      endpoint: 'target fact: responsiblePerson/responsibleLeader do not grant visibility',
       actual: { visible: managerASeesNameOnly.visible },
       expected: { visible: false },
       note: managerASeesNameOnly.responseError ? `Non-array response: ${JSON.stringify(managerASeesNameOnly.responseError)}` : '',
@@ -565,8 +611,8 @@ async function verifyCompletionRate(baseUrl, loginByUsername, deptByCode, works)
     TDB: false,
   };
   const noteByDeptCode = {
-    TDA: 'Target: completion-rate uses responsible department ownership and excludes cooperate departments. Current fixture for department A currently matches this target case, so it should pass.',
-    TDB: 'Phase 2 closeout: completion-rate uses responsibleDepartmentIds/responsibleDepartmentIds for ownership and excludes cooperate departments, including the department B multi-responsible case.',
+    TDA: 'Phase 8C: completion-rate uses departmentId ownership and excludes cooperators. Department A has both main and cooperator items.',
+    TDB: 'Phase 8C: completion-rate uses departmentId ownership and excludes cooperators. Department B has cooperator-only items that should not count toward completion rate.',
   };
 
   for (const code of ['TDA', 'TDB']) {
@@ -645,25 +691,28 @@ async function verifyExcelExport(baseUrl, loginByUsername, userByUsername, works
   const adminResponse = await requestBinary(baseUrl, 'GET', '/api/excel/export', loginByUsername.admin.cookies);
   const rows = parseWorkbookRows(adminResponse.body);
   const dataRows = rows.slice(1);
-  const byTitle = Object.fromEntries(dataRows.map((row) => [row[4], row]));
+
+  const headers = rows[0] || [];
+  const col = Object.fromEntries(headers.map((h, i) => [String(h).trim(), i]));
+  const byTitle = Object.fromEntries(dataRows.map((row) => [row[col['工作事项'] ?? 4], row]));
 
   record({
     role: 'admin',
     endpoint: 'GET /api/excel/export department/person fields',
     actual: {
-      multiResponsibleDepartments: byTitle['TC-多主责部门待办-AB']?.[9],
-      multiCooperateDepartments: byTitle['TC-多配合部门待办-BC']?.[12],
-      responsiblePerson: byTitle['TC-多主责部门待办-AB']?.[11],
-      cooperatePersons: byTitle['TC-多配合部门待办-BC']?.[13],
+      mainDept: byTitle['TC-多配合部门待办-BC']?.[col['主责部门']],
+      responsibleLeader: byTitle['TC-多配合部门待办-BC']?.[col['责任领导']],
+      responsiblePersonRow: byTitle['TC-多配合部门待办-BC']?.[col['责任人']],
+      cooperatorsCol: byTitle['TC-多配合部门待办-BC']?.[col['配合方']],
     },
     expected: {
-      multiResponsibleDepartments: 'TDA',
-      multiCooperateDepartments: 'TDB/TDC',
-      responsiblePerson: '业务主责人A',
-      cooperatePersons: '业务配合人B/业务配合人C',
+      mainDept: '测试A部门',
+      responsibleLeader: '',
+      responsiblePersonRow: '业务主责人A',
+      cooperatorsCol: '测试B部门||业务配合人B；测试C部门||业务配合人C',
     },
     expectedFailure: false,
-    note: 'Phase 8B: Excel export uses single departmentId and cooperators JSON for display.',
+    note: 'Phase 8C: Excel export uses header-based column lookup; cooperators string covers department, leader and person.',
   });
 }
 
@@ -675,9 +724,9 @@ async function verifyExcelImport(baseUrl, loginByUsername, deptByCode, userByUse
     '待办事项',
     '形成时间',
     '主责部门',
-    '主责责任人',
-    '配合部门',
-    '配合责任人',
+    '责任领导',
+    '责任人',
+    '配合方',
     '工作计划',
     '计划完成时间',
     '进展情况',
@@ -691,9 +740,9 @@ async function verifyExcelImport(baseUrl, loginByUsername, deptByCode, userByUse
       'TC-导入越权待办-B',
       '2026-05-01',
       'TDB',
+      '',
       '重名主责人',
-      'TDA',
-      '重名配合人',
+      'TDA||重名配合人',
       '验证部门用户不能跨主责部门导入',
       '2026-12-31',
       '未开始',
@@ -733,9 +782,9 @@ async function verifyExcelImport(baseUrl, loginByUsername, deptByCode, userByUse
       'TC-导入允许待办-A配合B',
       '2026-05-01',
       'TDA',
-      '重名主责人/非系统人员',
-      'TDB',
-      '重名配合人/非系统人员',
+      '',
+      '重名主责人',
+      'TDB|配合领导B|重名配合人',
       '验证姓名文本不要求匹配系统用户',
       '2026-12-31',
       '未开始',
@@ -761,7 +810,7 @@ async function verifyExcelImport(baseUrl, loginByUsername, deptByCode, userByUse
       success: validResponse.body?.success,
       status: imported?.status,
       departmentId: imported?.departmentId,
-      cooperators: imported?.cooperators,
+      cooperators: normalizeCooperators(imported?.cooperators),
       responsiblePerson: imported?.responsiblePerson,
     },
     expected: {
@@ -769,12 +818,11 @@ async function verifyExcelImport(baseUrl, loginByUsername, deptByCode, userByUse
       success: true,
       status: 'DRAFT',
       departmentId: deptByCode.TDA.id,
-      // Phase 8B: cooperators key order depends on JSON serialization; data is equivalent
-      cooperators: [{ person: '重名配合人', departmentId: deptByCode.TDB.id, departmentName: 'TDB' }],
-      responsiblePerson: '重名主责人/非系统人员',
+      cooperators: [{ departmentId: deptByCode.TDB.id, departmentName: 'TDB', leader: '配合领导B', person: '重名配合人' }],
+      responsiblePerson: '重名主责人',
     },
     expectedFailure: false,
-    note: 'Phase 5: ordinary import defaults to DRAFT and treats responsible/cooperate persons as display text only.',
+    note: 'Phase 8C: TODO import uses departmentId, responsibleLeader, responsiblePerson, cooperators.',
   });
 
   const invalidStatusHeaders = [
@@ -790,9 +838,9 @@ async function verifyExcelImport(baseUrl, loginByUsername, deptByCode, userByUse
       'TC-导入非法状态-APPROVED',
       '2026-05-01',
       'TDA',
+      '',
       '非法状态责任人',
-      'TDB',
-      '非法状态配合人',
+      '',
       '验证普通导入不能绕过 workflow',
       '2026-12-31',
       '未开始',
@@ -822,6 +870,134 @@ async function verifyExcelImport(baseUrl, loginByUsername, deptByCode, userByUse
     },
     expectedFailure: false,
     note: 'PR 6.3: ordinary Excel import only accepts empty status or DRAFT/草稿; old and non-draft states must go through workflow.',
+  });
+
+  // --- priority import ---
+  const priorityHeaders = [
+    '业务类别',
+    '工作事项',
+    '是否为创新工作',
+    '工作节点',
+    '完成时间',
+    '完成形式',
+    '责任部门',
+    '责任领导',
+    '责任人',
+    '配合方',
+  ];
+  const priorityRows = [
+    priorityHeaders,
+    [
+      'target-contract import',
+      'TC-导入重点工作-cooperators',
+      '否',
+      '导入节点',
+      '2026-12-31',
+      '验收材料',
+      'TDA',
+      '导入责任领导',
+      '导入责任人',
+      'TDB|导入配合领导|导入配合人',
+    ],
+  ];
+  const priorityImportResponse = await requestMultipart(
+    baseUrl,
+    '/api/excel/import/priority',
+    'priority.xlsx',
+    buildWorkbookBuffer(priorityRows),
+    loginByUsername.dept_manager_a1.cookies
+  );
+  const importedPriority = await prisma.workItem.findFirst({
+    where: { title: 'TC-导入重点工作-cooperators' },
+    orderBy: { id: 'desc' },
+  });
+
+  record({
+    role: 'dept_manager_a1',
+    endpoint: 'POST /api/excel/import/priority imports with cooperators',
+    actual: {
+      statusCode: priorityImportResponse.statusCode,
+      success: priorityImportResponse.body?.success,
+      status: importedPriority?.status,
+      departmentId: importedPriority?.departmentId,
+      responsibleLeader: importedPriority?.responsibleLeader,
+      responsiblePerson: importedPriority?.responsiblePerson,
+      cooperators: normalizeCooperators(importedPriority?.cooperators),
+    },
+    expected: {
+      statusCode: 200,
+      success: true,
+      status: 'DRAFT',
+      departmentId: deptByCode.TDA.id,
+      responsibleLeader: '导入责任领导',
+      responsiblePerson: '导入责任人',
+      cooperators: [{ departmentId: deptByCode.TDB.id, departmentName: 'TDB', leader: '导入配合领导', person: '导入配合人' }],
+    },
+    expectedFailure: false,
+    note: 'Phase 8C: priority import supports cooperators with leader field.',
+  });
+
+  // --- main import ---
+  const mainHeaders = [
+    '业务类别',
+    '工作事项',
+    '工作节点',
+    '完成时间',
+    '完成形式',
+    '责任部门',
+    '责任领导',
+    '责任人',
+    '配合方',
+  ];
+  const mainRows = [
+    mainHeaders,
+    [
+      'target-contract import',
+      'TC-导入主要工作-cooperators',
+      '导入节点',
+      '2026-12-31',
+      '验收材料',
+      'TDA',
+      '导入责任领导M',
+      '导入责任人M',
+      'TDC||导入配合人M',
+    ],
+  ];
+  const mainImportResponse = await requestMultipart(
+    baseUrl,
+    '/api/excel/import/main',
+    'main.xlsx',
+    buildWorkbookBuffer(mainRows),
+    loginByUsername.dept_manager_a1.cookies
+  );
+  const importedMain = await prisma.workItem.findFirst({
+    where: { title: 'TC-导入主要工作-cooperators' },
+    orderBy: { id: 'desc' },
+  });
+
+  record({
+    role: 'dept_manager_a1',
+    endpoint: 'POST /api/excel/import/main imports with cooperators',
+    actual: {
+      statusCode: mainImportResponse.statusCode,
+      success: mainImportResponse.body?.success,
+      status: importedMain?.status,
+      departmentId: importedMain?.departmentId,
+      responsibleLeader: importedMain?.responsibleLeader,
+      responsiblePerson: importedMain?.responsiblePerson,
+      cooperators: normalizeCooperators(importedMain?.cooperators),
+    },
+    expected: {
+      statusCode: 200,
+      success: true,
+      status: 'DRAFT',
+      departmentId: deptByCode.TDA.id,
+      responsibleLeader: '导入责任领导M',
+      responsiblePerson: '导入责任人M',
+      cooperators: [{ departmentId: deptByCode.TDC.id, departmentName: 'TDC', person: '导入配合人M' }],
+    },
+    expectedFailure: false,
+    note: 'Phase 8C: main import supports cooperators with optional leader.',
   });
 }
 

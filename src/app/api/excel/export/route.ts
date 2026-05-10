@@ -104,23 +104,15 @@ function formatDate(value: Date | null): string {
   return value ? value.toISOString().split('T')[0] : ''
 }
 
-function joinCooperatorPersons(cooperators: unknown): string {
+function joinCooperators(cooperators: unknown): string {
   if (!Array.isArray(cooperators)) return ''
   return (cooperators as any[])
-    .map((c: any) => c?.person)
-    .filter(Boolean)
-    .join('/')
-}
-
-function buildDepartmentCodeMap(departments: { id: number; code: string | null; name: string }[]) {
-  return new Map(departments.map((department) => [
-    department.id,
-    department.code || department.name || String(department.id),
-  ]))
-}
-
-function departmentCodes(ids: number[], deptById: Map<number, string>): string {
-  return ids.map((id) => deptById.get(id) || String(id)).join('/')
+    .map((c: any) => {
+      const parts = [c?.departmentName || c?.departmentId || '', c?.leader || '', c?.person || '']
+      return parts.join('|')
+    })
+    .filter((s) => s !== '||')
+    .join('；')
 }
 
 function keywordMatches(workItem: {
@@ -211,11 +203,6 @@ export async function GET(request: NextRequest) {
         )
       })
 
-    const departments = await prisma.department.findMany({
-      select: { id: true, name: true, code: true },
-    })
-    const deptById = buildDepartmentCodeMap(departments)
-
     const headers = [
       '序号',
       '事项类型',
@@ -227,10 +214,9 @@ export async function GET(request: NextRequest) {
       '完成时间',
       '完成形式',
       '主责部门',
-      '业务责任领导',
-      '业务责任人',
-      '配合部门',
-      '配合责任人',
+      '责任领导',
+      '责任人',
+      '配合方',
       '进展情况',
       '创建人',
       '创建时间',
@@ -243,8 +229,7 @@ export async function GET(request: NextRequest) {
 
     const rows = visibleItems.map((item, index) => {
       const isPriorityOrMain = item.type === WorkItemType.PRIORITY || item.type === WorkItemType.MAIN
-      const responsibleDepartmentCodes = departmentCodes(getResponsibleDepartmentIds(item), deptById)
-      const cooperateDepartmentCodes = departmentCodes(getCooperatorDepartmentIds(item), deptById)
+      const deptName = item.department?.name || item.department?.code || ''
 
       return [
         index + 1,
@@ -256,11 +241,10 @@ export async function GET(request: NextRequest) {
         isPriorityOrMain ? (item.workNode || '') : '',
         formatDate(item.completeTime),
         isPriorityOrMain ? (item.completeForm || '') : '',
-        responsibleDepartmentCodes,
-        isPriorityOrMain ? (item.responsibleLeader || '') : '',
-        isPriorityOrMain ? (item.responsiblePerson || '') : (item.responsiblePerson || ''),
-        item.type === WorkItemType.TODO ? cooperateDepartmentCodes : '',
-        item.type === WorkItemType.TODO ? joinCooperatorPersons(item.cooperators) : '',
+        deptName,
+        item.responsibleLeader || '',
+        item.responsiblePerson || '',
+        joinCooperators(item.cooperators),
         item.type === WorkItemType.TODO ? (item.progress || '') : '',
         item.creator?.name || '',
         formatDate(item.createdAt),

@@ -133,12 +133,7 @@ export default function WorkDetailPage() {
         proposedLeaderRole: work.proposedLeaderRole || '',
         proposedScene: work.proposedScene || '',
         formedTime: work.formedTime || '',
-        responsibleDepartmentIds: work.departmentId ? [work.departmentId] : [] as number[],
-        responsiblePersons: work.responsiblePerson ? [work.responsiblePerson] : [] as string[],
-        cooperateDepartmentIds: (work.cooperators || []).map((c: any) => c.departmentId) as number[],
-        cooperatePersons: (work.cooperators || []).map((c: any) => c.person).filter(Boolean) as string[],
-        cooperateDepartment: (work.cooperators || []).map((c: any) => c.departmentName).filter(Boolean).join('、') || '',
-        cooperatePerson: (work.cooperators || []).map((c: any) => c.person).filter(Boolean).join('、') || '',
+        cooperators: work.cooperators || [],
         workPlan: work.workPlan || '',
         planCompleteTime: work.planCompleteTime || '',
         progress: work.progress || '',
@@ -781,7 +776,11 @@ export default function WorkDetailPage() {
             <span>{getDepartmentName(work.departmentId ?? 0)}</span>
           </div>
           <div>
-            <span className="text-sm text-slate-500">主责责任人：</span>
+            <span className="text-sm text-slate-500">责任领导：</span>
+            <span>{work.responsibleLeader || '-'}</span>
+          </div>
+          <div>
+            <span className="text-sm text-slate-500">责任人：</span>
             <span>{work.responsiblePerson || '-'}</span>
           </div>
           <div>

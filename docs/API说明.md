@@ -76,9 +76,14 @@ GET /api/dashboard?limit=5
   status: string;
   statusLabel: string;
   departmentName: string | null;
-  departmentNames: string[];
-  responsibleDepartmentNames: string[];
-  cooperateDepartmentNames: string[];
+  responsibleLeader: string | null;
+  responsiblePerson: string | null;
+  cooperators: Array<{
+    departmentId: number;
+    departmentName?: string;
+    leader?: string;
+    person?: string;
+  }>;
   completeTime: string | null;
   planCompleteTime: string | null;
   dueTime: string | null;
@@ -90,6 +95,8 @@ GET /api/dashboard?limit=5
 ```
 
 不得返回 `nodes`、`proof`、`attachments`、`workflowRecords`、长文本详情等详情页字段。
+
+`responsibleDepartmentNames` / `cooperateDepartmentNames` / `departmentNames` 已废弃（Phase 8C），前端如需展示字符串请从 `cooperators` 派生。
 
 ## GET /api/works 状态筛选
 

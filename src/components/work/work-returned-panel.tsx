@@ -1,11 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
-import { MultiSearchSelect } from '@/components/common/multi-search-select';
-import { getUsersByDepartment } from '@/lib/auth';
 
 interface WorkReturnedPanelProps {
   visible: boolean;
@@ -61,53 +59,40 @@ export function WorkReturnedPanel({
   updateSubNodeCompleteTime,
   deleteSubNode,
 }: WorkReturnedPanelProps) {
-  const [departmentUsers, setDepartmentUsers] = useState<
-    Record<number, Array<{ id: number; name: string; role: string; departmentId: number; departmentName?: string }>>
-  >({});
-
-  // Phase 4A: 加载 TODO 编辑所需的部门用户数据
-  useEffect(() => {
-    if (!isTodo) return;
-    if (!editForm.responsibleDepartmentIds?.length && !editForm.cooperateDepartmentIds?.length) return;
-
-    const allDeptIds = Array.from(
-      new Set([...(editForm.responsibleDepartmentIds || []), ...(editForm.cooperateDepartmentIds || [])]),
-    );
-    const missing = allDeptIds.filter((deptId: number) => !departmentUsers[deptId]);
-    if (missing.length === 0) return;
-
-    Promise.all(missing.map(async (deptId: number) => {
-      const users = await getUsersByDepartment(deptId);
-      return [deptId, users] as const;
-    })).then((results) => {
-      setDepartmentUsers((prev) => {
-        const next = { ...prev };
-        results.forEach(([deptId, users]) => { next[deptId] = users; });
-        return next;
-      });
-    });
-  }, [editForm.responsibleDepartmentIds, editForm.cooperateDepartmentIds, isTodo]);
-
-  // Phase 4A: 人员选项（和新建页一致，按当前选中部门的人员姓名生成）
+  const cooperators = Array.isArray(editForm.cooperators) ? editForm.cooperators : [];
   const businessDepts = departments.filter((d) => d.isBusiness !== false);
-  const departmentOptions = businessDepts.map((dept) => ({
-    value: String(dept.id),
-    label: dept.name,
-  }));
-  const responsiblePersonOptions = (editForm.responsibleDepartmentIds || []).flatMap(
-    (deptId: number) => (departmentUsers[deptId] || []).map((person) => ({
-      value: person.name,
-      label: person.name,
-      description: person.departmentName || '-',
-    })),
-  );
-  const cooperatePersonOptions = (editForm.cooperateDepartmentIds || []).flatMap(
-    (deptId: number) => (departmentUsers[deptId] || []).map((person) => ({
-      value: person.name,
-      label: person.name,
-      description: person.departmentName || '-',
-    })),
-  );
+
+  function addCooperator() {
+    setEditForm((prev: any) => ({
+      ...prev,
+      cooperators: [...(Array.isArray(prev.cooperators) ? prev.cooperators : []), { departmentId: 0, departmentName: '', leader: '', person: '' }],
+    }));
+  }
+
+  function removeCooperator(idx: number) {
+    setEditForm((prev: any) => ({
+      ...prev,
+      cooperators: (Array.isArray(prev.cooperators) ? prev.cooperators : []).filter((_: any, i: number) => i !== idx),
+    }));
+  }
+
+  function updateCooperator(idx: number, field: string, value: any) {
+    setEditForm((prev: any) => {
+      const list = Array.isArray(prev.cooperators) ? [...prev.cooperators] : [];
+      if (field === 'departmentId') {
+        const newId = Number(value);
+        if (list.some((c: any, i: number) => i !== idx && c.departmentId === newId)) {
+          alert('该配合部门已存在，请勿重复添加');
+          return prev;
+        }
+        const dept = businessDepts.find((d) => d.id === newId);
+        list[idx] = { ...list[idx], departmentId: newId, departmentName: dept?.name || '' };
+      } else {
+        list[idx] = { ...list[idx], [field]: value };
+      }
+      return { ...prev, cooperators: list };
+    });
+  }
 
   if (!visible) {
     return null;
@@ -235,108 +220,35 @@ export function WorkReturnedPanel({
                   />
                 </div>
 
-                <div className="md:col-span-2">
-                  <label className="text-sm font-medium">
-                    主责部门
-                    <span className="text-xs text-slate-400 ml-1">（可多选，支持搜索）</span>
-                  </label>
-                  <MultiSearchSelect
-                    className="mt-2"
-                    options={departmentOptions}
-                    value={(editForm.responsibleDepartmentIds || []).map(String)}
-                    onChange={(nextValues) => {
-                      const nextDepartmentIds = nextValues.map(Number);
-                      const nextDepartmentUserNames = new Set(
-                        nextDepartmentIds.flatMap((deptId: number) =>
-                          (departmentUsers[deptId] || []).map((p) => p.name),
-                        ),
-                      );
-                      setEditForm((prev: any) => ({
-                        ...prev,
-                        responsibleDepartmentIds: nextDepartmentIds,
-                        responsiblePersons: (prev.responsiblePersons || []).filter((name: string) =>
-                          nextDepartmentUserNames.has(name),
-                        ),
-                      }));
-                    }}
-                    placeholder="请选择主责部门"
-                    searchPlaceholder="搜索部门名称"
-                    emptyText="未找到匹配部门"
+                <div>
+                  <label className="text-sm font-medium">主责部门</label>
+                  <select
+                    value={editForm.departmentId || ''}
+                    onChange={(e) => setEditForm((prev: any) => ({ ...prev, departmentId: Number(e.target.value) }))}
+                    className="rounded-lg border-slate-200 bg-white/60 w-full mt-2"
+                  >
+                    <option value="">请选择主责部门</option>
+                    {businessDepts.map((d) => (
+                      <option key={d.id} value={d.id}>{d.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium">责任领导</label>
+                  <Input
+                    value={editForm.responsibleLeader || ''}
+                    onChange={(e) => setEditForm((prev: any) => ({ ...prev, responsibleLeader: e.target.value }))}
+                    placeholder="请输入责任领导姓名"
                   />
                 </div>
 
-                <div className="md:col-span-2">
-                  <label className="text-sm font-medium">
-                    主责责任人
-                    <span className="text-xs text-slate-400 ml-1">（主责部门的具体责任人，可多选，支持搜索）</span>
-                  </label>
-                  <MultiSearchSelect
-                    className="mt-2"
-                    options={responsiblePersonOptions}
-                    value={editForm.responsiblePersons || []}
-                    onChange={(nextPersons) =>
-                      setEditForm((prev: any) => ({
-                        ...prev,
-                        responsiblePersons: nextPersons,
-                      }))
-                    }
-                    placeholder={(editForm.responsibleDepartmentIds || []).length > 0 ? '请选择主责责任人' : '请先选择主责部门'}
-                    searchPlaceholder="搜索姓名"
-                    emptyText="未找到匹配责任人"
-                    disabled={(editForm.responsibleDepartmentIds || []).length === 0}
-                  />
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="text-sm font-medium">
-                    配合部门
-                    <span className="text-xs text-slate-400 ml-1">（可多选，支持搜索）</span>
-                  </label>
-                  <MultiSearchSelect
-                    className="mt-2"
-                    options={departmentOptions}
-                    value={(editForm.cooperateDepartmentIds || []).map(String)}
-                    onChange={(nextValues) => {
-                      const nextDeptIds = nextValues.map(Number);
-                      const nextDeptUserNames = new Set(
-                        nextDeptIds.flatMap((deptId: number) =>
-                          (departmentUsers[deptId] || []).map((p) => p.name),
-                        ),
-                      );
-                      setEditForm((prev: any) => ({
-                        ...prev,
-                        cooperateDepartmentIds: nextDeptIds,
-                        cooperatePersons: (prev.cooperatePersons || []).filter((name: string) =>
-                          nextDeptUserNames.has(name),
-                        ),
-                      }));
-                    }}
-                    placeholder="请选择配合部门"
-                    searchPlaceholder="搜索部门名称"
-                    emptyText="未找到匹配部门"
-                  />
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="text-sm font-medium">
-                    配合责任人
-                    <span className="text-xs text-slate-400 ml-1">（配合部门的具体责任人，可多选，支持搜索）</span>
-                  </label>
-                  <MultiSearchSelect
-                    className="mt-2"
-                    options={cooperatePersonOptions}
-                    value={editForm.cooperatePersons || []}
-                    onChange={(nextPersons) =>
-                      setEditForm((prev: any) => ({
-                        ...prev,
-                        cooperatePersons: nextPersons,
-                        cooperatePerson: nextPersons.join('、'),
-                      }))
-                    }
-                    placeholder={(editForm.cooperateDepartmentIds || []).length > 0 ? '请选择配合责任人' : '请先选择配合部门'}
-                    searchPlaceholder="搜索姓名"
-                    emptyText="未找到匹配责任人"
-                    disabled={(editForm.cooperateDepartmentIds || []).length === 0}
+                <div>
+                  <label className="text-sm font-medium">责任人</label>
+                  <Input
+                    value={editForm.responsiblePerson || ''}
+                    onChange={(e) => setEditForm((prev: any) => ({ ...prev, responsiblePerson: e.target.value }))}
+                    placeholder="请输入责任人姓名"
                   />
                 </div>
 
@@ -365,6 +277,44 @@ export function WorkReturnedPanel({
                     onChange={(e) => setEditForm((prev: any) => ({ ...prev, progress: e.target.value }))}
                     rows={3}
                   />
+                </div>
+
+                {/* 配合方 */}
+                <div className="md:col-span-2 border-t pt-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <label className="text-sm font-medium">配合方</label>
+                    <Button type="button" variant="outline" size="sm" onClick={addCooperator}>添加配合方</Button>
+                  </div>
+                  {cooperators.length === 0 && (
+                    <p className="text-xs text-slate-400">暂无配合方</p>
+                  )}
+                  {cooperators.map((c: any, idx: number) => (
+                    <div key={idx} className="flex items-center gap-2 mb-2">
+                      <select
+                        value={c.departmentId || ''}
+                        onChange={(e) => updateCooperator(idx, 'departmentId', e.target.value)}
+                        className="flex-1 rounded-lg border-slate-200 bg-white/60 text-sm"
+                      >
+                        <option value="">选择配合部门</option>
+                        {businessDepts.map((d) => (
+                          <option key={d.id} value={d.id}>{d.name}</option>
+                        ))}
+                      </select>
+                      <Input
+                        value={c.leader || ''}
+                        onChange={(e) => updateCooperator(idx, 'leader', e.target.value)}
+                        placeholder="配合责任领导（可选）"
+                        className="flex-1"
+                      />
+                      <Input
+                        value={c.person || ''}
+                        onChange={(e) => updateCooperator(idx, 'person', e.target.value)}
+                        placeholder="配合责任人（可选）"
+                        className="flex-1"
+                      />
+                      <Button type="button" variant="destructive" size="sm" onClick={() => removeCooperator(idx)}>删除</Button>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}

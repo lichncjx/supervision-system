@@ -194,6 +194,7 @@ async function validateAndParseExcel(
       const departmentName = getCell('责任部门');
       const responsibleLeader = getCell('责任领导');
       const responsiblePerson = getCell('责任人');
+      const cooperatorsStr = getCell('配合方');
 
       if (!workItem) {
         errors.push({ row: rowNum, field: '工作事项', value: workItem, reason: '必填字段不能为空' });
@@ -214,6 +215,27 @@ async function validateAndParseExcel(
         errors.push({ row: rowNum, field: '责任领导', value: responsibleLeader, reason: '必填字段不能为空' });
       }
 
+      // Parse cooperators
+      const cooperators: Array<{ departmentId: number; departmentName?: string; leader?: string; person?: string }> = [];
+      if (cooperatorsStr) {
+        const segments = cooperatorsStr.split(/[；;]/).map((s: string) => s.trim()).filter(Boolean);
+        for (const seg of segments) {
+          const parts = seg.split('|').map((s: string) => s.trim());
+          const coopDeptName = parts[0] || '';
+          const resolvedCoopDeptId = coopDeptName ? resolveDeptId(coopDeptName) : null;
+          if (coopDeptName && !resolvedCoopDeptId) {
+            errors.push({ row: rowNum, field: '配合方', value: seg, reason: `配合部门"${coopDeptName}"不存在或不是业务部门` });
+          } else if (resolvedCoopDeptId) {
+            cooperators.push({
+              departmentId: resolvedCoopDeptId,
+              departmentName: coopDeptName || undefined,
+              leader: parts[1] || undefined,
+              person: parts[2] || undefined,
+            });
+          }
+        }
+      }
+
       if (errors.filter((e) => e.row === rowNum).length === 0) {
         rows.push({
           row: rowNum,
@@ -230,6 +252,7 @@ async function validateAndParseExcel(
             departmentCode: departments.find(d => d.id === resolvedDeptId)?.code || departmentName,
             responsibleLeader,
             responsiblePerson: responsiblePerson || null,
+            cooperators,
           },
         });
       }
@@ -242,6 +265,7 @@ async function validateAndParseExcel(
       const departmentName = getCell('责任部门');
       const responsibleLeader = getCell('责任领导');
       const responsiblePerson = getCell('责任人');
+      const cooperatorsStr = getCell('配合方');
 
       if (!workItem) {
         errors.push({ row: rowNum, field: '工作事项', value: workItem, reason: '必填字段不能为空' });
@@ -259,6 +283,27 @@ async function validateAndParseExcel(
         errors.push({ row: rowNum, field: '责任领导', value: responsibleLeader, reason: '必填字段不能为空' });
       }
 
+      // Parse cooperators
+      const cooperators: Array<{ departmentId: number; departmentName?: string; leader?: string; person?: string }> = [];
+      if (cooperatorsStr) {
+        const segments = cooperatorsStr.split(/[；;]/).map((s: string) => s.trim()).filter(Boolean);
+        for (const seg of segments) {
+          const parts = seg.split('|').map((s: string) => s.trim());
+          const coopDeptName = parts[0] || '';
+          const resolvedCoopDeptId = coopDeptName ? resolveDeptId(coopDeptName) : null;
+          if (coopDeptName && !resolvedCoopDeptId) {
+            errors.push({ row: rowNum, field: '配合方', value: seg, reason: `配合部门"${coopDeptName}"不存在或不是业务部门` });
+          } else if (resolvedCoopDeptId) {
+            cooperators.push({
+              departmentId: resolvedCoopDeptId,
+              departmentName: coopDeptName || undefined,
+              leader: parts[1] || undefined,
+              person: parts[2] || undefined,
+            });
+          }
+        }
+      }
+
       if (errors.filter((e) => e.row === rowNum).length === 0) {
         rows.push({
           row: rowNum,
@@ -274,24 +319,21 @@ async function validateAndParseExcel(
             departmentCode: departments.find(d => d.id === resolvedDeptId)?.code || departmentName,
             responsibleLeader,
             responsiblePerson: responsiblePerson || null,
+            cooperators,
           },
         });
       }
     } else if (type === 'todo' || type === 'TODO') {
-      // 事项提出领导：提出该待办事项的公司领导（PRESIDENT 或 VICE_PRESIDENT）
       const proposedLeaderName = getCell('事项提出领导');
-      // 指定审批领导：负责后续调整、取消、完成审批的公司领导（默认等于提出领导）
       const approvalLeaderName = getCell('指定审批领导');
       const proposedScene = getCell('事项提出场景');
       const workItem = getCell('待办事项');
       const formedTimeStr = getCell('形成时间');
-      // 主责部门：多个用 / 分隔，填写部门全名或缩写代码
-      const departmentNames = getCell('主责部门');
-      // 主责责任人：主责部门的具体责任人，多个用 / 分隔
-      const responsiblePersons = getCell('主责责任人');
-      const cooperateDepartmentNames = getCell('配合部门');
-      // 配合责任人：配合部门的具体责任人，多个用 / 分隔
-      const cooperatePersons = getCell('配合责任人');
+      const departmentName = getCell('主责部门');
+      const responsibleLeader = getCell('责任领导');
+      const responsiblePerson = getCell('责任人');
+      // 配合方格式：部门|领导|人员；部门|领导|人员  例如：工艺技术处|王主任|赵工；质量管理处|刘主任|钱工
+      const cooperatorsStr = getCell('配合方');
       const workPlan = getCell('工作计划');
       const planCompleteTimeStr = getCell('计划完成时间');
       const progress = getCell('进展情况');
@@ -299,14 +341,19 @@ async function validateAndParseExcel(
       if (!workItem) {
         errors.push({ row: rowNum, field: '待办事项', value: workItem, reason: '必填字段不能为空' });
       }
-      if (!departmentNames) {
-        errors.push({ row: rowNum, field: '责任部门', value: departmentNames, reason: '必填字段不能为空' });
+      if (!departmentName) {
+        errors.push({ row: rowNum, field: '主责部门', value: departmentName, reason: '必填字段不能为空' });
       }
       if (!workPlan) {
         errors.push({ row: rowNum, field: '工作计划', value: workPlan, reason: '必填字段不能为空' });
       }
       if (!planCompleteTimeStr || !parseExcelDate(planCompleteTimeStr)) {
         errors.push({ row: rowNum, field: '计划完成时间', value: planCompleteTimeStr, reason: '必填字段，格式为 YYYY-MM-DD' });
+      }
+
+      const resolvedDeptId = departmentName ? resolveDeptId(departmentName) : null;
+      if (departmentName && !resolvedDeptId) {
+        errors.push({ row: rowNum, field: '主责部门', value: departmentName, reason: `部门"${departmentName}"不存在或不是业务部门，请填写部门全名或缩写代码` });
       }
 
       const hasProposedLeader = proposedLeaderName && leaderNameToId.has(proposedLeaderName);
@@ -320,63 +367,48 @@ async function validateAndParseExcel(
         });
       }
 
+      // Parse cooperators: "部门|领导|人员；部门|领导|人员"
+      const cooperators: Array<{ departmentId: number; departmentName?: string; leader?: string; person?: string }> = [];
+      if (cooperatorsStr) {
+        const segments = cooperatorsStr.split(/[；;]/).map((s: string) => s.trim()).filter(Boolean);
+        for (const seg of segments) {
+          const parts = seg.split('|').map((s: string) => s.trim());
+          const coopDeptName = parts[0] || '';
+          const resolvedCoopDeptId = coopDeptName ? resolveDeptId(coopDeptName) : null;
+          if (coopDeptName && !resolvedCoopDeptId) {
+            errors.push({ row: rowNum, field: '配合方', value: seg, reason: `配合部门"${coopDeptName}"不存在或不是业务部门` });
+          } else if (resolvedCoopDeptId) {
+            cooperators.push({
+              departmentId: resolvedCoopDeptId,
+              departmentName: coopDeptName || undefined,
+              leader: parts[1] || undefined,
+              person: parts[2] || undefined,
+            });
+          }
+        }
+      }
+
       if (errors.filter((e) => e.row === rowNum).length === 0) {
-        const deptIds: number[] = [];
-        const deptNames = departmentNames.split('/').map((s: string) => s.trim()).filter(Boolean);
-        for (const dn of deptNames) {
-          const resolved = resolveDeptId(dn);
-          if (!resolved) {
-            errors.push({ row: rowNum, field: '责任部门', value: dn, reason: `部门"${dn}"不存在或不是业务部门，请填写部门全名或缩写代码，多个用 / 分隔` });
-          } else {
-            deptIds.push(resolved);
-          }
-        }
-
-        // 配合部门名称 → ID 转换（Phase 4A：修复之前 cooperateDepartmentIds 硬编码为 [] 的 bug）
-        const cooperateDeptIds: number[] = [];
-        const cooperateDeptNameList = cooperateDepartmentNames
-          ? cooperateDepartmentNames.split('/').map((s: string) => s.trim()).filter(Boolean)
-          : [];
-        for (const cn of cooperateDeptNameList) {
-          const resolved = resolveDeptId(cn);
-          if (!resolved) {
-            errors.push({ row: rowNum, field: '配合部门', value: cn, reason: `配合部门"${cn}"不存在或不是业务部门，请填写部门全名或缩写代码，多个用 / 分隔` });
-          } else {
-            cooperateDeptIds.push(resolved);
-          }
-        }
-
-        if (errors.filter((e) => e.row === rowNum).length === 0) {
-          const responsiblePersonList = responsiblePersons.split('/').map((s: string) => s.trim()).filter(Boolean);
-          const cooperatePersonList = cooperatePersons.split('/').map((s: string) => s.trim()).filter(Boolean);
-          // Build cooperators array from cooperate department names and persons
-          const cooperators = cooperateDeptIds.map((deptId: number, idx: number) => ({
-            departmentId: deptId,
-            departmentName: cooperateDeptNameList[idx] || undefined,
-            leader: undefined,
-            person: cooperatePersonList[idx] || undefined,
-          }));
-          rows.push({
-            row: rowNum,
-            data: {
-              type: 'TODO',
-              proposedLeaderId: hasProposedLeader ? leaderNameToId.get(proposedLeaderName) : null,
-              proposedLeaderName: proposedLeaderName,
-              approvalLeaderId: hasApprovalLeader ? leaderNameToId.get(approvalLeaderName) : null,
-              approvalLeaderName: approvalLeaderName,
-              proposedScene,
-              workItem,
-              formedTime: parseExcelDate(formedTimeStr),
-              departmentNames: deptNames,
-              departmentId: deptIds[0] || null,
-              responsiblePerson: responsiblePersonList.join('/'),
-              cooperators,
-              workPlan,
-              planCompleteTime: parseExcelDate(planCompleteTimeStr),
-              progress,
-            },
-          });
-        }
+        rows.push({
+          row: rowNum,
+          data: {
+            type: 'TODO',
+            proposedLeaderId: hasProposedLeader ? leaderNameToId.get(proposedLeaderName) : null,
+            proposedLeaderName: proposedLeaderName,
+            approvalLeaderId: hasApprovalLeader ? leaderNameToId.get(approvalLeaderName) : null,
+            approvalLeaderName: approvalLeaderName,
+            proposedScene,
+            workItem,
+            formedTime: parseExcelDate(formedTimeStr),
+            departmentId: resolvedDeptId,
+            responsibleLeader: responsibleLeader || null,
+            responsiblePerson: responsiblePerson || null,
+            cooperators,
+            workPlan,
+            planCompleteTime: parseExcelDate(planCompleteTimeStr),
+            progress,
+          },
+        });
       }
     }
   }
@@ -474,6 +506,7 @@ export async function POST(
           completeForm: data.completeForm || null,
           responsibleLeader: data.responsibleLeader || null,
           responsiblePerson: data.responsiblePerson || null,
+          cooperators: data.cooperators?.length ? data.cooperators : undefined,
           createdAt: now,
           updatedAt: now,
         };
@@ -492,8 +525,9 @@ export async function POST(
           proposedScene: data.proposedScene || null,
           workItem: data.workItem,
           formedTime: data.formedTime ? new Date(data.formedTime) : null,
+          responsibleLeader: data.responsibleLeader || null,
           responsiblePerson: data.responsiblePerson || null,
-          cooperators: data.cooperators || undefined,
+          cooperators: data.cooperators?.length ? data.cooperators : undefined,
           workPlan: data.workPlan,
           planCompleteTime: data.planCompleteTime ? new Date(data.planCompleteTime) : null,
           progress: data.progress || null,

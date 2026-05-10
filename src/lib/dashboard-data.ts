@@ -5,8 +5,6 @@ import {
   canApproveWorkItem,
   canHandleWorkItem,
   canViewWorkItem,
-  getCooperatorDepartmentIds,
-  getResponsibleDepartmentIds,
   type PermissionUser,
 } from '@/lib/server-permissions'
 import { getWorkStatusLabel, normalizeWorkStatus } from '@/lib/work-status'
@@ -41,6 +39,8 @@ const dashboardWorkSelect = {
   planCompleteTime: true,
   departmentId: true,
   cooperators: true,
+  responsibleLeader: true,
+  responsiblePerson: true,
   creatorId: true,
   firstSubmitterId: true,
   proposedLeaderId: true,
@@ -62,6 +62,8 @@ type DashboardWork = {
   planCompleteTime: Date | null
   departmentId: number | null
   cooperators: unknown
+  responsibleLeader: string | null
+  responsiblePerson: string | null
   creatorId: number | null
   firstSubmitterId: number | null
   proposedLeaderId: number | null
@@ -109,9 +111,9 @@ export interface WorkDashboardItem {
   status: string
   statusLabel: string
   departmentName: string | null
-  departmentNames: string[]
-  responsibleDepartmentNames: string[]
-  cooperateDepartmentNames: string[]
+  responsibleLeader: string | null
+  responsiblePerson: string | null
+  cooperators: Array<{ departmentId: number; departmentName?: string; leader?: string; person?: string }>
   completeTime: string | null
   planCompleteTime: string | null
   dueTime: string | null
@@ -186,49 +188,23 @@ function getActionType(
   return 'view'
 }
 
-function getDepartmentNameMap(works: DashboardWork[]): Promise<Map<number, string>> {
-  const ids = new Set<number>()
-  for (const work of works) {
-    for (const id of [
-      ...getResponsibleDepartmentIds(work),
-      ...getCooperatorDepartmentIds(work),
-    ]) {
-      ids.add(id)
-    }
-  }
-
-  if (ids.size === 0) return Promise.resolve(new Map())
-
-  return prisma.department
-    .findMany({
-      where: { id: { in: Array.from(ids) } },
-      select: { id: true, name: true },
-    })
-    .then((departments) =>
-      new Map(departments.map((department) => [department.id, department.name]))
-    )
-}
-
-function departmentNames(ids: number[], nameById: Map<number, string>): string[] {
-  return ids
-    .map((id) => nameById.get(id))
-    .filter((name): name is string => Boolean(name))
+function parseCooperators(value: unknown): Array<{ departmentId: number; departmentName?: string; leader?: string; person?: string }> {
+  if (!Array.isArray(value)) return []
+  return value
+    .map((item: any) => ({
+      departmentId: Number(item?.departmentId) || 0,
+      departmentName: item?.departmentName || undefined,
+      leader: item?.leader || undefined,
+      person: item?.person || undefined,
+    }))
+    .filter((c) => c.departmentId > 0)
 }
 
 function toDashboardItem(
   user: PermissionUser,
   workItem: DashboardWork,
-  nameById: Map<number, string>,
   now: Date,
 ): WorkDashboardItem {
-  const responsibleDepartmentNames = departmentNames(
-    getResponsibleDepartmentIds(workItem),
-    nameById,
-  )
-  const cooperateDepartmentNames = departmentNames(
-    getCooperatorDepartmentIds(workItem),
-    nameById,
-  )
   const dueDate = getWorkDueDate(workItem)
   const status = normalizeWorkStatus(workItem.status) || String(workItem.status).toLowerCase()
 
@@ -240,9 +216,9 @@ function toDashboardItem(
     status,
     statusLabel: getWorkStatusLabel(workItem.status),
     departmentName: workItem.department?.name || null,
-    departmentNames: responsibleDepartmentNames,
-    responsibleDepartmentNames,
-    cooperateDepartmentNames,
+    responsibleLeader: workItem.responsibleLeader || null,
+    responsiblePerson: workItem.responsiblePerson || null,
+    cooperators: parseCooperators(workItem.cooperators),
     completeTime: serializeDate(workItem.completeTime),
     planCompleteTime: serializeDate(workItem.planCompleteTime),
     dueTime: serializeDate(dueDate),
@@ -380,7 +356,6 @@ export async function getDashboardData(
     canViewWorkItem(user, workItem)
   ) as DashboardWork[]
   const now = new Date()
-  const nameById = await getDepartmentNameMap(visibleWorks)
   const summary = buildSummary(user, visibleWorks, now)
 
   const expiringAndOverdue = sortExpiringAndOverdue(
@@ -391,7 +366,7 @@ export async function getDashboardData(
     now,
   )
     .slice(0, limit)
-    .map((workItem) => toDashboardItem(user, workItem, nameById, now))
+    .map((workItem) => toDashboardItem(user, workItem, now))
 
   const myActionRequired = sortMyActionRequired(
     user,
@@ -402,7 +377,7 @@ export async function getDashboardData(
     now,
   )
     .slice(0, limit)
-    .map((workItem) => toDashboardItem(user, workItem, nameById, now))
+    .map((workItem) => toDashboardItem(user, workItem, now))
 
   return {
     summary,

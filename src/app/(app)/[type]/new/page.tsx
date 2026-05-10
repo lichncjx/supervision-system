@@ -5,13 +5,12 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Star, ListTodo, CheckSquare } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
-import { getCompanyLeaders, getDepartments, getUsersByDepartment } from '@/lib/auth';
+import { getCompanyLeaders, getDepartments } from '@/lib/auth';
 import { addWork, submitWork, type WorkType, type WorkNode } from '@/lib/work-store';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { MultiSearchSelect } from '@/components/common/multi-search-select';
 
 export default function NewWorkPage() {
   const params = useParams<{ type: string }>();
@@ -31,7 +30,6 @@ export default function NewWorkPage() {
 
   const [companyLeaders, setCompanyLeaders] = useState<Array<{ id: number; name: string; role: string }>>([]);
   const [departments, setDepartments] = useState<Array<{ id: number; name: string; code: string; isBusiness: boolean }>>([]);
-  const [departmentUsers, setDepartmentUsers] = useState<Record<number, Array<{ id: number; name: string; role: string; departmentId: number; departmentName?: string }>>>({});
 
   const canCreateTodo =
     user?.role === 'ADMIN' ||
@@ -163,13 +161,10 @@ export default function NewWorkPage() {
     proposedScene: '',
     workItem: '',
     formedTime: '',
-    responsibleDepartmentIds:
-      user?.departmentId && user.departmentId !== 1
-        ? [user.departmentId]
-        : [],
-    responsiblePersons: [] as string[],
-    cooperateDepartmentIds: [] as number[],
-    cooperatePersons: [] as string[],
+    departmentId: user?.departmentId && user.departmentId !== 1 ? user.departmentId : 0,
+    responsibleLeader: '',
+    responsiblePerson: '',
+    cooperators: [] as Array<{ departmentId: number; departmentName?: string; leader?: string; person?: string }>,
     workPlan: '',
     planCompleteTime: '',
     progress: '',
@@ -187,50 +182,6 @@ export default function NewWorkPage() {
     fetchData();
   }, []);
 
-  useEffect(() => {
-    const departmentId = Number(priorityMainForm.departmentId);
-    if (departmentId && isPriorityOrMain) {
-      const fetchDepartmentUsers = async () => {
-        const users = await getUsersByDepartment(departmentId);
-        setDepartmentUsers((prev) => ({ ...prev, [departmentId]: users }));
-      };
-      fetchDepartmentUsers();
-    }
-  }, [priorityMainForm.departmentId, isPriorityOrMain]);
-
-  useEffect(() => {
-    const fetchTodoDepartmentUsers = async () => {
-      const selectedDepartmentIds = Array.from(
-        new Set([...todoForm.responsibleDepartmentIds, ...todoForm.cooperateDepartmentIds]),
-      );
-      const missingDepartmentIds = selectedDepartmentIds.filter(
-        (deptId) => !departmentUsers[deptId],
-      );
-
-      if (missingDepartmentIds.length === 0) {
-        return;
-      }
-
-      const usersByDepartment = await Promise.all(
-        missingDepartmentIds.map(async (deptId) => {
-          const users = await getUsersByDepartment(deptId);
-          return [deptId, users] as const;
-        }),
-      );
-
-      setDepartmentUsers((prev) => {
-        const next = { ...prev };
-        usersByDepartment.forEach(([deptId, users]) => {
-          next[deptId] = users;
-        });
-        return next;
-      });
-    };
-
-    if (isTodo) {
-      fetchTodoDepartmentUsers();
-    }
-  }, [todoForm.responsibleDepartmentIds, todoForm.cooperateDepartmentIds, departmentUsers, isTodo]);
 
   if (type === '待办' && !canCreateTodo) {
     return (
@@ -272,7 +223,7 @@ export default function NewWorkPage() {
         alert('请输入待办事项');
         return;
       }
-      if (todoForm.responsibleDepartmentIds.length === 0) {
+      if (!todoForm.departmentId) {
         alert('请选择主责部门');
         return;
       }
@@ -341,20 +292,12 @@ export default function NewWorkPage() {
           responsiblePerson: priorityMainForm.responsiblePerson,
         });
       } else if (isTodo) {
-        const cooperators = (todoForm.cooperateDepartmentIds || []).map((id: number) => {
-              const dept = departments.find((d: any) => d.id === id);
-              return {
-                departmentId: id,
-                departmentName: dept?.name || undefined,
-                leader: undefined,
-                person: undefined,
-              };
-            });
+        const cooperators = todoForm.cooperators.filter((c) => c.departmentId > 0);
         createdWork = await addWork({
           id: Date.now(),
           title: todoForm.workItem,
           type: '待办',
-          departmentId: todoForm.responsibleDepartmentIds[0] || 2,
+          departmentId: todoForm.departmentId || 2,
           creatorRole: user.role,
           creatorId: user.id,
           action: 'todo_decompose',
@@ -397,26 +340,7 @@ export default function NewWorkPage() {
   const iconColor = routeType === 'priority' ? 'text-rose-500' : routeType === 'main' ? 'text-sky-500' : 'text-emerald-500';
   const TitleIcon = routeType === 'priority' ? Star : routeType === 'main' ? ListTodo : CheckSquare;
 
-  const responsiblePersonOptions = todoForm.responsibleDepartmentIds.flatMap(
-    (departmentId: number) => departmentUsers[departmentId] || []
-  );
-  const cooperatePersonOptions = todoForm.cooperateDepartmentIds.flatMap(
-    (departmentId: number) => departmentUsers[departmentId] || []
-  );
-  const departmentOptions = departments.map((dept) => ({
-    value: String(dept.id),
-    label: dept.name,
-  }));
-  const responsiblePersonSelectOptions = responsiblePersonOptions.map((person) => ({
-    value: person.name,
-    label: person.name,
-    description: person.departmentName || '-',
-  }));
-  const cooperatePersonSelectOptions = cooperatePersonOptions.map((person) => ({
-    value: person.name,
-    label: person.name,
-    description: person.departmentName || '-',
-  }));
+  const businessDepts = departments.filter((d) => d.isBusiness !== false);
 
   return (
     <div className="space-y-6">
@@ -669,106 +593,102 @@ export default function NewWorkPage() {
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium">主责部门</label>
-                  <MultiSearchSelect
-                    className="mt-2"
-                    options={departmentOptions}
-                    value={todoForm.responsibleDepartmentIds.map(String)}
-                    onChange={(nextValues) => {
-                      const nextDepartmentIds = nextValues.map(Number);
-                      const nextDepartmentUserNames = new Set(
-                        nextDepartmentIds.flatMap((deptId) =>
-                          (departmentUsers[deptId] || []).map((person) => person.name),
-                        ),
-                      );
+                  <label className="block text-sm font-medium mb-1">主责部门</label>
+                  <select
+                    value={todoForm.departmentId || ''}
+                    onChange={(e) => setTodoForm({ ...todoForm, departmentId: Number(e.target.value) })}
+                    className="w-full border rounded-md p-2"
+                  >
+                    <option value="">请选择主责部门</option>
+                    {businessDepts.map((d) => (
+                      <option key={d.id} value={d.id}>{d.name}</option>
+                    ))}
+                  </select>
+                </div>
 
-                      setTodoForm((prev) => ({
-                        ...prev,
-                        responsibleDepartmentIds: nextDepartmentIds,
-                        responsiblePersons: prev.responsiblePersons.filter((personName) =>
-                          nextDepartmentUserNames.has(personName),
-                        ),
-                      }));
-                    }}
-                    placeholder="请选择主责部门"
-                    searchPlaceholder="搜索部门名称"
-                    emptyText="未找到匹配部门"
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    责任领导
+                    <span className="text-xs text-gray-400 ml-1">（姓名文本，仅用于展示和留痕）</span>
+                  </label>
+                  <Input
+                    value={todoForm.responsibleLeader}
+                    onChange={(e) => setTodoForm({ ...todoForm, responsibleLeader: e.target.value })}
+                    placeholder="请输入责任领导姓名"
                   />
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium">
-                    主责责任人
-                    <span className="text-xs text-gray-400 ml-1">（主责部门的具体责任人）</span>
+                  <label className="block text-sm font-medium mb-1">
+                    责任人
+                    <span className="text-xs text-gray-400 ml-1">（姓名文本，仅用于展示和留痕）</span>
                   </label>
-                  <MultiSearchSelect
-                    className="mt-2"
-                    options={responsiblePersonSelectOptions}
-                    value={todoForm.responsiblePersons}
-                    onChange={(nextPersons) =>
-                      setTodoForm((prev) => ({
-                        ...prev,
-                        responsiblePersons: nextPersons,
-                      }))
-                    }
-                    placeholder={todoForm.responsibleDepartmentIds.length > 0 ? '请选择主责责任人' : '请先选择主责部门'}
-                    searchPlaceholder="搜索姓名"
-                    emptyText="未找到匹配责任人"
-                    disabled={todoForm.responsibleDepartmentIds.length === 0}
+                  <Input
+                    value={todoForm.responsiblePerson}
+                    onChange={(e) => setTodoForm({ ...todoForm, responsiblePerson: e.target.value })}
+                    placeholder="请输入责任人姓名"
                   />
                 </div>
 
-                <div>
-                  <label className="text-sm font-medium">
-                    配合部门
-                    <span className="text-xs text-gray-400 ml-1">（协助执行的部门）</span>
-                  </label>
-                  <MultiSearchSelect
-                    className="mt-2"
-                    options={departmentOptions}
-                    value={todoForm.cooperateDepartmentIds.map(String)}
-                    onChange={(nextValues) => {
-                      const nextDepartmentIds = nextValues.map(Number);
-                      const nextDepartmentUserNames = new Set(
-                        nextDepartmentIds.flatMap((deptId) =>
-                          (departmentUsers[deptId] || []).map((person) => person.name),
-                        ),
-                      );
-
-                      setTodoForm((prev) => ({
-                        ...prev,
-                        cooperateDepartmentIds: nextDepartmentIds,
-                        cooperatePersons: prev.cooperatePersons.filter((personName) =>
-                          nextDepartmentUserNames.has(personName),
-                        ),
-                      }));
-                    }}
-                    placeholder="请选择配合部门"
-                    searchPlaceholder="搜索部门名称"
-                    emptyText="未找到匹配部门"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium">
-                    配合责任人
-                    <span className="text-xs text-gray-400 ml-1">（配合部门的具体责任人）</span>
-                  </label>
-                  <MultiSearchSelect
-                    className="mt-2"
-                    options={cooperatePersonSelectOptions}
-                    value={todoForm.cooperatePersons}
-                    onChange={(nextPersons) =>
-                      setTodoForm((prev) => ({
-                        ...prev,
-                        cooperatePersons: nextPersons,
-                      }))
-                    }
-                    placeholder={todoForm.cooperateDepartmentIds.length > 0 ? '请选择配合责任人' : '请先选择配合部门'}
-                    searchPlaceholder="搜索姓名"
-                    emptyText="未找到匹配责任人"
-                    disabled={todoForm.cooperateDepartmentIds.length === 0}
-                  />
+                {/* 配合方 */}
+                <div className="border-t pt-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <label className="text-sm font-medium">配合方</label>
+                    <Button type="button" variant="outline" size="sm" onClick={() => {
+                      setTodoForm({
+                        ...todoForm,
+                        cooperators: [...todoForm.cooperators, { departmentId: 0, departmentName: '', leader: '', person: '' }],
+                      });
+                    }}>添加配合方</Button>
+                  </div>
+                  {todoForm.cooperators.length === 0 && (
+                    <p className="text-xs text-gray-400">暂无配合方</p>
+                  )}
+                  {todoForm.cooperators.map((c, idx) => (
+                    <div key={idx} className="flex items-center gap-2 mb-2">
+                      <select
+                        value={c.departmentId || ''}
+                        onChange={(e) => {
+                          const newId = Number(e.target.value);
+                          const list = [...todoForm.cooperators];
+                          if (list.some((item, i) => i !== idx && item.departmentId === newId)) {
+                            alert('该配合部门已存在，请勿重复添加');
+                            return;
+                          }
+                          const dept = businessDepts.find((d) => d.id === newId);
+                          list[idx] = { ...list[idx], departmentId: newId, departmentName: dept?.name || '' };
+                          setTodoForm({ ...todoForm, cooperators: list });
+                        }}
+                        className="flex-1 border rounded-md p-2 text-sm"
+                      >
+                        <option value="">选择配合部门</option>
+                        {businessDepts.map((d) => (
+                          <option key={d.id} value={d.id}>{d.name}</option>
+                        ))}
+                      </select>
+                      <Input
+                        value={c.leader || ''}
+                        onChange={(e) => {
+                          const list = [...todoForm.cooperators];
+                          list[idx] = { ...list[idx], leader: e.target.value };
+                          setTodoForm({ ...todoForm, cooperators: list });
+                        }}
+                        placeholder="配合责任领导（可选）"
+                      />
+                      <Input
+                        value={c.person || ''}
+                        onChange={(e) => {
+                          const list = [...todoForm.cooperators];
+                          list[idx] = { ...list[idx], person: e.target.value };
+                          setTodoForm({ ...todoForm, cooperators: list });
+                        }}
+                        placeholder="配合责任人（可选）"
+                      />
+                      <Button type="button" variant="destructive" size="sm" onClick={() => {
+                        setTodoForm({ ...todoForm, cooperators: todoForm.cooperators.filter((_, i) => i !== idx) });
+                      }}>删除</Button>
+                    </div>
+                  ))}
                 </div>
 
                 {user && (user.role === 'DEPARTMENT_MANAGER' || user.role === 'DEPARTMENT_LEADER') && (

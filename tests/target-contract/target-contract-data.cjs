@@ -113,14 +113,14 @@ function buildWorkItems(ctx) {
       },
     },
     {
-      key: 'todo_multi_responsible_ab',
-      label: '多主责部门待办',
+      key: 'todo_main_a_coop_b',
+      label: '主责A配合B待办',
       targetStatus: 'IN_PROGRESS',
       data: {
         ...base,
         type: 'TODO',
-        title: 'TC-多主责部门待办-AB',
-        workItem: 'TC-多主责部门待办-AB',
+        title: 'TC-主责A配合B待办',
+        workItem: 'TC-主责A配合B待办',
         status: 'IN_PROGRESS',
         departmentId: dept.deptA.id,
         cooperators: [

@@ -35,8 +35,7 @@ interface WorkOperationPanelProps {
     proposedScene?: string;
     formedTime?: string;
     responsiblePerson?: string;
-    cooperateDepartment?: string;
-    cooperatePerson?: string;
+    cooperators?: Array<{ departmentId: number; departmentName?: string; leader?: string; person?: string }>;
     workPlan?: string;
     planCompleteTime?: string;
     progress?: string;
@@ -82,8 +81,7 @@ export function WorkOperationPanel({
       proposedLeaderRole: work.proposedLeaderRole || '',
       proposedScene: work.proposedScene || '',
       formedTime: work.formedTime || '',
-      cooperateDepartment: work.cooperateDepartment || '',
-      cooperatePerson: work.cooperatePerson || '',
+      cooperators: work.cooperators || [],
       workPlan: work.workPlan || '',
       planCompleteTime: work.planCompleteTime || '',
       progress: work.progress || '',
