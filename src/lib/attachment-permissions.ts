@@ -16,6 +16,7 @@ export interface AttPermUser {
 /** 权限判断所需的最简事项信息 */
 export interface AttPermWorkItem extends PermissionWorkItem {
   departmentId: number | null;
+  cooperators: unknown;
   status: string;
   creatorId: number;
   type: string; // 'PRIORITY' | 'MAIN' | 'TODO'

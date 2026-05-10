@@ -25,9 +25,6 @@ function isDepartmentImportRole(role: string): boolean {
 }
 
 function getImportResponsibleDepartmentIds(data: any): number[] {
-  if (Array.isArray(data.responsibleDepartmentIds) && data.responsibleDepartmentIds.length > 0) {
-    return data.responsibleDepartmentIds;
-  }
   return data.departmentId ? [data.departmentId] : [];
 }
 
@@ -350,6 +347,15 @@ async function validateAndParseExcel(
         }
 
         if (errors.filter((e) => e.row === rowNum).length === 0) {
+          const responsiblePersonList = responsiblePersons.split('/').map((s: string) => s.trim()).filter(Boolean);
+          const cooperatePersonList = cooperatePersons.split('/').map((s: string) => s.trim()).filter(Boolean);
+          // Build cooperators array from cooperate department names and persons
+          const cooperators = cooperateDeptIds.map((deptId: number, idx: number) => ({
+            departmentId: deptId,
+            departmentName: cooperateDeptNameList[idx] || undefined,
+            leader: undefined,
+            person: cooperatePersonList[idx] || undefined,
+          }));
           rows.push({
             row: rowNum,
             data: {
@@ -362,10 +368,9 @@ async function validateAndParseExcel(
               workItem,
               formedTime: parseExcelDate(formedTimeStr),
               departmentNames: deptNames,
-              responsibleDepartmentIds: deptIds,
-              responsiblePersons: responsiblePersons.split('/').map((s: string) => s.trim()).filter(Boolean),
-              cooperateDepartmentIds: cooperateDeptIds,
-              cooperatePersons: cooperatePersons.split('/').map((s: string) => s.trim()).filter(Boolean),
+              departmentId: deptIds[0] || null,
+              responsiblePerson: responsiblePersonList.join('/'),
+              cooperators,
               workPlan,
               planCompleteTime: parseExcelDate(planCompleteTimeStr),
               progress,
@@ -461,7 +466,6 @@ export async function POST(
           status: WorkItemStatus.DRAFT,
           creatorId: currentUser.id,
           departmentId: data.departmentId,
-          responsibleDepartmentIds: [data.departmentId],
           businessCategory: data.businessCategory || null,
           workItem: data.workItem,
           isInnovation: data.isInnovation || false,
@@ -474,8 +478,6 @@ export async function POST(
           updatedAt: now,
         };
       } else {
-        // 默认 approvalLeaderId = proposedLeaderId（提出领导也负责后续审批）
-        // 仅当明确指定了不同的审批领导时才使用不同的值
         const finalProposedLeaderId = data.proposedLeaderId || data.approvalLeaderId;
         const finalApprovalLeaderId = data.approvalLeaderId || finalProposedLeaderId;
 
@@ -484,16 +486,14 @@ export async function POST(
           title: data.workItem,
           status: WorkItemStatus.DRAFT,
           creatorId: currentUser.id,
-          departmentId: data.responsibleDepartmentIds[0] || currentUser.departmentId,
+          departmentId: data.departmentId || currentUser.departmentId,
           proposedLeaderId: finalProposedLeaderId,
           approvalLeaderId: finalApprovalLeaderId,
           proposedScene: data.proposedScene || null,
           workItem: data.workItem,
           formedTime: data.formedTime ? new Date(data.formedTime) : null,
-          responsibleDepartmentIds: data.responsibleDepartmentIds,
-          cooperateDepartmentIds: data.cooperateDepartmentIds || [],
-          responsiblePersons: data.responsiblePersons,
-          cooperatePersons: data.cooperatePersons,
+          responsiblePerson: data.responsiblePerson || null,
+          cooperators: data.cooperators || undefined,
           workPlan: data.workPlan,
           planCompleteTime: data.planCompleteTime ? new Date(data.planCompleteTime) : null,
           progress: data.progress || null,

@@ -42,12 +42,7 @@ async function getDepartmentStats(
 
   const filters: any[] = [
     visibilityWhere,
-    {
-      OR: [
-        { departmentId },
-        { responsibleDepartmentIds: { has: departmentId } },
-      ],
-    },
+    { departmentId },
   ];
 
   if (Object.keys(dateFilter).length > 0) {
@@ -148,7 +143,6 @@ export async function GET(request: NextRequest) {
         where: visibilityWhere,
         select: {
           departmentId: true,
-          responsibleDepartmentIds: true,
         },
       });
       const responsibleDepartmentIds = Array.from(

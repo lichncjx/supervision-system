@@ -115,9 +115,9 @@ async function main() {
 
   const admin = await login('admin');
   const president = await login('president');
-  const vicePresident = await login('vice_president');
-  const deptLeader = await login('dept_leader');
-  const deptManager = await login('dept_manager');
+  const vicePresident = await login('vp_a');
+  const deptLeader = await login('dept_leader_a');
+  const deptManager = await login('dept_manager_a1');
 
   assert('admin login', admin.success);
   assert('president login', president.success);

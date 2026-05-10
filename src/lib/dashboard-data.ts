@@ -5,7 +5,7 @@ import {
   canApproveWorkItem,
   canHandleWorkItem,
   canViewWorkItem,
-  getCooperateDepartmentIds,
+  getCooperatorDepartmentIds,
   getResponsibleDepartmentIds,
   type PermissionUser,
 } from '@/lib/server-permissions'
@@ -40,8 +40,7 @@ const dashboardWorkSelect = {
   completeTime: true,
   planCompleteTime: true,
   departmentId: true,
-  responsibleDepartmentIds: true,
-  cooperateDepartmentIds: true,
+  cooperators: true,
   creatorId: true,
   firstSubmitterId: true,
   proposedLeaderId: true,
@@ -62,8 +61,7 @@ type DashboardWork = {
   completeTime: Date | null
   planCompleteTime: Date | null
   departmentId: number | null
-  responsibleDepartmentIds: number[]
-  cooperateDepartmentIds: number[]
+  cooperators: unknown
   creatorId: number | null
   firstSubmitterId: number | null
   proposedLeaderId: number | null
@@ -193,7 +191,7 @@ function getDepartmentNameMap(works: DashboardWork[]): Promise<Map<number, strin
   for (const work of works) {
     for (const id of [
       ...getResponsibleDepartmentIds(work),
-      ...getCooperateDepartmentIds(work),
+      ...getCooperatorDepartmentIds(work),
     ]) {
       ids.add(id)
     }
@@ -228,7 +226,7 @@ function toDashboardItem(
     nameById,
   )
   const cooperateDepartmentNames = departmentNames(
-    getCooperateDepartmentIds(workItem),
+    getCooperatorDepartmentIds(workItem),
     nameById,
   )
   const dueDate = getWorkDueDate(workItem)

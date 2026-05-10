@@ -133,13 +133,12 @@ export default function WorkDetailPage() {
         proposedLeaderRole: work.proposedLeaderRole || '',
         proposedScene: work.proposedScene || '',
         formedTime: work.formedTime || '',
-        // Phase 4A: 数组字段，支持编辑时多部门/多责任人的 MultiSearchSelect
-        responsibleDepartmentIds: work.responsibleDepartmentIds || [] as number[],
-        responsiblePersons: work.responsiblePersons || [] as string[],
-        cooperateDepartmentIds: work.cooperateDepartmentIds || [] as number[],
-        cooperatePersons: work.cooperatePersons || [] as string[],
-        cooperateDepartment: work.cooperateDepartment || '',
-        cooperatePerson: work.cooperatePerson || '',
+        responsibleDepartmentIds: work.departmentId ? [work.departmentId] : [] as number[],
+        responsiblePersons: work.responsiblePerson ? [work.responsiblePerson] : [] as string[],
+        cooperateDepartmentIds: (work.cooperators || []).map((c: any) => c.departmentId) as number[],
+        cooperatePersons: (work.cooperators || []).map((c: any) => c.person).filter(Boolean) as string[],
+        cooperateDepartment: (work.cooperators || []).map((c: any) => c.departmentName).filter(Boolean).join('、') || '',
+        cooperatePerson: (work.cooperators || []).map((c: any) => c.person).filter(Boolean).join('、') || '',
         workPlan: work.workPlan || '',
         planCompleteTime: work.planCompleteTime || '',
         progress: work.progress || '',
@@ -165,12 +164,8 @@ export default function WorkDetailPage() {
 
     if (work.departmentId === user.departmentId) return true;
 
-    if (Array.isArray(work.responsibleDepartmentIds)) {
-      return work.responsibleDepartmentIds.includes(user.departmentId);
-    }
-
-    if (Array.isArray(work.cooperateDepartmentIds)) {
-      return work.cooperateDepartmentIds.includes(user.departmentId);
+    if (Array.isArray(work.cooperators)) {
+      return work.cooperators.some((c: any) => c.departmentId === user.departmentId);
     }
 
     return false;
@@ -783,36 +778,26 @@ export default function WorkDetailPage() {
           </div>
           <div>
             <span className="text-sm text-slate-500">主责部门：</span>
-            <span>
-              {work.responsibleDepartmentIds && work.responsibleDepartmentIds.length > 0
-                ? work.responsibleDepartmentIds.map((id: number) => getDepartmentName(id)).join('、')
-                : getDepartmentName(work.departmentId ?? 0)}
-            </span>
+            <span>{getDepartmentName(work.departmentId ?? 0)}</span>
           </div>
           <div>
             <span className="text-sm text-slate-500">主责责任人：</span>
-            <span>
-              {work.responsiblePersons && work.responsiblePersons.length > 0
-                ? work.responsiblePersons.join('、')
-                : work.responsiblePerson || '-'}
-            </span>
+            <span>{work.responsiblePerson || '-'}</span>
           </div>
           <div>
             <span className="text-sm text-slate-500">配合部门：</span>
             <span>
-              {work.cooperateDepartmentIds && work.cooperateDepartmentIds.length > 0
-                ? work.cooperateDepartmentIds.map((id: number) => getDepartmentName(id)).join('、')
-                : work.cooperateDepartments && work.cooperateDepartments.length > 0
-                ? work.cooperateDepartments.join('、')
-                : work.cooperateDepartment || '-'}
+              {work.cooperators && work.cooperators.length > 0
+                ? work.cooperators.map((c: any) => getDepartmentName(c.departmentId) || c.departmentName).join('、')
+                : '-'}
             </span>
           </div>
           <div>
             <span className="text-sm text-slate-500">配合责任人：</span>
             <span>
-              {work.cooperatePersons && work.cooperatePersons.length > 0
-                ? work.cooperatePersons.join('、')
-                : work.cooperatePerson || '-'}
+              {work.cooperators && work.cooperators.length > 0
+                ? work.cooperators.map((c: any) => c.person).filter(Boolean).join('、')
+                : '-'}
             </span>
           </div>
           <div>

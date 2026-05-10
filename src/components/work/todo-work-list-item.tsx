@@ -30,17 +30,13 @@ export function TodoWorkListItem({ item, routeType, getDepartmentName }: TodoWor
         <div>
           <span className="text-slate-400">主责部门：</span>
           <span className="text-slate-600">
-            {item.responsibleDepartmentIds && item.responsibleDepartmentIds.length > 0
-              ? item.responsibleDepartmentIds.map((id: number) => getDepartmentName(id)).join('、')
-              : getDepartmentName(item.departmentId ?? 0)}
+            {getDepartmentName(item.departmentId ?? 0)}
           </span>
         </div>
         <div>
           <span className="text-slate-400">主责责任人：</span>
           <span className="text-slate-600">
-            {item.responsiblePersons && item.responsiblePersons.length > 0
-              ? item.responsiblePersons.join('、')
-              : item.responsiblePerson || '-'}
+            {item.responsiblePerson || '-'}
           </span>
         </div>
         <div>

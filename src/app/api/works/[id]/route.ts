@@ -64,7 +64,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       type: work.type === 'PRIORITY' ? '重点' : work.type === 'MAIN' ? '主要' : '待办',
       status: work.status,
       departmentId: work.departmentId,
-      responsibleDepartmentIds: work.responsibleDepartmentIds as number[] || [],
+      cooperators: work.cooperators,
       departmentName: work.department?.name || '-',
       creatorId: work.creatorId,
       creatorName: work.creator?.name || '-',
@@ -81,9 +81,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       proposedLeaderId: work.proposedLeaderId,
       proposedScene: work.proposedScene,
       formedTime: formatDate(work.formedTime),
-      responsiblePersons: work.responsiblePersons as string[] || [],
-      cooperateDepartmentIds: work.cooperateDepartmentIds as number[] || [],
-      cooperatePersons: work.cooperatePersons as string[] || [],
       workPlan: work.workPlan,
       planCompleteTime: formatDate(work.planCompleteTime),
       progress: work.progress,
@@ -173,13 +170,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     if (body.proposedScene !== undefined) updateData.proposedScene = body.proposedScene;
     if (body.formedTime !== undefined) updateData.formedTime = convertToDateTime(body.formedTime);
     // Phase 4A: responsibleDepartmentIds 更新分支（之前遗漏，导致编辑时主责部门数组无法更新）
-    if (body.responsibleDepartmentIds !== undefined) updateData.responsibleDepartmentIds = body.responsibleDepartmentIds;
-    if (body.responsiblePersons !== undefined) updateData.responsiblePersons = body.responsiblePersons;
     if (body.responsiblePerson !== undefined) updateData.responsiblePerson = body.responsiblePerson;
-    if (body.cooperateDepartmentIds !== undefined) updateData.cooperateDepartmentIds = body.cooperateDepartmentIds;
-    if (body.cooperateDepartment !== undefined) updateData.cooperateDepartment = body.cooperateDepartment;
-    if (body.cooperatePersons !== undefined) updateData.cooperatePersons = body.cooperatePersons;
-    if (body.cooperatePerson !== undefined) updateData.cooperatePerson = body.cooperatePerson;
+    if (body.cooperators !== undefined) updateData.cooperators = body.cooperators;
     if (body.workPlan !== undefined) updateData.workPlan = body.workPlan;
     if (body.planCompleteTime !== undefined) updateData.planCompleteTime = convertToDateTime(body.planCompleteTime);
     if (body.progress !== undefined) updateData.progress = body.progress;

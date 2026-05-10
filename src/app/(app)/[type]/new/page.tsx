@@ -341,12 +341,20 @@ export default function NewWorkPage() {
           responsiblePerson: priorityMainForm.responsiblePerson,
         });
       } else if (isTodo) {
+        const cooperators = (todoForm.cooperateDepartmentIds || []).map((id: number) => {
+              const dept = departments.find((d: any) => d.id === id);
+              return {
+                departmentId: id,
+                departmentName: dept?.name || undefined,
+                leader: undefined,
+                person: undefined,
+              };
+            });
         createdWork = await addWork({
           id: Date.now(),
           title: todoForm.workItem,
           type: '待办',
           departmentId: todoForm.responsibleDepartmentIds[0] || 2,
-          responsibleDepartmentIds: todoForm.responsibleDepartmentIds,
           creatorRole: user.role,
           creatorId: user.id,
           action: 'todo_decompose',
@@ -355,28 +363,11 @@ export default function NewWorkPage() {
           proposedLeader: selectedProposedLeader?.name || '',
           proposedLeaderId: selectedProposedLeader?.id,
           proposedLeaderRole: selectedProposedLeader?.role,
-          // approvalLeaderId 默认等于 proposedLeaderId，特殊情况才单独指定
           approvalLeaderId: selectedProposedLeader?.id,
           proposedScene: todoForm.proposedScene,
           workItem: todoForm.workItem,
           formedTime: todoForm.formedTime,
-          responsiblePersons: todoForm.responsiblePersons,
-          cooperateDepartmentIds: todoForm.cooperateDepartmentIds,
-          cooperateDepartments: todoForm.cooperateDepartmentIds
-            .map((id) => {
-              const dept = departments.find((d) => d.id === id);
-              return dept?.name;
-            })
-            .filter(Boolean) as string[],
-          cooperateDepartment: todoForm.cooperateDepartmentIds
-            .map((id) => {
-              const dept = departments.find((d) => d.id === id);
-              return dept?.name;
-            })
-            .filter(Boolean)
-            .join('、'),
-          cooperatePersons: todoForm.cooperatePersons,
-          cooperatePerson: todoForm.cooperatePersons.join('、'),
+          cooperators,
           workPlan: todoForm.workPlan,
           planCompleteTime: todoForm.planCompleteTime,
           progress: todoForm.progress,

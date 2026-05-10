@@ -213,8 +213,8 @@ export async function exportWorksToExcel(type: ExcelRouteType, works: Work[]) {
         work.formedTime || '',
         await getDepartmentNameForExcel(work.departmentId),
         work.responsiblePerson || '',
-        work.cooperateDepartment || '',
-        work.cooperatePerson || '',
+        (work.cooperators || []).map((c: any) => c.departmentName || '').filter(Boolean).join('/'),
+        (work.cooperators || []).map((c: any) => c.person || '').filter(Boolean).join('/'),
         work.workPlan || '',
         work.planCompleteTime || '',
         work.progress || ''
@@ -306,6 +306,20 @@ export async function importWorksFromExcel(
               const matchedProposedLeader = companyLeaders.find(
                 (leader) => leader.name === proposedLeaderName || String(leader.id) === proposedLeaderName
               );
+              const cooperateDeptRaw = String(r['配合部门'] || '').trim();
+              const cooperatePersonRaw = String(r['配合责任人'] || '').trim();
+              const coopDeptNames = cooperateDeptRaw ? cooperateDeptRaw.split('/').map((s: string) => s.trim()).filter(Boolean) : [];
+              const coopPersons = cooperatePersonRaw ? cooperatePersonRaw.split('/').map((s: string) => s.trim()).filter(Boolean) : [];
+              const cooperators = coopDeptNames.map((name: string, idx: number) => {
+                const dept = departments.find((d) => d.name === name || d.code === name);
+                return {
+                  departmentId: dept?.id || 0,
+                  departmentName: name,
+                  leader: undefined as string | undefined,
+                  person: coopPersons[idx] || undefined as string | undefined,
+                };
+              }).filter((c) => c.departmentId > 0);
+
               work = {
                 id: Date.now() + Math.random(),
                 title: r['待办事项'],
@@ -323,8 +337,7 @@ export async function importWorksFromExcel(
                 workItem: r['待办事项'],
                 formedTime: r['形成时间'] || '',
                 responsiblePerson: r['主责责任人'] || '',
-                cooperateDepartment: r['配合部门'] || '',
-                cooperatePerson: r['配合责任人'] || '',
+                cooperators,
                 workPlan: r['工作计划'] || '',
                 planCompleteTime: r['计划完成时间'] || '',
                 progress: r['进展情况'] || ''
@@ -392,9 +405,6 @@ export async function exportCompanyCompletionRate(works: Work[]) {
       }
     };
     addId(work.departmentId);
-    if (Array.isArray(work.responsibleDepartmentIds)) {
-      work.responsibleDepartmentIds.forEach(addId);
-    }
     return Array.from(ids);
   };
 

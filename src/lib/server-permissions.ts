@@ -30,8 +30,7 @@ export interface PermissionWorkItem {
   type?: WorkItemType | string
   status?: WorkItemStatus | string
   departmentId?: number | null
-  responsibleDepartmentIds?: number[] | null
-  cooperateDepartmentIds?: number[] | null
+  cooperators?: unknown
   creatorId?: number | null
   firstSubmitterId?: number | null
   proposedLeaderId?: number | null
@@ -62,20 +61,18 @@ function normalizeStatus(status: PermissionWorkItem['status']): string {
 }
 
 export function getResponsibleDepartmentIds(workItem: PermissionWorkItem): number[] {
-  if (
-    Array.isArray(workItem.responsibleDepartmentIds) &&
-    workItem.responsibleDepartmentIds.length > 0
-  ) {
-    return uniquePositiveIds(workItem.responsibleDepartmentIds)
-  }
-
   return uniquePositiveIds([workItem.departmentId])
 }
 
+export function getCooperatorDepartmentIds(workItem: PermissionWorkItem): number[] {
+  const cooperators = workItem.cooperators
+  if (!Array.isArray(cooperators)) return []
+  return uniquePositiveIds(cooperators.map((c: any) => c?.departmentId).filter(Boolean))
+}
+
+/** @deprecated Use getCooperatorDepartmentIds instead */
 export function getCooperateDepartmentIds(workItem: PermissionWorkItem): number[] {
-  return Array.isArray(workItem.cooperateDepartmentIds)
-    ? uniquePositiveIds(workItem.cooperateDepartmentIds)
-    : []
+  return getCooperatorDepartmentIds(workItem)
 }
 
 export function isGlobalViewRole(role: Role): boolean {
@@ -120,14 +117,10 @@ export function buildWorkVisibilityWhere(user: PermissionUser): Prisma.WorkItemW
   }
 
   if (isDepartmentLevelRole(user.role)) {
-    return {
-      OR: [
-        { departmentId: user.departmentId },
-        { responsibleDepartmentIds: { has: user.departmentId } },
-        { cooperateDepartmentIds: { has: user.departmentId } },
-        { currentApproverId: user.id },
-      ],
-    }
+    // Phase 8B: cooperators JSONB filtering is not supported as a Prisma where clause.
+    // Return a broad query that includes both main-department and cooperator-department items.
+    // Precision is ensured by the canViewWorkItem post-filter in each API route.
+    return {}
   }
 
   if (user.role === Role.VICE_PRESIDENT) {

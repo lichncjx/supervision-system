@@ -106,8 +106,7 @@ model WorkItem {
   isInnovation          Boolean         @default(false)
 
   departmentId          Int?
-  responsibleDepartmentIds Int[]        @default([])
-  cooperateDepartmentIds   Int[]        @default([])
+  cooperators           Json?
 
   creatorId             Int
   firstSubmitterId      Int?
@@ -122,8 +121,6 @@ model WorkItem {
   // They do not participate in permission, approval or visibility decisions.
   responsibleLeader     String?         @db.VarChar(50)
   responsiblePerson     String?         @db.VarChar(50)
-  responsiblePersons    String[]        @default([])
-  cooperatePersons      String[]        @default([])
 
   proposedScene         String?         @db.VarChar(200)
   formedTime            DateTime?

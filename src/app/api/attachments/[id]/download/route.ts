@@ -36,8 +36,7 @@ export async function GET(
         workItem: {
           select: {
             departmentId: true,
-            responsibleDepartmentIds: true,
-            cooperateDepartmentIds: true,
+            cooperators: true,
             creatorId: true,
             proposedLeaderId: true,
             approvalLeaderId: true,
@@ -57,8 +56,7 @@ export async function GET(
     if (attachment.workItem) {
       const permWorkItem: AttPermWorkItem = {
         departmentId: attachment.workItem.departmentId,
-        responsibleDepartmentIds: attachment.workItem.responsibleDepartmentIds,
-        cooperateDepartmentIds: attachment.workItem.cooperateDepartmentIds,
+        cooperators: attachment.workItem.cooperators,
         status: '', // download 不校验状态
         creatorId: attachment.workItem.creatorId,
         proposedLeaderId: attachment.workItem.proposedLeaderId,

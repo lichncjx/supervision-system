@@ -93,11 +93,11 @@ export interface Work {
   type: WorkType;
 
   // ---- 部门关联 ----
-  // departmentId: 重点/主要工作的单一主办部门
+  // departmentId: 事项唯一主责部门
   departmentId?: number;
   departmentName?: string;
-  // responsibleDepartmentIds: 待办事项的主责部门 ID 数组
-  responsibleDepartmentIds?: number[];
+  // cooperators: 配合方列表 JSON，结构见 docs/责任事项方模型设计.md
+  cooperators?: Cooperator[];
 
   // ---- 业务人员 ID 字段（xxxId = 真实关联字段，用于权限、流程、审批、待处理判断）----
   creatorRole: string;
@@ -121,21 +121,10 @@ export interface Work {
   // approvalLeader: 审批领导姓名（从 Prisma relation 解析，非独立 DB 字段）
   approvalLeader?: string;
   approvalLeaderRole?: string;
-  // responsibleLeader: 重点/主要工作的责任领导姓名文本，仅用于展示、导入导出、历史留痕，不参与权限判断
+  // responsibleLeader: 主责责任领导姓名文本，仅用于展示、导入导出、历史留痕，不参与权限判断
   responsibleLeader?: string;
-  // responsiblePerson: 重点/主要工作的责任人/实际负责人姓名文本，仅用于展示、导入导出、历史留痕，不参与权限判断
+  // responsiblePerson: 主责责任人姓名文本，仅用于展示、导入导出、历史留痕，不参与权限判断
   responsiblePerson?: string;
-  // responsiblePersons: 待办事项的主责责任人姓名数组
-  responsiblePersons?: string[];
-  // cooperatePersons: 待办事项的配合部门责任人姓名数组
-  cooperatePersons?: string[];
-  // cooperateDepartmentIds: 待办事项的配合部门 ID 数组
-  cooperateDepartmentIds?: number[];
-  // cooperateDepartments: 配合部门名称数组
-  cooperateDepartments?: string[];
-  // cooperateDepartment / cooperatePerson: 展示用拼接字符串（从前端 join 计算，非独立 DB 字段）
-  cooperateDepartment?: string;
-  cooperatePerson?: string;
 
   // ---- 事项基本信息 ----
   status: Status;
@@ -177,6 +166,13 @@ export interface Work {
   updatedAt: string;
 }
 
+export interface Cooperator {
+  departmentId: number;
+  departmentName?: string;
+  leader?: string;
+  person?: string;
+}
+
 export type WorkEditablePatch = Partial<Pick<
   Work,
   | 'title'
@@ -189,7 +185,7 @@ export type WorkEditablePatch = Partial<Pick<
   | 'completeTime'
   | 'completeForm'
   | 'departmentId'
-  | 'responsibleDepartmentIds'
+  | 'cooperators'
   | 'responsibleLeader'
   | 'proposedLeader'
   | 'proposedLeaderId'
@@ -197,12 +193,6 @@ export type WorkEditablePatch = Partial<Pick<
   | 'proposedScene'
   | 'formedTime'
   | 'responsiblePerson'
-  | 'responsiblePersons'
-  | 'cooperateDepartmentIds'
-  | 'cooperateDepartments'
-  | 'cooperateDepartment'
-  | 'cooperatePersons'
-  | 'cooperatePerson'
   | 'workPlan'
   | 'planCompleteTime'
   | 'progress'
@@ -210,6 +200,18 @@ export type WorkEditablePatch = Partial<Pick<
   | 'approvalLeaderId'
   | 'approvalLeaderRole'
 >>;
+
+function parseCooperators(value: unknown): Cooperator[] {
+  if (!Array.isArray(value)) return []
+  return value
+    .map((item: any) => ({
+      departmentId: Number(item?.departmentId) || 0,
+      departmentName: item?.departmentName || undefined,
+      leader: item?.leader || undefined,
+      person: item?.person || undefined,
+    }))
+    .filter((c) => c.departmentId > 0)
+}
 
 export function transformWorkFromAPI(work: any): Work {
   // 从 relation 对象或字符串中提取名称
@@ -220,19 +222,6 @@ export function transformWorkFromAPI(work: any): Work {
     return '';
   };
 
-  // 从对象数组或字符串数组中提取名称数组
-  const extractNameArray = (arr: any): string[] => {
-    if (!arr) return [];
-    if (Array.isArray(arr)) {
-      return arr.map((item: any) => {
-        if (typeof item === 'string') return item;
-        if (typeof item === 'object' && item.name) return item.name;
-        return String(item);
-      }).filter(Boolean);
-    }
-    return [];
-  };
-
   return {
     id: work.id,
     title: work.title,
@@ -240,7 +229,7 @@ export function transformWorkFromAPI(work: any): Work {
     // 部门字段
     departmentId: work.departmentId,
     departmentName: work.departmentName,
-    responsibleDepartmentIds: work.responsibleDepartmentIds || work.department_ids || [],
+    cooperators: parseCooperators(work.cooperators),
     // 创建者（ID 用于权限判断）
     creatorRole: work.creatorRole || work.creator_role || '',
     creatorId: work.creatorId || work.creator_id,
@@ -259,12 +248,6 @@ export function transformWorkFromAPI(work: any): Work {
     // 责任领导 / 责任人姓名文本（仅用于展示、导入导出、历史留痕，不参与权限判断）
     responsibleLeader: work.responsibleLeader || work.responsible_leader,
     responsiblePerson: work.responsiblePerson || work.responsible_person,
-    // 待办事项 - 主责责任人姓名数组
-    responsiblePersons: extractNameArray(work.responsiblePersons || work.responsible_persons),
-    // 待办事项 - 配合部门 ID 数组
-    cooperateDepartmentIds: work.cooperateDepartmentIds || work.cooperate_department_ids || [],
-    // 待办事项 - 配合责任人姓名数组
-    cooperatePersons: extractNameArray(work.cooperatePersons || work.cooperate_persons),
     // 事项基本信息
     status: normalizeWorkStatus(work.status) || 'draft',
     action: normalizeAction(work.action || work.action_type),
@@ -458,10 +441,7 @@ export async function addWork(work: Omit<Work, 'createdAt' | 'updatedAt'>): Prom
     proposedLeaderId: work.proposedLeaderId,
     proposedScene: work.proposedScene,
     formedTime: work.formedTime,
-    responsibleDepartmentIds: work.responsibleDepartmentIds,
-    responsiblePersons: work.responsiblePersons,
-    cooperateDepartmentIds: work.cooperateDepartmentIds,
-    cooperatePersons: work.cooperatePersons,
+    cooperators: work.cooperators,
     workPlan: work.workPlan,
     planCompleteTime: work.planCompleteTime,
     progress: work.progress,
@@ -500,12 +480,7 @@ export async function updateWork(id: number, patch: Partial<Work>): Promise<Work
   if (patch.proposedLeaderId !== undefined) data.proposedLeaderId = patch.proposedLeaderId;
   if (patch.proposedScene !== undefined) data.proposedScene = patch.proposedScene;
   if (patch.formedTime !== undefined) data.formedTime = patch.formedTime;
-  if (patch.responsibleDepartmentIds !== undefined) data.responsibleDepartmentIds = patch.responsibleDepartmentIds;
-  if (patch.responsiblePersons !== undefined) data.responsiblePersons = patch.responsiblePersons;
-  if (patch.cooperateDepartmentIds !== undefined) data.cooperateDepartmentIds = patch.cooperateDepartmentIds;
-  if (patch.cooperateDepartment !== undefined) data.cooperateDepartment = patch.cooperateDepartment;
-  if (patch.cooperatePersons !== undefined) data.cooperatePersons = patch.cooperatePersons;
-  if (patch.cooperatePerson !== undefined) data.cooperatePerson = patch.cooperatePerson;
+  if (patch.cooperators !== undefined) data.cooperators = patch.cooperators;
   if (patch.workPlan !== undefined) data.workPlan = patch.workPlan;
   if (patch.planCompleteTime !== undefined) data.planCompleteTime = patch.planCompleteTime;
   if (patch.progress !== undefined) data.progress = patch.progress;
@@ -769,11 +744,8 @@ function getWorkDepartmentIds(work: Work) {
     }
   };
   addId(work.departmentId);
-  if (Array.isArray(work.responsibleDepartmentIds)) {
-    work.responsibleDepartmentIds.forEach(addId);
-  }
-  if (Array.isArray(work.cooperateDepartmentIds)) {
-    work.cooperateDepartmentIds.forEach(addId);
+  if (Array.isArray(work.cooperators)) {
+    work.cooperators.forEach((c) => addId(c.departmentId));
   }
   return Array.from(ids);
 }

@@ -3,7 +3,7 @@ import prisma from '@/lib/prisma';
 import { verifyToken } from '@/lib/server-auth';
 import { formatDate, processNodesForDisplay, processAdjustHistory, convertToDateTime } from '@/lib/utils';
 import { Role, WorkItemType, WorkItemStatus } from '@prisma/client';
-import { buildWorkVisibilityWhere, canHandleWorkItem } from '@/lib/server-permissions';
+import { buildWorkVisibilityWhere, canHandleWorkItem, canViewWorkItem } from '@/lib/server-permissions';
 
 const ROLES_CAN_CREATE_ALL: Role[] = [Role.ADMIN, Role.SUPERVISOR];
 const ROLES_CAN_CREATE_TODO_ONLY: Role[] = [Role.VICE_PRESIDENT, Role.PRESIDENT];
@@ -175,8 +175,6 @@ export async function GET(request: NextRequest) {
       filters.push({
         OR: [
           { departmentId: id },
-          { responsibleDepartmentIds: { has: id } },
-          { cooperateDepartmentIds: { has: id } },
         ],
       });
     }
@@ -208,14 +206,15 @@ export async function GET(request: NextRequest) {
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    const viewableWorks = works.filter((work) => canViewWorkItem(currentUser, work));
     const filteredWorks = statusFilter?.kind === 'post'
-      ? works.filter((work) => {
+      ? viewableWorks.filter((work) => {
         if (statusFilter.postFilter === 'handling') return canHandleWorkItem(currentUser, work);
         if (statusFilter.postFilter === 'overdue') return isOverdueWork(work, today);
         if (statusFilter.postFilter === 'expiring') return isExpiringWork(work, today);
         return true;
       })
-      : works;
+      : viewableWorks;
 
     const result = filteredWorks.map((work) => ({
       id: work.id,
@@ -223,7 +222,7 @@ export async function GET(request: NextRequest) {
       type: work.type === 'PRIORITY' ? '重点' : work.type === 'MAIN' ? '主要' : '待办',
       status: work.status,
       departmentId: work.departmentId,
-      responsibleDepartmentIds: work.responsibleDepartmentIds as number[] || [],
+      cooperators: work.cooperators,
       departmentName: work.department?.name || '-',
       creatorId: work.creatorId,
       creatorName: work.creator?.name || '-',
@@ -240,9 +239,6 @@ export async function GET(request: NextRequest) {
       proposedLeaderId: work.proposedLeaderId,
       proposedScene: work.proposedScene,
       formedTime: formatDate(work.formedTime),
-      responsiblePersons: work.responsiblePersons as string[] || [],
-      cooperateDepartmentIds: work.cooperateDepartmentIds as number[] || [],
-      cooperatePersons: work.cooperatePersons as string[] || [],
       workPlan: work.workPlan,
       planCompleteTime: formatDate(work.planCompleteTime),
       progress: work.progress,
@@ -361,10 +357,7 @@ export async function POST(request: NextRequest) {
       approvalLeaderId: rest.approvalLeaderId || rest.proposedLeaderId,
       proposedScene: rest.proposedScene,
       formedTime: convertToDateTime(rest.formedTime),
-      responsibleDepartmentIds: rest.responsibleDepartmentIds || (departmentId ? [departmentId] : []),
-      responsiblePersons: rest.responsiblePersons,
-      cooperateDepartmentIds: rest.cooperateDepartmentIds,
-      cooperatePersons: rest.cooperatePersons,
+      cooperators: rest.cooperators || undefined,
       workPlan: rest.workPlan,
       planCompleteTime: convertToDateTime(rest.planCompleteTime),
       progress: rest.progress,
@@ -397,7 +390,7 @@ export async function POST(request: NextRequest) {
       title: work.title,
       type: work.type === 'PRIORITY' ? '重点' : work.type === 'MAIN' ? '主要' : '待办',
       departmentId: work.departmentId,
-      responsibleDepartmentIds: work.responsibleDepartmentIds as number[] || [],
+      cooperators: work.cooperators,
       departmentName: work.department?.name || '-',
       proposedLeader: work.proposedLeader?.name || null,
       proposedLeaderId: work.proposedLeaderId,

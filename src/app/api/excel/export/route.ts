@@ -7,7 +7,7 @@ import {
   buildWorkVisibilityWhere,
   canHandleWorkItem,
   canViewWorkItem,
-  getCooperateDepartmentIds,
+  getCooperatorDepartmentIds,
   getResponsibleDepartmentIds,
 } from '@/lib/server-permissions'
 import { getWorkStatusLabel } from '@/lib/work-status'
@@ -104,8 +104,12 @@ function formatDate(value: Date | null): string {
   return value ? value.toISOString().split('T')[0] : ''
 }
 
-function joinNames(values: string[] | null | undefined): string {
-  return Array.isArray(values) ? values.filter(Boolean).join('/') : ''
+function joinCooperatorPersons(cooperators: unknown): string {
+  if (!Array.isArray(cooperators)) return ''
+  return (cooperators as any[])
+    .map((c: any) => c?.person)
+    .filter(Boolean)
+    .join('/')
 }
 
 function buildDepartmentCodeMap(departments: { id: number; code: string | null; name: string }[]) {
@@ -203,7 +207,7 @@ export async function GET(request: NextRequest) {
         if (!departmentIdFilter) return true
         return (
           getResponsibleDepartmentIds(workItem).includes(departmentIdFilter) ||
-          getCooperateDepartmentIds(workItem).includes(departmentIdFilter)
+          getCooperatorDepartmentIds(workItem).includes(departmentIdFilter)
         )
       })
 
@@ -240,7 +244,7 @@ export async function GET(request: NextRequest) {
     const rows = visibleItems.map((item, index) => {
       const isPriorityOrMain = item.type === WorkItemType.PRIORITY || item.type === WorkItemType.MAIN
       const responsibleDepartmentCodes = departmentCodes(getResponsibleDepartmentIds(item), deptById)
-      const cooperateDepartmentCodes = departmentCodes(getCooperateDepartmentIds(item), deptById)
+      const cooperateDepartmentCodes = departmentCodes(getCooperatorDepartmentIds(item), deptById)
 
       return [
         index + 1,
@@ -254,9 +258,9 @@ export async function GET(request: NextRequest) {
         isPriorityOrMain ? (item.completeForm || '') : '',
         responsibleDepartmentCodes,
         isPriorityOrMain ? (item.responsibleLeader || '') : '',
-        isPriorityOrMain ? (item.responsiblePerson || '') : joinNames(item.responsiblePersons),
+        isPriorityOrMain ? (item.responsiblePerson || '') : (item.responsiblePerson || ''),
         item.type === WorkItemType.TODO ? cooperateDepartmentCodes : '',
-        item.type === WorkItemType.TODO ? joinNames(item.cooperatePersons) : '',
+        item.type === WorkItemType.TODO ? joinCooperatorPersons(item.cooperators) : '',
         item.type === WorkItemType.TODO ? (item.progress || '') : '',
         item.creator?.name || '',
         formatDate(item.createdAt),

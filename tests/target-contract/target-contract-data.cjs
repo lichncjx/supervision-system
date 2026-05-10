@@ -105,11 +105,10 @@ function buildWorkItems(ctx) {
         workItem: 'TC-公司领导发起待办-A',
         status: 'PENDING_DECOMPOSE',
         departmentId: dept.deptA.id,
-        responsibleDepartmentIds: [dept.deptA.id],
         creatorId: user.vpA.id,
         proposedLeaderId: user.vpA.id,
         approvalLeaderId: user.vpA.id,
-        responsiblePersons: ['业务主责人A'],
+        responsiblePerson: '业务主责人A',
         planCompleteTime: farFuture,
       },
     },
@@ -124,12 +123,14 @@ function buildWorkItems(ctx) {
         workItem: 'TC-多主责部门待办-AB',
         status: 'IN_PROGRESS',
         departmentId: dept.deptA.id,
-        responsibleDepartmentIds: [dept.deptA.id, dept.deptB.id],
+        cooperators: [
+          { departmentId: dept.deptB.id, departmentName: '测试B部门', leader: undefined, person: '业务主责人B' },
+        ],
         creatorId: user.deptManagerA1.id,
         firstSubmitterId: user.deptManagerA1.id,
         proposedLeaderId: user.vpA.id,
         approvalLeaderId: user.vpA.id,
-        responsiblePersons: ['业务主责人A', '业务主责人B'],
+        responsiblePerson: '业务主责人A',
         planCompleteTime: farFuture,
       },
     },
@@ -144,14 +145,15 @@ function buildWorkItems(ctx) {
         workItem: 'TC-多配合部门待办-BC',
         status: 'IN_PROGRESS',
         departmentId: dept.deptA.id,
-        responsibleDepartmentIds: [dept.deptA.id],
-        cooperateDepartmentIds: [dept.deptB.id, dept.deptC.id],
+        cooperators: [
+          { departmentId: dept.deptB.id, departmentName: '测试B部门', leader: undefined, person: '业务配合人B' },
+          { departmentId: dept.deptC.id, departmentName: '测试C部门', leader: undefined, person: '业务配合人C' },
+        ],
         creatorId: user.deptManagerA1.id,
         firstSubmitterId: user.deptManagerA1.id,
         proposedLeaderId: user.vpA.id,
         approvalLeaderId: user.vpA.id,
-        responsiblePersons: ['业务主责人A'],
-        cooperatePersons: ['业务配合人B', '业务配合人C'],
+        responsiblePerson: '业务主责人A',
         planCompleteTime: farFuture,
       },
     },
@@ -212,12 +214,11 @@ function buildWorkItems(ctx) {
         workItem: 'TC-副总B负责待办-B',
         status: 'IN_PROGRESS',
         departmentId: dept.deptB.id,
-        responsibleDepartmentIds: [dept.deptB.id],
         creatorId: user.deptManagerB1.id,
         firstSubmitterId: user.deptManagerB1.id,
         proposedLeaderId: user.vpB.id,
         approvalLeaderId: user.vpB.id,
-        responsiblePersons: ['业务主责人B'],
+        responsiblePerson: '业务主责人B',
         planCompleteTime: farFuture,
       },
     },
@@ -283,13 +284,12 @@ function buildWorkItems(ctx) {
         beforeApprovalStatus: 'IN_PROGRESS',
         approvalType: 'COMPLETE',
         departmentId: dept.deptA.id,
-        responsibleDepartmentIds: [dept.deptA.id],
         creatorId: user.deptManagerA1.id,
         firstSubmitterId: user.deptManagerA1.id,
         currentApproverId: user.vpA.id,
         proposedLeaderId: user.vpA.id,
         approvalLeaderId: user.vpA.id,
-        responsiblePersons: ['业务主责人完成'],
+        responsiblePerson: '业务主责人完成',
         planCompleteTime: farFuture,
       },
     },
@@ -365,12 +365,11 @@ function buildWorkItems(ctx) {
         workItem: 'TC-临期待办-A',
         status: 'IN_PROGRESS',
         departmentId: dept.deptA.id,
-        responsibleDepartmentIds: [dept.deptA.id],
         creatorId: user.deptManagerA2.id,
         firstSubmitterId: user.deptManagerA2.id,
         proposedLeaderId: user.vpA.id,
         approvalLeaderId: user.vpA.id,
-        responsiblePersons: ['业务主责人临期'],
+        responsiblePerson: '业务主责人临期',
         planCompleteTime: expiring,
       },
     },
@@ -424,13 +423,11 @@ function buildWorkItems(ctx) {
         workItem: 'TC-责任人姓名不授权-B',
         status: 'IN_PROGRESS',
         departmentId: dept.deptB.id,
-        responsibleDepartmentIds: [dept.deptB.id],
         creatorId: user.deptManagerB1.id,
         firstSubmitterId: user.deptManagerB1.id,
         proposedLeaderId: user.vpB.id,
         approvalLeaderId: user.vpB.id,
-        responsiblePersons: [user.deptManagerA1.name],
-        cooperatePersons: [user.deptManagerA2.name],
+        responsiblePerson: user.deptManagerA1.name,
         planCompleteTime: farFuture,
       },
     },
@@ -447,16 +444,18 @@ function getDueDate(work) {
 }
 
 function getResponsibleDepartmentIds(work) {
-  if (Array.isArray(work.responsibleDepartmentIds) && work.responsibleDepartmentIds.length > 0) {
-    return work.responsibleDepartmentIds;
-  }
   return work.departmentId ? [work.departmentId] : [];
+}
+
+function getCooperatorDepartmentIds(work) {
+  if (!Array.isArray(work.cooperators)) return [];
+  return work.cooperators.map((c) => c.departmentId).filter((id) => id > 0);
 }
 
 function isDeptRelated(work, departmentId) {
   return (
     getResponsibleDepartmentIds(work).includes(departmentId) ||
-    (Array.isArray(work.cooperateDepartmentIds) && work.cooperateDepartmentIds.includes(departmentId))
+    getCooperatorDepartmentIds(work).includes(departmentId)
   );
 }
 

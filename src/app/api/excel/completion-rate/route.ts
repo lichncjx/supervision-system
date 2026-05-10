@@ -20,12 +20,7 @@ async function getDepartmentStatsForExcel(
   }
 
   const filters: any[] = [
-    {
-      OR: [
-        { departmentId },
-        { responsibleDepartmentIds: { has: departmentId } },
-      ],
-    },
+    { departmentId },
   ];
 
   if (Object.keys(dateFilter).length > 0) {
