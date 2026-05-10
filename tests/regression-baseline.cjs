@@ -1,8 +1,10 @@
 const http = require('http');
+const { PrismaClient } = require('@prisma/client');
 
 const BASE_URL = process.env.REGRESSION_BASE_HOST || 'localhost';
 const PORT = Number(process.env.REGRESSION_BASE_PORT || 5000);
 const RUN_ID = `Regression-${new Date().toISOString().replace(/[:.]/g, '-')}`;
+const prisma = new PrismaClient();
 
 const results = [];
 const createdWorkIds = [];
@@ -70,6 +72,24 @@ function assertStatus(name, response, expectedStatus) {
   );
 }
 
+function responseSummary(response) {
+  return JSON.stringify({
+    statusCode: response.statusCode,
+    success: response.body?.success,
+    status: response.body?.status,
+    error: response.body?.error,
+    workItemStatus: response.body?.workItem?.status,
+    currentApproverRole: response.body?.currentApproverRole ?? response.body?.workItem?.currentApproverRole,
+  });
+}
+
+function workflowWorkResponse(response) {
+  return {
+    statusCode: response.statusCode,
+    body: response.body?.workItem,
+  };
+}
+
 async function getWork(id, cookies) {
   return request('GET', `/api/works/${id}`, null, cookies);
 }
@@ -109,9 +129,7 @@ async function main() {
     throw new Error('Required regression accounts are unavailable.');
   }
 
-  const departments = await request('GET', '/api/departments', null, admin.cookies);
-  const departmentId = (Array.isArray(departments.body) ? departments.body.find((d) => d.code === 'ZH') : null)?.id
-    || deptManager.user?.departmentId;
+  const departmentId = deptManager.user?.departmentId;
   assert('department resolved', Boolean(departmentId), `departmentId=${departmentId}`);
 
   try {
@@ -188,18 +206,20 @@ async function main() {
     let companyTodoState = await getWork(companyTodo.body.id, vicePresident.cookies);
     assertStatus('company todo submit enters PENDING_DECOMPOSE', companyTodoState, 'PENDING_DECOMPOSE');
 
-    await workflow(companyTodo.body.id, deptManager.cookies, 'decompose', {
+    const decomposeSubmit = await workflow(companyTodo.body.id, deptManager.cookies, 'decompose', {
       nodes: [{ title: `${RUN_ID} node`, responsiblePerson: 'owner', planCompleteTime: '2026-12-31' }],
       comment: 'decomposed',
     });
-    companyTodoState = await getWork(companyTodo.body.id, deptManager.cookies);
+    assert('department manager submits decomposition', decomposeSubmit.statusCode === 200 && decomposeSubmit.body?.success, responseSummary(decomposeSubmit));
+    companyTodoState = workflowWorkResponse(decomposeSubmit);
     assertStatus('decompose enters PROPOSING', companyTodoState, 'PROPOSING');
     assert('decompose beforeApprovalStatus is PENDING_DECOMPOSE', companyTodoState.body?.beforeApprovalStatus === 'PENDING_DECOMPOSE');
 
-    await workflow(companyTodo.body.id, deptLeader.cookies, 'reject', {
+    const decomposeReject = await workflow(companyTodo.body.id, deptLeader.cookies, 'reject', {
       rejectReason: `${RUN_ID} decompose rejected`,
     });
-    companyTodoState = await getWork(companyTodo.body.id, deptManager.cookies);
+    assert('department leader rejects decomposition', decomposeReject.statusCode === 200 && decomposeReject.body?.success, responseSummary(decomposeReject));
+    companyTodoState = workflowWorkResponse(decomposeReject);
     assertStatus('decompose reject returns to PENDING_DECOMPOSE', companyTodoState, 'PENDING_DECOMPOSE');
 
     const priority = await createWork(deptManager.cookies, {
@@ -214,6 +234,10 @@ async function main() {
     await workflow(priority.body.id, deptManager.cookies, 'submit');
     await workflow(priority.body.id, deptLeader.cookies, 'approve');
     await workflow(priority.body.id, vicePresident.cookies, 'approve');
+    await prisma.workItem.update({
+      where: { id: priority.body.id },
+      data: { needMainLeaderCancel: true },
+    });
     let priorityState = await getWork(priority.body.id, deptManager.cookies);
     assertStatus('priority proposal approval enters IN_PROGRESS', priorityState, 'IN_PROGRESS');
 
@@ -261,4 +285,6 @@ async function main() {
 main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
+}).finally(async () => {
+  await prisma.$disconnect();
 });

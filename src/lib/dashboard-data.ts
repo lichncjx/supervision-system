@@ -40,7 +40,7 @@ const dashboardWorkSelect = {
   completeTime: true,
   planCompleteTime: true,
   departmentId: true,
-  departmentIds: true,
+  responsibleDepartmentIds: true,
   cooperateDepartmentIds: true,
   creatorId: true,
   firstSubmitterId: true,
@@ -49,7 +49,6 @@ const dashboardWorkSelect = {
   currentApproverId: true,
   currentApproverRole: true,
   needMainLeaderCancel: true,
-  deptManagerId: true,
   department: { select: { id: true, name: true } },
   currentApprover: { select: { id: true, name: true } },
 } as const
@@ -63,7 +62,7 @@ type DashboardWork = {
   completeTime: Date | null
   planCompleteTime: Date | null
   departmentId: number | null
-  departmentIds: number[]
+  responsibleDepartmentIds: number[]
   cooperateDepartmentIds: number[]
   creatorId: number | null
   firstSubmitterId: number | null
@@ -72,7 +71,6 @@ type DashboardWork = {
   currentApproverId: number | null
   currentApproverRole: Role | null
   needMainLeaderCancel: boolean | null
-  deptManagerId: number | null
   department: Pick<Department, 'id' | 'name'> | null
   currentApprover: { id: number; name: string } | null
 }

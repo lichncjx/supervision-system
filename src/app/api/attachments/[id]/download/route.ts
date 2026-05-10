@@ -36,7 +36,7 @@ export async function GET(
         workItem: {
           select: {
             departmentId: true,
-            departmentIds: true,
+            responsibleDepartmentIds: true,
             cooperateDepartmentIds: true,
             creatorId: true,
             proposedLeaderId: true,
@@ -45,7 +45,6 @@ export async function GET(
             currentApproverRole: true,
             needMainLeaderCancel: true,
             type: true,
-            deptManagerId: true,
           },
         },
       },
@@ -58,7 +57,7 @@ export async function GET(
     if (attachment.workItem) {
       const permWorkItem: AttPermWorkItem = {
         departmentId: attachment.workItem.departmentId,
-        departmentIds: attachment.workItem.departmentIds,
+        responsibleDepartmentIds: attachment.workItem.responsibleDepartmentIds,
         cooperateDepartmentIds: attachment.workItem.cooperateDepartmentIds,
         status: '', // download 不校验状态
         creatorId: attachment.workItem.creatorId,
@@ -68,7 +67,6 @@ export async function GET(
         currentApproverRole: attachment.workItem.currentApproverRole,
         needMainLeaderCancel: attachment.workItem.needMainLeaderCancel,
         type: attachment.workItem.type,
-        deptManagerId: attachment.workItem.deptManagerId,
       };
       if (!canViewAttachment(currentUser, permWorkItem)) {
         return NextResponse.json({ error: '无权查看该附件' }, { status: 403 });

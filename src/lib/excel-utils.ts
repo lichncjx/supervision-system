@@ -56,7 +56,7 @@ export function getExcelTemplate(type: ExcelRouteType): { body: Uint8Array; file
         '完成形式',
         '责任部门',
         '责任领导',
-        '主管人员',
+        '责任人',
       ];
       example = [
         '示例：生产管理',
@@ -80,7 +80,7 @@ export function getExcelTemplate(type: ExcelRouteType): { body: Uint8Array; file
         '完成形式',
         '责任部门',
         '责任领导',
-        '主管人员',
+        '责任人',
       ];
       example = [
         '示例：生产管理',
@@ -154,7 +154,7 @@ export async function exportWorksToExcel(type: ExcelRouteType, works: Work[]) {
         '完成形式',
         '责任部门',
         '责任领导',
-        '主管人员'
+        '责任人'
       ];
       rows = await Promise.all(works.map(async work => [
         work.businessCategory || '',
@@ -165,7 +165,7 @@ export async function exportWorksToExcel(type: ExcelRouteType, works: Work[]) {
         work.completeForm || '',
         await getDepartmentNameForExcel(work.departmentId),
         work.responsibleLeader || '',
-        work.supervisor || ''
+        work.responsiblePerson || ''
       ]));
       fileName = '重点工作导出.xlsx';
       break;
@@ -178,7 +178,7 @@ export async function exportWorksToExcel(type: ExcelRouteType, works: Work[]) {
         '完成形式',
         '责任部门',
         '责任领导',
-        '主管人员'
+        '责任人'
       ];
       rows = await Promise.all(works.map(async work => [
         work.businessCategory || '',
@@ -188,7 +188,7 @@ export async function exportWorksToExcel(type: ExcelRouteType, works: Work[]) {
         work.completeForm || '',
         await getDepartmentNameForExcel(work.departmentId),
         work.responsibleLeader || '',
-        work.supervisor || ''
+        work.responsiblePerson || ''
       ]));
       fileName = '主要工作导出.xlsx';
       break;
@@ -274,7 +274,7 @@ export async function importWorksFromExcel(
                 completeTime: r['完成时间'] || '',
                 completeForm: r['完成形式'] || '',
                 responsibleLeader: r['责任领导'] || '',
-                supervisor: r['主管人员'] || ''
+                responsiblePerson: r['责任人'] || ''
               };
               break;
             case 'main':
@@ -297,7 +297,7 @@ export async function importWorksFromExcel(
                 completeTime: r['完成时间'] || '',
                 completeForm: r['完成形式'] || '',
                 responsibleLeader: r['责任领导'] || '',
-                supervisor: r['主管人员'] || ''
+                responsiblePerson: r['责任人'] || ''
               };
               break;
             case 'todo':
@@ -392,8 +392,8 @@ export async function exportCompanyCompletionRate(works: Work[]) {
       }
     };
     addId(work.departmentId);
-    if (Array.isArray(work.departmentIds)) {
-      work.departmentIds.forEach(addId);
+    if (Array.isArray(work.responsibleDepartmentIds)) {
+      work.responsibleDepartmentIds.forEach(addId);
     }
     return Array.from(ids);
   };
@@ -408,7 +408,7 @@ export async function exportCompanyCompletionRate(works: Work[]) {
     };
   };
 
-  const departmentIds = departments
+  const responsibleDepartmentIds = departments
     .filter((d) => d.id !== 1)
     .map((d) => d.id);
 
@@ -420,7 +420,7 @@ export async function exportCompanyCompletionRate(works: Work[]) {
     '总完成率',
   ];
 
-  const rows = departmentIds.map((departmentId) => {
+  const rows = responsibleDepartmentIds.map((departmentId) => {
     const deptWorks = works.filter((work) =>
       getResponsibleDepartmentIds(work).includes(departmentId)
     );

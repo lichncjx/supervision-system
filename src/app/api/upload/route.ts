@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
       select: {
         id: true,
         departmentId: true,
-        departmentIds: true,
+        responsibleDepartmentIds: true,
         cooperateDepartmentIds: true,
         status: true,
         creatorId: true,
@@ -85,7 +85,6 @@ export async function POST(request: NextRequest) {
         currentApproverRole: true,
         needMainLeaderCancel: true,
         type: true,
-        deptManagerId: true,
       },
     });
 
@@ -95,7 +94,7 @@ export async function POST(request: NextRequest) {
 
     const permWorkItem: AttPermWorkItem = {
       departmentId: workItem.departmentId,
-      departmentIds: workItem.departmentIds,
+      responsibleDepartmentIds: workItem.responsibleDepartmentIds,
       cooperateDepartmentIds: workItem.cooperateDepartmentIds,
       status: workItem.status,
       creatorId: workItem.creatorId,
@@ -105,7 +104,6 @@ export async function POST(request: NextRequest) {
       currentApproverRole: workItem.currentApproverRole,
       needMainLeaderCancel: workItem.needMainLeaderCancel,
       type: workItem.type,
-      deptManagerId: workItem.deptManagerId,
     };
 
     if (!canViewAttachment(currentUser, permWorkItem)) {

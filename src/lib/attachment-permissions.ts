@@ -19,7 +19,6 @@ export interface AttPermWorkItem extends PermissionWorkItem {
   status: string;
   creatorId: number;
   type: string; // 'PRIORITY' | 'MAIN' | 'TODO'
-  deptManagerId?: number | null;
 }
 
 /** 权限判断所需的最简附件信息 */

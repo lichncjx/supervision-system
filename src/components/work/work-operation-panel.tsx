@@ -29,7 +29,6 @@ interface WorkOperationPanelProps {
     completeForm?: string;
     departmentId?: number;
     responsibleLeader?: string;
-    supervisor?: string;
     proposedLeader?: string;
     proposedLeaderId?: number;
     proposedLeaderRole?: string;
@@ -77,13 +76,12 @@ export function WorkOperationPanel({
       completeForm: work.completeForm || '',
       departmentId: work.departmentId,
       responsibleLeader: work.responsibleLeader || '',
-      supervisor: work.supervisor || '',
+      responsiblePerson: work.responsiblePerson || '',
       proposedLeader: work.proposedLeader || '',
       proposedLeaderId: work.proposedLeaderId ? String(work.proposedLeaderId) : '',
       proposedLeaderRole: work.proposedLeaderRole || '',
       proposedScene: work.proposedScene || '',
       formedTime: work.formedTime || '',
-      responsiblePerson: work.responsiblePerson || '',
       cooperateDepartment: work.cooperateDepartment || '',
       cooperatePerson: work.cooperatePerson || '',
       workPlan: work.workPlan || '',

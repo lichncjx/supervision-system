@@ -127,17 +127,14 @@ export default function WorkDetailPage() {
         completeForm: work.completeForm || '',
         departmentId: work.departmentId,
         responsibleLeader: work.responsibleLeader || '',
-        supervisor: work.supervisor || '',
-        deptLeaderId: work.deptLeaderId ? String(work.deptLeaderId) : '',
-        deptManagerId: work.deptManagerId ? String(work.deptManagerId) : '',
+        responsiblePerson: work.responsiblePerson || '',
         proposedLeader: work.proposedLeader || '',
         proposedLeaderId: work.proposedLeaderId ? String(work.proposedLeaderId) : '',
         proposedLeaderRole: work.proposedLeaderRole || '',
         proposedScene: work.proposedScene || '',
         formedTime: work.formedTime || '',
-        responsiblePerson: work.responsiblePerson || '',
         // Phase 4A: 数组字段，支持编辑时多部门/多责任人的 MultiSearchSelect
-        departmentIds: work.departmentIds || [] as number[],
+        responsibleDepartmentIds: work.responsibleDepartmentIds || [] as number[],
         responsiblePersons: work.responsiblePersons || [] as string[],
         cooperateDepartmentIds: work.cooperateDepartmentIds || [] as number[],
         cooperatePersons: work.cooperatePersons || [] as string[],
@@ -168,8 +165,8 @@ export default function WorkDetailPage() {
 
     if (work.departmentId === user.departmentId) return true;
 
-    if (Array.isArray(work.departmentIds)) {
-      return work.departmentIds.includes(user.departmentId);
+    if (Array.isArray(work.responsibleDepartmentIds)) {
+      return work.responsibleDepartmentIds.includes(user.departmentId);
     }
 
     if (Array.isArray(work.cooperateDepartmentIds)) {
@@ -212,9 +209,9 @@ export default function WorkDetailPage() {
       !isReturnedDraftWork(work)
     ) ||
     (
-      // Phase 3B: deptManagerId（含退回后补充材料）
+      // 同部门且相关可编辑（不依赖姓名字段判断权限）
       (work.type === '重点' || work.type === '主要') &&
-      user.id === work.deptManagerId &&
+      isCurrentUserRelatedDepartment() &&
       !isWorkStatusTerminal(work.status)
     )
   );
@@ -627,12 +624,12 @@ export default function WorkDetailPage() {
             <span>{getDepartmentName(work.departmentId ?? 0)}</span>
           </div>
           <div>
-            <span className="text-sm text-slate-500">部门领导：</span>
-            <span>{work.deptLeaderName || work.responsibleLeader || '-'}</span>
+            <span className="text-sm text-slate-500">责任领导：</span>
+            <span>{work.responsibleLeader || '-'}</span>
           </div>
           <div>
-            <span className="text-sm text-slate-500">主管人员：</span>
-            <span>{work.deptManagerName || work.supervisor || '-'}</span>
+            <span className="text-sm text-slate-500">责任人：</span>
+            <span>{work.responsiblePerson || '-'}</span>
           </div>
           {work.type === '重点' && (
             <div>
@@ -787,8 +784,8 @@ export default function WorkDetailPage() {
           <div>
             <span className="text-sm text-slate-500">主责部门：</span>
             <span>
-              {work.departmentIds && work.departmentIds.length > 0
-                ? work.departmentIds.map((id: number) => getDepartmentName(id)).join('、')
+              {work.responsibleDepartmentIds && work.responsibleDepartmentIds.length > 0
+                ? work.responsibleDepartmentIds.map((id: number) => getDepartmentName(id)).join('、')
                 : getDepartmentName(work.departmentId ?? 0)}
             </span>
           </div>

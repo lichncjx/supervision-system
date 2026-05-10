@@ -25,8 +25,8 @@ function isDepartmentImportRole(role: string): boolean {
 }
 
 function getImportResponsibleDepartmentIds(data: any): number[] {
-  if (Array.isArray(data.departmentIds) && data.departmentIds.length > 0) {
-    return data.departmentIds;
+  if (Array.isArray(data.responsibleDepartmentIds) && data.responsibleDepartmentIds.length > 0) {
+    return data.responsibleDepartmentIds;
   }
   return data.departmentId ? [data.departmentId] : [];
 }
@@ -195,10 +195,8 @@ async function validateAndParseExcel(
       const completeTimeStr = getCell('完成时间');
       const completeForm = getCell('完成形式');
       const departmentName = getCell('责任部门');
-      // responsibleLeader: 部门领导姓名（legacy，未来迁移为 deptLeaderName）
       const responsibleLeader = getCell('责任领导');
-      // supervisor: 主管人员姓名（legacy，未来迁移为 deptManagerName）
-      const supervisor = getCell('主管人员');
+      const responsiblePerson = getCell('责任人');
 
       if (!workItem) {
         errors.push({ row: rowNum, field: '工作事项', value: workItem, reason: '必填字段不能为空' });
@@ -220,24 +218,6 @@ async function validateAndParseExcel(
       }
 
       if (errors.filter((e) => e.row === rowNum).length === 0) {
-        const deptId = resolvedDeptId!;
-        const deptLeaders = await prisma.user.findMany({
-          where: { departmentId: deptId, role: Role.DEPARTMENT_LEADER, isActive: true },
-          select: { id: true, name: true },
-        });
-        // Phase 2: 从姓名解析 deptLeaderId（唯一匹配前提）
-        const matchedDeptLeaders = deptLeaders.filter(u => u.name === responsibleLeader);
-        const deptLeaderId = matchedDeptLeaders.length === 1 ? matchedDeptLeaders[0].id : null;
-        // supervisor 可解析但无硬校验
-        const deptManagers = supervisor
-          ? await prisma.user.findMany({
-              where: { departmentId: deptId, role: Role.DEPARTMENT_MANAGER, isActive: true },
-              select: { id: true, name: true },
-            })
-          : [];
-        const matchedDeptManagers = supervisor ? deptManagers.filter(u => u.name === supervisor) : [];
-        const deptManagerId = matchedDeptManagers.length === 1 ? matchedDeptManagers[0].id : null;
-
         rows.push({
           row: rowNum,
           data: {
@@ -250,14 +230,9 @@ async function validateAndParseExcel(
             completeForm,
             departmentName,
             departmentId: resolvedDeptId,
-            // 双写：保留用户原始输入（可能是全名或代码），用于后续回显
             departmentCode: departments.find(d => d.id === resolvedDeptId)?.code || departmentName,
             responsibleLeader,
-            supervisor,
-            deptLeaderId,
-            deptLeaderName: responsibleLeader || null,
-            deptManagerId,
-            deptManagerName: supervisor || null,
+            responsiblePerson: responsiblePerson || null,
           },
         });
       }
@@ -268,10 +243,8 @@ async function validateAndParseExcel(
       const completeTimeStr = getCell('完成时间');
       const completeForm = getCell('完成形式');
       const departmentName = getCell('责任部门');
-      // responsibleLeader: 部门领导姓名（legacy，未来迁移为 deptLeaderName）
       const responsibleLeader = getCell('责任领导');
-      // supervisor: 主管人员姓名（legacy，未来迁移为 deptManagerName）
-      const supervisor = getCell('主管人员');
+      const responsiblePerson = getCell('责任人');
 
       if (!workItem) {
         errors.push({ row: rowNum, field: '工作事项', value: workItem, reason: '必填字段不能为空' });
@@ -290,24 +263,6 @@ async function validateAndParseExcel(
       }
 
       if (errors.filter((e) => e.row === rowNum).length === 0) {
-        const deptId = resolvedDeptId!;
-        const deptLeaders = await prisma.user.findMany({
-          where: { departmentId: deptId, role: Role.DEPARTMENT_LEADER, isActive: true },
-          select: { id: true, name: true },
-        });
-        // Phase 2: 从姓名解析 deptLeaderId（唯一匹配前提）
-        const matchedDeptLeaders = deptLeaders.filter(u => u.name === responsibleLeader);
-        const deptLeaderId = matchedDeptLeaders.length === 1 ? matchedDeptLeaders[0].id : null;
-        // supervisor 可解析但无硬校验
-        const deptManagers = supervisor
-          ? await prisma.user.findMany({
-              where: { departmentId: deptId, role: Role.DEPARTMENT_MANAGER, isActive: true },
-              select: { id: true, name: true },
-            })
-          : [];
-        const matchedDeptManagers = supervisor ? deptManagers.filter(u => u.name === supervisor) : [];
-        const deptManagerId = matchedDeptManagers.length === 1 ? matchedDeptManagers[0].id : null;
-
         rows.push({
           row: rowNum,
           data: {
@@ -321,11 +276,7 @@ async function validateAndParseExcel(
             departmentId: resolvedDeptId,
             departmentCode: departments.find(d => d.id === resolvedDeptId)?.code || departmentName,
             responsibleLeader,
-            supervisor,
-            deptLeaderId,
-            deptLeaderName: responsibleLeader || null,
-            deptManagerId,
-            deptManagerName: supervisor || null,
+            responsiblePerson: responsiblePerson || null,
           },
         });
       }
@@ -411,7 +362,7 @@ async function validateAndParseExcel(
               workItem,
               formedTime: parseExcelDate(formedTimeStr),
               departmentNames: deptNames,
-              departmentIds: deptIds,
+              responsibleDepartmentIds: deptIds,
               responsiblePersons: responsiblePersons.split('/').map((s: string) => s.trim()).filter(Boolean),
               cooperateDepartmentIds: cooperateDeptIds,
               cooperatePersons: cooperatePersons.split('/').map((s: string) => s.trim()).filter(Boolean),
@@ -510,7 +461,7 @@ export async function POST(
           status: WorkItemStatus.DRAFT,
           creatorId: currentUser.id,
           departmentId: data.departmentId,
-          departmentIds: [data.departmentId],
+          responsibleDepartmentIds: [data.departmentId],
           businessCategory: data.businessCategory || null,
           workItem: data.workItem,
           isInnovation: data.isInnovation || false,
@@ -518,11 +469,7 @@ export async function POST(
           completeTime: data.completeTime ? new Date(data.completeTime) : null,
           completeForm: data.completeForm || null,
           responsibleLeader: data.responsibleLeader || null,
-          supervisor: data.supervisor || null,
-          deptLeaderId: data.deptLeaderId || null,
-          deptLeaderName: data.deptLeaderName || null,
-          deptManagerId: data.deptManagerId || null,
-          deptManagerName: data.deptManagerName || null,
+          responsiblePerson: data.responsiblePerson || null,
           createdAt: now,
           updatedAt: now,
         };
@@ -537,13 +484,13 @@ export async function POST(
           title: data.workItem,
           status: WorkItemStatus.DRAFT,
           creatorId: currentUser.id,
-          departmentId: data.departmentIds[0] || currentUser.departmentId,
+          departmentId: data.responsibleDepartmentIds[0] || currentUser.departmentId,
           proposedLeaderId: finalProposedLeaderId,
           approvalLeaderId: finalApprovalLeaderId,
           proposedScene: data.proposedScene || null,
           workItem: data.workItem,
           formedTime: data.formedTime ? new Date(data.formedTime) : null,
-          departmentIds: data.departmentIds,
+          responsibleDepartmentIds: data.responsibleDepartmentIds,
           cooperateDepartmentIds: data.cooperateDepartmentIds || [],
           responsiblePersons: data.responsiblePersons,
           cooperatePersons: data.cooperatePersons,
