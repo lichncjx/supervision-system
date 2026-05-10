@@ -175,7 +175,7 @@ export async function GET(request: NextRequest) {
       filters.push({
         OR: [
           { departmentId: id },
-          { departmentIds: { has: id } },
+          { responsibleDepartmentIds: { has: id } },
           { cooperateDepartmentIds: { has: id } },
         ],
       });
@@ -203,8 +203,6 @@ export async function GET(request: NextRequest) {
         department: true,
         creator: { select: { name: true, role: true } },
         proposedLeader: { select: { id: true, name: true } },
-        deptLeader: { select: { id: true, name: true } },
-        deptManager: { select: { id: true, name: true } },
       },
     });
 
@@ -225,7 +223,7 @@ export async function GET(request: NextRequest) {
       type: work.type === 'PRIORITY' ? '重点' : work.type === 'MAIN' ? '主要' : '待办',
       status: work.status,
       departmentId: work.departmentId,
-      departmentIds: work.departmentIds as number[] || [],
+      responsibleDepartmentIds: work.responsibleDepartmentIds as number[] || [],
       departmentName: work.department?.name || '-',
       creatorId: work.creatorId,
       creatorName: work.creator?.name || '-',
@@ -237,11 +235,7 @@ export async function GET(request: NextRequest) {
       completeForm: work.completeForm,
       isInnovation: work.isInnovation,
       responsibleLeader: work.responsibleLeader,
-      supervisor: work.supervisor,
-      deptLeaderId: work.deptLeaderId,
-      deptLeaderName: work.deptLeader?.name || work.deptLeaderName || work.responsibleLeader || null,
-      deptManagerId: work.deptManagerId,
-      deptManagerName: work.deptManager?.name || work.deptManagerName || work.supervisor || null,
+      responsiblePerson: work.responsiblePerson,
       proposedLeader: work.proposedLeader?.name || null,
       proposedLeaderId: work.proposedLeaderId,
       proposedScene: work.proposedScene,
@@ -345,50 +339,6 @@ export async function POST(request: NextRequest) {
       }));
     };
 
-    // Phase 2: 校验 deptLeaderId（重点/主要工作专用）
-    let validatedDeptLeaderName: string | null = null;
-    if ((workType === WorkItemType.PRIORITY || workType === WorkItemType.MAIN) && rest.deptLeaderId) {
-      const deptLeader = await prisma.user.findUnique({
-        where: { id: rest.deptLeaderId },
-        select: { id: true, name: true, role: true, departmentId: true, isActive: true },
-      });
-      if (!deptLeader) {
-        return NextResponse.json({ error: '所选部门领导用户不存在' }, { status: 400 });
-      }
-      if (deptLeader.departmentId !== departmentId) {
-        return NextResponse.json({ error: '部门领导不属于所选责任部门' }, { status: 400 });
-      }
-      if (deptLeader.role !== Role.DEPARTMENT_LEADER) {
-        return NextResponse.json({ error: '所选用户不是部门领导角色' }, { status: 400 });
-      }
-      if (!deptLeader.isActive) {
-        return NextResponse.json({ error: '所选部门领导用户已停用' }, { status: 400 });
-      }
-      validatedDeptLeaderName = deptLeader.name;
-    }
-
-    // Phase 2: 校验 deptManagerId（重点/主要工作专用）
-    let validatedDeptManagerName: string | null = null;
-    if ((workType === WorkItemType.PRIORITY || workType === WorkItemType.MAIN) && rest.deptManagerId) {
-      const deptManager = await prisma.user.findUnique({
-        where: { id: rest.deptManagerId },
-        select: { id: true, name: true, role: true, departmentId: true, isActive: true },
-      });
-      if (!deptManager) {
-        return NextResponse.json({ error: '所选主管人员用户不存在' }, { status: 400 });
-      }
-      if (deptManager.departmentId !== departmentId) {
-        return NextResponse.json({ error: '主管人员不属于所选责任部门' }, { status: 400 });
-      }
-      if (deptManager.role !== Role.DEPARTMENT_MANAGER) {
-        return NextResponse.json({ error: '所选用户不是部门主管角色' }, { status: 400 });
-      }
-      if (!deptManager.isActive) {
-        return NextResponse.json({ error: '所选主管人员用户已停用' }, { status: 400 });
-      }
-      validatedDeptManagerName = deptManager.name;
-    }
-
     const workData: any = {
       type: workType,
       title: rest.title || rest.workItem || '未命名事项',
@@ -401,15 +351,9 @@ export async function POST(request: NextRequest) {
       completeTime: convertToDateTime(rest.completeTime),
       completeForm: rest.completeForm,
       isInnovation: rest.isInnovation || false,
-      // responsibleLeader: 部门领导姓名快照（legacy，未来迁移为 deptLeaderName）
       responsibleLeader: rest.responsibleLeader,
-      // supervisor: 主管人员姓名快照（legacy，未来迁移为 deptManagerName，非系统角色 SUPERVISOR）
-      supervisor: rest.supervisor,
+      responsiblePerson: rest.responsiblePerson,
       // Phase 2: 部门领导/主管人员 ID 和 Name（校验后写入）
-      deptLeaderId: rest.deptLeaderId || null,
-      deptManagerId: rest.deptManagerId || null,
-      deptLeaderName: validatedDeptLeaderName || rest.responsibleLeader || null,
-      deptManagerName: validatedDeptManagerName || rest.supervisor || null,
       // proposedLeaderId: 提出领导 ID（真实关联字段）
       proposedLeaderId: rest.proposedLeaderId,
       // approvalLeaderId: 审批领导 ID，默认等于 proposedLeaderId
@@ -417,7 +361,7 @@ export async function POST(request: NextRequest) {
       approvalLeaderId: rest.approvalLeaderId || rest.proposedLeaderId,
       proposedScene: rest.proposedScene,
       formedTime: convertToDateTime(rest.formedTime),
-      departmentIds: rest.departmentIds || (departmentId ? [departmentId] : []),
+      responsibleDepartmentIds: rest.responsibleDepartmentIds || (departmentId ? [departmentId] : []),
       responsiblePersons: rest.responsiblePersons,
       cooperateDepartmentIds: rest.cooperateDepartmentIds,
       cooperatePersons: rest.cooperatePersons,
@@ -453,7 +397,7 @@ export async function POST(request: NextRequest) {
       title: work.title,
       type: work.type === 'PRIORITY' ? '重点' : work.type === 'MAIN' ? '主要' : '待办',
       departmentId: work.departmentId,
-      departmentIds: work.departmentIds as number[] || [],
+      responsibleDepartmentIds: work.responsibleDepartmentIds as number[] || [],
       departmentName: work.department?.name || '-',
       proposedLeader: work.proposedLeader?.name || null,
       proposedLeaderId: work.proposedLeaderId,

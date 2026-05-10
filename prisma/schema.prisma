@@ -42,8 +42,6 @@ enum ActionType {
 }
 
 enum Role {
-  // 注意：SUPERVISOR 是系统级"督办管理员"，拥有全局查看、导入导出权限。
-  // 事项字段 supervisor（主管人员/业务主管人员）与此角色无关，未来将迁移为 deptManager 语义。
   ADMIN                  @map("admin")
   SUPERVISOR             @map("supervisor")
   DEPARTMENT_MANAGER     @map("department_manager")
@@ -59,10 +57,10 @@ model Department {
   isBusiness  Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  
+
   users       User[]   @relation("UserDepartment")
   workItems   WorkItem[] @relation("DepartmentWorkItems")
-  
+
   @@map("departments")
 }
 
@@ -78,7 +76,7 @@ model User {
   phone     String?  @db.VarChar(20)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
   department           Department              @relation("UserDepartment", fields: [departmentId], references: [id])
   createdWorkItems     WorkItem[]              @relation("CreatorWorkItems")
   currentApprovalItems WorkItem[]              @relation("ApproverWorkItems")
@@ -88,9 +86,6 @@ model User {
   approvedWorkflowRecords  WorkflowRecord[]    @relation("WorkflowApprover")
   operationLogs        OperationLog[]
   attachments          Attachment[]
-  // Phase 2: 部门领导/主管人员关联的重点/主要工作事项
-  deptLeaderItems  WorkItem[]  @relation("DeptLeaderWorkItems")
-  deptManagerItems WorkItem[]  @relation("DeptManagerWorkItems")
 
   @@map("users")
 }
@@ -103,7 +98,6 @@ model WorkItem {
   action                ActionType?
   needMainLeaderCancel  Boolean         @default(false)
 
-  // ---- 事项基本信息 ----
   businessCategory      String?         @db.VarChar(100)
   workItem              String?         @db.VarChar(500)
   workNode              String?         @db.VarChar(200)
@@ -111,75 +105,38 @@ model WorkItem {
   completeForm          String?         @db.VarChar(200)
   isInnovation          Boolean         @default(false)
 
-  // ---- 部门关联字段 ----
-  // departmentId: 重点/主要工作所属单一主办部门（FK 关联 departments）
-  // departmentIds:  待办事项的主责部门 ID 数组（未来迁移为 responsibleDepartmentIds）
-  // cooperateDepartmentIds: 待办事项的配合部门 ID 数组
   departmentId          Int?
-  departmentIds         Int[]           @default([])
-  cooperateDepartmentIds Int[]          @default([])
+  responsibleDepartmentIds Int[]        @default([])
+  cooperateDepartmentIds   Int[]        @default([])
 
-  // ---- 业务人员 ID 字段（xxxId = 真实关联字段，用于权限、流程、审批、待处理判断）----
-  // creatorId: 创建事项草稿的用户（始终为当前用户，写入后不可修改）
   creatorId             Int
-  // firstSubmitterId: 首次将事项送入正式审批链路（PROPOSING）的操作人
-  // 仅在首次进入时写入，后续退回再提交不覆盖
   firstSubmitterId      Int?
-  // proposedLeaderId: 待办事项的提出领导 ID（公司领导：VICE_PRESIDENT 或 PRESIDENT）
   proposedLeaderId      Int?
-  // approvalLeaderId: 待办事项的审批领导 ID，默认等于 proposedLeaderId
-  // 负责后续调整、取消、完成审批
   approvalLeaderId      Int?
-  // currentApproverId / currentApproverRole: 当前应执行审批操作的用户/角色
   currentApproverId     Int?
   currentApproverRole   Role?
   beforeApprovalStatus  WorkItemStatus?
   approvalType          ApprovalType?
 
-  // ---- 重点/主要工作部门人员 ID 字段（xxxId = 真实关联字段，允许 NULL，有 FK 约束）----
-  // deptLeaderId: 部门领导用户 ID（重点/主要工作专用，关联 DEPARTMENT_LEADER 角色用户）
-  //   - 允许 NULL；有值时必须指向 users.id
-  //   - onDelete: SetNull（用户删除时自动置空，用户停用通过 isActive=false）
-  deptLeaderId          Int?
-  // deptManagerId: 部门主管人员/业务主管人员用户 ID（重点/主要工作专用，关联 DEPARTMENT_MANAGER 角色用户）
-  deptManagerId         Int?
-
-  // ---- 业务人员姓名快照字段（xxxName 语义，仅用于页面展示、Excel 导出、历史留痕）----
-  // responsibleLeader: 重点/主要工作的部门领导姓名（legacy，未来迁移为 deptLeaderName）
-  //   - 创建时从部门 DEPARTMENT_LEADER 列表下拉选择
-  //   - 调整/退回时变为自由文本 Input（存在无约束风险）
-  //   - 不参与权限判断
+  // Name snapshots for display, Excel import/export and audit history only.
+  // They do not participate in permission, approval or visibility decisions.
   responsibleLeader     String?         @db.VarChar(50)
-  // supervisor: 重点/主要工作的主管人员/业务主管人员姓名（legacy，未来迁移为 deptManagerName）
-  //   - 注意：与系统角色 SUPERVISOR（督办管理员）无关
-  //   - 创建时从部门 DEPARTMENT_MANAGER 列表下拉选择
-  //   - 调整/退回时变为自由文本 Input（存在无约束风险）
-  //   - 不参与权限判断
-  supervisor            String?         @db.VarChar(50)
-  // deptLeaderName: 部门领导姓名快照（展示/导出优先读此字段，fallback 到 responsibleLeader）
-  deptLeaderName        String?         @db.VarChar(50)
-  // deptManagerName: 主管人员姓名快照（同上）
-  deptManagerName       String?         @db.VarChar(50)
-  // responsiblePersons: 待办事项的主责责任人姓名数组（legacy，未来迁移为 responsiblePersonNames）
+  responsiblePerson     String?         @db.VarChar(50)
   responsiblePersons    String[]        @default([])
-  // cooperatePersons: 待办事项的配合部门责任人姓名数组（legacy，未来迁移为 cooperatePersonNames）
   cooperatePersons      String[]        @default([])
 
-  // ---- 待办事项专用字段 ----
   proposedScene         String?         @db.VarChar(200)
   formedTime            DateTime?
   workPlan              String?         @db.Text
   planCompleteTime      DateTime?
   progress              String?         @db.Text
 
-  // ---- 证明材料 / 调整 / 取消 / 退回 ----
   proof                 String?         @db.Text
   adjustReason          String?         @db.Text
   cancelReason          String?         @db.Text
   rejectReason          String?         @db.Text
   rejectedFromStatus    WorkItemStatus?
 
-  // ---- JSON 扩展字段 ----
   nodes                 Json?
   adjustHistory         Json?           @default("[]")
 
@@ -189,12 +146,8 @@ model WorkItem {
   department            Department?     @relation("DepartmentWorkItems", fields: [departmentId], references: [id])
   creator               User            @relation("CreatorWorkItems", fields: [creatorId], references: [id])
   currentApprover       User?           @relation("ApproverWorkItems", fields: [currentApproverId], references: [id])
-  // approvalLeader FK: 关联到 users 表，但 Prisma schema 中未声明 @relation
   approvalLeader        User?           @relation("ApprovalLeaderWorkItems", fields: [approvalLeaderId], references: [id])
   proposedLeader        User?           @relation("ProposedLeaderWorkItems", fields: [proposedLeaderId], references: [id])
-  // Phase 2: 部门领导/主管人员 FK 关联（onDelete: SetNull）
-  deptLeader            User?           @relation("DeptLeaderWorkItems", fields: [deptLeaderId], references: [id], onDelete: SetNull)
-  deptManager           User?           @relation("DeptManagerWorkItems", fields: [deptManagerId], references: [id], onDelete: SetNull)
 
   workflowRecords       WorkflowRecord[]
   attachments           Attachment[]
@@ -213,11 +166,11 @@ model WorkflowRecord {
   statusAfter     WorkItemStatus
   comment         String?         @db.Text
   createdAt       DateTime        @default(now())
-  
+
   workItem        WorkItem        @relation(fields: [workItemId], references: [id], onDelete: Cascade)
   initiator       User            @relation("WorkflowInitiator", fields: [initiatorId], references: [id])
   approver        User?           @relation("WorkflowApprover", fields: [approverId], references: [id])
-  
+
   @@map("workflow_records")
 }
 
@@ -250,8 +203,8 @@ model OperationLog {
   description     String          @db.VarChar(500)
   ipAddress       String?         @db.VarChar(50)
   createdAt       DateTime        @default(now())
-  
+
   user            User            @relation(fields: [userId], references: [id])
-  
+
   @@map("operation_logs")
 }

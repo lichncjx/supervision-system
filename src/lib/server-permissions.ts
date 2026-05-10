@@ -30,7 +30,6 @@ export interface PermissionWorkItem {
   type?: WorkItemType | string
   status?: WorkItemStatus | string
   departmentId?: number | null
-  departmentIds?: number[] | null
   responsibleDepartmentIds?: number[] | null
   cooperateDepartmentIds?: number[] | null
   creatorId?: number | null
@@ -45,7 +44,6 @@ export interface PermissionWorkItem {
   rejectedFromStatus?: WorkItemStatus | string | null
   rejectedAt?: Date | string | null
   needMainLeaderCancel?: boolean | null
-  deptManagerId?: number | null
 }
 
 function uniquePositiveIds(values: unknown[]): number[] {
@@ -63,20 +61,12 @@ function normalizeStatus(status: PermissionWorkItem['status']): string {
   return String(status || '').toUpperCase()
 }
 
-function normalizeType(type: PermissionWorkItem['type']): string {
-  return String(type || '').toUpperCase()
-}
-
 export function getResponsibleDepartmentIds(workItem: PermissionWorkItem): number[] {
   if (
     Array.isArray(workItem.responsibleDepartmentIds) &&
     workItem.responsibleDepartmentIds.length > 0
   ) {
     return uniquePositiveIds(workItem.responsibleDepartmentIds)
-  }
-
-  if (Array.isArray(workItem.departmentIds) && workItem.departmentIds.length > 0) {
-    return uniquePositiveIds(workItem.departmentIds)
   }
 
   return uniquePositiveIds([workItem.departmentId])
@@ -133,7 +123,7 @@ export function buildWorkVisibilityWhere(user: PermissionUser): Prisma.WorkItemW
     return {
       OR: [
         { departmentId: user.departmentId },
-        { departmentIds: { has: user.departmentId } },
+        { responsibleDepartmentIds: { has: user.departmentId } },
         { cooperateDepartmentIds: { has: user.departmentId } },
         { currentApproverId: user.id },
       ],
@@ -302,14 +292,6 @@ export function canEditWorkItem(user: PermissionUser, workItem: PermissionWorkIt
 export function canUploadAttachment(user: PermissionUser, workItem: PermissionWorkItem): boolean {
   if (user.role === Role.ADMIN || user.role === Role.SUPERVISOR) return true
   if (TERMINAL_STATUSES.includes(normalizeStatus(workItem.status) as WorkItemStatus)) return false
-
-  if (
-    (normalizeType(workItem.type) === WorkItemType.PRIORITY ||
-      normalizeType(workItem.type) === WorkItemType.MAIN) &&
-    workItem.deptManagerId === user.id
-  ) {
-    return true
-  }
 
   return canHandleWorkItem(user, workItem)
 }

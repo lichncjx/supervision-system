@@ -25,8 +25,8 @@ function isDepartmentImportRole(role: string): boolean {
 }
 
 function getImportResponsibleDepartmentIds(data: any): number[] {
-  if (Array.isArray(data.departmentIds) && data.departmentIds.length > 0) {
-    return data.departmentIds;
+  if (Array.isArray(data.responsibleDepartmentIds) && data.responsibleDepartmentIds.length > 0) {
+    return data.responsibleDepartmentIds;
   }
   return data.departmentId ? [data.departmentId] : [];
 }
@@ -411,7 +411,7 @@ async function validateAndParseExcel(
               workItem,
               formedTime: parseExcelDate(formedTimeStr),
               departmentNames: deptNames,
-              departmentIds: deptIds,
+              responsibleDepartmentIds: deptIds,
               responsiblePersons: responsiblePersons.split('/').map((s: string) => s.trim()).filter(Boolean),
               cooperateDepartmentIds: cooperateDeptIds,
               cooperatePersons: cooperatePersons.split('/').map((s: string) => s.trim()).filter(Boolean),
@@ -510,7 +510,7 @@ export async function POST(
           status: WorkItemStatus.DRAFT,
           creatorId: currentUser.id,
           departmentId: data.departmentId,
-          departmentIds: [data.departmentId],
+          responsibleDepartmentIds: [data.departmentId],
           businessCategory: data.businessCategory || null,
           workItem: data.workItem,
           isInnovation: data.isInnovation || false,
@@ -537,13 +537,13 @@ export async function POST(
           title: data.workItem,
           status: WorkItemStatus.DRAFT,
           creatorId: currentUser.id,
-          departmentId: data.departmentIds[0] || currentUser.departmentId,
+          departmentId: data.responsibleDepartmentIds[0] || currentUser.departmentId,
           proposedLeaderId: finalProposedLeaderId,
           approvalLeaderId: finalApprovalLeaderId,
           proposedScene: data.proposedScene || null,
           workItem: data.workItem,
           formedTime: data.formedTime ? new Date(data.formedTime) : null,
-          departmentIds: data.departmentIds,
+          responsibleDepartmentIds: data.responsibleDepartmentIds,
           cooperateDepartmentIds: data.cooperateDepartmentIds || [],
           responsiblePersons: data.responsiblePersons,
           cooperatePersons: data.cooperatePersons,

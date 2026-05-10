@@ -272,8 +272,8 @@ export default function StatusFilterPage() {
                     <span className={`font-medium ${getWorkTypeText(work.type)}`}>{work.type}</span>
                     <StatusBadge status={work.status} work={work} />
                     <span className="text-slate-400">
-                      责任部门：{work.departmentIds && work.departmentIds.length > 0
-                        ? work.departmentIds.map((id: number) => getDepartmentName(id)).join('、')
+                      责任部门：{work.responsibleDepartmentIds && work.responsibleDepartmentIds.length > 0
+                        ? work.responsibleDepartmentIds.map((id: number) => getDepartmentName(id)).join('、')
                         : getDepartmentName(work.departmentId ?? 0)}
                     </span>
                     <span className="text-slate-400">计划完成时间：{getWorkDueDate(work) || '-'}</span>

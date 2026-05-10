@@ -45,7 +45,7 @@ async function getDepartmentStats(
     {
       OR: [
         { departmentId },
-        { departmentIds: { has: departmentId } },
+        { responsibleDepartmentIds: { has: departmentId } },
       ],
     },
   ];
@@ -148,15 +148,15 @@ export async function GET(request: NextRequest) {
         where: visibilityWhere,
         select: {
           departmentId: true,
-          departmentIds: true,
+          responsibleDepartmentIds: true,
         },
       });
-      const departmentIds = Array.from(
+      const responsibleDepartmentIds = Array.from(
         new Set(visibleWorks.flatMap((work) => getResponsibleDepartmentIds(work)))
       );
-      departments = departmentIds.length > 0
+      departments = responsibleDepartmentIds.length > 0
         ? await prisma.department.findMany({
-            where: { id: { in: departmentIds }, isBusiness: true },
+            where: { id: { in: responsibleDepartmentIds }, isBusiness: true },
             select: { id: true, name: true },
             orderBy: { name: 'asc' },
           })

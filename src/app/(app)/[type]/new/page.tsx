@@ -169,7 +169,7 @@ export default function NewWorkPage() {
     proposedScene: '',
     workItem: '',
     formedTime: '',
-    departmentIds:
+    responsibleDepartmentIds:
       user?.departmentId && user.departmentId !== 1
         ? [user.departmentId]
         : [],
@@ -213,7 +213,7 @@ export default function NewWorkPage() {
   useEffect(() => {
     const fetchTodoDepartmentUsers = async () => {
       const selectedDepartmentIds = Array.from(
-        new Set([...todoForm.departmentIds, ...todoForm.cooperateDepartmentIds]),
+        new Set([...todoForm.responsibleDepartmentIds, ...todoForm.cooperateDepartmentIds]),
       );
       const missingDepartmentIds = selectedDepartmentIds.filter(
         (deptId) => !departmentUsers[deptId],
@@ -242,7 +242,7 @@ export default function NewWorkPage() {
     if (isTodo) {
       fetchTodoDepartmentUsers();
     }
-  }, [todoForm.departmentIds, todoForm.cooperateDepartmentIds, departmentUsers, isTodo]);
+  }, [todoForm.responsibleDepartmentIds, todoForm.cooperateDepartmentIds, departmentUsers, isTodo]);
 
   if (type === '待办' && !canCreateTodo) {
     return (
@@ -284,7 +284,7 @@ export default function NewWorkPage() {
         alert('请输入待办事项');
         return;
       }
-      if (todoForm.departmentIds.length === 0) {
+      if (todoForm.responsibleDepartmentIds.length === 0) {
         alert('请选择主责部门');
         return;
       }
@@ -359,8 +359,8 @@ export default function NewWorkPage() {
           id: Date.now(),
           title: todoForm.workItem,
           type: '待办',
-          departmentId: todoForm.departmentIds[0] || 2,
-          departmentIds: todoForm.departmentIds,
+          departmentId: todoForm.responsibleDepartmentIds[0] || 2,
+          responsibleDepartmentIds: todoForm.responsibleDepartmentIds,
           creatorRole: user.role,
           creatorId: user.id,
           action: 'todo_decompose',
@@ -421,7 +421,7 @@ export default function NewWorkPage() {
   const iconColor = routeType === 'priority' ? 'text-rose-500' : routeType === 'main' ? 'text-sky-500' : 'text-emerald-500';
   const TitleIcon = routeType === 'priority' ? Star : routeType === 'main' ? ListTodo : CheckSquare;
 
-  const responsiblePersonOptions = todoForm.departmentIds.flatMap(
+  const responsiblePersonOptions = todoForm.responsibleDepartmentIds.flatMap(
     (departmentId: number) => departmentUsers[departmentId] || []
   );
   const cooperatePersonOptions = todoForm.cooperateDepartmentIds.flatMap(
@@ -725,7 +725,7 @@ export default function NewWorkPage() {
                   <MultiSearchSelect
                     className="mt-2"
                     options={departmentOptions}
-                    value={todoForm.departmentIds.map(String)}
+                    value={todoForm.responsibleDepartmentIds.map(String)}
                     onChange={(nextValues) => {
                       const nextDepartmentIds = nextValues.map(Number);
                       const nextDepartmentUserNames = new Set(
@@ -736,7 +736,7 @@ export default function NewWorkPage() {
 
                       setTodoForm((prev) => ({
                         ...prev,
-                        departmentIds: nextDepartmentIds,
+                        responsibleDepartmentIds: nextDepartmentIds,
                         responsiblePersons: prev.responsiblePersons.filter((personName) =>
                           nextDepartmentUserNames.has(personName),
                         ),
@@ -763,10 +763,10 @@ export default function NewWorkPage() {
                         responsiblePersons: nextPersons,
                       }))
                     }
-                    placeholder={todoForm.departmentIds.length > 0 ? '请选择主责责任人' : '请先选择主责部门'}
+                    placeholder={todoForm.responsibleDepartmentIds.length > 0 ? '请选择主责责任人' : '请先选择主责部门'}
                     searchPlaceholder="搜索姓名"
                     emptyText="未找到匹配责任人"
-                    disabled={todoForm.departmentIds.length === 0}
+                    disabled={todoForm.responsibleDepartmentIds.length === 0}
                   />
                 </div>
 

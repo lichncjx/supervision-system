@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
       select: {
         id: true,
         departmentId: true,
-        departmentIds: true,
+        responsibleDepartmentIds: true,
         cooperateDepartmentIds: true,
         status: true,
         creatorId: true,
@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
 
     const permWorkItem: AttPermWorkItem = {
       departmentId: workItem.departmentId,
-      departmentIds: workItem.departmentIds,
+      responsibleDepartmentIds: workItem.responsibleDepartmentIds,
       cooperateDepartmentIds: workItem.cooperateDepartmentIds,
       status: workItem.status,
       creatorId: workItem.creatorId,

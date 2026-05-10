@@ -96,8 +96,8 @@ export interface Work {
   // departmentId: 重点/主要工作的单一主办部门
   departmentId?: number;
   departmentName?: string;
-  // departmentIds: 待办事项的主责部门 ID 数组（未来迁移为 responsibleDepartmentIds）
-  departmentIds?: number[];
+  // responsibleDepartmentIds: 待办事项的主责部门 ID 数组（未来迁移为 responsibleDepartmentIds）
+  responsibleDepartmentIds?: number[];
 
   // ---- 业务人员 ID 字段（xxxId = 真实关联字段，用于权限、流程、审批、待处理判断）----
   creatorRole: string;
@@ -202,7 +202,7 @@ export type WorkEditablePatch = Partial<Pick<
   | 'completeTime'
   | 'completeForm'
   | 'departmentId'
-  | 'departmentIds'
+  | 'responsibleDepartmentIds'
   | 'responsibleLeader'
   | 'supervisor'
   | 'proposedLeader'
@@ -258,7 +258,7 @@ export function transformWorkFromAPI(work: any): Work {
     // 部门字段
     departmentId: work.departmentId,
     departmentName: work.departmentName,
-    departmentIds: work.departmentIds || work.department_ids || [],
+    responsibleDepartmentIds: work.responsibleDepartmentIds || work.department_ids || [],
     // 创建者（ID 用于权限判断）
     creatorRole: work.creatorRole || work.creator_role || '',
     creatorId: work.creatorId || work.creator_id,
@@ -491,7 +491,7 @@ export async function addWork(work: Omit<Work, 'createdAt' | 'updatedAt'>): Prom
     proposedLeaderId: work.proposedLeaderId,
     proposedScene: work.proposedScene,
     formedTime: work.formedTime,
-    departmentIds: work.departmentIds,
+    responsibleDepartmentIds: work.responsibleDepartmentIds,
     responsiblePersons: work.responsiblePersons,
     cooperateDepartmentIds: work.cooperateDepartmentIds,
     cooperatePersons: work.cooperatePersons,
@@ -535,7 +535,7 @@ export async function updateWork(id: number, patch: Partial<Work>): Promise<Work
   if (patch.proposedLeaderId !== undefined) data.proposedLeaderId = patch.proposedLeaderId;
   if (patch.proposedScene !== undefined) data.proposedScene = patch.proposedScene;
   if (patch.formedTime !== undefined) data.formedTime = patch.formedTime;
-  if (patch.departmentIds !== undefined) data.departmentIds = patch.departmentIds;
+  if (patch.responsibleDepartmentIds !== undefined) data.responsibleDepartmentIds = patch.responsibleDepartmentIds;
   if (patch.responsiblePersons !== undefined) data.responsiblePersons = patch.responsiblePersons;
   if (patch.responsiblePerson !== undefined) data.responsiblePerson = patch.responsiblePerson;
   if (patch.cooperateDepartmentIds !== undefined) data.cooperateDepartmentIds = patch.cooperateDepartmentIds;
@@ -805,8 +805,8 @@ function getWorkDepartmentIds(work: Work) {
     }
   };
   addId(work.departmentId);
-  if (Array.isArray(work.departmentIds)) {
-    work.departmentIds.forEach(addId);
+  if (Array.isArray(work.responsibleDepartmentIds)) {
+    work.responsibleDepartmentIds.forEach(addId);
   }
   if (Array.isArray(work.cooperateDepartmentIds)) {
     work.cooperateDepartmentIds.forEach(addId);
@@ -907,7 +907,7 @@ export function canHandleWork(user: User | null | undefined, work: Work) {
     return submitterId === user.id;
   }
 
-  // 以下判断依赖部门关联（departmentId / departmentIds / cooperateDepartmentIds）
+  // 以下判断依赖部门关联（departmentId / responsibleDepartmentIds / cooperateDepartmentIds）
   // 注意：未来 deptManagerId 落地后，可在此处增加精确人员权限判断
 
   // 待办事项待分解（部门主管/部门领导可分解关联部门的待办）

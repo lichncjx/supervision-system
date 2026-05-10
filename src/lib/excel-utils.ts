@@ -392,8 +392,8 @@ export async function exportCompanyCompletionRate(works: Work[]) {
       }
     };
     addId(work.departmentId);
-    if (Array.isArray(work.departmentIds)) {
-      work.departmentIds.forEach(addId);
+    if (Array.isArray(work.responsibleDepartmentIds)) {
+      work.responsibleDepartmentIds.forEach(addId);
     }
     return Array.from(ids);
   };
@@ -408,7 +408,7 @@ export async function exportCompanyCompletionRate(works: Work[]) {
     };
   };
 
-  const departmentIds = departments
+  const responsibleDepartmentIds = departments
     .filter((d) => d.id !== 1)
     .map((d) => d.id);
 
@@ -420,7 +420,7 @@ export async function exportCompanyCompletionRate(works: Work[]) {
     '总完成率',
   ];
 
-  const rows = departmentIds.map((departmentId) => {
+  const rows = responsibleDepartmentIds.map((departmentId) => {
     const deptWorks = works.filter((work) =>
       getResponsibleDepartmentIds(work).includes(departmentId)
     );

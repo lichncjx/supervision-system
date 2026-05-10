@@ -113,7 +113,7 @@ function buildWorkItems(ctx) {
         workItem: 'TC-公司领导发起待办-A',
         status: 'PENDING_DECOMPOSE',
         departmentId: dept.deptA.id,
-        departmentIds: [dept.deptA.id],
+        responsibleDepartmentIds: [dept.deptA.id],
         creatorId: user.vpA.id,
         proposedLeaderId: user.vpA.id,
         approvalLeaderId: user.vpA.id,
@@ -132,7 +132,7 @@ function buildWorkItems(ctx) {
         workItem: 'TC-多主责部门待办-AB',
         status: 'IN_PROGRESS',
         departmentId: dept.deptA.id,
-        departmentIds: [dept.deptA.id, dept.deptB.id],
+        responsibleDepartmentIds: [dept.deptA.id, dept.deptB.id],
         creatorId: user.deptManagerA1.id,
         firstSubmitterId: user.deptManagerA1.id,
         proposedLeaderId: user.vpA.id,
@@ -152,7 +152,7 @@ function buildWorkItems(ctx) {
         workItem: 'TC-多配合部门待办-BC',
         status: 'IN_PROGRESS',
         departmentId: dept.deptA.id,
-        departmentIds: [dept.deptA.id],
+        responsibleDepartmentIds: [dept.deptA.id],
         cooperateDepartmentIds: [dept.deptB.id, dept.deptC.id],
         creatorId: user.deptManagerA1.id,
         firstSubmitterId: user.deptManagerA1.id,
@@ -220,7 +220,7 @@ function buildWorkItems(ctx) {
         workItem: 'TC-副总B负责待办-B',
         status: 'IN_PROGRESS',
         departmentId: dept.deptB.id,
-        departmentIds: [dept.deptB.id],
+        responsibleDepartmentIds: [dept.deptB.id],
         creatorId: user.deptManagerB1.id,
         firstSubmitterId: user.deptManagerB1.id,
         proposedLeaderId: user.vpB.id,
@@ -291,7 +291,7 @@ function buildWorkItems(ctx) {
         beforeApprovalStatus: 'IN_PROGRESS',
         approvalType: 'COMPLETE',
         departmentId: dept.deptA.id,
-        departmentIds: [dept.deptA.id],
+        responsibleDepartmentIds: [dept.deptA.id],
         creatorId: user.deptManagerA1.id,
         firstSubmitterId: user.deptManagerA1.id,
         currentApproverId: user.vpA.id,
@@ -373,7 +373,7 @@ function buildWorkItems(ctx) {
         workItem: 'TC-临期待办-A',
         status: 'IN_PROGRESS',
         departmentId: dept.deptA.id,
-        departmentIds: [dept.deptA.id],
+        responsibleDepartmentIds: [dept.deptA.id],
         creatorId: user.deptManagerA2.id,
         firstSubmitterId: user.deptManagerA2.id,
         proposedLeaderId: user.vpA.id,
@@ -432,7 +432,7 @@ function buildWorkItems(ctx) {
         workItem: 'TC-责任人姓名不授权-B',
         status: 'IN_PROGRESS',
         departmentId: dept.deptB.id,
-        departmentIds: [dept.deptB.id],
+        responsibleDepartmentIds: [dept.deptB.id],
         creatorId: user.deptManagerB1.id,
         firstSubmitterId: user.deptManagerB1.id,
         proposedLeaderId: user.vpB.id,
@@ -458,8 +458,8 @@ function getResponsibleDepartmentIds(work) {
   if (Array.isArray(work.responsibleDepartmentIds) && work.responsibleDepartmentIds.length > 0) {
     return work.responsibleDepartmentIds;
   }
-  if (Array.isArray(work.departmentIds) && work.departmentIds.length > 0) {
-    return work.departmentIds;
+  if (Array.isArray(work.responsibleDepartmentIds) && work.responsibleDepartmentIds.length > 0) {
+    return work.responsibleDepartmentIds;
   }
   return work.departmentId ? [work.departmentId] : [];
 }

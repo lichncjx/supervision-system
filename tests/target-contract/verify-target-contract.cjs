@@ -534,7 +534,7 @@ async function verifyTargetPermissionFacts(baseUrl, loginByUsername, works) {
       expected: { visible: true },
       expectedFailure: false,
       note: [
-        'Phase 2 closeout: responsibleDepartmentIds/departmentIds grant organization visibility.',
+        'Phase 2 closeout: responsibleDepartmentIds/responsibleDepartmentIds grant organization visibility.',
         managerBSeesResponsible.responseError ? `Non-array response: ${JSON.stringify(managerBSeesResponsible.responseError)}` : '',
       ].filter(Boolean).join(' '),
     },
@@ -566,7 +566,7 @@ async function verifyCompletionRate(baseUrl, loginByUsername, deptByCode, works)
   };
   const noteByDeptCode = {
     TDA: 'Target: completion-rate uses responsible department ownership and excludes cooperate departments. Current fixture for department A currently matches this target case, so it should pass.',
-    TDB: 'Phase 2 closeout: completion-rate uses responsibleDepartmentIds/departmentIds for ownership and excludes cooperate departments, including the department B multi-responsible case.',
+    TDB: 'Phase 2 closeout: completion-rate uses responsibleDepartmentIds/responsibleDepartmentIds for ownership and excludes cooperate departments, including the department B multi-responsible case.',
   };
 
   for (const code of ['TDA', 'TDB']) {
@@ -760,7 +760,7 @@ async function verifyExcelImport(baseUrl, loginByUsername, deptByCode, userByUse
       statusCode: validResponse.statusCode,
       success: validResponse.body?.success,
       status: imported?.status,
-      departmentIds: imported?.departmentIds || [],
+      responsibleDepartmentIds: imported?.responsibleDepartmentIds || [],
       cooperateDepartmentIds: imported?.cooperateDepartmentIds || [],
       responsiblePersons: imported?.responsiblePersons || [],
       cooperatePersons: imported?.cooperatePersons || [],
@@ -769,7 +769,7 @@ async function verifyExcelImport(baseUrl, loginByUsername, deptByCode, userByUse
       statusCode: 200,
       success: true,
       status: 'DRAFT',
-      departmentIds: [deptByCode.TDA.id],
+      responsibleDepartmentIds: [deptByCode.TDA.id],
       cooperateDepartmentIds: [deptByCode.TDB.id],
       responsiblePersons: ['重名主责人', '非系统人员'],
       cooperatePersons: ['重名配合人', '非系统人员'],
@@ -849,7 +849,7 @@ function workflowBaseData({ title, type, status, creator, dept, vp, needMainLead
     workItem: title,
     status,
     departmentId: dept.id,
-    departmentIds: type === 'TODO' ? [dept.id] : [],
+    responsibleDepartmentIds: type === 'TODO' ? [dept.id] : [],
     cooperateDepartmentIds: [],
     creatorId: creator.id,
     firstSubmitterId: status === 'DRAFT' || status === 'PENDING_DECOMPOSE' ? null : creator.id,
@@ -1634,7 +1634,7 @@ async function verifyStateFilters(baseUrl, loginByUsername, deptByCode, userByUs
       workItem: 'TC-STATE-returned-draft',
       status: 'DRAFT',
       departmentId: deptByCode.TDA.id,
-      departmentIds: [deptByCode.TDA.id],
+      responsibleDepartmentIds: [deptByCode.TDA.id],
       creatorId: userByUsername.dept_manager_a2.id,
       firstSubmitterId: userByUsername.dept_manager_a1.id,
       proposedLeaderId: userByUsername.vp_a.id,

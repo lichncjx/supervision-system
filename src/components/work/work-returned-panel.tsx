@@ -68,10 +68,10 @@ export function WorkReturnedPanel({
   // Phase 4A: 加载 TODO 编辑所需的部门用户数据
   useEffect(() => {
     if (!isTodo) return;
-    if (!editForm.departmentIds?.length && !editForm.cooperateDepartmentIds?.length) return;
+    if (!editForm.responsibleDepartmentIds?.length && !editForm.cooperateDepartmentIds?.length) return;
 
     const allDeptIds = Array.from(
-      new Set([...(editForm.departmentIds || []), ...(editForm.cooperateDepartmentIds || [])]),
+      new Set([...(editForm.responsibleDepartmentIds || []), ...(editForm.cooperateDepartmentIds || [])]),
     );
     const missing = allDeptIds.filter((deptId: number) => !departmentUsers[deptId]);
     if (missing.length === 0) return;
@@ -86,7 +86,7 @@ export function WorkReturnedPanel({
         return next;
       });
     });
-  }, [editForm.departmentIds, editForm.cooperateDepartmentIds, isTodo]);
+  }, [editForm.responsibleDepartmentIds, editForm.cooperateDepartmentIds, isTodo]);
 
   // Phase 4A: 人员选项（和新建页一致，按当前选中部门的人员姓名生成）
   const businessDepts = departments.filter((d) => d.isBusiness !== false);
@@ -94,7 +94,7 @@ export function WorkReturnedPanel({
     value: String(dept.id),
     label: dept.name,
   }));
-  const responsiblePersonOptions = (editForm.departmentIds || []).flatMap(
+  const responsiblePersonOptions = (editForm.responsibleDepartmentIds || []).flatMap(
     (deptId: number) => (departmentUsers[deptId] || []).map((person) => ({
       value: person.name,
       label: person.name,
@@ -263,7 +263,7 @@ export function WorkReturnedPanel({
                   <MultiSearchSelect
                     className="mt-2"
                     options={departmentOptions}
-                    value={(editForm.departmentIds || []).map(String)}
+                    value={(editForm.responsibleDepartmentIds || []).map(String)}
                     onChange={(nextValues) => {
                       const nextDepartmentIds = nextValues.map(Number);
                       const nextDepartmentUserNames = new Set(
@@ -273,7 +273,7 @@ export function WorkReturnedPanel({
                       );
                       setEditForm((prev: any) => ({
                         ...prev,
-                        departmentIds: nextDepartmentIds,
+                        responsibleDepartmentIds: nextDepartmentIds,
                         responsiblePersons: (prev.responsiblePersons || []).filter((name: string) =>
                           nextDepartmentUserNames.has(name),
                         ),
@@ -301,10 +301,10 @@ export function WorkReturnedPanel({
                         responsiblePerson: nextPersons.join('、'),
                       }))
                     }
-                    placeholder={(editForm.departmentIds || []).length > 0 ? '请选择主责责任人' : '请先选择主责部门'}
+                    placeholder={(editForm.responsibleDepartmentIds || []).length > 0 ? '请选择主责责任人' : '请先选择主责部门'}
                     searchPlaceholder="搜索姓名"
                     emptyText="未找到匹配责任人"
-                    disabled={(editForm.departmentIds || []).length === 0}
+                    disabled={(editForm.responsibleDepartmentIds || []).length === 0}
                   />
                 </div>
 

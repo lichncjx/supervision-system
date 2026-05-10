@@ -72,9 +72,9 @@ export function WorkActionDialogs({
   // Phase 4A: 加载 TODO 调整表单所需的部门用户数据
   useEffect(() => {
     if (!isTodo) return;
-    if (!editForm.departmentIds?.length && !editForm.cooperateDepartmentIds?.length) return;
+    if (!editForm.responsibleDepartmentIds?.length && !editForm.cooperateDepartmentIds?.length) return;
     const allDeptIds = Array.from(
-      new Set([...(editForm.departmentIds || []), ...(editForm.cooperateDepartmentIds || [])]),
+      new Set([...(editForm.responsibleDepartmentIds || []), ...(editForm.cooperateDepartmentIds || [])]),
     );
     const missing = allDeptIds.filter((deptId: number) => !departmentUsers[deptId]);
     if (missing.length === 0) return;
@@ -88,13 +88,13 @@ export function WorkActionDialogs({
         return next;
       });
     });
-  }, [editForm.departmentIds, editForm.cooperateDepartmentIds, isTodo]);
+  }, [editForm.responsibleDepartmentIds, editForm.cooperateDepartmentIds, isTodo]);
 
   const departmentOptions = departments.filter((d) => (d as any).isBusiness !== false).map((dept) => ({
     value: String(dept.id),
     label: dept.name,
   }));
-  const responsiblePersonOptions = (editForm.departmentIds || []).flatMap(
+  const responsiblePersonOptions = (editForm.responsibleDepartmentIds || []).flatMap(
     (deptId: number) => (departmentUsers[deptId] || []).map((p) => ({
       value: p.name,
       label: p.name,
@@ -360,7 +360,7 @@ export function WorkActionDialogs({
                       <MultiSearchSelect
                         className="mt-2"
                         options={departmentOptions}
-                        value={(editForm.departmentIds || []).map(String)}
+                        value={(editForm.responsibleDepartmentIds || []).map(String)}
                         onChange={(nextValues) => {
                           const nextDepartmentIds = nextValues.map(Number);
                           const nextDepartmentUserNames = new Set(
@@ -368,7 +368,7 @@ export function WorkActionDialogs({
                           );
                           setEditForm((prev: any) => ({
                             ...prev,
-                            departmentIds: nextDepartmentIds,
+                            responsibleDepartmentIds: nextDepartmentIds,
                             responsiblePersons: (prev.responsiblePersons || []).filter((name: string) => nextDepartmentUserNames.has(name)),
                           }));
                         }}
@@ -386,10 +386,10 @@ export function WorkActionDialogs({
                         onChange={(nextPersons) =>
                           setEditForm((prev: any) => ({ ...prev, responsiblePersons: nextPersons, responsiblePerson: nextPersons.join('、') }))
                         }
-                        placeholder={(editForm.departmentIds || []).length > 0 ? '请选择主责责任人' : '请先选择主责部门'}
+                        placeholder={(editForm.responsibleDepartmentIds || []).length > 0 ? '请选择主责责任人' : '请先选择主责部门'}
                         searchPlaceholder="搜索姓名"
                         emptyText="未找到匹配责任人"
-                        disabled={(editForm.departmentIds || []).length === 0}
+                        disabled={(editForm.responsibleDepartmentIds || []).length === 0}
                       />
                     </div>
                     <div className="md:col-span-2">

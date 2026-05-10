@@ -37,7 +37,7 @@ export async function DELETE(
         workItem: {
           select: {
             departmentId: true,
-            departmentIds: true,
+            responsibleDepartmentIds: true,
             cooperateDepartmentIds: true,
             status: true,
             creatorId: true,
@@ -62,7 +62,7 @@ export async function DELETE(
     if (attachment.workItem) {
       const permWorkItem: AttPermWorkItem = {
         departmentId: attachment.workItem.departmentId,
-        departmentIds: attachment.workItem.departmentIds,
+        responsibleDepartmentIds: attachment.workItem.responsibleDepartmentIds,
         cooperateDepartmentIds: attachment.workItem.cooperateDepartmentIds,
         status: attachment.workItem.status,
         creatorId: attachment.workItem.creatorId,

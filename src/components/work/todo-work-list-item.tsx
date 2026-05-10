@@ -30,8 +30,8 @@ export function TodoWorkListItem({ item, routeType, getDepartmentName }: TodoWor
         <div>
           <span className="text-slate-400">主责部门：</span>
           <span className="text-slate-600">
-            {item.departmentIds && item.departmentIds.length > 0
-              ? item.departmentIds.map((id: number) => getDepartmentName(id)).join('、')
+            {item.responsibleDepartmentIds && item.responsibleDepartmentIds.length > 0
+              ? item.responsibleDepartmentIds.map((id: number) => getDepartmentName(id)).join('、')
               : getDepartmentName(item.departmentId ?? 0)}
           </span>
         </div>

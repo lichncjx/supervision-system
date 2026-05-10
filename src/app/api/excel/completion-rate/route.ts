@@ -23,7 +23,7 @@ async function getDepartmentStatsForExcel(
     {
       OR: [
         { departmentId },
-        { departmentIds: { has: departmentId } },
+        { responsibleDepartmentIds: { has: departmentId } },
       ],
     },
   ];

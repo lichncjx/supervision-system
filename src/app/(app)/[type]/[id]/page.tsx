@@ -137,7 +137,7 @@ export default function WorkDetailPage() {
         formedTime: work.formedTime || '',
         responsiblePerson: work.responsiblePerson || '',
         // Phase 4A: 数组字段，支持编辑时多部门/多责任人的 MultiSearchSelect
-        departmentIds: work.departmentIds || [] as number[],
+        responsibleDepartmentIds: work.responsibleDepartmentIds || [] as number[],
         responsiblePersons: work.responsiblePersons || [] as string[],
         cooperateDepartmentIds: work.cooperateDepartmentIds || [] as number[],
         cooperatePersons: work.cooperatePersons || [] as string[],
@@ -168,8 +168,8 @@ export default function WorkDetailPage() {
 
     if (work.departmentId === user.departmentId) return true;
 
-    if (Array.isArray(work.departmentIds)) {
-      return work.departmentIds.includes(user.departmentId);
+    if (Array.isArray(work.responsibleDepartmentIds)) {
+      return work.responsibleDepartmentIds.includes(user.departmentId);
     }
 
     if (Array.isArray(work.cooperateDepartmentIds)) {
@@ -787,8 +787,8 @@ export default function WorkDetailPage() {
           <div>
             <span className="text-sm text-slate-500">主责部门：</span>
             <span>
-              {work.departmentIds && work.departmentIds.length > 0
-                ? work.departmentIds.map((id: number) => getDepartmentName(id)).join('、')
+              {work.responsibleDepartmentIds && work.responsibleDepartmentIds.length > 0
+                ? work.responsibleDepartmentIds.map((id: number) => getDepartmentName(id)).join('、')
                 : getDepartmentName(work.departmentId ?? 0)}
             </span>
           </div>
