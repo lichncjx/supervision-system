@@ -1,6 +1,8 @@
 # 公司督办管理系统
 
-用于跟踪和管理公司重点工作、主要工作、待办事项的企业级督办管理系统。
+## 当前状态口径
+
+当前系统运行态统一为 9 状态：`DRAFT`、`PENDING_DECOMPOSE`、`PROPOSING`、`IN_PROGRESS`、`ADJUSTING`、`CANCELLING`、`COMPLETING`、`COMPLETED`、`CANCELLED`。`REJECTED` 已取消，退回待修改由 `DRAFT` + 退回痕迹派生；`APPROVED` 已取消，立项通过后进入 `IN_PROGRESS`；完成审批统一为 `COMPLETING`；取消审批统一为 `CANCELLING`。
 
 ## 技术栈
 
