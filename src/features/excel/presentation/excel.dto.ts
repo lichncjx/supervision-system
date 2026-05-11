@@ -23,6 +23,7 @@ export interface ExportCompletionRateInput {
 }
 
 export interface CompletionRateStat {
+  departmentId?: number
   departmentName: string
   priorityTotal: number
   priorityCompleted: number
