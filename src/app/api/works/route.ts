@@ -1,31 +1,15 @@
 import { NextResponse, NextRequest } from 'next/server'
-import prisma from '@/lib/prisma'
-import { verifyToken } from '@/lib/server-auth'
+import { getCurrentUserOrAuthError } from '@/shared/auth/get-current-user-or-auth-error'
 import { parseWorkQuery, parseWorkType, parseWorkStatusFilter } from '@/features/works/presentation/work.validators'
 import { queryWorksUseCase } from '@/features/works/application/query-works.usecase'
 import { createWorkUseCase } from '@/features/works/application/create-work.usecase'
 
 export async function GET(request: NextRequest) {
   try {
-    const token = request.cookies.get('token')?.value
+    const auth = await getCurrentUserOrAuthError(request)
+    if (!auth.ok) return auth.response
 
-    if (!token) {
-      return NextResponse.json({ error: '未登录' }, { status: 401 })
-    }
-
-    const decoded = verifyToken(token)
-
-    if (!decoded) {
-      return NextResponse.json({ error: '登录已过期' }, { status: 401 })
-    }
-
-    const currentUser = await prisma.user.findUnique({
-      where: { id: decoded.userId },
-    })
-
-    if (!currentUser) {
-      return NextResponse.json({ error: '用户不存在' }, { status: 401 })
-    }
+    const currentUser = auth.user
 
     const { searchParams } = new URL(request.url)
     const params = parseWorkQuery(searchParams)
@@ -53,25 +37,10 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const token = request.cookies.get('token')?.value
+    const auth = await getCurrentUserOrAuthError(request)
+    if (!auth.ok) return auth.response
 
-    if (!token) {
-      return NextResponse.json({ error: '未登录' }, { status: 401 })
-    }
-
-    const decoded = verifyToken(token)
-
-    if (!decoded) {
-      return NextResponse.json({ error: '登录已过期' }, { status: 401 })
-    }
-
-    const currentUser = await prisma.user.findUnique({
-      where: { id: decoded.userId },
-    })
-
-    if (!currentUser) {
-      return NextResponse.json({ error: '用户不存在' }, { status: 401 })
-    }
+    const currentUser = auth.user
 
     const body = await request.json()
 

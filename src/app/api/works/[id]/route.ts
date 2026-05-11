@@ -1,6 +1,5 @@
 import { NextResponse, NextRequest } from 'next/server'
-import prisma from '@/lib/prisma'
-import { verifyToken } from '@/lib/server-auth'
+import { getCurrentUserOrAuthError } from '@/shared/auth/get-current-user-or-auth-error'
 import { getWorkDetailUseCase } from '@/features/works/application/get-work-detail.usecase'
 import { updateWorkUseCase } from '@/features/works/application/update-work.usecase'
 import { deleteWorkUseCase } from '@/features/works/application/delete-work.usecase'
@@ -10,25 +9,10 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const token = request.cookies.get('token')?.value
+    const auth = await getCurrentUserOrAuthError(request)
+    if (!auth.ok) return auth.response
 
-    if (!token) {
-      return NextResponse.json({ error: '未登录' }, { status: 401 })
-    }
-
-    const decoded = verifyToken(token)
-
-    if (!decoded) {
-      return NextResponse.json({ error: '登录已过期' }, { status: 401 })
-    }
-
-    const currentUser = await prisma.user.findUnique({
-      where: { id: decoded.userId },
-    })
-
-    if (!currentUser) {
-      return NextResponse.json({ error: '用户不存在' }, { status: 401 })
-    }
+    const currentUser = auth.user
 
     const { id } = await params
     const workId = parseInt(id)
@@ -58,25 +42,10 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const token = request.cookies.get('token')?.value
+    const auth = await getCurrentUserOrAuthError(request)
+    if (!auth.ok) return auth.response
 
-    if (!token) {
-      return NextResponse.json({ error: '未登录' }, { status: 401 })
-    }
-
-    const decoded = verifyToken(token)
-
-    if (!decoded) {
-      return NextResponse.json({ error: '登录已过期' }, { status: 401 })
-    }
-
-    const currentUser = await prisma.user.findUnique({
-      where: { id: decoded.userId },
-    })
-
-    if (!currentUser) {
-      return NextResponse.json({ error: '用户不存在' }, { status: 401 })
-    }
+    const currentUser = auth.user
 
     const { id } = await params
     const workId = parseInt(id)
@@ -107,25 +76,10 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const token = request.cookies.get('token')?.value
+    const auth = await getCurrentUserOrAuthError(request)
+    if (!auth.ok) return auth.response
 
-    if (!token) {
-      return NextResponse.json({ error: '未登录' }, { status: 401 })
-    }
-
-    const decoded = verifyToken(token)
-
-    if (!decoded) {
-      return NextResponse.json({ error: '登录已过期' }, { status: 401 })
-    }
-
-    const currentUser = await prisma.user.findUnique({
-      where: { id: decoded.userId },
-    })
-
-    if (!currentUser) {
-      return NextResponse.json({ error: '用户不存在' }, { status: 401 })
-    }
+    const currentUser = auth.user
 
     const { id } = await params
     const workId = parseInt(id)
