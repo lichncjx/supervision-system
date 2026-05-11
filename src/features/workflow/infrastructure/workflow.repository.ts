@@ -81,3 +81,13 @@ export async function findWorkflowRecordsByWorkItemId(
     orderBy: { createdAt: 'asc' },
   })
 }
+
+export async function updateWorkItemForWorkflow(
+  workItemId: number,
+  data: Record<string, unknown>,
+) {
+  return prisma.workItem.update({
+    where: { id: workItemId },
+    data: data as Prisma.WorkItemUpdateInput,
+  })
+}
