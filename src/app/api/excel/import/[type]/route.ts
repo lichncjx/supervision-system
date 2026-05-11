@@ -1,568 +1,96 @@
-import { NextRequest, NextResponse } from 'next/server';
-import * as XLSX from 'xlsx';
-import prisma from '@/lib/prisma';
-import { getUserFromToken } from '@/lib/server-auth';
-import { Role, WorkItemStatus, WorkItemType } from '@prisma/client';
-
-interface ValidationError {
-  row: number;
-  field: string;
-  value: string;
-  reason: string;
-}
-
-interface ImportRow {
-  row: number;
-  data: any;
-}
-
-function isCompanyLevelRole(role: string): boolean {
-  return role === Role.ADMIN || role === Role.SUPERVISOR;
-}
-
-function isDepartmentImportRole(role: string): boolean {
-  return role === Role.DEPARTMENT_LEADER || role === Role.DEPARTMENT_MANAGER;
-}
-
-function getImportResponsibleDepartmentIds(data: any): number[] {
-  return data.departmentId ? [data.departmentId] : [];
-}
-
-function validateImportScope(
-  currentUser: { id: number; role: string; departmentId: number },
-  row: ImportRow,
-): ValidationError | null {
-  const responsibleDepartmentIds = getImportResponsibleDepartmentIds(row.data);
-
-  if (isCompanyLevelRole(currentUser.role)) {
-    return null;
-  }
-
-  if (isDepartmentImportRole(currentUser.role)) {
-    if (!responsibleDepartmentIds.includes(currentUser.departmentId)) {
-      return {
-        row: row.row,
-        field: '主责部门',
-        value: row.data.departmentName || row.data.departmentNames?.join('/') || '',
-        reason: '部门用户只能导入主责部门包含本部门的事项；配合部门不能替代主责部门授权',
-      };
-    }
-    return null;
-  }
-
-  if (currentUser.role === Role.VICE_PRESIDENT || currentUser.role === Role.PRESIDENT) {
-    if (row.data.type !== 'TODO') {
-      return {
-        row: row.row,
-        field: '事项类型',
-        value: row.data.type,
-        reason: '公司领导普通导入仅允许导入本人提出或本人审批的待办事项',
-      };
-    }
-
-    const leaderIds = [row.data.proposedLeaderId, row.data.approvalLeaderId].filter(Boolean);
-    if (!leaderIds.includes(currentUser.id)) {
-      return {
-        row: row.row,
-        field: '事项提出领导/指定审批领导',
-        value: `${row.data.proposedLeaderName || ''}/${row.data.approvalLeaderName || ''}`,
-        reason: '公司领导不能默认全局导入其他领导负责的事项',
-      };
-    }
-    return null;
-  }
-
-  return {
-    row: row.row,
-    field: '权限',
-    value: currentUser.role,
-    reason: '当前角色无普通 Excel 导入权限',
-  };
-}
-
-function parseExcelDate(value: any): string | null {
-  if (!value) return null;
-
-  if (typeof value === 'number' && value > 25000 && value < 60000) {
-    const date = XLSX.SSF.parse_date_code(value);
-    if (date) {
-      return `${date.y}-${String(date.m).padStart(2, '0')}-${String(date.d).padStart(2, '0')}`;
-    }
-  }
-
-  if (typeof value === 'string') {
-    const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    if (match) {
-      const [, year, month, day] = match;
-      const d = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-      if (!isNaN(d.getTime())) {
-        return `${year}-${month}-${day}`;
-      }
-    }
-  }
-
-  if (value instanceof Date) {
-    if (!isNaN(value.getTime())) {
-      return value.toISOString().split('T')[0];
-    }
-  }
-
-  return null;
-}
-
-function isAllowedImportedStatus(value: string): boolean {
-  const normalized = value.trim();
-  if (!normalized) return true;
-  return normalized === '草稿' || normalized.toUpperCase() === WorkItemStatus.DRAFT;
-}
-
-async function validateAndParseExcel(
-  file: Buffer,
-  type: string,
-  _currentUser: { id: number; name: string; role: string; departmentId: number }
-): Promise<{ rows: ImportRow[]; errors: ValidationError[] }> {
-  const errors: ValidationError[] = [];
-  const rows: ImportRow[] = [];
-
-  const workbook = XLSX.read(file, { type: 'buffer' });
-  const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-  const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
-
-  if (!jsonData || jsonData.length === 0) {
-    errors.push({
-      row: 0,
-      field: 'file',
-      value: '',
-      reason: 'Excel 文件为空或格式不正确',
-    });
-    return { rows, errors };
-  }
-
-  const headerRow = jsonData[0] as any;
-  const headerMap: Record<string, string> = {};
-
-  for (const key of Object.keys(headerRow)) {
-    headerMap[key.trim()] = key;
-  }
-
-  const departments = await prisma.department.findMany({
-    where: { isBusiness: true },
-    select: { id: true, name: true, code: true },
-  });
-  const deptNameToId = new Map(departments.map((d) => [d.name, d.id]));
-  const deptCodeToId = new Map(departments.filter((d) => d.code).map((d) => [d.code!, d.id]));
-  const resolveDeptId = (input: string) =>
-    deptNameToId.get(input) ?? deptCodeToId.get(input.toUpperCase()) ?? null;
-
-  const companyLeaders = await prisma.user.findMany({
-    where: {
-      role: { in: [Role.PRESIDENT, Role.VICE_PRESIDENT] },
-      isActive: true,
-    },
-    select: { id: true, name: true },
-  });
-  const leaderNameToId = new Map(companyLeaders.map((u) => [u.name, u.id]));
-
-  for (let i = 0; i < jsonData.length; i++) {
-    const row = jsonData[i] as any;
-    const rowNum = i + 2;
-
-    const getCell = (field: string): string => {
-      const key = headerMap[field];
-      if (!key) return '';
-      const val = row[key];
-      return val !== undefined && val !== null ? String(val).trim() : '';
-    };
-
-    const importedStatus = getCell('当前状态') || getCell('状态') || getCell('status') || getCell('Status');
-    if (!isAllowedImportedStatus(importedStatus)) {
-      errors.push({
-        row: rowNum,
-        field: '当前状态',
-        value: importedStatus,
-        reason: '普通导入只允许空状态或 DRAFT/草稿；审批中、进行中、终态和旧状态必须通过 workflow 流转',
-      });
-    }
-
-    if (type === 'priority' || type === 'PRIORITY') {
-      const businessCategory = getCell('业务类别');
-      const workItem = getCell('工作事项');
-      const isInnovationStr = getCell('是否为创新工作');
-      const workNode = getCell('工作节点');
-      const completeTimeStr = getCell('完成时间');
-      const completeForm = getCell('完成形式');
-      const departmentName = getCell('责任部门');
-      const responsibleLeader = getCell('责任领导');
-      const responsiblePerson = getCell('责任人');
-      const cooperatorsStr = getCell('配合方');
-
-      if (!workItem) {
-        errors.push({ row: rowNum, field: '工作事项', value: workItem, reason: '必填字段不能为空' });
-      }
-      if (!isInnovationStr || !['是', '否'].includes(isInnovationStr)) {
-        errors.push({ row: rowNum, field: '是否为创新工作', value: isInnovationStr, reason: '只能填写"是"或"否"' });
-      }
-      if (!completeTimeStr || !parseExcelDate(completeTimeStr)) {
-        errors.push({ row: rowNum, field: '完成时间', value: completeTimeStr, reason: '必填字段，格式为 YYYY-MM-DD' });
-      }
-      const resolvedDeptId = departmentName ? resolveDeptId(departmentName) : null;
-      if (!departmentName) {
-        errors.push({ row: rowNum, field: '责任部门', value: departmentName, reason: '必填字段不能为空' });
-      } else if (!resolvedDeptId) {
-        errors.push({ row: rowNum, field: '责任部门', value: departmentName, reason: `部门"${departmentName}"不存在或不是业务部门，请填写部门全名或缩写代码` });
-      }
-      if (!responsibleLeader) {
-        errors.push({ row: rowNum, field: '责任领导', value: responsibleLeader, reason: '必填字段不能为空' });
-      }
-
-      // Parse cooperators
-      const cooperators: Array<{ departmentId: number; departmentName?: string; leader?: string; person?: string }> = [];
-      if (cooperatorsStr) {
-        const segments = cooperatorsStr.split(/[；;]/).map((s: string) => s.trim()).filter(Boolean);
-        for (const seg of segments) {
-          const parts = seg.split('|').map((s: string) => s.trim());
-          const coopDeptName = parts[0] || '';
-          const resolvedCoopDeptId = coopDeptName ? resolveDeptId(coopDeptName) : null;
-          if (coopDeptName && !resolvedCoopDeptId) {
-            errors.push({ row: rowNum, field: '配合方', value: seg, reason: `配合部门"${coopDeptName}"不存在或不是业务部门` });
-          } else if (resolvedCoopDeptId) {
-            cooperators.push({
-              departmentId: resolvedCoopDeptId,
-              departmentName: coopDeptName || undefined,
-              leader: parts[1] || undefined,
-              person: parts[2] || undefined,
-            });
-          }
-        }
-      }
-
-      if (errors.filter((e) => e.row === rowNum).length === 0) {
-        rows.push({
-          row: rowNum,
-          data: {
-            type: 'PRIORITY',
-            businessCategory,
-            workItem,
-            isInnovation: isInnovationStr === '是',
-            workNode,
-            completeTime: parseExcelDate(completeTimeStr),
-            completeForm,
-            departmentName,
-            departmentId: resolvedDeptId,
-            departmentCode: departments.find(d => d.id === resolvedDeptId)?.code || departmentName,
-            responsibleLeader,
-            responsiblePerson: responsiblePerson || null,
-            cooperators,
-          },
-        });
-      }
-    } else if (type === 'main' || type === 'MAIN') {
-      const businessCategory = getCell('业务类别');
-      const workItem = getCell('工作事项');
-      const workNode = getCell('工作节点');
-      const completeTimeStr = getCell('完成时间');
-      const completeForm = getCell('完成形式');
-      const departmentName = getCell('责任部门');
-      const responsibleLeader = getCell('责任领导');
-      const responsiblePerson = getCell('责任人');
-      const cooperatorsStr = getCell('配合方');
-
-      if (!workItem) {
-        errors.push({ row: rowNum, field: '工作事项', value: workItem, reason: '必填字段不能为空' });
-      }
-      if (!completeTimeStr || !parseExcelDate(completeTimeStr)) {
-        errors.push({ row: rowNum, field: '完成时间', value: completeTimeStr, reason: '必填字段，格式为 YYYY-MM-DD' });
-      }
-      const resolvedDeptId = departmentName ? resolveDeptId(departmentName) : null;
-      if (!departmentName) {
-        errors.push({ row: rowNum, field: '责任部门', value: departmentName, reason: '必填字段不能为空' });
-      } else if (!resolvedDeptId) {
-        errors.push({ row: rowNum, field: '责任部门', value: departmentName, reason: `部门"${departmentName}"不存在或不是业务部门，请填写部门全名或缩写代码` });
-      }
-      if (!responsibleLeader) {
-        errors.push({ row: rowNum, field: '责任领导', value: responsibleLeader, reason: '必填字段不能为空' });
-      }
-
-      // Parse cooperators
-      const cooperators: Array<{ departmentId: number; departmentName?: string; leader?: string; person?: string }> = [];
-      if (cooperatorsStr) {
-        const segments = cooperatorsStr.split(/[；;]/).map((s: string) => s.trim()).filter(Boolean);
-        for (const seg of segments) {
-          const parts = seg.split('|').map((s: string) => s.trim());
-          const coopDeptName = parts[0] || '';
-          const resolvedCoopDeptId = coopDeptName ? resolveDeptId(coopDeptName) : null;
-          if (coopDeptName && !resolvedCoopDeptId) {
-            errors.push({ row: rowNum, field: '配合方', value: seg, reason: `配合部门"${coopDeptName}"不存在或不是业务部门` });
-          } else if (resolvedCoopDeptId) {
-            cooperators.push({
-              departmentId: resolvedCoopDeptId,
-              departmentName: coopDeptName || undefined,
-              leader: parts[1] || undefined,
-              person: parts[2] || undefined,
-            });
-          }
-        }
-      }
-
-      if (errors.filter((e) => e.row === rowNum).length === 0) {
-        rows.push({
-          row: rowNum,
-          data: {
-            type: 'MAIN',
-            businessCategory,
-            workItem,
-            workNode,
-            completeTime: parseExcelDate(completeTimeStr),
-            completeForm,
-            departmentName,
-            departmentId: resolvedDeptId,
-            departmentCode: departments.find(d => d.id === resolvedDeptId)?.code || departmentName,
-            responsibleLeader,
-            responsiblePerson: responsiblePerson || null,
-            cooperators,
-          },
-        });
-      }
-    } else if (type === 'todo' || type === 'TODO') {
-      const proposedLeaderName = getCell('事项提出领导');
-      const approvalLeaderName = getCell('指定审批领导');
-      const proposedScene = getCell('事项提出场景');
-      const workItem = getCell('待办事项');
-      const formedTimeStr = getCell('形成时间');
-      const departmentName = getCell('主责部门');
-      const responsibleLeader = getCell('责任领导');
-      const responsiblePerson = getCell('责任人');
-      // 配合方格式：部门|领导|人员；部门|领导|人员  例如：工艺技术处|王主任|赵工；质量管理处|刘主任|钱工
-      const cooperatorsStr = getCell('配合方');
-      const workPlan = getCell('工作计划');
-      const planCompleteTimeStr = getCell('计划完成时间');
-      const progress = getCell('进展情况');
-
-      if (!workItem) {
-        errors.push({ row: rowNum, field: '待办事项', value: workItem, reason: '必填字段不能为空' });
-      }
-      if (!departmentName) {
-        errors.push({ row: rowNum, field: '主责部门', value: departmentName, reason: '必填字段不能为空' });
-      }
-      if (!workPlan) {
-        errors.push({ row: rowNum, field: '工作计划', value: workPlan, reason: '必填字段不能为空' });
-      }
-      if (!planCompleteTimeStr || !parseExcelDate(planCompleteTimeStr)) {
-        errors.push({ row: rowNum, field: '计划完成时间', value: planCompleteTimeStr, reason: '必填字段，格式为 YYYY-MM-DD' });
-      }
-
-      const resolvedDeptId = departmentName ? resolveDeptId(departmentName) : null;
-      if (departmentName && !resolvedDeptId) {
-        errors.push({ row: rowNum, field: '主责部门', value: departmentName, reason: `部门"${departmentName}"不存在或不是业务部门，请填写部门全名或缩写代码` });
-      }
-
-      const hasProposedLeader = proposedLeaderName && leaderNameToId.has(proposedLeaderName);
-      const hasApprovalLeader = approvalLeaderName && leaderNameToId.has(approvalLeaderName);
-      if (!hasProposedLeader && !hasApprovalLeader) {
-        errors.push({
-          row: rowNum,
-          field: '事项提出领导/指定审批领导',
-          value: `${proposedLeaderName}/${approvalLeaderName}`,
-          reason: '事项提出领导或指定审批领导至少需要填写一个，且必须是公司领导（董事长/总经理/副总经理）',
-        });
-      }
-
-      // Parse cooperators: "部门|领导|人员；部门|领导|人员"
-      const cooperators: Array<{ departmentId: number; departmentName?: string; leader?: string; person?: string }> = [];
-      if (cooperatorsStr) {
-        const segments = cooperatorsStr.split(/[；;]/).map((s: string) => s.trim()).filter(Boolean);
-        for (const seg of segments) {
-          const parts = seg.split('|').map((s: string) => s.trim());
-          const coopDeptName = parts[0] || '';
-          const resolvedCoopDeptId = coopDeptName ? resolveDeptId(coopDeptName) : null;
-          if (coopDeptName && !resolvedCoopDeptId) {
-            errors.push({ row: rowNum, field: '配合方', value: seg, reason: `配合部门"${coopDeptName}"不存在或不是业务部门` });
-          } else if (resolvedCoopDeptId) {
-            cooperators.push({
-              departmentId: resolvedCoopDeptId,
-              departmentName: coopDeptName || undefined,
-              leader: parts[1] || undefined,
-              person: parts[2] || undefined,
-            });
-          }
-        }
-      }
-
-      if (errors.filter((e) => e.row === rowNum).length === 0) {
-        rows.push({
-          row: rowNum,
-          data: {
-            type: 'TODO',
-            proposedLeaderId: hasProposedLeader ? leaderNameToId.get(proposedLeaderName) : null,
-            proposedLeaderName: proposedLeaderName,
-            approvalLeaderId: hasApprovalLeader ? leaderNameToId.get(approvalLeaderName) : null,
-            approvalLeaderName: approvalLeaderName,
-            proposedScene,
-            workItem,
-            formedTime: parseExcelDate(formedTimeStr),
-            departmentId: resolvedDeptId,
-            responsibleLeader: responsibleLeader || null,
-            responsiblePerson: responsiblePerson || null,
-            cooperators,
-            workPlan,
-            planCompleteTime: parseExcelDate(planCompleteTimeStr),
-            progress,
-          },
-        });
-      }
-    }
-  }
-
-  return { rows, errors };
-}
+import { NextRequest, NextResponse } from 'next/server'
+import { getCurrentUserOrAuthError } from '@/shared/auth/get-current-user-or-auth-error'
+import { importWorksFromExcelUseCase } from '@/features/excel/application/import-works-from-excel.usecase'
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ type: string }> }
+  { params }: { params: Promise<{ type: string }> },
 ) {
   try {
-    const token = request.cookies.get('token')?.value;
-    if (!token) {
-      return NextResponse.json({ error: '未登录' }, { status: 401 });
-    }
+    const auth = await getCurrentUserOrAuthError(request)
+    if (!auth.ok) return auth.response
 
-    const currentUser = await getUserFromToken(token);
-    if (!currentUser) {
-      return NextResponse.json({ error: '登录已过期' }, { status: 401 });
-    }
+    const currentUser = auth.user
 
-    const { type } = await params;
-    const validTypes = ['priority', 'main', 'todo', 'PRIORITY', 'MAIN', 'TODO'];
+    const { type } = await params
+    const validTypes = [
+      'priority',
+      'main',
+      'todo',
+      'PRIORITY',
+      'MAIN',
+      'TODO',
+    ]
     if (!validTypes.includes(type)) {
-      return NextResponse.json({ error: '无效的导入类型' }, { status: 400 });
+      return NextResponse.json(
+        { error: '无效的导入类型' },
+        { status: 400 },
+      )
     }
 
-    const formData = await request.formData();
-    const file = formData.get('file') as File;
+    const formData = await request.formData()
+    const file = formData.get('file') as File
     if (!file) {
-      return NextResponse.json({ error: '请选择要导入的文件' }, { status: 400 });
+      return NextResponse.json(
+        { error: '请选择要导入的文件' },
+        { status: 400 },
+      )
     }
 
     if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
-      return NextResponse.json({ error: '只支持 .xlsx 或 .xls 格式' }, { status: 400 });
+      return NextResponse.json(
+        { error: '只支持 .xlsx 或 .xls 格式' },
+        { status: 400 },
+      )
     }
 
-    const buffer = Buffer.from(await file.arrayBuffer());
+    const fileBuffer = Buffer.from(await file.arrayBuffer())
 
-    const { rows, errors } = await validateAndParseExcel(buffer, type, currentUser);
+    const result = await importWorksFromExcelUseCase({
+      currentUser,
+      type,
+      fileBuffer,
+      fileName: file.name,
+    })
 
-    if (errors.length > 0) {
+    if (result.kind === 'error') {
+      return NextResponse.json(
+        { error: result.message },
+        { status: result.status },
+      )
+    }
+
+    if (result.kind === 'validation-error') {
+      const status =
+        result.details.some(
+          (d) =>
+            d.reason.includes('部门用户只能导入') ||
+            d.reason.includes('公司领导普通导入') ||
+            d.reason.includes('公司领导不能默认') ||
+            d.reason.includes('当前角色无'),
+        )
+          ? 403
+          : 400
       return NextResponse.json(
         {
           success: false,
-          error: '导入失败，请修正以下错误',
-          details: errors,
+          error: result.error,
+          details: result.details,
         },
-        { status: 400 }
-      );
+        { status },
+      )
     }
-
-    if (rows.length === 0) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: '导入失败',
-          details: [{ row: 0, field: 'file', value: '', reason: 'Excel 文件中没有有效数据行' }],
-        },
-        { status: 400 }
-      );
-    }
-
-    const scopeErrors = rows
-      .map((row) => validateImportScope(currentUser, row))
-      .filter((error): error is ValidationError => Boolean(error));
-
-    if (scopeErrors.length > 0) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: '导入失败',
-          details: scopeErrors,
-        },
-        { status: 403 }
-      );
-    }
-
-    const now = new Date();
-    const workItems = rows.map((row): any => {
-      const data = row.data;
-      if (data.type === 'PRIORITY' || data.type === 'MAIN') {
-        return {
-          type: data.type as WorkItemType,
-          title: data.workItem,
-          status: WorkItemStatus.DRAFT,
-          creatorId: currentUser.id,
-          departmentId: data.departmentId,
-          businessCategory: data.businessCategory || null,
-          workItem: data.workItem,
-          isInnovation: data.isInnovation || false,
-          workNode: data.workNode || null,
-          completeTime: data.completeTime ? new Date(data.completeTime) : null,
-          completeForm: data.completeForm || null,
-          responsibleLeader: data.responsibleLeader || null,
-          responsiblePerson: data.responsiblePerson || null,
-          cooperators: data.cooperators?.length ? data.cooperators : undefined,
-          createdAt: now,
-          updatedAt: now,
-        };
-      } else {
-        const finalProposedLeaderId = data.proposedLeaderId || data.approvalLeaderId;
-        const finalApprovalLeaderId = data.approvalLeaderId || finalProposedLeaderId;
-
-        return {
-          type: 'TODO' as WorkItemType,
-          title: data.workItem,
-          status: WorkItemStatus.DRAFT,
-          creatorId: currentUser.id,
-          departmentId: data.departmentId || currentUser.departmentId,
-          proposedLeaderId: finalProposedLeaderId,
-          approvalLeaderId: finalApprovalLeaderId,
-          proposedScene: data.proposedScene || null,
-          workItem: data.workItem,
-          formedTime: data.formedTime ? new Date(data.formedTime) : null,
-          responsibleLeader: data.responsibleLeader || null,
-          responsiblePerson: data.responsiblePerson || null,
-          cooperators: data.cooperators?.length ? data.cooperators : undefined,
-          workPlan: data.workPlan,
-          planCompleteTime: data.planCompleteTime ? new Date(data.planCompleteTime) : null,
-          progress: data.progress || null,
-          createdAt: now,
-          updatedAt: now,
-        };
-      }
-    });
-
-    const result = await prisma.$transaction(async (tx) => {
-      const created = await tx.workItem.createMany({ data: workItems });
-
-      await tx.operationLog.create({
-        data: {
-          userId: currentUser.id,
-          userName: currentUser.name,
-          userRole: currentUser.role,
-          action: 'import',
-          module: 'excel',
-          targetType: 'workItem',
-          targetId: 0,
-          description: `导入${rows.length}条${type.toUpperCase()}事项`,
-        },
-      });
-
-      return created;
-    });
 
     return NextResponse.json({
       success: true,
-      imported: result.count,
-      message: `成功导入 ${result.count} 条事项，导入后状态为草稿，请确认后手动提交审批`,
-    });
+      imported: result.imported,
+      message: result.message,
+    })
   } catch (error) {
-    console.error('Import error:', error);
-    return NextResponse.json({ error: '导入失败：' + (error as Error).message }, { status: 500 });
+    console.error('Import error:', error)
+    return NextResponse.json(
+      { error: '导入失败：' + (error as Error).message },
+      { status: 500 },
+    )
   }
 }
