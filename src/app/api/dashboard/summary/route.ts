@@ -1,22 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getDashboardSummary } from '@/lib/dashboard-data'
-import { getUserFromToken } from '@/lib/server-auth'
+import { getCurrentUserOrAuthError } from '@/shared/auth/get-current-user-or-auth-error'
+import { getDashboardSummaryUseCase } from '@/features/dashboard/application/get-dashboard-summary.usecase'
 
 export async function GET(request: NextRequest) {
   try {
-    const token = request.cookies.get('token')?.value
-    if (!token) {
-      return NextResponse.json({ error: '未登录' }, { status: 401 })
-    }
+    const auth = await getCurrentUserOrAuthError(request)
+    if (!auth.ok) return auth.response
 
-    const currentUser = await getUserFromToken(token)
-    if (!currentUser) {
-      return NextResponse.json({ error: '登录已过期' }, { status: 401 })
-    }
-
-    return NextResponse.json(await getDashboardSummary(currentUser))
+    return NextResponse.json(
+      await getDashboardSummaryUseCase({
+        currentUser: auth.user,
+      }),
+    )
   } catch (error) {
     console.error('Dashboard summary error:', error)
-    return NextResponse.json({ error: '获取统计失败' }, { status: 500 })
+    return NextResponse.json(
+      { error: '获取统计失败' },
+      { status: 500 },
+    )
   }
 }
