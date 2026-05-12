@@ -26,16 +26,16 @@ import {
 } from '@/lib/work-store';
 import { Button } from '@/components/ui/button';
 import { workTypeColors } from '@/lib/status-colors';
-import { WorkAttachmentPanel } from '@/components/work/work-attachment-panel';
-import { WorkOperationPanel } from '@/components/work/work-operation-panel';
-import { WorkWorkflowRecords } from '@/components/work/work-workflow-records';
-import { WorkApprovalPanel } from '@/components/work/work-approval-panel';
-import { WorkReturnedPanel } from '@/components/work/work-returned-panel';
-import { WorkDecomposePanel } from '@/components/work/work-decompose-panel';
-import { WorkActionDialogs } from '@/components/work/work-action-dialogs';
-import { WorkPendingAdjustmentPanel } from '@/components/work/work-pending-adjustment-panel';
-import { StatusBadge } from '@/components/common/badges';
-import { WorkflowProgress } from '@/components/common/workflow-progress';
+import { WorkAttachmentPanel } from '@/features/attachments/ui/work-attachment-panel';
+import { WorkOperationPanel } from '@/features/works/ui/work-operation-panel';
+import { WorkWorkflowRecords } from '@/features/workflow/ui/work-workflow-records';
+import { WorkApprovalPanel } from '@/features/workflow/ui/work-approval-panel';
+import { WorkReturnedPanel } from '@/features/works/ui/work-returned-panel';
+import { WorkDecomposePanel } from '@/features/workflow/ui/work-decompose-panel';
+import { WorkActionDialogs } from '@/features/works/ui/work-action-dialogs';
+import { WorkPendingAdjustmentPanel } from '@/features/workflow/ui/work-pending-adjustment-panel';
+import { StatusBadge } from '@/features/works/ui/badges';
+import { WorkflowProgress } from '@/features/workflow/ui/workflow-progress';
 import { ExpandableText } from '@/components/common/expandable-text';
 import { isReturnedDraftWork, isWorkStatusTerminal } from '@/lib/work-status';
 

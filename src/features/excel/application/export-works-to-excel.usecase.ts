@@ -1,4 +1,22 @@
+import type { CurrentUser } from '@/shared/auth/current-user'
 import { WorkItemStatus, WorkItemType } from '@prisma/client'
+
+export interface ExportWorksToExcelInput {
+  currentUser: CurrentUser
+  type: string | null
+  status: string | null
+  departmentId: string | null
+  keyword: string | null
+}
+
+export type ExportWorksToExcelResult =
+  | {
+      kind: 'ok'
+      buffer: Buffer
+      fileName: string
+      visibleItemCount: number
+    }
+  | { kind: 'error'; status: number; message: string }
 import {
   buildWorkVisibilityWhere,
   canViewWorkItem,
@@ -12,10 +30,6 @@ import {
   createExportOperationLog,
 } from '@/features/excel/infrastructure/excel-work.repository'
 import { generateExportBuffer } from '@/features/excel/infrastructure/work-exporter'
-import type {
-  ExportWorksToExcelInput,
-  ExportWorksToExcelResult,
-} from '@/features/excel/presentation/excel.dto'
 
 const EXPIRING_DAYS = 7
 const APPROVING_STATUSES: WorkItemStatus[] = [

@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/shared/db/prisma'
 import { verifyToken } from '@/shared/auth/jwt'
+import type { CurrentUser } from './current-user'
 
 type AuthResult =
-  | { ok: true; user: { id: number; name: string; role: string; departmentId: number } }
+  | { ok: true; user: CurrentUser }
   | { ok: false; response: NextResponse }
 
 export async function getCurrentUserOrAuthError(

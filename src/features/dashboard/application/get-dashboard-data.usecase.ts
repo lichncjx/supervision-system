@@ -1,3 +1,5 @@
+import type { BaseCurrentUser } from '@/shared/auth/current-user'
+import type { DashboardData, DashboardDataOptions } from '@/features/dashboard/domain/dashboard.types'
 import {
   buildWorkVisibilityWhere,
   canViewWorkItem,
@@ -15,7 +17,13 @@ import {
   isExpiringWorkItem,
 } from '@/features/dashboard/domain/dashboard.rules'
 import { findDashboardWorks } from '@/features/dashboard/infrastructure/dashboard.repository'
-import type { GetDashboardDataInput, GetDashboardDataResult } from '@/features/dashboard/presentation/dashboard.dto'
+
+export type GetDashboardDataInput = {
+  currentUser: BaseCurrentUser
+  options?: DashboardDataOptions
+}
+
+export type GetDashboardDataResult = DashboardData
 
 export async function getDashboardDataUseCase(
   input: GetDashboardDataInput,

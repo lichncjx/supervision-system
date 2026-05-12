@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx'
-import type { CompletionRateStat } from '@/features/excel/presentation/excel.dto'
+import type { CompletionRateStat } from '@/shared/completion-rate.rules'
 
 const HEADERS = [
   '序号',

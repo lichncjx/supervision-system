@@ -1,11 +1,53 @@
+import type { CurrentUser } from '@/shared/auth/current-user'
 import { Role, WorkItemType, WorkItemStatus } from '@prisma/client'
 import {
   createWorkItem,
   findDepartmentById,
   createWorkOperationLog,
 } from '@/features/works/infrastructure/work.repository'
-import { toCreateWorkResponse } from '@/features/works/presentation/work.presenter'
-import type { CreateWorkInput } from '@/features/works/presentation/work.dto'
+interface CreateWorkResponseDto { id: number; title: string; type: string; departmentId: number | null; cooperators: unknown; departmentName: string; proposedLeader: string | null; proposedLeaderId: number | null; status: string; createdAt: string; updatedAt: string }
+
+function toCreateWorkResponse(work: any): CreateWorkResponseDto {
+  return {
+    id: work.id, title: work.title,
+    type: work.type === 'PRIORITY' ? '重点' : work.type === 'MAIN' ? '主要' : '待办',
+    departmentId: work.departmentId, cooperators: work.cooperators,
+    departmentName: work.department?.name || '-',
+    proposedLeader: work.proposedLeader?.name || null,
+    proposedLeaderId: work.proposedLeaderId,
+    status: work.status,
+    createdAt: work.createdAt.toISOString(),
+    updatedAt: work.updatedAt.toISOString(),
+  }
+}
+
+export interface CreateWorkBody {
+  type: string
+  departmentId: number
+  title?: string
+  workItem?: string
+  workNode?: string
+  businessCategory?: string
+  completeTime?: string
+  completeForm?: string
+  isInnovation?: boolean
+  responsibleLeader?: string
+  responsiblePerson?: string
+  proposedLeaderId?: number
+  proposedScene?: string
+  formedTime?: string
+  cooperators?: unknown
+  workPlan?: string
+  planCompleteTime?: string
+  progress?: string
+  approvalLeaderId?: number
+  nodes?: unknown
+}
+
+export interface CreateWorkInput {
+  currentUser: CurrentUser
+  body: CreateWorkBody
+}
 
 const ROLES_CAN_CREATE_ALL: Role[] = [Role.ADMIN, Role.SUPERVISOR]
 const ROLES_CAN_CREATE_TODO_ONLY: Role[] = [Role.VICE_PRESIDENT, Role.PRESIDENT]

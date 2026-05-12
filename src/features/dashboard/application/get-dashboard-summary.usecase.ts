@@ -1,5 +1,12 @@
+import type { BaseCurrentUser } from '@/shared/auth/current-user'
+import type { DashboardSummary } from '@/features/dashboard/domain/dashboard.types'
 import { getDashboardDataUseCase } from './get-dashboard-data.usecase'
-import type { GetDashboardSummaryInput, GetDashboardSummaryResult } from '@/features/dashboard/presentation/dashboard.dto'
+
+export type GetDashboardSummaryInput = {
+  currentUser: BaseCurrentUser
+}
+
+export type GetDashboardSummaryResult = DashboardSummary
 
 export async function getDashboardSummaryUseCase(
   input: GetDashboardSummaryInput,

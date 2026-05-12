@@ -1,10 +1,11 @@
+import type { BaseCurrentUser } from '@/shared/auth/current-user'
 import {
   buildWorkVisibilityWhere,
   getResponsibleDepartmentIds,
   isDepartmentLevelRole,
   isGlobalViewRole,
 } from '@/lib/server-permissions'
-import { calculateDepartmentStats } from '@/shared/completion-rate.rules'
+import { calculateDepartmentStats, type CompletionRateStat } from '@/shared/completion-rate.rules'
 import {
   findWorksForDashboardCompletionRate,
   findBusinessDepartments,
@@ -12,11 +13,21 @@ import {
   findDepartmentIdsFromVisibleWorks,
   findDepartmentsByIds,
 } from '@/features/dashboard/infrastructure/dashboard.repository'
-import type {
-  GetCompletionRateInput,
-  GetCompletionRateResult,
-} from '@/features/dashboard/presentation/dashboard.dto'
-import type { CompletionRateStat } from '@/features/excel/presentation/excel.dto'
+
+export interface GetCompletionRateInput {
+  currentUser: BaseCurrentUser
+  type: string | null
+  startDate: string | null
+  endDate: string | null
+}
+
+export type GetCompletionRateResult =
+  | {
+      kind: 'ok'
+      items: CompletionRateStat[]
+      total: number
+    }
+  | { kind: 'error'; status: number; message: string }
 
 async function getDepartmentStats(
   departmentId: number,

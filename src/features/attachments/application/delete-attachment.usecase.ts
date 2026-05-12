@@ -1,3 +1,4 @@
+import type { CurrentUser } from '@/shared/auth/current-user'
 import type { Role } from '@prisma/client'
 import {
   canDeleteAttachment,
@@ -10,10 +11,15 @@ import {
   createAttachmentLog,
 } from '@/features/attachments/infrastructure/attachment.repository'
 import { deleteAttachmentFileIfExists } from '@/features/attachments/infrastructure/local-file-storage'
-import type {
-  DeleteAttachmentInput,
-  DeleteAttachmentResult,
-} from '@/features/attachments/presentation/attachment.dto'
+
+export interface DeleteAttachmentInput {
+  currentUser: CurrentUser
+  attachmentId: number
+}
+
+export type DeleteAttachmentResult =
+  | { kind: 'ok' }
+  | { kind: 'error'; status: number; message: string }
 
 export async function deleteAttachmentUseCase(
   input: DeleteAttachmentInput,

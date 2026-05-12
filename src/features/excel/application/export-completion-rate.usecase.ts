@@ -1,4 +1,15 @@
+import type { CurrentUser } from '@/shared/auth/current-user'
 import { isSupervisionAdmin } from '@/lib/server-auth'
+
+export interface ExportCompletionRateInput {
+  currentUser: CurrentUser
+  startDate: string | null
+  endDate: string | null
+}
+
+export type ExportCompletionRateResult =
+  | { kind: 'ok'; buffer: Buffer; fileName: string }
+  | { kind: 'error'; status: number; message: string }
 import { getResponsibleDepartmentIds } from '@/lib/server-permissions'
 import {
   findWorksForCompletionRate,
@@ -6,12 +17,7 @@ import {
   createCompletionRateLog,
 } from '@/features/excel/infrastructure/completion-rate.repository'
 import { generateCompletionRateBuffer } from '@/features/excel/infrastructure/completion-rate-exporter'
-import { calculateDepartmentStats } from '@/shared/completion-rate.rules'
-import type {
-  ExportCompletionRateInput,
-  ExportCompletionRateResult,
-  CompletionRateStat,
-} from '@/features/excel/presentation/excel.dto'
+import { calculateDepartmentStats, type CompletionRateStat } from '@/shared/completion-rate.rules'
 
 async function getDepartmentStats(
   departmentId: number,

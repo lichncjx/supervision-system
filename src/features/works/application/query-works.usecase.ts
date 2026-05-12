@@ -1,4 +1,46 @@
+import type { BaseCurrentUser } from '@/shared/auth/current-user'
+import type { Prisma } from '@prisma/client'
 import { WorkItemType, WorkItemStatus } from '@prisma/client'
+
+export interface QueryWorksParams {
+  type: string | null; status: string | null; departmentId: string | null; keyword: string | null
+}
+
+export type StatusFilter =
+  | { kind: 'where'; where: Prisma.WorkItemWhereInput }
+  | { kind: 'post'; where: Prisma.WorkItemWhereInput; postFilter: 'handling' | 'overdue' | 'expiring' }
+  | { kind: 'invalid' }
+
+const APPROVING_STATUSES = [WorkItemStatus.PROPOSING, WorkItemStatus.ADJUSTING, WorkItemStatus.CANCELLING, WorkItemStatus.COMPLETING]
+const TERMINAL_STATUSES: WorkItemStatus[] = [WorkItemStatus.COMPLETED, WorkItemStatus.CANCELLED]
+
+export function parseWorkType(raw: string | null): WorkItemType | null {
+  if (!raw) return null
+  const lower = raw.toLowerCase()
+  if (lower === 'priority') return WorkItemType.PRIORITY
+  if (lower === 'main') return WorkItemType.MAIN
+  if (lower === 'todo') return WorkItemType.TODO
+  return null
+}
+
+export function parseWorkStatusFilter(raw: string | null): StatusFilter {
+  if (!raw) return null as unknown as StatusFilter
+  const normalized = raw.trim()
+  const lower = normalized.toLowerCase()
+  if (!normalized) return null as unknown as StatusFilter
+  if (lower === 'draft') return { kind: 'where', where: { status: WorkItemStatus.DRAFT, rejectReason: null, rejectedFromStatus: null } }
+  if (lower === 'returneddraft' || lower === 'returned_draft') return { kind: 'where', where: { status: WorkItemStatus.DRAFT, OR: [{ rejectReason: { not: null } }, { rejectedFromStatus: { not: null } }] } }
+  if (lower === 'pendingdecompose' || lower === 'pending_decompose') return { kind: 'where', where: { status: WorkItemStatus.PENDING_DECOMPOSE } }
+  const exact = Object.values(WorkItemStatus).find((v) => v === normalized.toUpperCase())
+  if (exact) return { kind: 'where', where: { status: exact } }
+  if (lower === 'approving') return { kind: 'where', where: { status: { in: APPROVING_STATUSES } } }
+  if (lower === 'inprogress' || lower === 'in_progress') return { kind: 'where', where: { status: WorkItemStatus.IN_PROGRESS } }
+  if (lower === 'completed') return { kind: 'where', where: { status: WorkItemStatus.COMPLETED } }
+  if (lower === 'cancelled') return { kind: 'where', where: { status: WorkItemStatus.CANCELLED } }
+  if (lower === 'handling') return { kind: 'post', where: { status: { in: [WorkItemStatus.DRAFT, WorkItemStatus.PENDING_DECOMPOSE, WorkItemStatus.IN_PROGRESS] } }, postFilter: 'handling' }
+  if (lower === 'overdue' || lower === 'expiring') return { kind: 'post', where: { status: { notIn: TERMINAL_STATUSES } }, postFilter: lower as 'overdue' | 'expiring' }
+  return { kind: 'invalid' }
+}
 import { canViewWorkItem } from '@/features/works/domain/work.permissions'
 import { canHandleWorkItem } from '@/features/works/domain/work.permissions'
 import type { PermissionUser } from '@/features/works/domain/work.permissions'
@@ -7,16 +49,65 @@ import {
   findManyWorks,
   type WorkListRow,
 } from '@/features/works/infrastructure/work.repository'
-import { toWorkListItems } from '@/features/works/presentation/work.presenter'
-import type {
-  QueryWorksInput,
-  StatusFilter,
-} from '@/features/works/presentation/work.dto'
+import { formatDate, processNodesForDisplay, processAdjustHistory } from '@/lib/utils'
 
-const TERMINAL_STATUSES: WorkItemStatus[] = [
-  WorkItemStatus.COMPLETED,
-  WorkItemStatus.CANCELLED,
-]
+interface WorkListItemDto { id: number; title: string; type: string; status: string; departmentId: number | null; cooperators: unknown; departmentName: string; creatorId: number | null; creatorName: string; creatorRole: string; workItem: string | null; workNode: string | null; businessCategory: string | null; completeTime: string | null; completeForm: string | null; isInnovation: boolean | null; responsibleLeader: string | null; responsiblePerson: string | null; proposedLeader: string | null; proposedLeaderId: number | null; proposedScene: string | null; formedTime: string | null; workPlan: string | null; planCompleteTime: string | null; progress: string | null; action: string | null; approvalLeaderId: number | null; currentApproverId: number | null; currentApproverRole: string | null; firstSubmitterId: number | null; rejectReason: string | null; rejectedFromStatus: string | null; beforeApprovalStatus: string | null; approvalType: string | null; nodes: unknown; adjustHistory: unknown; createdAt: string; updatedAt: string }
+
+function parseJsonField<T>(value: unknown, fallback: T): T {
+  if (!value) return fallback
+  if (typeof value !== 'string') return value as T
+  try { return JSON.parse(value) as T } catch { return fallback }
+}
+
+const TYPE_LABEL: Record<string, string> = { PRIORITY: '重点', MAIN: '主要', TODO: '待办' }
+
+function toWorkListItem(work: WorkListRow): WorkListItemDto {
+  return {
+    id: work.id, title: work.title,
+    type: TYPE_LABEL[work.type] || work.type,
+    status: work.status, departmentId: work.departmentId,
+    cooperators: work.cooperators,
+    departmentName: work.department?.name || '-',
+    creatorId: work.creatorId,
+    creatorName: work.creator?.name || '-',
+    creatorRole: work.creator?.role || '-',
+    workItem: work.workItem, workNode: work.workNode,
+    businessCategory: work.businessCategory,
+    completeTime: formatDate(work.completeTime),
+    completeForm: work.completeForm,
+    isInnovation: work.isInnovation,
+    responsibleLeader: work.responsibleLeader,
+    responsiblePerson: work.responsiblePerson,
+    proposedLeader: work.proposedLeader?.name || null,
+    proposedLeaderId: work.proposedLeaderId,
+    proposedScene: work.proposedScene,
+    formedTime: formatDate(work.formedTime),
+    workPlan: work.workPlan,
+    planCompleteTime: formatDate(work.planCompleteTime),
+    progress: work.progress, action: work.action,
+    approvalLeaderId: work.approvalLeaderId,
+    currentApproverId: work.currentApproverId,
+    currentApproverRole: work.currentApproverRole,
+    firstSubmitterId: work.firstSubmitterId,
+    rejectReason: work.rejectReason,
+    rejectedFromStatus: work.rejectedFromStatus,
+    beforeApprovalStatus: work.beforeApprovalStatus,
+    approvalType: work.approvalType,
+    nodes: processNodesForDisplay(parseJsonField(work.nodes, [])),
+    adjustHistory: processAdjustHistory(parseJsonField(work.adjustHistory, [])),
+    createdAt: work.createdAt.toISOString(),
+    updatedAt: work.updatedAt.toISOString(),
+  }
+}
+
+function toWorkListItems(works: WorkListRow[]): WorkListItemDto[] {
+  return works.map(toWorkListItem)
+}
+
+export interface QueryWorksInput {
+  currentUser: BaseCurrentUser
+  params: QueryWorksParams
+}
 
 const EXPIRING_DAYS = 7
 
@@ -75,8 +166,13 @@ function applyPostFilter(
 export async function queryWorksUseCase(input: QueryWorksInput) {
   const { currentUser, params } = input
 
-  const { where, statusFilter } = buildWorksWhere(
+  const workType = parseWorkType(params.type)
+  const statusFilter = parseWorkStatusFilter(params.status)
+
+  const { where } = buildWorksWhere(
     currentUser as PermissionUser,
+    workType,
+    statusFilter,
     params,
   )
 

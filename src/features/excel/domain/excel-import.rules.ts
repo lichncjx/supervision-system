@@ -1,6 +1,11 @@
+import type { BaseCurrentUser } from '@/shared/auth/current-user'
 import * as XLSX from 'xlsx'
 import { Role, WorkItemStatus } from '@prisma/client'
-import type { ImportRow } from '@/features/excel/presentation/excel.dto'
+
+export interface ImportRow {
+  row: number
+  data: any
+}
 
 export interface ValidationError {
   row: number
@@ -22,7 +27,7 @@ function getImportResponsibleDepartmentIds(data: any): number[] {
 }
 
 export function validateImportScope(
-  currentUser: { id: number; role: string; departmentId: number },
+  currentUser: BaseCurrentUser,
   row: ImportRow,
 ): ValidationError | null {
   const responsibleDepartmentIds =

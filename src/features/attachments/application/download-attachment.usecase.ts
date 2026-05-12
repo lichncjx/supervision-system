@@ -1,3 +1,4 @@
+import type { CurrentUser } from '@/shared/auth/current-user'
 import type { Role } from '@prisma/client'
 import {
   canViewAttachment,
@@ -9,10 +10,20 @@ import {
   attachmentFilePathExists,
 } from '@/features/attachments/infrastructure/local-file-storage'
 import { getContentType } from '@/features/attachments/domain/attachment.rules'
-import type {
-  DownloadAttachmentInput,
-  DownloadAttachmentResult,
-} from '@/features/attachments/presentation/attachment.dto'
+
+export interface DownloadAttachmentInput {
+  currentUser: CurrentUser
+  attachmentId: number
+}
+
+export type DownloadAttachmentResult =
+  | {
+      kind: 'ok'
+      fileBuffer: Buffer
+      fileName: string
+      contentType: string
+    }
+  | { kind: 'error'; status: number; message: string }
 
 export async function downloadAttachmentUseCase(
   input: DownloadAttachmentInput,
