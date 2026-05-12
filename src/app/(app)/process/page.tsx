@@ -18,9 +18,9 @@ import {
   sortWorksByDueDate,
   type Work,
 } from '@/lib/work-store';
-import { StatusBadge } from '@/components/common/badges';
-import { WorkListPagination } from '@/components/work/work-list-pagination';
-import { WorkSearchBar } from '@/components/work/work-search-bar';
+import { StatusBadge } from '@/features/works/ui/badges';
+import { WorkListPagination } from '@/features/works/ui/work-list-pagination';
+import { WorkSearchBar } from '@/features/works/ui/work-search-bar';
 
 export default function ApprovalPage() {
   const { user } = useAuth();

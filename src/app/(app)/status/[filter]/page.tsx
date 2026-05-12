@@ -18,7 +18,7 @@ import {
   type Work,
 } from '@/lib/work-store';
 import { getDepartments, isCompanyLevel, isSupervisionAdmin } from '@/lib/auth';
-import { StatusBadge } from '@/components/common/badges';
+import { StatusBadge } from '@/features/works/ui/badges';
 import { Input } from '@/components/ui/input';
 import { getWorkTypeAccent, getWorkTypeText } from '@/lib/status-colors';
 

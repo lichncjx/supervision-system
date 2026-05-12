@@ -8,7 +8,7 @@ const pillColors = { ...statusColors, ...expiryColors };
 import { Textarea } from '@/components/ui/textarea';
 import { Plus, Bell, Search } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
-import { StatusBadge } from '@/components/common/badges';
+import { StatusBadge } from '@/features/works/ui/badges';
 import { isSupervisionAdmin } from '@/lib/auth';
 
 type DashboardWorkType = 'PRIORITY' | 'MAIN' | 'TODO';
