@@ -1,3 +1,4 @@
+import type { CurrentUser } from '@/shared/auth/current-user'
 import { Role } from '@prisma/client'
 import { canEditWorkItem } from '@/features/works/domain/work.permissions'
 import type { PermissionUser } from '@/features/works/domain/work.permissions'
@@ -6,8 +7,45 @@ import {
   updateWorkItem,
   createWorkUpdateOperationLog,
 } from '@/features/works/infrastructure/work.repository'
-import { toUpdateWorkResponse } from '@/features/works/presentation/work.presenter'
-import type { UpdateWorkInput } from '@/features/works/presentation/work.dto'
+interface UpdateWorkResponseDto { id: number; title: string; type: string; departmentId: number | null; departmentName: string; status: string; updatedAt: string }
+
+function toUpdateWorkResponse(work: any): UpdateWorkResponseDto {
+  return {
+    id: work.id, title: work.title,
+    type: work.type === 'PRIORITY' ? '重点' : work.type === 'MAIN' ? '主要' : '待办',
+    departmentId: work.departmentId,
+    departmentName: work.department?.name || '-',
+    status: work.status,
+    updatedAt: work.updatedAt.toISOString(),
+  }
+}
+
+export interface UpdateWorkBody {
+  title?: string
+  workItem?: string
+  workNode?: string
+  businessCategory?: string
+  completeTime?: string
+  completeForm?: string
+  isInnovation?: boolean
+  responsibleLeader?: string
+  responsiblePerson?: string
+  proposedLeaderId?: number
+  proposedScene?: string
+  formedTime?: string
+  cooperators?: unknown
+  workPlan?: string
+  planCompleteTime?: string
+  progress?: string
+  approvalLeaderId?: number
+  nodes?: unknown
+}
+
+export interface UpdateWorkInput {
+  currentUser: CurrentUser
+  workId: number
+  body: UpdateWorkBody
+}
 
 function convertToDateTime(dateStr: string | null | undefined): Date | null {
   if (!dateStr) return null

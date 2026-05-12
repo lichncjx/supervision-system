@@ -1,10 +1,20 @@
+import type { CurrentUser } from '@/shared/auth/current-user'
 import { Role } from '@prisma/client'
+
+export interface DeleteWorkResponseDto {
+  success: true
+  message: string
+}
 import {
   findWorkForUpdateById,
   deleteWorkItem,
   createWorkDeleteOperationLog,
 } from '@/features/works/infrastructure/work.repository'
-import type { DeleteWorkInput } from '@/features/works/presentation/work.dto'
+
+export interface DeleteWorkInput {
+  currentUser: CurrentUser
+  workId: number
+}
 
 export type DeleteWorkResult =
   | { kind: 'ok'; data: { success: true; message: string } }

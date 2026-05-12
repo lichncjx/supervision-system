@@ -1,4 +1,29 @@
+import type { CurrentUser } from '@/shared/auth/current-user'
 import type { Role } from '@prisma/client'
+
+export interface UploadAttachmentInput {
+  currentUser: CurrentUser
+  workItemId: number
+  fileName: string
+  fileBuffer: Buffer
+  fileSize: number
+  ext: string
+  category: string
+}
+
+export type UploadAttachmentResult =
+  | {
+      kind: 'ok'
+      attachment: {
+        id: number
+        fileName: string
+        fileSize: number
+        fileType: string
+        category: string
+        uploadedAt: Date
+      }
+    }
+  | { kind: 'error'; status: number; message: string }
 import {
   canViewAttachment,
   canUploadAttachment,
@@ -10,10 +35,6 @@ import {
   createAttachmentLog,
 } from '@/features/attachments/infrastructure/attachment.repository'
 import { saveUploadedFile } from '@/features/attachments/infrastructure/local-file-storage'
-import type {
-  UploadAttachmentInput,
-  UploadAttachmentResult,
-} from '@/features/attachments/presentation/attachment.dto'
 
 export async function uploadAttachmentUseCase(
   input: UploadAttachmentInput,

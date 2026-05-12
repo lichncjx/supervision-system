@@ -1,7 +1,6 @@
 import { NextResponse, NextRequest } from 'next/server'
 import { getCurrentUserOrAuthError } from '@/shared/auth/get-current-user-or-auth-error'
-import { parseWorkQuery, parseWorkType, parseWorkStatusFilter } from '@/features/works/presentation/work.validators'
-import { queryWorksUseCase } from '@/features/works/application/query-works.usecase'
+import { parseWorkType, parseWorkStatusFilter, queryWorksUseCase } from '@/features/works/application/query-works.usecase'
 import { createWorkUseCase } from '@/features/works/application/create-work.usecase'
 
 export async function GET(request: NextRequest) {
@@ -12,7 +11,12 @@ export async function GET(request: NextRequest) {
     const currentUser = auth.user
 
     const { searchParams } = new URL(request.url)
-    const params = parseWorkQuery(searchParams)
+    const params = {
+      type: searchParams.get('type'),
+      status: searchParams.get('status'),
+      departmentId: searchParams.get('departmentId'),
+      keyword: searchParams.get('keyword'),
+    }
 
     if (params.type) {
       const workType = parseWorkType(params.type)

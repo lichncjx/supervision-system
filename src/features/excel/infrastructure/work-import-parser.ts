@@ -1,7 +1,10 @@
 import * as XLSX from 'xlsx'
-import { parseExcelDate, isAllowedImportedStatus } from '@/features/excel/domain/excel-import.rules'
+import {
+  parseExcelDate,
+  isAllowedImportedStatus,
+  type ImportRow,
+} from '@/features/excel/domain/excel-import.rules'
 import type { ValidationError as ImportValidationError } from '@/features/excel/domain/excel-import.rules'
-import type { ImportRow } from '@/features/excel/presentation/excel.dto'
 import type { DepartmentInfo, CompanyLeaderInfo } from './work-import.repository'
 
 export async function validateAndParseExcel(

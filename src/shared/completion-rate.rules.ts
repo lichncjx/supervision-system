@@ -29,7 +29,9 @@ export function formatCompletionRate(
   return Math.round((completed / total) * 10000) / 100
 }
 
-export interface DepartmentCompletionStats {
+export interface CompletionRateStat {
+  departmentId?: number
+  departmentName?: string
   priorityTotal: number
   priorityCompleted: number
   priorityRate: number
@@ -48,7 +50,7 @@ export interface DepartmentCompletionStats {
 
 export function calculateDepartmentStats(
   works: CompletionRateWorksInput[],
-): DepartmentCompletionStats {
+): CompletionRateStat {
   const priority = works.filter((w) => w.type === 'PRIORITY')
   const main = works.filter((w) => w.type === 'MAIN')
   const todo = works.filter((w) => w.type === 'TODO')

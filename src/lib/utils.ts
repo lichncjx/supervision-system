@@ -3,4 +3,4 @@ export { convertToDateTime, formatDate } from '@/shared/utils/date'
 export {
   processNodesForDisplay,
   processAdjustHistory,
-} from '@/features/works/presentation/work-display.utils'
+} from '@/features/works/application/work-display.utils'
