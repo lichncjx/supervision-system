@@ -11,6 +11,8 @@ import { DISPLAY_LABEL } from './visual-tokens';
 interface WorkDisplayInfoProps {
   work: Work;
   departments: Array<{ id: number; name: string }>;
+  hideNodes?: boolean;
+  hideCooperators?: boolean;
 }
 
 function getDepartmentName(
@@ -20,7 +22,7 @@ function getDepartmentName(
   return departments.find((d) => d.id === id)?.name || '-';
 }
 
-function PriorityMainWorkDisplayInfo({ work, departments }: WorkDisplayInfoProps) {
+function PriorityMainWorkDisplayInfo({ work, departments, hideNodes, hideCooperators: _hideCooperators }: WorkDisplayInfoProps) {
   return (
     <div className="space-y-2">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
@@ -86,33 +88,35 @@ function PriorityMainWorkDisplayInfo({ work, departments }: WorkDisplayInfoProps
         </div>
       )}
 
-      <div>
-        <p className="font-medium mb-2">工作节点：</p>
-        {work.nodes && work.nodes.length > 0 ? (
-          <div className="space-y-3">
-            {work.nodes.map((node: any, index: number) => (
-              <div key={node.id ?? index} className="border border-slate-200 bg-slate-50/70 rounded-lg p-3">
-                <div className="font-medium break-words">
-                  {index + 1}. {node.title}
-                  {node.completeTime ? `（节点完成时间：${node.completeTime}）` : ''}
-                </div>
-                {node.children && node.children.length > 0 && (
-                  <div className="pl-5 mt-2 space-y-1 text-sm text-slate-500">
-                    {node.children.map((child: any, childIndex: number) => (
-                      <div key={child.id ?? `${index}-${childIndex}`} className="break-words">
-                        {index + 1}.{childIndex + 1} {child.title}
-                        {child.completeTime ? `（完成日期：${child.completeTime}）` : ''}
-                      </div>
-                    ))}
+      {!hideNodes && (
+        <div>
+          <p className="font-medium mb-2">工作节点：</p>
+          {work.nodes && work.nodes.length > 0 ? (
+            <div className="space-y-3">
+              {work.nodes.map((node: any, index: number) => (
+                <div key={node.id ?? index} className="border border-slate-200 bg-slate-50/70 rounded-lg p-3">
+                  <div className="font-medium break-words">
+                    {index + 1}. {node.title}
+                    {node.completeTime ? `（节点完成时间：${node.completeTime}）` : ''}
                   </div>
-                )}
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className={DISPLAY_LABEL}>暂无工作节点</p>
-        )}
-      </div>
+                  {node.children && node.children.length > 0 && (
+                    <div className="pl-5 mt-2 space-y-1 text-sm text-slate-500">
+                      {node.children.map((child: any, childIndex: number) => (
+                        <div key={child.id ?? `${index}-${childIndex}`} className="break-words">
+                          {index + 1}.{childIndex + 1} {child.title}
+                          {child.completeTime ? `（完成日期：${child.completeTime}）` : ''}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className={DISPLAY_LABEL}>暂无工作节点</p>
+          )}
+        </div>
+      )}
 
       {work.proof && (
         <div>
@@ -185,7 +189,7 @@ function PriorityMainWorkDisplayInfo({ work, departments }: WorkDisplayInfoProps
   );
 }
 
-function TodoWorkDisplayInfo({ work, departments }: WorkDisplayInfoProps) {
+function TodoWorkDisplayInfo({ work, departments, hideNodes, hideCooperators }: WorkDisplayInfoProps) {
   return (
     <div className="space-y-2">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -218,22 +222,26 @@ function TodoWorkDisplayInfo({ work, departments }: WorkDisplayInfoProps) {
           <span className={DISPLAY_LABEL}>责任人：</span>
           <span>{work.responsiblePerson || '-'}</span>
         </div>
-        <div>
-          <span className={DISPLAY_LABEL}>配合部门：</span>
-          <span>
-            {work.cooperators && work.cooperators.length > 0
-              ? work.cooperators.map((c: any) => getDepartmentName(departments, c.departmentId) || c.departmentName).join('、')
-              : '-'}
-          </span>
-        </div>
-        <div>
-          <span className={DISPLAY_LABEL}>配合责任人：</span>
-          <span>
-            {work.cooperators && work.cooperators.length > 0
-              ? work.cooperators.map((c: any) => c.person).filter(Boolean).join('、')
-              : '-'}
-          </span>
-        </div>
+        {!hideCooperators && (
+          <>
+            <div>
+              <span className={DISPLAY_LABEL}>配合部门：</span>
+              <span>
+                {work.cooperators && work.cooperators.length > 0
+                  ? work.cooperators.map((c: any) => getDepartmentName(departments, c.departmentId) || c.departmentName).join('、')
+                  : '-'}
+              </span>
+            </div>
+            <div>
+              <span className={DISPLAY_LABEL}>配合责任人：</span>
+              <span>
+                {work.cooperators && work.cooperators.length > 0
+                  ? work.cooperators.map((c: any) => c.person).filter(Boolean).join('、')
+                  : '-'}
+              </span>
+            </div>
+          </>
+        )}
         <div>
           <span className={DISPLAY_LABEL}>工作计划：</span>
           <span>{work.workPlan || '-'}</span>
@@ -260,7 +268,7 @@ function TodoWorkDisplayInfo({ work, departments }: WorkDisplayInfoProps) {
         </div>
       </div>
 
-      {work.nodes && work.nodes.length > 0 && (
+      {!hideNodes && work.nodes && work.nodes.length > 0 && (
         <div>
           <p className="font-medium mb-2">任务分解节点：</p>
           <div className="space-y-3">
@@ -352,11 +360,11 @@ function TodoWorkDisplayInfo({ work, departments }: WorkDisplayInfoProps) {
   );
 }
 
-export function WorkDisplayInfo({ work, departments }: WorkDisplayInfoProps) {
+export function WorkDisplayInfo({ work, departments, hideNodes, hideCooperators }: WorkDisplayInfoProps) {
   const isTodo = work.type === '待办';
 
   if (isTodo) {
-    return <TodoWorkDisplayInfo work={work} departments={departments} />;
+    return <TodoWorkDisplayInfo work={work} departments={departments} hideNodes={hideNodes} hideCooperators={hideCooperators} />;
   }
-  return <PriorityMainWorkDisplayInfo work={work} departments={departments} />;
+  return <PriorityMainWorkDisplayInfo work={work} departments={departments} hideNodes={hideNodes} hideCooperators={hideCooperators} />;
 }

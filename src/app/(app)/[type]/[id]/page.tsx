@@ -14,7 +14,7 @@ import {
   PANEL_PADDED,
 } from '@/features/works/ui/visual-tokens';
 import { WorkAttachmentPanel } from '@/features/attachments/ui/work-attachment-panel';
-import { WorkOperationPanel } from '@/features/works/ui/work-operation-panel';
+import { WorkCompletePanel } from '@/features/works/ui/work-complete-panel';
 import { WorkflowRecords } from '@/features/workflow/ui/workflow-records';
 import { WorkflowApprovalPanel } from '@/features/workflow/ui/workflow-approval-panel';
 import { WorkDraftEditPanel } from '@/features/works/ui/work-draft-edit-panel';
@@ -22,6 +22,7 @@ import { WorkDisplayInfo } from '@/features/works/ui/work-display-info';
 import { WorkDecomposePanel } from '@/features/works/ui/work-decompose-panel';
 import { WorkActionDialogs } from '@/features/works/ui/work-action-dialogs';
 import { WorkPendingAdjustmentPanel } from '@/features/works/ui/work-pending-adjustment-panel';
+import { WorkSidebarActions } from '@/features/works/ui/work-sidebar-actions';
 import { WorkflowProgress } from '@/features/workflow/ui/workflow-progress';
 import { useWorkDetailData } from '@/features/works/client/use-work-detail-data';
 import { uploadFiles, deleteAttachment } from '@/features/attachments/client/attachment-api';
@@ -377,17 +378,31 @@ export default function WorkDetailPage() {
 
   const theme = TYPE_THEME[typeColorKey];
 
+  const buildEditFormFromWork = () => ({
+    title: work.title || '', workItem: work.workItem || work.title || '',
+    businessCategory: work.businessCategory || '', isInnovation: !!work.isInnovation,
+    completeTime: work.completeTime || '', completeForm: work.completeForm || '',
+    departmentId: work.departmentId, responsibleLeader: work.responsibleLeader || '',
+    responsiblePerson: work.responsiblePerson || '', proposedLeader: work.proposedLeader || '',
+    proposedLeaderId: work.proposedLeaderId ? String(work.proposedLeaderId) : '',
+    proposedLeaderRole: work.proposedLeaderRole || '', proposedScene: work.proposedScene || '',
+    formedTime: work.formedTime || '', cooperators: work.cooperators || [],
+    workPlan: work.workPlan || '', planCompleteTime: work.planCompleteTime || '',
+    progress: work.progress || '', nodes: work.nodes || [],
+  });
+
+  const showSidebarNodes = !canEditDraft && !canHandleReturnedCreate && !canDecomposeTodo;
+  const showSidebarCooperators = isTodo && !canEditDraft && !canHandleReturnedCreate;
+
   return (
     <div className="space-y-6">
       {/* Light Hero Header */}
-      <div className="relative overflow-hidden rounded-2xl border border-slate-200/60 bg-gradient-to-br from-white via-white to-white p-6">
-        {/* Type-colored gradient wash */}
+      <div className="relative overflow-hidden rounded-2xl border border-slate-200/60 bg-gradient-to-br from-white via-white to-white px-5 py-4">
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-br opacity-[0.07]" style={{ backgroundImage: `linear-gradient(135deg, ${theme.accentHex}33, transparent 60%)` }} />
-        {/* Top accent strip */}
         <div className={`absolute inset-x-0 top-0 h-[3px] rounded-t-2xl ${theme.accent}`} />
 
         <div className="relative flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <div className="space-y-2">
+          <div className="space-y-4">
             <Link href={`/${type}`}>
               <Button variant="outline" size="sm" className="rounded-full">
                 <ArrowLeft className="h-4 w-4" />
@@ -395,15 +410,10 @@ export default function WorkDetailPage() {
               </Button>
             </Link>
 
-            <div>
-              <div className="mb-1.5 inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-slate-50/80 px-3 py-1 text-xs font-medium text-slate-500">
-                {theme.name}
-              </div>
-              <h1 className="flex items-center gap-3 text-2xl font-bold leading-tight text-slate-900">
-                <span className={`h-8 w-1 rounded-full ${theme.accent}`} />
-                {work.title}
-              </h1>
-            </div>
+            <h1 className="flex items-center gap-3 text-2xl font-bold leading-tight text-slate-900">
+              <span className={`h-8 w-1 rounded-full ${theme.accent}`} />
+              {work.title}
+            </h1>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -417,100 +427,153 @@ export default function WorkDetailPage() {
         </div>
       </div>
 
-      {/* Info Panel */}
-      <div className={`${PANEL_PADDED} stagger-1`}>
-        <WorkDisplayInfo work={work} departments={departments} />
-      </div>
-
-      {/* Workflow Progress */}
-      <div className={`${PANEL_PADDED} stagger-2`}>
-        <WorkflowProgress work={work} />
-      </div>
-
-      <WorkAttachmentPanel
-        attachments={(work.attachments || []).filter(a => a.category !== 'evidence')}
-        canUpload={!!canEdit}
-        canDelete={canDeleteAttachment}
-        onUpload={handleUploadAttachments}
-        onDelete={handleDeleteAttachment}
-      />
-
-      <WorkDraftEditPanel
-        visible={!!canHandleReturnedCreate || !!canEditDraft}
-        rejectReason={work.rejectReason || ''}
-        editMode={editMode}
-        setEditMode={setEditMode}
-        editForm={editForm}
-        setEditForm={setEditForm}
-        editReason={editReason}
-        setEditReason={setEditReason}
-        isPriorityOrMain={isPriorityOrMain}
-        isTodo={isTodo}
-        departments={departments}
-        companyLeaders={companyLeaders}
-        departmentLeaders={departmentLeaders}
-        departmentManagers={departmentManagers}
-        onResubmit={handleResubmit}
-        onSaveDraft={handleSaveDraft}
-        isRegularDraft={canEditDraft}
-        onDelete={handleDelete}
-      />
-
-      <WorkDecomposePanel
-        visible={!!canDecomposeTodo}
-        editForm={editForm}
-        setEditForm={setEditForm}
-        rejectReason={work.rejectReason || ''}
-        isReturned={!!(work.status === 'pending_decompose' && (work.rejectReason || work.rejectedFromStatus))}
-        onSubmitDecomposition={handleDecompose}
-      />
-
-      {canSubmitDraft && (
-        <div className={`${PANEL} overflow-hidden stagger-3`}>
-          <div className={`flex items-center gap-4 p-5 bg-gradient-to-r ${theme.lightGradient}`}>
-            <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${theme.accent} text-white shadow-lg`}>
-              <span className="text-lg">↑</span>
-            </div>
-            <div className="flex-1">
-              <span className="text-sm font-semibold text-slate-800">当前为草稿状态，请提交审批</span>
-              <p className="text-xs text-slate-500 mt-0.5">提交后将由系统按工作流规则自动分配审批节点；责任领导、责任人仅用于业务留痕。</p>
-            </div>
-            <Button onClick={handlePropose} className={`rounded-full ${theme.button} border-0`}>
-              提交审批
-            </Button>
+      {/* Body: Main + Sidebar */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
+        {/* Main Area */}
+        <div className="lg:col-span-3 space-y-6">
+          <div className={`${PANEL_PADDED}`}>
+            <WorkDisplayInfo work={work} departments={departments} hideNodes={true} hideCooperators={isTodo} />
           </div>
+
+          <div className={`${PANEL_PADDED}`}>
+            <WorkflowProgress work={work} />
+          </div>
+
+          {canSubmitDraft && (
+            <div className={`${PANEL} overflow-hidden`}>
+              <div className={`flex items-center gap-4 p-5 bg-gradient-to-r ${theme.lightGradient}`}>
+                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${theme.accent} text-white shadow-lg`}>
+                  <span className="text-lg">↑</span>
+                </div>
+                <div className="flex-1">
+                  <span className="text-sm font-semibold text-slate-800">当前为草稿状态，请提交审批</span>
+                  <p className="text-xs text-slate-500 mt-0.5">提交后将由系统按工作流规则自动分配审批节点；责任领导、责任人仅用于业务留痕。</p>
+                </div>
+                <Button onClick={handlePropose} className={`rounded-full ${theme.button} border-0`}>
+                  提交审批
+                </Button>
+              </div>
+            </div>
+          )}
+
+          <WorkCompletePanel
+            proof={proof}
+            onProofChange={setProof}
+            evidenceAttachments={(work.attachments || []).filter(a => a.category === 'evidence')}
+            onUploadEvidence={handleUploadEvidence}
+            onDeleteEvidence={handleDeleteEvidence}
+            uploading={uploading}
+            onComplete={handleComplete}
+          />
+
+          <WorkflowApprovalPanel visible={canApprove} onApprove={handleApprove} onReject={handleReject} />
+          <WorkPendingAdjustmentPanel work={work} />
+          <WorkflowRecords records={workflowRecords} />
         </div>
-      )}
 
-      <WorkOperationPanel
-        work={work}
-        proof={proof}
-        onProofChange={setProof}
-        evidenceAttachments={(work.attachments || []).filter(a => a.category === 'evidence')}
-        onUploadEvidence={handleUploadEvidence}
-        onDeleteEvidence={handleDeleteEvidence}
-        uploading={uploading}
-        onComplete={handleComplete}
-        onOpenAdjustDialog={(editForm, adjustReason) => {
-          setEditForm(editForm);
-          setAdjustReason(adjustReason);
-          setIsAdjustDialogOpen(true);
-        }}
-        onOpenCancelDialog={(cancelReason) => {
-          setCancelReason(cancelReason);
-          setIsCancelDialogOpen(true);
-        }}
-      />
+        {/* Sidebar */}
+        <aside className="lg:col-span-2 space-y-4">
+          <WorkAttachmentPanel
+            attachments={(work.attachments || []).filter(a => a.category !== 'evidence')}
+            canUpload={!!canEdit}
+            canDelete={canDeleteAttachment}
+            onUpload={handleUploadAttachments}
+            onDelete={handleDeleteAttachment}
+          />
 
-      <WorkflowApprovalPanel
-        visible={canApprove}
-        onApprove={handleApprove}
-        onReject={handleReject}
-      />
+          <WorkDraftEditPanel
+            visible={!!canHandleReturnedCreate || !!canEditDraft}
+            rejectReason={work.rejectReason || ''}
+            editMode={editMode}
+            setEditMode={setEditMode}
+            editForm={editForm}
+            setEditForm={setEditForm}
+            editReason={editReason}
+            setEditReason={setEditReason}
+            isPriorityOrMain={isPriorityOrMain}
+            isTodo={isTodo}
+            departments={departments}
+            companyLeaders={companyLeaders}
+            departmentLeaders={departmentLeaders}
+            departmentManagers={departmentManagers}
+            onResubmit={handleResubmit}
+            onSaveDraft={handleSaveDraft}
+            isRegularDraft={canEditDraft}
+            onDelete={handleDelete}
+          />
 
-      <WorkPendingAdjustmentPanel work={work} />
+          <WorkDecomposePanel
+            visible={!!canDecomposeTodo}
+            editForm={editForm}
+            setEditForm={setEditForm}
+            rejectReason={work.rejectReason || ''}
+            isReturned={!!(work.status === 'pending_decompose' && (work.rejectReason || work.rejectedFromStatus))}
+            onSubmitDecomposition={handleDecompose}
+          />
 
-      <WorkflowRecords records={workflowRecords} />
+          {/* Read-only nodes */}
+          {showSidebarNodes && work.nodes && work.nodes.length > 0 && (
+            <div className={PANEL_PADDED}>
+              <h3 className="text-sm font-semibold text-slate-500 tracking-wide mb-3">
+                {isTodo ? '任务分解节点' : '工作节点'}
+              </h3>
+              <div className="space-y-2">
+                {work.nodes.map((node: any, index: number) => (
+                  <div key={node.id ?? index} className="border border-slate-200 bg-slate-50/70 rounded-lg p-3">
+                    <div className="text-sm font-medium break-words">
+                      {index + 1}. {node.title}
+                      {node.completeTime ? `（节点完成时间：${node.completeTime}）` : ''}
+                    </div>
+                    {node.children && node.children.length > 0 && (
+                      <div className="pl-4 mt-1.5 space-y-0.5 text-xs text-slate-500">
+                        {node.children.map((child: any, childIndex: number) => (
+                          <div key={child.id ?? `${index}-${childIndex}`} className="break-words">
+                            {index + 1}.{childIndex + 1} {child.title}
+                            {child.completeTime ? `（完成日期：${child.completeTime}）` : ''}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Read-only cooperators */}
+          {showSidebarCooperators && work.cooperators && work.cooperators.length > 0 && (
+            <div className={PANEL_PADDED}>
+              <h3 className="text-sm font-semibold text-slate-500 tracking-wide mb-3">配合方</h3>
+              <div className="space-y-2">
+                {work.cooperators.map((c: any, idx: number) => (
+                  <div key={idx} className="border border-slate-200 bg-slate-50/70 rounded-lg p-3 text-sm">
+                    <div className="font-medium">{c.departmentName || departments.find(d => d.id === c.departmentId)?.name || String(c.departmentId)}</div>
+                    {(c.leader || c.person) && (
+                      <div className="text-xs text-slate-500 mt-1">
+                        {c.leader && <span>领导：{c.leader}</span>}
+                        {c.leader && c.person && <span className="mx-2">|</span>}
+                        {c.person && <span>责任人：{c.person}</span>}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <WorkSidebarActions
+            onAdjust={() => {
+              setEditForm(buildEditFormFromWork());
+              setAdjustReason('');
+              setIsAdjustDialogOpen(true);
+            }}
+            onCancel={() => {
+              setCancelReason('');
+              setIsCancelDialogOpen(true);
+            }}
+          />
+        </aside>
+      </div>
 
       <WorkActionDialogs
         isAdjustDialogOpen={isAdjustDialogOpen}

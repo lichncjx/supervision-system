@@ -35,14 +35,14 @@ export function WorkFormShell({
   return (
     <div className="space-y-6">
       {/* Light Hero Header */}
-      <div className="relative overflow-hidden rounded-2xl border border-slate-200/60 bg-gradient-to-br from-white via-white to-white p-6">
+      <div className="relative overflow-hidden rounded-2xl border border-slate-200/60 bg-gradient-to-br from-white via-white to-white px-5 py-4">
         {/* Type-colored gradient wash */}
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-br opacity-[0.07]" style={{ backgroundImage: `linear-gradient(135deg, ${theme.accentHex}33, transparent 60%)` }} />
         {/* Top accent strip */}
         <div className={`absolute inset-x-0 top-0 h-[3px] rounded-t-2xl ${theme.accent}`} />
 
         <div className="relative flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <div className="space-y-3">
+          <div className="space-y-4">
             <Link href={backHref}>
               <Button variant="outline" size="sm" className="rounded-full">
                 <ArrowLeft className="h-4 w-4" />
@@ -50,18 +50,13 @@ export function WorkFormShell({
               </Button>
             </Link>
 
-            <div>
-              <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-slate-50/80 px-3 py-1 text-xs font-medium text-slate-500">
-                事项录入
-              </div>
-              <h1 className="flex items-center gap-3 text-2xl font-bold leading-tight text-slate-900">
+            <h1 className="flex items-center gap-3 text-2xl font-bold leading-tight text-slate-900">
                 <span className={`h-8 w-1 rounded-full ${accentBar}`} />
                 <span className={`grid h-10 w-10 place-items-center rounded-xl ${theme.panelBg} ${theme.text}`}>
                   {icon}
                 </span>
                 {title}
               </h1>
-            </div>
           </div>
 
           <div className="grid grid-cols-3 gap-2 text-center md:min-w-64">
@@ -76,12 +71,14 @@ export function WorkFormShell({
       </div>
 
       {/* Form Layout */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
-        <form onSubmit={onSubmit} className="space-y-5">
-          {children}
-        </form>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
+        <div className="lg:col-span-3">
+          <form onSubmit={onSubmit} className="space-y-5">
+            {children}
+          </form>
+        </div>
 
-        <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
+        <aside className="lg:col-span-2 space-y-4 lg:sticky lg:top-24 lg:self-start">
           {sidebar}
         </aside>
       </div>
