@@ -31,6 +31,8 @@ interface WorkReturnedPanelProps {
   updateSubNodeTitle: (nodeId: number, subNodeId: number, title: string) => void;
   updateSubNodeCompleteTime: (nodeId: number, subNodeId: number, completeTime: string) => void;
   deleteSubNode: (nodeId: number, subNodeId: number) => void;
+  isRegularDraft?: boolean;
+  onSaveDraft?: () => void;
 }
 
 export function WorkReturnedPanel({
@@ -58,6 +60,8 @@ export function WorkReturnedPanel({
   updateSubNodeTitle,
   updateSubNodeCompleteTime,
   deleteSubNode,
+  isRegularDraft,
+  onSaveDraft,
 }: WorkReturnedPanelProps) {
   const cooperators = Array.isArray(editForm.cooperators) ? editForm.cooperators : [];
   const businessDepts = departments.filter((d) => d.isBusiness !== false);
@@ -100,9 +104,14 @@ export function WorkReturnedPanel({
 
   return (
     <div className="rounded-xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50/50 p-5">
-      <h3 className="font-semibold text-slate-800 mb-4">退回事项处理</h3>
+      <h3 className="font-semibold text-slate-800 mb-4">
+        {isRegularDraft ? '完善草稿' : '退回事项处理'}
+      </h3>
       <div className="space-y-4">
-        {rejectReason && (
+        {isRegularDraft && (
+          <p className="text-sm text-slate-500">可继续完善事项信息、上传附件后提交审批</p>
+        )}
+        {!isRegularDraft && rejectReason && (
           <div className="p-3 bg-rose-50/50 rounded text-red-700 break-words whitespace-pre-wrap">
             退回原因：{rejectReason}
           </div>
@@ -111,10 +120,10 @@ export function WorkReturnedPanel({
         {!editMode ? (
           <div className="flex gap-3">
             <Button onClick={() => setEditMode(true)} className="rounded-full">
-              修改后重新提交
+              {isRegularDraft ? '编辑草稿' : '修改后重新提交'}
             </Button>
             <Button variant="destructive" onClick={onDelete} className="rounded-full">
-              删除退回事项
+              {isRegularDraft ? '删除草稿' : '删除退回事项'}
             </Button>
           </div>
         ) : (
@@ -376,18 +385,20 @@ export function WorkReturnedPanel({
             </div>
 
             <div>
-              <label className="text-sm font-medium">修改说明 / 重新提交原因</label>
+              <label className="text-sm font-medium">
+                {isRegularDraft ? '修改说明' : '修改说明 / 重新提交原因'}
+              </label>
               <Textarea
                 value={editReason}
                 onChange={(e) => setEditReason(e.target.value)}
                 rows={3}
-                placeholder="请说明修改内容或重新提交原因"
+                placeholder={isRegularDraft ? '请说明修改内容' : '请说明修改内容或重新提交原因'}
               />
             </div>
 
             <div className="flex gap-3">
-              <Button onClick={onResubmit} className="rounded-full">
-                保存修改并重新提交
+              <Button onClick={isRegularDraft && onSaveDraft ? onSaveDraft : onResubmit} className="rounded-full">
+                {isRegularDraft ? '保存草稿修改' : '保存修改并重新提交'}
               </Button>
               <Button variant="outline" onClick={() => setEditMode(false)} className="rounded-full">
                 取消

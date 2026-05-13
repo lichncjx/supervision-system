@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { Star, ListTodo, CheckSquare } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { getCompanyLeaders, getDepartments } from '@/lib/auth';
-import { addWork, submitWork, type WorkType, type WorkNode } from '@/lib/work-store';
+import { addWork, type WorkType, type WorkNode } from '@/lib/work-store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -264,12 +264,10 @@ export default function NewWorkPage() {
         });
       }
 
-      // 提交审批
+      // 保存草稿
       if (createdWork) {
-        await submitWork(createdWork, user);
+        router.push(`/${routeType}/${createdWork.id}`);
       }
-
-      router.push(`/${routeType}`);
     } catch (error) {
       console.error(error);
       alert('创建失败，请查看控制台错误');
@@ -288,12 +286,12 @@ export default function NewWorkPage() {
 
   const businessDepts = departments.filter((d) => d.isBusiness !== false);
 
-  const approvalHint = (
+  const draftHint = (
     <div className="rounded-lg border border-blue-200 bg-blue-50/50 p-3 text-sm text-slate-600">
-      <p className="font-medium text-slate-700 mb-1">填写提示</p>
+      <p className="font-medium text-slate-700 mb-1">保存草稿提示</p>
       <ul className="list-disc list-inside space-y-0.5">
+        <li>保存草稿后，可在详情页继续完善信息、上传附件，并提交审批。</li>
         <li>责任领导、责任人仅用于业务留痕，不决定审批去向。</li>
-        <li>提交后系统将按当前用户角色和工作流规则自动分配审批节点。</li>
         <li>部门主管提交后由本部门领导审批，再由公司领导审批；部门领导提交后由公司领导审批。</li>
         <li>公司领导发起的待办事项直接进入待分解。</li>
       </ul>
@@ -344,7 +342,7 @@ export default function NewWorkPage() {
           <p className="text-xs text-gray-400">如需拆解阶段任务，可添加节点；未添加节点不影响提交。</p>
         </>
       )}
-      {approvalHint}
+      {draftHint}
     </>
   );
 
@@ -520,7 +518,7 @@ export default function NewWorkPage() {
 
       <div className="flex gap-3">
         <Button type="submit">
-          保存并提交
+          保存草稿
         </Button>
         <Link href={`/${routeType}`}>
           <Button variant="outline" type="button">取消</Button>

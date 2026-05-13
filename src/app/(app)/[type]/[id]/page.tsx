@@ -16,6 +16,7 @@ import {
   rejectWork,
   canApproveWork,
   resubmitRejectedWork,
+  updateWork,
   deleteWork,
   getWorkflowRecords,
   submitWork,
@@ -210,6 +211,24 @@ export default function WorkDetailPage() {
     user.role === 'ADMIN' ||
     user.id === work.creatorId
   );
+
+  const canEditDraft = work.status === 'draft' && !isReturnedDraftWork(work) && user && (
+    user.role === 'ADMIN' ||
+    user.id === work.creatorId
+  );
+
+  const handleSaveDraft = async () => {
+    if (!user) return;
+    try {
+      await updateWork(work.id, editForm);
+      setEditMode(false);
+      alert('草稿已保存');
+      setRefresh((v) => v + 1);
+    } catch (error) {
+      console.error(error);
+      alert('保存草稿失败');
+    }
+  };
 
   const handleSubmitDraft = async () => {
     if (!user) return;
@@ -960,7 +979,7 @@ export default function WorkDetailPage() {
       />
 
       <WorkReturnedPanel
-        visible={!!canHandleReturnedCreate}
+        visible={!!canHandleReturnedCreate || !!canEditDraft}
         rejectReason={work.rejectReason || ''}
         editMode={editMode}
         setEditMode={setEditMode}
@@ -975,6 +994,8 @@ export default function WorkDetailPage() {
         departmentLeaders={departmentLeaders}
         departmentManagers={departmentManagers}
         onResubmit={handleResubmit}
+        onSaveDraft={handleSaveDraft}
+        isRegularDraft={!!canEditDraft && !isReturnedDraftWork(work)}
         updateNodeTitle={updateNodeTitle}
         updateNodeCompleteTime={updateNodeCompleteTime}
         deleteNode={deleteNode}
