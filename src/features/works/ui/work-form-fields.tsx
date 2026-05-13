@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 
 // WorkItemField
 export interface WorkItemFieldProps {
@@ -207,5 +208,70 @@ export function PlanCompleteTimeField({ label, value, onChange }: PlanCompleteTi
         onChange={(e) => onChange(e.target.value)}
       />
     </div>
+  );
+}
+
+// TodoSpecificFields — 待办事项特有字段（不包含 workItem / planCompleteTime / departmentId / cooperators）
+export interface TodoSpecificFieldsProps {
+  proposedScene: string;
+  onProposedSceneChange: (value: string) => void;
+  formedTime: string;
+  onFormedTimeChange: (value: string) => void;
+  workPlan: string;
+  onWorkPlanChange: (value: string) => void;
+  progress: string;
+  onProgressChange: (value: string) => void;
+}
+
+export function TodoSpecificFields({
+  proposedScene,
+  onProposedSceneChange,
+  formedTime,
+  onFormedTimeChange,
+  workPlan,
+  onWorkPlanChange,
+  progress,
+  onProgressChange,
+}: TodoSpecificFieldsProps) {
+  return (
+    <>
+      <div>
+        <label className="block text-sm font-medium mb-1">事项提出场景</label>
+        <Input
+          value={proposedScene}
+          onChange={(e) => onProposedSceneChange(e.target.value)}
+          placeholder="请输入事项提出场景"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-1">形成时间</label>
+        <Input
+          type="date"
+          value={formedTime}
+          onChange={(e) => onFormedTimeChange(e.target.value)}
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-1">工作计划</label>
+        <Textarea
+          value={workPlan}
+          onChange={(e) => onWorkPlanChange(e.target.value)}
+          placeholder="请输入工作计划"
+          rows={3}
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-1">进展情况</label>
+        <Textarea
+          value={progress}
+          onChange={(e) => onProgressChange(e.target.value)}
+          placeholder="请输入进展情况"
+          rows={3}
+        />
+      </div>
+    </>
   );
 }

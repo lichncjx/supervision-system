@@ -8,8 +8,6 @@ import { useAuth } from '@/components/providers/auth-provider';
 import { getCompanyLeaders, getDepartments } from '@/lib/auth';
 import { addWork, type WorkType, type WorkNode } from '@/lib/work-store';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { WorkFormShell } from '@/features/works/ui/work-form-shell';
 import { WorkFormSectionCard } from '@/features/works/ui/work-form-section-card';
 import { WorkFormNodes } from '@/features/works/ui/work-form-nodes';
@@ -21,6 +19,7 @@ import {
   DepartmentField,
   ResponsibleFields,
   PlanCompleteTimeField,
+  TodoSpecificFields,
 } from '@/features/works/ui/work-form-fields';
 import { validateCreateWorkFormFields, type CreateWorkFormField } from '@/features/works/ui/work-form-validations';
 
@@ -432,14 +431,16 @@ export default function NewWorkPage() {
               fieldId="field-proposedLeaderId"
             />
 
-            <div>
-              <label className="block text-sm font-medium mb-1">事项提出场景</label>
-              <Input
-                value={todoForm.proposedScene}
-                onChange={(e) => setTodoForm({ ...todoForm, proposedScene: e.target.value })}
-                placeholder="请输入事项提出场景"
-              />
-            </div>
+            <TodoSpecificFields
+              proposedScene={todoForm.proposedScene}
+              onProposedSceneChange={(v) => setTodoForm({ ...todoForm, proposedScene: v })}
+              formedTime={todoForm.formedTime}
+              onFormedTimeChange={(v) => setTodoForm({ ...todoForm, formedTime: v })}
+              workPlan={todoForm.workPlan}
+              onWorkPlanChange={(v) => setTodoForm({ ...todoForm, workPlan: v })}
+              progress={todoForm.progress}
+              onProgressChange={(v) => setTodoForm({ ...todoForm, progress: v })}
+            />
 
             <WorkItemField
               label="待办事项"
@@ -451,40 +452,11 @@ export default function NewWorkPage() {
               fieldId="field-workItem"
             />
 
-            <div>
-              <label className="block text-sm font-medium mb-1">形成时间</label>
-              <Input
-                type="date"
-                value={todoForm.formedTime}
-                onChange={(e) => setTodoForm({ ...todoForm, formedTime: e.target.value })}
-              />
-            </div>
-
             <PlanCompleteTimeField
               label="计划完成时间"
               value={todoForm.planCompleteTime}
               onChange={(v) => setTodoForm({ ...todoForm, planCompleteTime: v })}
             />
-
-            <div>
-              <label className="block text-sm font-medium mb-1">工作计划</label>
-              <Textarea
-                value={todoForm.workPlan}
-                onChange={(e) => setTodoForm({ ...todoForm, workPlan: e.target.value })}
-                placeholder="请输入工作计划"
-                rows={3}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">进展情况</label>
-              <Textarea
-                value={todoForm.progress}
-                onChange={(e) => setTodoForm({ ...todoForm, progress: e.target.value })}
-                placeholder="请输入进展情况"
-                rows={3}
-              />
-            </div>
           </WorkFormSectionCard>
 
           <WorkFormSectionCard title="责任分工">

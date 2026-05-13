@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Download } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { getCompanyLeaders, getDepartments, getDepartmentLeaders, getDepartmentManagers } from '@/lib/auth';
 import {
@@ -14,7 +14,6 @@ import {
   submitTodoDecomposition,
   approveWork,
   rejectWork,
-  canApproveWork,
   resubmitRejectedWork,
   updateWork,
   deleteWork,
@@ -23,7 +22,6 @@ import {
   type WorkEditablePatch,
   type Work,
   type WorkflowRecord,
-  getCurrentProcessDescription,
 } from '@/lib/work-store';
 import { Button } from '@/components/ui/button';
 import { workTypeColors } from '@/lib/status-colors';
@@ -31,14 +29,13 @@ import { WorkAttachmentPanel } from '@/features/attachments/ui/work-attachment-p
 import { WorkOperationPanel } from '@/features/works/ui/work-operation-panel';
 import { WorkWorkflowRecords } from '@/features/workflow/ui/work-workflow-records';
 import { WorkApprovalPanel } from '@/features/workflow/ui/work-approval-panel';
-import { WorkReturnedPanel } from '@/features/works/ui/work-returned-panel';
+import { WorkDraftEditPanel } from '@/features/works/ui/work-draft-edit-panel';
+import { WorkDisplayInfo } from '@/features/works/ui/work-display-info';
 import { WorkDecomposePanel } from '@/features/workflow/ui/work-decompose-panel';
 import { WorkActionDialogs } from '@/features/works/ui/work-action-dialogs';
 import { WorkPendingAdjustmentPanel } from '@/features/workflow/ui/work-pending-adjustment-panel';
-import { StatusBadge } from '@/features/works/ui/badges';
 import { WorkflowProgress } from '@/features/workflow/ui/workflow-progress';
-import { ExpandableText } from '@/components/common/expandable-text';
-import { isReturnedDraftWork, isWorkStatusTerminal } from '@/lib/work-status';
+import { useWorkDetailPermissions } from '@/features/works/client/use-work-detail-permissions';
 
 export default function WorkDetailPage() {
   const params = useParams<{ type: string; id: string }>();
@@ -59,7 +56,6 @@ export default function WorkDetailPage() {
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
   const [editForm, setEditForm] = useState<any>({});
   const [editReason, setEditReason] = useState('');
-  // Phase 2: department leaders/managers for returned panel dropdowns
   const [departmentLeaders, setDepartmentLeaders] = useState<Array<{ id: number; name: string; role: string; departmentId: number }>>([]);
   const [departmentManagers, setDepartmentManagers] = useState<Array<{ id: number; name: string; role: string; departmentId: number }>>([]);
 
@@ -100,7 +96,6 @@ export default function WorkDetailPage() {
     fetchWorkflowRecords();
   }, [work, refresh]);
 
-  // Phase 2: fetch department leaders/managers for priority/main returned panel
   useEffect(() => {
     if (work && (work.type === '重点' || work.type === '主要') && work.departmentId) {
       const fetchDeptUsers = async () => {
@@ -115,7 +110,6 @@ export default function WorkDetailPage() {
     }
   }, [work?.departmentId, work?.type, work]);
 
-  // 初始化编辑表单
   React.useEffect(() => {
     if (work) {
       setEditForm({
@@ -144,6 +138,8 @@ export default function WorkDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [work?.id, refresh]);
 
+  const perms = useWorkDetailPermissions(work, user);
+
   if (!work) {
     return (
       <div className="text-center py-12">
@@ -154,68 +150,6 @@ export default function WorkDetailPage() {
       </div>
     );
   }
-
-  const isCurrentUserRelatedDepartment = () => {
-    if (!user?.departmentId) return false;
-
-    if (work.departmentId === user.departmentId) return true;
-
-    if (Array.isArray(work.cooperators)) {
-      return work.cooperators.some((c: any) => c.departmentId === user.departmentId);
-    }
-
-    return false;
-  };
-
-  const canDecomposeTodo =
-    user &&
-    work.type === '待办' &&
-    work.status === 'pending_decompose' &&
-    (
-      user.role === 'ADMIN' ||
-      (
-        (user.role === 'DEPARTMENT_MANAGER' || user.role === 'DEPARTMENT_LEADER') &&
-        isCurrentUserRelatedDepartment()
-      )
-    );
-
-  const canHandleReturnedCreate =
-    user &&
-    isReturnedDraftWork(work) &&
-    (
-      user.role === 'ADMIN' ||
-      // firstSubmitterId ?? creatorId 的 fallback 仅用于兼容历史数据
-      user.id === (work.firstSubmitterId ?? work.creatorId)
-    );
-
-  const canApprove = user ? canApproveWork(user, work) : false;
-
-  const canEdit = user && (
-    user.role === 'ADMIN' ||
-    user.role === 'SUPERVISOR' ||
-    (
-      (user.role === 'DEPARTMENT_MANAGER' || user.role === 'DEPARTMENT_LEADER') &&
-      isCurrentUserRelatedDepartment() &&
-      !isWorkStatusTerminal(work.status) &&
-      !isReturnedDraftWork(work)
-    ) ||
-    (
-      // 同部门且相关可编辑（不依赖姓名字段判断权限）
-      (work.type === '重点' || work.type === '主要') &&
-      isCurrentUserRelatedDepartment() &&
-      !isWorkStatusTerminal(work.status)
-    )
-  );
-
-  const canSubmitDraft = user && work.status === 'draft' && !isReturnedDraftWork(work) && (
-    user.role === 'ADMIN' ||
-    user.id === work.creatorId
-  );
-
-  const canEditDraft = work.status === 'draft' && !isReturnedDraftWork(work) && user && (
-    user.role === 'ADMIN' ||
-    user.id === work.creatorId
-  );
 
   const handleSaveDraft = async () => {
     if (!user) return;
@@ -290,114 +224,6 @@ export default function WorkDetailPage() {
       console.error(err);
       alert('删除失败');
     }
-  };
-
-  // 节点操作函数
-  const updateNodeTitle = (nodeId: number, title: string) => {
-    setEditForm((prev: any) => ({
-      ...prev,
-      nodes: prev.nodes.map((node: any) =>
-        node.id === nodeId ? { ...node, title } : node
-      ),
-    }));
-  };
-
-  const addNode = () => {
-    setEditForm((prev: any) => ({
-      ...prev,
-      nodes: [
-        ...prev.nodes,
-        {
-          id: Date.now(),
-          title: '',
-          completeTime: '',
-          children: [],
-        },
-      ],
-    }));
-  };
-
-  const updateNodeCompleteTime = (nodeId: number, completeTime: string) => {
-    setEditForm((prev: any) => ({
-      ...prev,
-      nodes: prev.nodes.map((node: any) =>
-        node.id === nodeId ? { ...node, completeTime: completeTime } : node
-      ),
-    }));
-  };
-
-  const deleteNode = (nodeId: number) => {
-    setEditForm((prev: any) => ({
-      ...prev,
-      nodes: prev.nodes.filter((node: any) => node.id !== nodeId),
-    }));
-  };
-
-  const addSubNode = (nodeId: number) => {
-    setEditForm((prev: any) => ({
-      ...prev,
-      nodes: prev.nodes.map((node: any) =>
-        node.id === nodeId
-          ? {
-              ...node,
-              children: [
-                ...node.children,
-                {
-                  id: Date.now(),
-                  title: '',
-                  completeTime: '',
-                },
-              ],
-            }
-          : node
-      ),
-    }));
-  };
-
-  const updateSubNodeTitle = (nodeId: number, subNodeId: number, title: string) => {
-    setEditForm((prev: any) => ({
-      ...prev,
-      nodes: prev.nodes.map((node: any) =>
-        node.id === nodeId
-          ? {
-              ...node,
-              children: node.children.map((child: any) =>
-                child.id === subNodeId ? { ...child, title } : child
-              ),
-            }
-          : node
-      ),
-    }));
-  };
-
-  const updateSubNodeCompleteTime = (nodeId: number, subNodeId: number, completeTime: string) => {
-    setEditForm((prev: any) => ({
-      ...prev,
-      nodes: prev.nodes.map((node: any) =>
-        node.id === nodeId
-          ? {
-              ...node,
-              children: node.children.map((child: any) =>
-                child.id === subNodeId ? { ...child, completeTime: completeTime } : child
-              ),
-            }
-          : node
-      ),
-    }));
-  };
-
-  const deleteSubNode = (nodeId: number, subNodeId: number) => {
-    setEditForm((prev: any) => ({
-      ...prev,
-      nodes: prev.nodes.map((node: any) =>
-        node.id === nodeId
-          ? {
-              ...node,
-              children: node.children.filter((child: any) => child.id !== subNodeId),
-            }
-          : node
-      ),
-    }));
   };
 
   const handleComplete = async () => {
@@ -586,355 +412,9 @@ export default function WorkDetailPage() {
     }
   };
 
-  const canDeleteAttachment = (attachment: { userId: number }): boolean => {
-    if (!user) return false;
-    // ADMIN / SUPERVISOR 可删除所有附件
-    if (user.role === 'ADMIN' || user.role === 'SUPERVISOR') return true;
-    // 上传者本人可删除自己上传的附件
-    if (user.id === attachment.userId) return true;
-    // 其他任何人不可删除他人附件
-    return false;
-  };
-
-  const getDepartmentName = (id: number) => {
-    return departments.find((d) => d.id === id)?.name || '-';
-  };
-
   const isPriorityOrMain = work.type === '重点' || work.type === '主要';
   const isTodo = work.type === '待办';
   const typeColorKey = work.type === '重点' ? 'priority' : work.type === '主要' ? 'main' : 'todo';
-
-  const renderPriorityOrMainInfo = () => {
-    return (
-      <div className="space-y-2">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <span className="text-sm text-slate-500">业务类别：</span>
-            <span>{work.businessCategory || '-'}</span>
-          </div>
-          <div>
-            <span className="text-sm text-slate-500">工作事项：</span>
-            <span>{work.workItem || '-'}</span>
-          </div>
-          <div>
-            <span className="text-sm text-slate-500">工作节点：</span>
-            <span>{work.workNode || '-'}</span>
-          </div>
-          <div>
-            <span className="text-sm text-slate-500">计划完成时间：</span>
-            <span>{work.completeTime || '-'}</span>
-          </div>
-          <div>
-            <span className="text-sm text-slate-500">完成形式：</span>
-            <span>{work.completeForm || '-'}</span>
-          </div>
-          <div>
-            <span className="text-sm text-slate-500">主办部门：</span>
-            <span>{getDepartmentName(work.departmentId ?? 0)}</span>
-          </div>
-          <div>
-            <span className="text-sm text-slate-500">责任领导：</span>
-            <span>{work.responsibleLeader || '-'}</span>
-          </div>
-          <div>
-            <span className="text-sm text-slate-500">责任人：</span>
-            <span>{work.responsiblePerson || '-'}</span>
-          </div>
-          {work.type === '重点' && (
-            <div>
-              <span className="text-sm text-slate-500">是否为创新工作：</span>
-              <span>{work.isInnovation ? '是' : '否'}</span>
-            </div>
-          )}
-          <div>
-            <span className="text-sm text-slate-500">当前状态：</span>
-            <StatusBadge status={work.status} work={work} />
-          </div>
-          <div>
-            <span className="text-sm text-slate-500">当前环节：</span>
-            <span className="text-blue-600">{getCurrentProcessDescription(
-              work.status,
-              work.currentApproverRole,
-              work.currentApproverId
-            )}</span>
-          </div>
-        </div>
-
-        {work.rejectReason && (
-          <div className="p-3 bg-rose-50/50 rounded text-sm text-rose-600 break-words whitespace-pre-wrap">
-            <div>退回人：{work.rejectedBy || '-'}</div>
-            <div>退回原因：{work.rejectReason}</div>
-            {work.rejectedAt && (
-              <div>退回时间：{new Date(work.rejectedAt).toLocaleString()}</div>
-            )}
-          </div>
-        )}
-
-        <div>
-          <p className="font-medium mb-2">工作节点：</p>
-          {work.nodes && work.nodes.length > 0 ? (
-            <div className="space-y-3">
-              {work.nodes.map((node: any, index: number) => (
-                <div key={node.id} className="border rounded p-3 bg-slate-50">
-                  <div className="font-medium break-words">
-                    {index + 1}. {node.title}
-                    {node.completeTime ? `（节点完成时间：${node.completeTime}）` : ''}
-                  </div>
-                  {node.children && node.children.length > 0 && (
-                    <div className="pl-5 mt-2 space-y-1 text-sm text-slate-500">
-                      {node.children.map((child: any, childIndex: number) => (
-                        <div key={child.id} className="break-words">
-                          {index + 1}.{childIndex + 1} {child.title}
-                          {child.completeTime ? `（完成日期：${child.completeTime}）` : ''}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-slate-500">暂无工作节点</p>
-          )}
-        </div>
-
-        {work.proof && (
-          <div>
-            <span className="text-sm text-slate-500">见证材料说明：</span>
-            <p className="mt-1 p-2 bg-slate-50 rounded break-words whitespace-pre-wrap overflow-hidden">{work.proof}</p>
-          </div>
-        )}
-        {(() => {
-          const evidenceAttachments = (work.attachments || []).filter(a => a.category === 'evidence');
-          if (evidenceAttachments.length === 0) return null;
-          return (
-            <div>
-              <span className="text-sm text-slate-500">见证材料附件：</span>
-              <div className="mt-2 space-y-2">
-                {evidenceAttachments.map((att) => (
-                  <div key={att.id} className="flex items-center justify-between rounded border p-2 text-sm">
-                    <div className="min-w-0">
-                      <div className="font-medium break-words">{att.fileName}</div>
-                      <div className="text-xs text-slate-500">
-                        上传人：{att.userName || '-'}
-                        上传时间：{att.uploadedAt ? new Date(att.uploadedAt).toLocaleString() : '-'}
-                      </div>
-                    </div>
-                    <a href={`/api/attachments/${att.id}/download`} target="_blank" rel="noopener noreferrer">
-                      <Button variant="outline" size="sm" className="rounded-full">
-                        <Download className="h-4 w-4 mr-1" />
-                        下载
-                      </Button>
-                    </a>
-                  </div>
-                ))}
-              </div>
-            </div>
-          );
-        })()}
-
-        {work.adjustReason && (
-          <div>
-            <p className="break-words whitespace-pre-wrap overflow-hidden">
-              调整原因：{work.adjustReason}
-            </p>
-          </div>
-        )}
-        {work.adjustNewTime && (
-          <p>
-            调整后时间：{work.adjustNewTime}
-          </p>
-        )}
-        {work.adjustHistory && work.adjustHistory.length > 0 && (
-          <div className="p-3 bg-purple-50/50 rounded text-sm text-purple-600 space-y-2">
-            <div className="font-medium">调整记录</div>
-            {work.adjustHistory.map((item) => (
-              <div key={item.id} className="border-t border-purple-100 pt-2 first:border-t-0 first:pt-0">
-                <div>调整原因：{item.reason || '-'}</div>
-                <div>原计划完成时间：{item.fromTime || '-'}</div>
-                <div>现计划完成时间：{item.toTime || '-'}</div>
-                <div>审批人：{item.approvedBy || '-'}</div>
-                <div>审批时间：{item.approvedAt ? new Date(item.approvedAt).toLocaleString() : '-'}</div>
-              </div>
-            ))}
-          </div>
-        )}
-        {work.cancelReason && (
-          <div>
-            <span className="text-sm text-slate-500">取消原因：</span>
-            <p className="mt-1 p-2 bg-slate-50 rounded break-words whitespace-pre-wrap overflow-hidden">{work.cancelReason}</p>
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  const renderTodoInfo = () => {
-    return (
-      <div className="space-y-2">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <span className="text-sm text-slate-500">事项提出领导：</span>
-            <span>{work.proposedLeader || '-'}</span>
-            <span className="text-xs text-slate-400 ml-2">（提出该待办事项，默认也是审批领导）</span>
-          </div>
-          <div>
-            <span className="text-sm text-slate-500">事项提出场景：</span>
-            <span>{work.proposedScene || '-'}</span>
-          </div>
-          <div>
-            <span className="text-sm text-slate-500">待办事项：</span>
-            <span>{work.workItem || '-'}</span>
-          </div>
-          <div>
-            <span className="text-sm text-slate-500">形成时间：</span>
-            <span>{work.formedTime || '-'}</span>
-          </div>
-          <div>
-            <span className="text-sm text-slate-500">主责部门：</span>
-            <span>{getDepartmentName(work.departmentId ?? 0)}</span>
-          </div>
-          <div>
-            <span className="text-sm text-slate-500">责任领导：</span>
-            <span>{work.responsibleLeader || '-'}</span>
-          </div>
-          <div>
-            <span className="text-sm text-slate-500">责任人：</span>
-            <span>{work.responsiblePerson || '-'}</span>
-          </div>
-          <div>
-            <span className="text-sm text-slate-500">配合部门：</span>
-            <span>
-              {work.cooperators && work.cooperators.length > 0
-                ? work.cooperators.map((c: any) => getDepartmentName(c.departmentId) || c.departmentName).join('、')
-                : '-'}
-            </span>
-          </div>
-          <div>
-            <span className="text-sm text-slate-500">配合责任人：</span>
-            <span>
-              {work.cooperators && work.cooperators.length > 0
-                ? work.cooperators.map((c: any) => c.person).filter(Boolean).join('、')
-                : '-'}
-            </span>
-          </div>
-          <div>
-            <span className="text-sm text-slate-500">工作计划：</span>
-            <span>{work.workPlan || '-'}</span>
-          </div>
-          <div>
-            <span className="text-sm text-slate-500">计划完成时间：</span>
-            <span>{work.planCompleteTime || '-'}</span>
-          </div>
-          <div>
-            <span className="text-sm text-slate-500">进展情况：</span>
-            <ExpandableText text={work.progress} />
-          </div>
-          <div>
-            <span className="text-sm text-slate-500">当前状态：</span>
-            <StatusBadge status={work.status} work={work} />
-          </div>
-          <div>
-            <span className="text-sm text-slate-500">当前环节：</span>
-            <span className="text-blue-600">{getCurrentProcessDescription(
-              work.status,
-              work.currentApproverRole,
-              work.currentApproverId
-            )}</span>
-          </div>
-        </div>
-
-        {work.nodes && work.nodes.length > 0 && (
-          <div>
-            <p className="font-medium mb-2">任务分解节点：</p>
-            <div className="space-y-3">
-              {work.nodes.map((node: any, index: number) => (
-                <div key={node.id} className="border rounded p-3 bg-slate-50">
-                  <div className="font-medium break-words">
-                    {index + 1}. {node.title}
-                    {node.completeTime ? `（节点完成时间：${node.completeTime}）` : ''}
-                  </div>
-                  {node.children && node.children.length > 0 && (
-                    <div className="pl-5 mt-2 space-y-1 text-sm text-slate-500">
-                      {node.children.map((child: any, childIndex: number) => (
-                        <div key={child.id} className="break-words">
-                          {index + 1}.{childIndex + 1} {child.title}
-                          {child.completeTime ? `（完成日期：${child.completeTime}）` : ''}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {work.rejectReason && (
-          <div className="p-3 bg-rose-50/50 rounded text-sm text-rose-600 break-words whitespace-pre-wrap">
-            <div>退回人：{work.rejectedBy || '-'}</div>
-            <div>退回原因：{work.rejectReason}</div>
-            {work.rejectedAt && (
-              <div>退回时间：{new Date(work.rejectedAt).toLocaleString()}</div>
-            )}
-          </div>
-        )}
-
-        {work.proof && (
-          <div>
-            <span className="text-sm text-slate-500">见证材料说明：</span>
-            <p className="mt-1 p-2 bg-slate-50 rounded break-words whitespace-pre-wrap overflow-hidden">{work.proof}</p>
-          </div>
-        )}
-        {(() => {
-          const evidenceAttachments = (work.attachments || []).filter(a => a.category === 'evidence');
-          if (evidenceAttachments.length === 0) return null;
-          return (
-            <div>
-              <span className="text-sm text-slate-500">见证材料附件：</span>
-              <div className="mt-2 space-y-2">
-                {evidenceAttachments.map((att) => (
-                  <div key={att.id} className="flex items-center justify-between rounded border p-2 text-sm">
-                    <div className="min-w-0">
-                      <div className="font-medium break-words">{att.fileName}</div>
-                      <div className="text-xs text-slate-500">
-                        上传人：{att.userName || '-'}
-                        上传时间：{att.uploadedAt ? new Date(att.uploadedAt).toLocaleString() : '-'}
-                      </div>
-                    </div>
-                    <a href={`/api/attachments/${att.id}/download`} target="_blank" rel="noopener noreferrer">
-                      <Button variant="outline" size="sm" className="rounded-full">
-                        <Download className="h-4 w-4 mr-1" />
-                        下载
-                      </Button>
-                    </a>
-                  </div>
-                ))}
-              </div>
-            </div>
-          );
-        })()}
-        {work.adjustReason && (
-          <div>
-            <p className="break-words whitespace-pre-wrap overflow-hidden">
-              调整原因：{work.adjustReason}
-            </p>
-          </div>
-        )}
-        {work.adjustNewTime && (
-          <p>
-            调整后时间：{work.adjustNewTime}
-          </p>
-        )}
-        {work.cancelReason && (
-          <div>
-            <span className="text-sm text-slate-500">取消原因：</span>
-            <p className="mt-1 p-2 bg-slate-50 rounded break-words whitespace-pre-wrap overflow-hidden">{work.cancelReason}</p>
-          </div>
-        )}
-      </div>
-    );
-  };
 
   return (
     <div className="space-y-6">
@@ -959,8 +439,7 @@ export default function WorkDetailPage() {
           </div>
         </div>
         <div className="space-y-4 p-5">
-          {isPriorityOrMain && renderPriorityOrMainInfo()}
-          {isTodo && renderTodoInfo()}
+          <WorkDisplayInfo work={work} departments={departments} />
         </div>
       </div>
 
@@ -972,14 +451,14 @@ export default function WorkDetailPage() {
 
       <WorkAttachmentPanel
         attachments={(work.attachments || []).filter(a => a.category !== 'evidence')}
-        canUpload={!!canEdit}
-        canDelete={canDeleteAttachment}
+        canUpload={!!perms.canEdit}
+        canDelete={perms.canDeleteAttachment}
         onUpload={handleUploadAttachments}
         onDelete={handleDeleteAttachment}
       />
 
-      <WorkReturnedPanel
-        visible={!!canHandleReturnedCreate || !!canEditDraft}
+      <WorkDraftEditPanel
+        visible={!!perms.canHandleReturnedCreate || !!perms.canEditDraft}
         rejectReason={work.rejectReason || ''}
         editMode={editMode}
         setEditMode={setEditMode}
@@ -995,15 +474,7 @@ export default function WorkDetailPage() {
         departmentManagers={departmentManagers}
         onResubmit={handleResubmit}
         onSaveDraft={handleSaveDraft}
-        isRegularDraft={!!canEditDraft && !isReturnedDraftWork(work)}
-        updateNodeTitle={updateNodeTitle}
-        updateNodeCompleteTime={updateNodeCompleteTime}
-        deleteNode={deleteNode}
-        addNode={addNode}
-        addSubNode={addSubNode}
-        updateSubNodeTitle={updateSubNodeTitle}
-        updateSubNodeCompleteTime={updateSubNodeCompleteTime}
-        deleteSubNode={deleteSubNode}
+        isRegularDraft={perms.isRegularDraft}
         onDelete={async () => {
           if (!confirm('确认删除该退回事项？')) return;
           try {
@@ -1017,17 +488,11 @@ export default function WorkDetailPage() {
       />
 
       <WorkDecomposePanel
-        visible={!!canDecomposeTodo}
+        visible={!!perms.canDecomposeTodo}
         editForm={editForm}
         setEditForm={setEditForm}
-        updateNodeTitle={updateNodeTitle}
-        updateNodeCompleteTime={updateNodeCompleteTime}
-        deleteNode={deleteNode}
-        addNode={addNode}
-        addSubNode={addSubNode}
-        updateSubNodeTitle={updateSubNodeTitle}
-        updateSubNodeCompleteTime={updateSubNodeCompleteTime}
-        deleteSubNode={deleteSubNode}
+        rejectReason={work.rejectReason || ''}
+        isReturned={!!(work.status === 'pending_decompose' && (work.rejectReason || work.rejectedFromStatus))}
         onSubmitDecomposition={async () => {
           if (!user) return;
           if (!editForm.workPlan?.trim()) {
@@ -1066,7 +531,7 @@ export default function WorkDetailPage() {
         }}
       />
 
-      {canSubmitDraft && (
+      {perms.canSubmitDraft && (
         <div className="rounded-xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50/50 overflow-hidden stagger-3">
           <div className="p-4">
             <div className="flex items-center gap-4">
@@ -1101,7 +566,7 @@ export default function WorkDetailPage() {
       />
 
       <WorkApprovalPanel
-        visible={canApprove}
+        visible={perms.canApprove}
         onApprove={handleApprove}
         onReject={handleReject}
       />
@@ -1129,14 +594,6 @@ export default function WorkDetailPage() {
         isTodo={isTodo}
         onSubmitAdjust={handleAdjustSubmit}
         onSubmitCancel={handleCancel}
-        updateNodeTitle={updateNodeTitle}
-        updateNodeCompleteTime={updateNodeCompleteTime}
-        deleteNode={deleteNode}
-        addNode={addNode}
-        addSubNode={addSubNode}
-        updateSubNodeTitle={updateSubNodeTitle}
-        updateSubNodeCompleteTime={updateSubNodeCompleteTime}
-        deleteSubNode={deleteSubNode}
       />
     </div>
   );
