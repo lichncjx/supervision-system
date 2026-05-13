@@ -112,7 +112,7 @@ export default function WorkDetailPage() {
       };
       fetchDeptUsers();
     }
-  }, [work?.departmentId, work?.type]);
+  }, [work?.departmentId, work?.type, work]);
 
   // 初始化编辑表单
   React.useEffect(() => {
@@ -1049,7 +1049,10 @@ export default function WorkDetailPage() {
         <div className="rounded-xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50/50 overflow-hidden stagger-3">
           <div className="p-4">
             <div className="flex items-center gap-4">
-              <span className="text-sm text-slate-500">当前为草稿状态，请提交审批：</span>
+              <div className="flex-1">
+                <span className="text-sm text-slate-500">当前为草稿状态，请提交审批：</span>
+                <p className="text-xs text-slate-400 mt-1">提交后将由系统按工作流规则自动分配审批节点；责任领导、责任人仅用于业务留痕。</p>
+              </div>
               <Button onClick={handleSubmitDraft} className="rounded-full">提交审批</Button>
             </div>
           </div>

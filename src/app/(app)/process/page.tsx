@@ -11,7 +11,6 @@ import {
   approveWork,
   canApproveWork,
   canHandleWork,
-  getActionName,
   getWorkDueDate,
   getVisibleWorks,
   rejectWork,

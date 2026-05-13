@@ -11,8 +11,6 @@ import {
   getVisibleWorks,
   isExpiringWork,
   isOverdueWork,
-  getActionName,
-  getWorkDueDate,
   sortWorksByDueDate,
   type Work,
 } from '@/lib/work-store';
