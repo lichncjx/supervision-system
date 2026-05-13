@@ -3,14 +3,14 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { FIELD_LABEL, MUTED_TEXT, ERROR_TEXT } from './visual-tokens';
+import { FIELD_LABEL, ERROR_TEXT } from './visual-tokens';
+import { Plus, Trash2 } from 'lucide-react';
 import type { WorkNode } from '@/features/works/domain/work-client.types';
 
 export interface WorkFormNodesProps {
   nodes: WorkNode[];
   onChange: (nodes: WorkNode[]) => void;
   nodeLabel?: string;
-  addButtonLabel?: string;
   nodePlaceholderPrefix?: string;
   error?: string;
   onTouched?: () => void;
@@ -21,7 +21,6 @@ export function WorkFormNodes({
   nodes,
   onChange,
   nodeLabel = '工作节点',
-  addButtonLabel = '新增工作节点',
   nodePlaceholderPrefix = '工作节点',
   error,
   onTouched,
@@ -111,62 +110,46 @@ export function WorkFormNodes({
   };
 
   return (
-    <div className="space-y-3" id={fieldId}>
+    <div className="space-y-2.5" id={fieldId}>
       <div className="flex items-center justify-between">
         <label className={FIELD_LABEL}>{nodeLabel}</label>
-        <Button type="button" variant="outline" size="sm" className="rounded-full" onClick={() => { addNode(); onTouched?.(); }}>
-          {addButtonLabel}
+        <Button type="button" variant="ghost" size="icon-sm" className="rounded-full text-slate-400 hover:text-slate-600" onClick={() => { addNode(); onTouched?.(); }}>
+          <Plus className="h-4 w-4" />
         </Button>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-2">
         {nodes.map((node, nodeIndex) => (
-          <div key={node.id} className="border rounded-lg p-4 space-y-3 bg-gray-50">
-            <div className="flex gap-2 items-center">
+          <div key={node.id} className="rounded-lg bg-slate-50 p-3 space-y-2">
+            <div className="space-y-2">
               <Input
                 value={node.title}
                 onChange={(e) => { updateNodeTitle(node.id, e.target.value); onTouched?.(); }}
                 placeholder={`${nodePlaceholderPrefix}${nodeIndex + 1}`}
-                className="flex-1"
               />
-              <span className="text-sm text-gray-500">节点完成时间</span>
-              <Input
-                type="date"
-                value={node.completeTime || ''}
-                onChange={(e) => { updateNodeCompleteTime(node.id, e.target.value); onTouched?.(); }}
-                className="w-40"
-              />
-              <Button
-                type="button"
-                variant="destructive"
-                size="sm"
-                className="rounded-full"
-                onClick={() => { deleteNode(node.id); onTouched?.(); }}
-              >
-                删除节点
-              </Button>
-            </div>
-
-            <div className="pl-6 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500">子节点</span>
+              <div className="flex gap-2">
+                <Input
+                  type="date"
+                  value={node.completeTime || ''}
+                  onChange={(e) => { updateNodeCompleteTime(node.id, e.target.value); onTouched?.(); }}
+                  placeholder="完成时间"
+                  className="flex-1"
+                />
                 <Button
                   type="button"
-                  variant="outline"
-                  size="sm"
-                  className="rounded-full"
-                  onClick={() => { addSubNode(node.id); onTouched?.(); }}
+                  variant="ghost"
+                  size="icon-sm"
+                  className="rounded-full text-slate-400 hover:text-rose-500"
+                  onClick={() => { deleteNode(node.id); onTouched?.(); }}
                 >
-                  新增子节点
+                  <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               </div>
+            </div>
 
-              {node.children.length === 0 && (
-                <div className={MUTED_TEXT}>暂无子节点</div>
-              )}
-
+            <div className="pl-4 space-y-1.5 border-l-2 border-slate-200">
               {node.children.map((child, childIndex) => (
-                <div key={child.id} className="grid grid-cols-1 md:grid-cols-[1fr_180px_auto] gap-2 items-center">
+                <div key={child.id} className="flex gap-1.5 items-center">
                   <Input
                     value={child.title}
                     onChange={(e) => {
@@ -176,7 +159,6 @@ export function WorkFormNodes({
                     placeholder={`子节点${childIndex + 1}`}
                     className="flex-1"
                   />
-
                   <Input
                     type="date"
                     value={child.completeTime || ''}
@@ -184,20 +166,29 @@ export function WorkFormNodes({
                       updateSubNodeCompleteTime(node.id, child.id, e.target.value);
                       onTouched?.();
                     }}
-                    placeholder="完成日期"
+                    className="w-[130px] shrink-0"
                   />
-
                   <Button
                     type="button"
-                    variant="outline"
-                    size="sm"
-                    className="rounded-full"
+                    variant="ghost"
+                    size="icon-sm"
+                    className="rounded-full text-slate-400 hover:text-rose-500 shrink-0"
                     onClick={() => { deleteSubNode(node.id, child.id); onTouched?.(); }}
                   >
-                    删除
+                    <Trash2 className="h-3 w-3" />
                   </Button>
                 </div>
               ))}
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="rounded-full text-xs text-slate-400 hover:text-slate-600"
+                onClick={() => { addSubNode(node.id); onTouched?.(); }}
+              >
+                <Plus className="h-3 w-3 mr-1" />
+                子节点
+              </Button>
             </div>
           </div>
         ))}

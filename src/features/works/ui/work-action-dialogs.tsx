@@ -155,7 +155,6 @@ export function WorkActionDialogs({
                     nodes={nodes}
                     onChange={(value) => setEditForm((prev: any) => ({ ...prev, nodes: value }))}
                     nodeLabel="工作节点（可选）"
-                    addButtonLabel="新增工作节点"
                     nodePlaceholderPrefix="工作节点"
                   />
                 </div>

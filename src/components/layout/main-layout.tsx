@@ -135,26 +135,31 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   });
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="bg-white border-b sticky top-0 z-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-50 to-teal-50/20">
+      <header className="sticky top-0 z-50 border-b border-slate-200/60 bg-white/80 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-          <h1 className="text-lg md:text-xl font-bold text-gray-900 leading-tight">
-   督办管理系统
- </h1>
+          <h1 className="text-lg md:text-xl font-bold text-slate-900 tracking-tight leading-tight">
+督办管理系统
+          </h1>
           {user && (
-            <div className="flex items-center gap-3">
-              <User className="h-4 w-4" />
-              <span className="text-sm">{user.name}</span>
-              <Badge variant="outline">{getRoleName(user.role)}</Badge>
+            <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-2 rounded-full bg-slate-50 px-3 py-1.5">
+                <User className="h-3.5 w-3.5 text-slate-500" />
+                <span className="text-sm font-medium text-slate-700">{user.name}</span>
+                <Badge variant="outline" className="text-[10px] font-semibold uppercase tracking-wider border-teal-200 text-teal-700 bg-teal-50/50">
+                  {getRoleName(user.role)}
+                </Badge>
+              </div>
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
                 onClick={() => setPasswordDialogOpen(true)}
+                className="text-slate-500 hover:text-slate-700"
               >
                 <KeyRound className="h-4 w-4 mr-1" />
                 修改密码
               </Button>
-              <Button variant="outline" size="sm" onClick={handleLogout}>
+              <Button variant="ghost" size="sm" onClick={handleLogout} className="text-slate-500 hover:text-slate-700">
                 <LogOut className="h-4 w-4 mr-1" />
                 退出
               </Button>
@@ -162,9 +167,9 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
           )}
         </div>
 
-        <div className="bg-white border-t">
+        <div className="bg-white/60 backdrop-blur-sm border-t border-slate-100">
           <div className="max-w-7xl mx-auto px-4">
-            <nav className="flex gap-1 h-12">
+            <nav className="flex gap-0.5 h-12 items-center">
               {visibleNavItems.map((item) => {
                 const Icon = item.icon;
                 const active = pathname === item.href;
@@ -173,13 +178,13 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                     key={item.href}
                     href={item.href}
                     className={cn(
-                      'flex items-center gap-2 px-4 text-sm font-medium',
+                      'flex items-center gap-2 px-3.5 py-1.5 text-sm font-medium rounded-full transition-all duration-200',
                       active
-                        ? 'text-blue-600 border-b-2 border-blue-600'
-                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                        ? 'bg-slate-900 text-white shadow-sm shadow-slate-900/10'
+                        : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100/80'
                     )}
                   >
-                    <Icon className={cn('h-4 w-4', item.color)} />
+                    <Icon className={cn('h-3.5 w-3.5', active ? 'text-white/80' : item.color)} />
                     {item.label}
                   </Link>
                 );

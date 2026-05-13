@@ -23,7 +23,7 @@ import {
 } from '@/features/works/ui/work-form-fields';
 import { validateCreateWorkFormFields, type CreateWorkFormField } from '@/features/works/ui/work-form-validations';
 import { buildCreateWorkPayload } from '@/features/works/client/build-create-work-payload';
-import { ERROR_BOX, HINT_BOX } from '@/features/works/ui/visual-tokens';
+import { ERROR_BOX, HINT_BOX, STICKY_ACTION_BAR } from '@/features/works/ui/visual-tokens';
 
 export default function NewWorkPage() {
   const params = useParams<{ type: string }>();
@@ -229,8 +229,9 @@ export default function NewWorkPage() {
   };
 
   const accentBar = routeType === 'priority' ? 'bg-rose-500' : routeType === 'main' ? 'bg-sky-500' : 'bg-emerald-500';
-  const iconColor = routeType === 'priority' ? 'text-rose-500' : routeType === 'main' ? 'text-sky-500' : 'text-emerald-500';
+  const iconColor = 'text-white';
   const TitleIcon = routeType === 'priority' ? Star : routeType === 'main' ? ListTodo : CheckSquare;
+  const themeKey = routeType === 'priority' ? 'priority' : routeType === 'main' ? 'main' : 'todo';
 
   const businessDepts = departments.filter((d) => d.isBusiness !== false);
   const isDepartmentUser = user?.role === 'DEPARTMENT_MANAGER' || user?.role === 'DEPARTMENT_LEADER';
@@ -268,7 +269,6 @@ export default function NewWorkPage() {
             nodes={nodes}
             onChange={setNodes}
             nodeLabel={isPriorityOrMain ? '工作节点（可选）' : '任务节点（可选）'}
-            addButtonLabel={isPriorityOrMain ? '新增工作节点' : '新增任务节点'}
             nodePlaceholderPrefix={isPriorityOrMain ? '工作节点' : '任务节点'}
             error={fieldError('nodes')}
             onTouched={() => handleBlur('nodes')}
@@ -276,6 +276,13 @@ export default function NewWorkPage() {
           />
           <p className="text-xs text-gray-400">如需拆解阶段任务，可添加节点；未添加节点不影响提交。</p>
         </>
+      )}
+      {isTodo && (
+        <WorkFormCooperators
+          cooperators={todoForm.cooperators}
+          onChange={(cooperators) => setTodoForm({ ...todoForm, cooperators })}
+          departments={businessDepts}
+        />
       )}
       {draftHint}
     </>
@@ -287,6 +294,7 @@ export default function NewWorkPage() {
       title={titleMap[type]}
       accentBar={accentBar}
       icon={<TitleIcon className={`h-6 w-6 ${iconColor}`} />}
+      themeKey={themeKey}
       sidebar={sidebar}
       onSubmit={handleSubmit}
     >
@@ -413,24 +421,19 @@ export default function NewWorkPage() {
               personValue={todoForm.responsiblePerson}
               onPersonChange={(v) => setTodoForm({ ...todoForm, responsiblePerson: v })}
             />
-
-            {/* 配合方 */}
-            <WorkFormCooperators
-              cooperators={todoForm.cooperators}
-              onChange={(cooperators) => setTodoForm({ ...todoForm, cooperators })}
-              departments={businessDepts}
-            />
           </WorkFormSectionCard>
         </>
       )}
 
-      <div className="flex gap-3">
-        <Button type="submit">
+      <div className={STICKY_ACTION_BAR}>
+        <Link href={`/${routeType}`}>
+          <Button variant="outline" type="button" className="rounded-full border-slate-200 bg-white/80">
+            取消
+          </Button>
+        </Link>
+        <Button type="submit" className="rounded-full bg-slate-950 px-5 text-white shadow-lg shadow-slate-950/15 hover:bg-slate-800">
           保存草稿
         </Button>
-        <Link href={`/${routeType}`}>
-          <Button variant="outline" type="button">取消</Button>
-        </Link>
       </div>
     </WorkFormShell>
   );

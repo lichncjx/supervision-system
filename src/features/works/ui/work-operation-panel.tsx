@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { StatusBadge } from '@/features/works/ui/badges';
 import { CheckCircle, Download, Loader2 } from 'lucide-react';
 import { getCurrentProcessDescription, type Attachment } from '@/lib/work-store';
-import { DISPLAY_LABEL, FIELD_LABEL } from './visual-tokens';
+import { DISPLAY_LABEL, FIELD_LABEL, PANEL_PADDED } from './visual-tokens';
 
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return bytes + ' B';
@@ -96,7 +96,7 @@ export function WorkOperationPanel({
   };
 
   return (
-    <div className="rounded-xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50/50 p-5">
+    <div className={PANEL_PADDED}>
       <h3 className="font-semibold text-slate-800 mb-4">事项操作</h3>
       <div className="space-y-6">
         <div className="space-y-2">

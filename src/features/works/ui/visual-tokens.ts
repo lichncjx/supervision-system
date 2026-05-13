@@ -1,31 +1,123 @@
-// 视觉 token — 与主页风格对齐的系统级 className 常量
+// 视觉 token — Warm Luxury 设计体系
+// 三基色：石板暖灰 (Slate) + 青碧 (Teal) + 琥珀金 (Amber)
 
-// 面板卡片（无 padding，内容区自行控制内边距）
-export const PANEL = 'rounded-xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50/50'
+// ── 毛玻璃面板 ──────────────────────────────────────────────
 
-// 面板卡片 + 统一内边距
-export const PANEL_PADDED = 'rounded-xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50/50 p-5'
+export const PANEL =
+  'rounded-2xl border border-white/70 bg-white/78 shadow-[0_18px_55px_rgba(15,23,42,0.08)] backdrop-blur-xl';
 
-// 区块/卡片标题
-export const SECTION_TITLE = 'text-sm font-semibold text-slate-500 tracking-wide'
+export const PANEL_PADDED = `${PANEL} p-5`;
 
-// 表单字段 label
-export const FIELD_LABEL = 'text-sm font-semibold text-slate-500'
+export const SURFACE_INSET =
+  'rounded-xl border border-slate-200/70 bg-white/65 shadow-inner shadow-white/50';
 
-// 字段级错误文案
-export const ERROR_TEXT = 'text-sm text-red-600 mt-1'
+// ── 区块头部 ──────────────────────────────────────────────
 
-// 错误摘要框
-export const ERROR_BOX = 'rounded border border-red-200 bg-rose-50 p-3 text-sm text-red-700'
+export const SECTION_HEADER =
+  'mb-5 flex items-center justify-between gap-3 border-b border-slate-200/70 pb-3';
 
-// 提示信息框（蓝色）
-export const HINT_BOX = 'rounded border border-blue-200 bg-blue-50 p-3 text-sm text-slate-600'
+export const SECTION_TITLE = 'text-sm font-semibold text-slate-800 tracking-tight';
 
-// 只读展示字段 label（比 FIELD_LABEL 更轻量）
-export const DISPLAY_LABEL = 'text-xs font-medium text-slate-500'
+export const SECTION_EYEBROW = 'text-[11px] font-semibold uppercase tracking-wider text-slate-400';
 
-// 只读展示字段 value
-export const DISPLAY_VALUE = 'text-sm text-slate-900'
+// ── 表单控件 ──────────────────────────────────────────────
 
-// 辅助文字
-export const MUTED_TEXT = 'text-xs text-gray-400'
+export const FIELD_LABEL = 'block text-xs font-semibold text-slate-500 tracking-wide';
+
+export const FORM_CONTROL =
+  'h-10 rounded-xl border-slate-200/80 bg-white/82 px-3 shadow-sm shadow-slate-200/40 transition-all duration-200 placeholder:text-slate-400 hover:border-slate-300 focus-visible:border-teal-500 focus-visible:ring-[3px] focus-visible:ring-teal-500/15';
+
+export const SELECT_CONTROL =
+  'h-10 w-full rounded-xl border border-slate-200/80 bg-white/82 px-3 text-sm shadow-sm shadow-slate-200/40 transition-all duration-200 outline-none hover:border-slate-300 focus:border-teal-500 focus:ring-[3px] focus:ring-teal-500/15 disabled:cursor-not-allowed disabled:opacity-50';
+
+export const TEXTAREA_CONTROL =
+  'rounded-xl border-slate-200/80 bg-white/82 shadow-sm shadow-slate-200/40 transition-all duration-200 placeholder:text-slate-400 hover:border-slate-300 focus-visible:border-teal-500 focus-visible:ring-[3px] focus-visible:ring-teal-500/15';
+
+// ── 信息展示 ──────────────────────────────────────────────
+
+export const DISPLAY_LABEL = 'text-[11px] font-semibold uppercase tracking-wider text-slate-400';
+
+export const DISPLAY_VALUE = 'text-sm font-medium text-slate-800';
+
+export const MUTED_TEXT = 'text-xs text-slate-400';
+
+// ── 反馈信息 ──────────────────────────────────────────────
+
+export const ERROR_TEXT = 'mt-1.5 text-xs font-medium text-rose-600';
+
+export const ERROR_BOX =
+  'rounded-2xl border border-rose-200/80 bg-rose-50/90 p-4 text-sm text-rose-700 shadow-sm shadow-rose-100/60';
+
+export const HINT_BOX =
+  'rounded-2xl border border-teal-200/70 bg-teal-50/70 p-4 text-sm text-slate-600 shadow-sm shadow-teal-100/60';
+
+// ── 详情页 Hero（浅色大气版） ─────────────────────────────
+
+export const DETAIL_HERO_BASE =
+  'relative overflow-hidden rounded-3xl px-6 py-6 text-white shadow-2xl shadow-slate-900/15';
+
+export const DETAIL_HERO_GLOW =
+  'pointer-events-none absolute -right-16 -top-20 h-52 w-52 rounded-full blur-3xl';
+
+export const DETAIL_HERO_LINE =
+  'pointer-events-none absolute bottom-0 left-1/3 h-px w-2/3 bg-gradient-to-r from-transparent via-white/40 to-transparent';
+
+// ── 浮动操作栏 ────────────────────────────────────────────
+
+export const STICKY_ACTION_BAR =
+  'sticky bottom-4 z-20 flex items-center justify-end gap-3 rounded-2xl border border-white/70 bg-white/82 p-3 shadow-[0_18px_45px_rgba(15,23,42,0.12)] backdrop-blur-xl';
+
+// ── 三色主题映射 ──────────────────────────────────────────
+
+export const TYPE_THEME = {
+  priority: {
+    name: '重点工作',
+    accent: 'bg-rose-500',
+    accentHex: '#f43f5e',
+    text: 'text-rose-600',
+    ring: 'ring-rose-100',
+    chip: 'border-rose-200/80 bg-rose-50/80 text-rose-700',
+    hero:
+      'from-slate-950 via-rose-950 to-orange-900 [--hero-glow:rgba(244,63,94,0.34)]',
+    button:
+      'bg-gradient-to-r from-rose-500 to-orange-500 text-white shadow-lg shadow-rose-500/20 hover:from-rose-600 hover:to-orange-600',
+    lightGradient: 'from-rose-50/40 via-white to-orange-50/20',
+    cardBorder: 'border-l-rose-400',
+    panelBg: 'bg-rose-50/30',
+    dot: 'bg-rose-500',
+  },
+  main: {
+    name: '主要工作',
+    accent: 'bg-sky-500',
+    accentHex: '#0ea5e9',
+    text: 'text-sky-600',
+    ring: 'ring-sky-100',
+    chip: 'border-sky-200/80 bg-sky-50/80 text-sky-700',
+    hero:
+      'from-slate-950 via-sky-950 to-teal-900 [--hero-glow:rgba(14,165,233,0.32)]',
+    button:
+      'bg-gradient-to-r from-sky-500 to-teal-500 text-white shadow-lg shadow-sky-500/20 hover:from-sky-600 hover:to-teal-600',
+    lightGradient: 'from-sky-50/40 via-white to-teal-50/20',
+    cardBorder: 'border-l-sky-400',
+    panelBg: 'bg-sky-50/30',
+    dot: 'bg-sky-500',
+  },
+  todo: {
+    name: '待办事项',
+    accent: 'bg-teal-500',
+    accentHex: '#14b8a6',
+    text: 'text-teal-600',
+    ring: 'ring-teal-100',
+    chip: 'border-teal-200/80 bg-teal-50/80 text-teal-700',
+    hero:
+      'from-slate-950 via-teal-950 to-emerald-900 [--hero-glow:rgba(20,184,166,0.34)]',
+    button:
+      'bg-gradient-to-r from-teal-500 to-emerald-500 text-white shadow-lg shadow-teal-500/20 hover:from-teal-600 hover:to-emerald-600',
+    lightGradient: 'from-teal-50/40 via-white to-emerald-50/20',
+    cardBorder: 'border-l-teal-400',
+    panelBg: 'bg-teal-50/30',
+    dot: 'bg-teal-500',
+  },
+} as const;
+
+export type WorkTypeThemeKey = keyof typeof TYPE_THEME;

@@ -6,7 +6,13 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { Button } from '@/components/ui/button';
-import { workTypeColors } from '@/lib/status-colors';
+import { StatusBadge } from '@/features/works/ui/badges';
+import { getCurrentProcessDescription } from '@/lib/work-store';
+import {
+  TYPE_THEME,
+  PANEL,
+  PANEL_PADDED,
+} from '@/features/works/ui/visual-tokens';
 import { WorkAttachmentPanel } from '@/features/attachments/ui/work-attachment-panel';
 import { WorkOperationPanel } from '@/features/works/ui/work-operation-panel';
 import { WorkflowRecords } from '@/features/workflow/ui/workflow-records';
@@ -369,37 +375,56 @@ export default function WorkDetailPage() {
   const isTodo = work.type === '待办';
   const typeColorKey = work.type === '重点' ? 'priority' : work.type === '主要' ? 'main' : 'todo';
 
+  const theme = TYPE_THEME[typeColorKey];
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Link href={`/${type}`}>
-          <Button variant="outline" size="sm" className="rounded-full">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            返回列表
-          </Button>
-        </Link>
-        <h1 className="stagger-1 flex items-center gap-3 text-2xl font-bold text-slate-800">
-          <span className="w-1 h-6 rounded-full bg-slate-500" />
-          事项详情
-        </h1>
-      </div>
+      {/* Light Hero Header */}
+      <div className="relative overflow-hidden rounded-2xl border border-slate-200/60 bg-gradient-to-br from-white via-white to-white p-6">
+        {/* Type-colored gradient wash */}
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br opacity-[0.07]" style={{ backgroundImage: `linear-gradient(135deg, ${theme.accentHex}33, transparent 60%)` }} />
+        {/* Top accent strip */}
+        <div className={`absolute inset-x-0 top-0 h-[3px] rounded-t-2xl ${theme.accent}`} />
 
-      <div className="rounded-xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50/50 overflow-hidden stagger-1">
-        <div className="p-5">
-          <div className="flex items-center gap-3">
-            <span className={`w-1.5 h-8 rounded-full ${workTypeColors[typeColorKey]?.text?.replace('text-', 'bg-') || 'bg-slate-400'}`} />
-            <h2 className="font-semibold text-slate-800">{work.title}</h2>
+        <div className="relative flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div className="space-y-2">
+            <Link href={`/${type}`}>
+              <Button variant="outline" size="sm" className="rounded-full">
+                <ArrowLeft className="h-4 w-4" />
+                返回列表
+              </Button>
+            </Link>
+
+            <div>
+              <div className="mb-1.5 inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-slate-50/80 px-3 py-1 text-xs font-medium text-slate-500">
+                {theme.name}
+              </div>
+              <h1 className="flex items-center gap-3 text-2xl font-bold leading-tight text-slate-900">
+                <span className={`h-8 w-1 rounded-full ${theme.accent}`} />
+                {work.title}
+              </h1>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <StatusBadge status={work.status} work={work} />
+            {work.currentApproverRole && (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200/80 bg-slate-50/80 px-3 py-1 text-xs font-medium text-slate-600">
+                当前环节：{getCurrentProcessDescription(work.status, work.currentApproverRole, work.currentApproverId)}
+              </span>
+            )}
           </div>
         </div>
-        <div className="space-y-4 p-5">
-          <WorkDisplayInfo work={work} departments={departments} />
-        </div>
       </div>
 
-      <div className="rounded-xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50/50 overflow-hidden stagger-2">
-        <div className="p-4">
-          <WorkflowProgress work={work} />
-        </div>
+      {/* Info Panel */}
+      <div className={`${PANEL_PADDED} stagger-1`}>
+        <WorkDisplayInfo work={work} departments={departments} />
+      </div>
+
+      {/* Workflow Progress */}
+      <div className={`${PANEL_PADDED} stagger-2`}>
+        <WorkflowProgress work={work} />
       </div>
 
       <WorkAttachmentPanel
@@ -441,15 +466,18 @@ export default function WorkDetailPage() {
       />
 
       {canSubmitDraft && (
-        <div className="rounded-xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50/50 overflow-hidden stagger-3">
-          <div className="p-4">
-            <div className="flex items-center gap-4">
-              <div className="flex-1">
-                <span className="text-sm text-slate-500">当前为草稿状态，请提交审批：</span>
-                <p className="text-xs text-slate-400 mt-1">提交后将由系统按工作流规则自动分配审批节点；责任领导、责任人仅用于业务留痕。</p>
-              </div>
-              <Button onClick={handlePropose} className="rounded-full">提交审批</Button>
+        <div className={`${PANEL} overflow-hidden stagger-3`}>
+          <div className={`flex items-center gap-4 p-5 bg-gradient-to-r ${theme.lightGradient}`}>
+            <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${theme.accent} text-white shadow-lg`}>
+              <span className="text-lg">↑</span>
             </div>
+            <div className="flex-1">
+              <span className="text-sm font-semibold text-slate-800">当前为草稿状态，请提交审批</span>
+              <p className="text-xs text-slate-500 mt-0.5">提交后将由系统按工作流规则自动分配审批节点；责任领导、责任人仅用于业务留痕。</p>
+            </div>
+            <Button onClick={handlePropose} className={`rounded-full ${theme.button} border-0`}>
+              提交审批
+            </Button>
           </div>
         </div>
       )}

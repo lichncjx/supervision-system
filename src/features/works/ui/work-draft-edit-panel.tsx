@@ -15,7 +15,7 @@ import {
   TodoSpecificFields,
 } from '@/features/works/ui/work-form-fields';
 import type { Cooperator, WorkNode } from '@/features/works/domain/work-client.types';
-import { FIELD_LABEL } from './visual-tokens';
+import { FIELD_LABEL, PANEL_PADDED } from './visual-tokens';
 
 interface WorkDraftEditPanelProps {
   visible: boolean;
@@ -67,7 +67,7 @@ export function WorkDraftEditPanel({
   }
 
   return (
-    <div className="rounded-xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50/50 p-5">
+    <div className={PANEL_PADDED}>
       <h3 className="font-semibold text-slate-800 mb-4">
         {isRegularDraft ? '完善草稿' : '退回事项处理'}
       </h3>
@@ -188,7 +188,6 @@ export function WorkDraftEditPanel({
               nodes={nodes}
               onChange={(value) => setEditForm((prev: any) => ({ ...prev, nodes: value }))}
               nodeLabel={isTodo ? '任务节点（可选）' : '工作节点（可选）'}
-              addButtonLabel={isTodo ? '新增任务节点' : '新增工作节点'}
               nodePlaceholderPrefix={isTodo ? '任务节点' : '工作节点'}
             />
 

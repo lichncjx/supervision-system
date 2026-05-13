@@ -5,7 +5,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { WorkFormNodes } from '@/features/works/ui/work-form-nodes';
 import type { WorkNode } from '@/features/works/domain/work-client.types';
-import { FIELD_LABEL } from '@/features/works/ui/visual-tokens';
+import { FIELD_LABEL, PANEL_PADDED } from '@/features/works/ui/visual-tokens';
 
 interface WorkDecomposePanelProps {
   visible: boolean;
@@ -31,7 +31,7 @@ export function WorkDecomposePanel({
   }
 
   return (
-    <div className="rounded-xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50/50 p-5">
+    <div className={PANEL_PADDED}>
       <h3 className="font-semibold text-slate-800 mb-4">
         {isReturned ? '待办事项分解（驳回修改）' : '待办事项分解'}
       </h3>
@@ -68,7 +68,6 @@ export function WorkDecomposePanel({
           nodes={nodes}
           onChange={(value) => setEditForm((prev: any) => ({ ...prev, nodes: value }))}
           nodeLabel="任务节点（可选）"
-          addButtonLabel="新增任务节点"
           nodePlaceholderPrefix="任务节点"
         />
 

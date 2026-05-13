@@ -2,6 +2,7 @@
 
 import { getRoleName } from '@/lib/auth';
 import { getActionName, getStatusName, getWorkflowRecordDescription } from '@/lib/work-store';
+import { PANEL_PADDED } from '@/features/works/ui/visual-tokens';
 
 interface WorkflowRecord {
   id: number;
@@ -24,7 +25,7 @@ export function WorkflowRecords({ records }: WorkflowRecordsProps) {
   }
 
   return (
-    <div className="rounded-xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50/50 p-5">
+    <div className={PANEL_PADDED}>
       <h3 className="font-semibold text-slate-800 mb-4">审批记录</h3>
       <div>
         <div className="space-y-3">
