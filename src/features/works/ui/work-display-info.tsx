@@ -39,7 +39,7 @@ function PriorityMainWorkDisplayInfo({ work, departments, hideNodes, hideCoopera
           <span>{work.workNode || '-'}</span>
         </div>
         <div>
-          <span className={DISPLAY_LABEL}>计划完成时间：</span>
+          <span className={DISPLAY_LABEL}>完成时间：</span>
           <span>{work.completeTime || '-'}</span>
         </div>
         <div>
@@ -55,7 +55,7 @@ function PriorityMainWorkDisplayInfo({ work, departments, hideNodes, hideCoopera
           <span>{work.responsibleLeader || '-'}</span>
         </div>
         <div>
-          <span className={DISPLAY_LABEL}>责任人：</span>
+          <span className={DISPLAY_LABEL}>责任人员：</span>
           <span>{work.responsiblePerson || '-'}</span>
         </div>
         {work.type === '重点' && (
@@ -171,8 +171,8 @@ function PriorityMainWorkDisplayInfo({ work, departments, hideNodes, hideCoopera
           {(work.adjustHistory as any[]).map((item, i: number) => (
             <div key={item.id ?? i} className="border-t border-purple-100 pt-2 first:border-t-0 first:pt-0">
               <div>调整原因：{item.reason || '-'}</div>
-              <div>原计划完成时间：{item.fromTime || '-'}</div>
-              <div>现计划完成时间：{item.toTime || '-'}</div>
+              <div>原完成时间：{item.fromTime || '-'}</div>
+              <div>现完成时间：{item.toTime || '-'}</div>
               <div>审批人：{item.approvedBy || '-'}</div>
               <div>审批时间：{item.approvedAt ? new Date(item.approvedAt).toLocaleString() : '-'}</div>
             </div>
@@ -219,7 +219,7 @@ function TodoWorkDisplayInfo({ work, departments, hideNodes, hideCooperators }: 
           <span>{work.responsibleLeader || '-'}</span>
         </div>
         <div>
-          <span className={DISPLAY_LABEL}>责任人：</span>
+          <span className={DISPLAY_LABEL}>责任人员：</span>
           <span>{work.responsiblePerson || '-'}</span>
         </div>
         {!hideCooperators && (
@@ -233,7 +233,7 @@ function TodoWorkDisplayInfo({ work, departments, hideNodes, hideCooperators }: 
               </span>
             </div>
             <div>
-              <span className={DISPLAY_LABEL}>配合责任人：</span>
+              <span className={DISPLAY_LABEL}>配合责任人员：</span>
               <span>
                 {work.cooperators && work.cooperators.length > 0
                   ? work.cooperators.map((c: any) => c.person).filter(Boolean).join('、')
@@ -247,7 +247,7 @@ function TodoWorkDisplayInfo({ work, departments, hideNodes, hideCooperators }: 
           <span>{work.workPlan || '-'}</span>
         </div>
         <div>
-          <span className={DISPLAY_LABEL}>计划完成时间：</span>
+          <span className={DISPLAY_LABEL}>完成时间：</span>
           <span>{work.planCompleteTime || '-'}</span>
         </div>
         <div>

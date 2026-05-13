@@ -3,6 +3,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FIELD_LABEL, MUTED_TEXT } from './visual-tokens';
 import { Plus, Trash2 } from 'lucide-react';
 import type { Cooperator } from '@/features/works/domain/work-client.types';
@@ -57,16 +58,19 @@ export function WorkFormCooperators({
       {cooperators.map((c, idx) => (
         <div key={idx} className="rounded-lg bg-slate-50 p-3 space-y-2">
           <div className="flex items-center gap-1.5">
-            <select
-              value={c.departmentId || ''}
-              onChange={(e) => handleDepartmentChange(idx, Number(e.target.value))}
-              className="flex-1 min-w-0 border rounded-md p-1.5 text-sm"
+            <Select
+              value={c.departmentId ? String(c.departmentId) : ''}
+              onValueChange={(v) => handleDepartmentChange(idx, Number(v))}
             >
-              <option value="">选择配合部门</option>
-              {departments.map((d) => (
-                <option key={d.id} value={d.id}>{d.name}</option>
-              ))}
-            </select>
+              <SelectTrigger className="flex-1 min-w-0 rounded-lg">
+                <SelectValue placeholder="选择配合部门" />
+              </SelectTrigger>
+              <SelectContent>
+                {departments.map((d) => (
+                  <SelectItem key={d.id} value={String(d.id)}>{d.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Button
               type="button"
               variant="ghost"

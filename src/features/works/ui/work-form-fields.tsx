@@ -3,6 +3,7 @@
 import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FIELD_LABEL, ERROR_TEXT } from './visual-tokens';
 
 // WorkItemField
@@ -49,14 +50,15 @@ export function IsInnovationField({ isInnovation, onChange }: IsInnovationFieldP
   return (
     <div>
       <label className={FIELD_LABEL + ' mb-1'}>是否为创新工作</label>
-      <select
-        value={isInnovation ? '是' : '否'}
-        onChange={(e) => onChange(e.target.value === '是')}
-        className="w-full border rounded-md p-2"
-      >
-        <option value="否">否</option>
-        <option value="是">是</option>
-      </select>
+      <Select value={isInnovation ? '是' : '否'} onValueChange={(v) => onChange(v === '是')}>
+        <SelectTrigger className="w-full rounded-lg">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="否">否</SelectItem>
+          <SelectItem value="是">是</SelectItem>
+        </SelectContent>
+      </Select>
     </div>
   );
 }
@@ -87,20 +89,16 @@ export function ProposedLeaderField({
         事项提出领导
         <span className="text-xs text-gray-400 ml-1">（提出该待办事项的公司领导，默认也是审批领导）</span>
       </label>
-      <select
-        value={value}
-        disabled={disabled}
-        onChange={(e) => onChange(e.target.value)}
-        onBlur={onBlur}
-        className="w-full border rounded-md p-2"
-      >
-        <option value="">请选择事项提出领导</option>
-        {leaders.map((leader) => (
-          <option key={leader.id} value={leader.id}>
-            {leader.name}
-          </option>
-        ))}
-      </select>
+      <Select value={value} onValueChange={(v) => onChange(v)} disabled={disabled}>
+        <SelectTrigger onBlur={onBlur} className="w-full rounded-lg">
+          <SelectValue placeholder="请选择事项提出领导" />
+        </SelectTrigger>
+        <SelectContent>
+          {leaders.map((leader) => (
+            <SelectItem key={leader.id} value={String(leader.id)}>{leader.name}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
       {error && <p className={ERROR_TEXT}>{error}</p>}
     </div>
   );
@@ -131,19 +129,16 @@ export function DepartmentField({
   return (
     <div id={fieldId}>
       <label className={FIELD_LABEL + ' mb-1'}>{label}</label>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        onBlur={onBlur}
-        className="w-full border rounded-md p-2"
-      >
-        {placeholder && <option value="">{placeholder}</option>}
-        {departments.map((d) => (
-          <option key={d.id} value={d.id}>
-            {d.name}
-          </option>
-        ))}
-      </select>
+      <Select value={value} onValueChange={(v) => onChange(v)}>
+        <SelectTrigger onBlur={onBlur} className="w-full rounded-lg">
+          <SelectValue placeholder={placeholder} />
+        </SelectTrigger>
+        <SelectContent>
+          {departments.map((d) => (
+            <SelectItem key={d.id} value={String(d.id)}>{d.name}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
       {error && <p className={ERROR_TEXT}>{error}</p>}
     </div>
   );

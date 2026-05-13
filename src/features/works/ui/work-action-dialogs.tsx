@@ -4,6 +4,7 @@ import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { WorkFormNodes } from '@/features/works/ui/work-form-nodes';
 import { WorkFormCooperators } from '@/features/works/ui/work-form-cooperators';
 import {
@@ -80,18 +81,16 @@ export function WorkActionDialogs({
                 公司审批领导
                 <span className="text-xs text-slate-400 ml-1">（负责本次调整审批的公司领导）</span>
               </label>
-              <select
-                value={approvalLeaderId}
-                onChange={(e) => setApprovalLeaderId(e.target.value)}
-                className="rounded-lg border-slate-200 bg-white/60"
-              >
-                <option value="">请选择公司审批领导</option>
-                {companyLeaders.map((leader) => (
-                  <option key={leader.id} value={leader.id}>
-                    {leader.name}
-                  </option>
-                ))}
-              </select>
+              <Select value={approvalLeaderId} onValueChange={setApprovalLeaderId}>
+                <SelectTrigger className="w-full rounded-lg">
+                  <SelectValue placeholder="请选择公司审批领导" />
+                </SelectTrigger>
+                <SelectContent>
+                  {companyLeaders.map((leader) => (
+                    <SelectItem key={leader.id} value={String(leader.id)}>{leader.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div>
@@ -258,18 +257,16 @@ export function WorkActionDialogs({
                 公司审批领导
                 <span className="text-xs text-slate-400 ml-1">（负责本次取消审批的公司领导）</span>
               </label>
-              <select
-                value={approvalLeaderId}
-                onChange={(e) => setApprovalLeaderId(e.target.value)}
-                className="rounded-lg border-slate-200 bg-white/60"
-              >
-                <option value="">请选择公司审批领导</option>
-                {companyLeaders.map((leader) => (
-                  <option key={leader.id} value={leader.id}>
-                    {leader.name}
-                  </option>
-                ))}
-              </select>
+              <Select value={approvalLeaderId} onValueChange={setApprovalLeaderId}>
+                <SelectTrigger className="w-full rounded-lg">
+                  <SelectValue placeholder="请选择公司审批领导" />
+                </SelectTrigger>
+                <SelectContent>
+                  {companyLeaders.map((leader) => (
+                    <SelectItem key={leader.id} value={String(leader.id)}>{leader.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div>
