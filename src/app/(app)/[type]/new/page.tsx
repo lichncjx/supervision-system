@@ -22,6 +22,7 @@ import {
   TodoSpecificFields,
 } from '@/features/works/ui/work-form-fields';
 import { validateCreateWorkFormFields, type CreateWorkFormField } from '@/features/works/ui/work-form-validations';
+import { ERROR_BOX, HINT_BOX } from '@/features/works/ui/visual-tokens';
 
 export default function NewWorkPage() {
   const params = useParams<{ type: string }>();
@@ -286,7 +287,7 @@ export default function NewWorkPage() {
   const businessDepts = departments.filter((d) => d.isBusiness !== false);
 
   const draftHint = (
-    <div className="rounded-lg border border-blue-200 bg-blue-50/50 p-3 text-sm text-slate-600">
+    <div className={HINT_BOX}>
       <p className="font-medium text-slate-700 mb-1">保存草稿提示</p>
       <ul className="list-disc list-inside space-y-0.5">
         <li>保存草稿后，可在详情页继续完善信息、上传附件，并提交审批。</li>
@@ -299,7 +300,7 @@ export default function NewWorkPage() {
 
   const errorSummary =
     submitAttempted && Object.keys(errors).length > 0 ? (
-      <div className="rounded-lg border border-red-300 bg-red-50 p-4 text-sm text-red-800">
+      <div className={ERROR_BOX}>
         <p className="font-semibold mb-2">请完善以下信息后再提交</p>
         <ul className="list-disc list-inside space-y-0.5">
           {Object.values(errors).map((msg, i) => (

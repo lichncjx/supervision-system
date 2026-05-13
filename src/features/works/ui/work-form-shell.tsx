@@ -28,7 +28,7 @@ export function WorkFormShell({
     <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Link href={backHref}>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" className="rounded-full">
             <ArrowLeft className="h-4 w-4 mr-2" />
             返回列表
           </Button>

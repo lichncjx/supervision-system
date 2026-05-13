@@ -3,6 +3,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { FIELD_LABEL, MUTED_TEXT, ERROR_TEXT } from './visual-tokens';
 import type { WorkNode } from '@/features/works/domain/work-client.types';
 
 export interface WorkFormNodesProps {
@@ -112,8 +113,8 @@ export function WorkFormNodes({
   return (
     <div className="space-y-3" id={fieldId}>
       <div className="flex items-center justify-between">
-        <label className="text-sm font-medium">{nodeLabel}</label>
-        <Button type="button" variant="outline" size="sm" onClick={() => { addNode(); onTouched?.(); }}>
+        <label className={FIELD_LABEL}>{nodeLabel}</label>
+        <Button type="button" variant="outline" size="sm" className="rounded-full" onClick={() => { addNode(); onTouched?.(); }}>
           {addButtonLabel}
         </Button>
       </div>
@@ -139,6 +140,7 @@ export function WorkFormNodes({
                 type="button"
                 variant="destructive"
                 size="sm"
+                className="rounded-full"
                 onClick={() => { deleteNode(node.id); onTouched?.(); }}
               >
                 删除节点
@@ -152,6 +154,7 @@ export function WorkFormNodes({
                   type="button"
                   variant="outline"
                   size="sm"
+                  className="rounded-full"
                   onClick={() => { addSubNode(node.id); onTouched?.(); }}
                 >
                   新增子节点
@@ -159,7 +162,7 @@ export function WorkFormNodes({
               </div>
 
               {node.children.length === 0 && (
-                <div className="text-sm text-gray-400">暂无子节点</div>
+                <div className={MUTED_TEXT}>暂无子节点</div>
               )}
 
               {node.children.map((child, childIndex) => (
@@ -188,6 +191,7 @@ export function WorkFormNodes({
                     type="button"
                     variant="outline"
                     size="sm"
+                    className="rounded-full"
                     onClick={() => { deleteSubNode(node.id, child.id); onTouched?.(); }}
                   >
                     删除
@@ -199,7 +203,7 @@ export function WorkFormNodes({
         ))}
       </div>
 
-      {error && <p className="text-red-600 text-sm mt-1">{error}</p>}
+      {error && <p className={ERROR_TEXT}>{error}</p>}
     </div>
   );
 }

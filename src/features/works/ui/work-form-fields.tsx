@@ -3,6 +3,7 @@
 import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { FIELD_LABEL, ERROR_TEXT } from './visual-tokens';
 
 // WorkItemField
 export interface WorkItemFieldProps {
@@ -26,14 +27,14 @@ export function WorkItemField({
 }: WorkItemFieldProps) {
   return (
     <div id={fieldId}>
-      <label className="block text-sm font-medium mb-1">{label}</label>
+      <label className={FIELD_LABEL + ' mb-1'}>{label}</label>
       <Input
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onBlur={onBlur}
         placeholder={placeholder}
       />
-      {error && <p className="text-red-600 text-sm mt-1">{error}</p>}
+      {error && <p className={ERROR_TEXT}>{error}</p>}
     </div>
   );
 }
@@ -47,7 +48,7 @@ export interface IsInnovationFieldProps {
 export function IsInnovationField({ isInnovation, onChange }: IsInnovationFieldProps) {
   return (
     <div>
-      <label className="block text-sm font-medium mb-1">是否为创新工作</label>
+      <label className={FIELD_LABEL + ' mb-1'}>是否为创新工作</label>
       <select
         value={isInnovation ? '是' : '否'}
         onChange={(e) => onChange(e.target.value === '是')}
@@ -82,7 +83,7 @@ export function ProposedLeaderField({
 }: ProposedLeaderFieldProps) {
   return (
     <div id={fieldId}>
-      <label className="block text-sm font-medium mb-1">
+      <label className={FIELD_LABEL + ' mb-1'}>
         事项提出领导
         <span className="text-xs text-gray-400 ml-1">（提出该待办事项的公司领导，默认也是审批领导）</span>
       </label>
@@ -100,7 +101,7 @@ export function ProposedLeaderField({
           </option>
         ))}
       </select>
-      {error && <p className="text-red-600 text-sm mt-1">{error}</p>}
+      {error && <p className={ERROR_TEXT}>{error}</p>}
     </div>
   );
 }
@@ -129,7 +130,7 @@ export function DepartmentField({
 }: DepartmentFieldProps) {
   return (
     <div id={fieldId}>
-      <label className="block text-sm font-medium mb-1">{label}</label>
+      <label className={FIELD_LABEL + ' mb-1'}>{label}</label>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -143,7 +144,7 @@ export function DepartmentField({
           </option>
         ))}
       </select>
-      {error && <p className="text-red-600 text-sm mt-1">{error}</p>}
+      {error && <p className={ERROR_TEXT}>{error}</p>}
     </div>
   );
 }
@@ -165,7 +166,7 @@ export function ResponsibleFields({
   return (
     <>
       <div>
-        <label className="block text-sm font-medium mb-1">
+        <label className={FIELD_LABEL + ' mb-1'}>
           责任领导
           <span className="text-xs text-gray-400 ml-1">（用于业务留痕）</span>
         </label>
@@ -177,7 +178,7 @@ export function ResponsibleFields({
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-1">
+        <label className={FIELD_LABEL + ' mb-1'}>
           责任人
           <span className="text-xs text-gray-400 ml-1">（用于业务留痕）</span>
         </label>
@@ -201,7 +202,7 @@ export interface PlanCompleteTimeFieldProps {
 export function PlanCompleteTimeField({ label, value, onChange }: PlanCompleteTimeFieldProps) {
   return (
     <div>
-      <label className="block text-sm font-medium mb-1">{label}</label>
+      <label className={FIELD_LABEL + ' mb-1'}>{label}</label>
       <Input
         type="date"
         value={value}
@@ -236,7 +237,7 @@ export function TodoSpecificFields({
   return (
     <>
       <div>
-        <label className="block text-sm font-medium mb-1">事项提出场景</label>
+        <label className={FIELD_LABEL + ' mb-1'}>事项提出场景</label>
         <Input
           value={proposedScene}
           onChange={(e) => onProposedSceneChange(e.target.value)}
@@ -245,7 +246,7 @@ export function TodoSpecificFields({
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-1">形成时间</label>
+        <label className={FIELD_LABEL + ' mb-1'}>形成时间</label>
         <Input
           type="date"
           value={formedTime}
@@ -254,7 +255,7 @@ export function TodoSpecificFields({
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-1">工作计划</label>
+        <label className={FIELD_LABEL + ' mb-1'}>工作计划</label>
         <Textarea
           value={workPlan}
           onChange={(e) => onWorkPlanChange(e.target.value)}
@@ -264,7 +265,7 @@ export function TodoSpecificFields({
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-1">进展情况</label>
+        <label className={FIELD_LABEL + ' mb-1'}>进展情况</label>
         <Textarea
           value={progress}
           onChange={(e) => onProgressChange(e.target.value)}

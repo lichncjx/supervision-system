@@ -4,6 +4,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { Cooperator } from '@/features/works/domain/work-client.types';
+import { FIELD_LABEL, MUTED_TEXT } from './visual-tokens';
 
 export interface WorkFormCooperatorsProps {
   cooperators: Cooperator[];
@@ -44,13 +45,13 @@ export function WorkFormCooperators({
   return (
     <div className="border-t pt-4">
       <div className="flex items-center justify-between mb-3">
-        <label className="text-sm font-medium">配合方</label>
-        <Button type="button" variant="outline" size="sm" onClick={handleAdd}>
+        <label className={FIELD_LABEL}>配合方</label>
+        <Button type="button" variant="outline" size="sm" className="rounded-full" onClick={handleAdd}>
           添加配合方
         </Button>
       </div>
       {cooperators.length === 0 && (
-        <p className="text-xs text-gray-400">暂无配合方</p>
+        <p className={MUTED_TEXT}>暂无配合方</p>
       )}
       {cooperators.map((c, idx) => (
         <div key={idx} className="flex items-center gap-2 mb-2">
@@ -74,7 +75,7 @@ export function WorkFormCooperators({
             onChange={(e) => handleFieldChange(idx, 'person', e.target.value)}
             placeholder="配合责任人（可选）"
           />
-          <Button type="button" variant="destructive" size="sm" onClick={() => handleDelete(idx)}>
+          <Button type="button" variant="destructive" size="sm" className="rounded-full" onClick={() => handleDelete(idx)}>
             删除
           </Button>
         </div>
