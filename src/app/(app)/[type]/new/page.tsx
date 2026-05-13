@@ -22,6 +22,7 @@ import {
   TodoSpecificFields,
 } from '@/features/works/ui/work-form-fields';
 import { validateCreateWorkFormFields, type CreateWorkFormField } from '@/features/works/ui/work-form-validations';
+import { buildCreateWorkPayload } from '@/features/works/client/build-create-work-payload';
 import { ERROR_BOX, HINT_BOX } from '@/features/works/ui/visual-tokens';
 
 export default function NewWorkPage() {
@@ -199,72 +200,19 @@ export default function NewWorkPage() {
 
     if (!user) return;
 
-    const selectedProposedLeader = isTodo
-      ? companyLeaders.find((leader) => leader.id === Number(todoForm.proposedLeaderId))
-      : null;
-
-    // 过滤掉标题为空的节点
-    const validNodes = nodes
-      .filter((node) => node.title.trim())
-      .map((node) => ({
-        ...node,
-        children: node.children.filter((child) => child.title.trim()),
-      }));
-
     try {
-      let createdWork;
-      if (isPriorityOrMain) {
-        createdWork = await addWork({
-          id: Date.now(),
-          title: priorityMainForm.workItem,
-          type,
-          departmentId: Number(priorityMainForm.departmentId),
-          creatorRole: user.role,
-          creatorId: user.id,
-          action: 'create',
-          status: 'draft',
-          needCeo: type === '重点',
-          isInnovation: type === '重点' ? isInnovation : false,
-          nodes: nodes.filter((node) => node.title.trim()).map((node) => ({
-            ...node,
-            children: node.children.filter((child) => child.title.trim()),
-          })),
-          businessCategory: priorityMainForm.businessCategory,
-          workItem: priorityMainForm.workItem,
-          workNode: priorityMainForm.workNode,
-          completeTime: priorityMainForm.completeTime,
-          completeForm: priorityMainForm.completeForm,
-          responsibleLeader: priorityMainForm.responsibleLeader,
-          responsiblePerson: priorityMainForm.responsiblePerson,
-        });
-      } else if (isTodo) {
-        const cooperators = todoForm.cooperators.filter((c) => c.departmentId > 0);
-        createdWork = await addWork({
-          id: Date.now(),
-          title: todoForm.workItem,
-          type: '待办',
-          departmentId: todoForm.departmentId || 2,
-          creatorRole: user.role,
-          creatorId: user.id,
-          action: 'todo_decompose',
-          status: 'draft',
-          needCeo: false,
-          proposedLeader: selectedProposedLeader?.name || '',
-          proposedLeaderId: selectedProposedLeader?.id,
-          proposedLeaderRole: selectedProposedLeader?.role,
-          approvalLeaderId: selectedProposedLeader?.id,
-          proposedScene: todoForm.proposedScene,
-          workItem: todoForm.workItem,
-          formedTime: todoForm.formedTime,
-          cooperators,
-          workPlan: todoForm.workPlan,
-          planCompleteTime: todoForm.planCompleteTime,
-          progress: todoForm.progress,
-          nodes: validNodes,
-        });
-      }
+      const payload = buildCreateWorkPayload({
+        type,
+        user,
+        priorityMainForm,
+        todoForm,
+        isInnovation,
+        nodes,
+        companyLeaders,
+      });
 
-      // 保存草稿
+      const createdWork = await addWork(payload);
+
       if (createdWork) {
         router.push(`/${routeType}/${createdWork.id}`);
       }
