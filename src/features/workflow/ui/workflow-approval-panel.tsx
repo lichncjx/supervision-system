@@ -2,13 +2,13 @@
 
 import { Button } from '@/components/ui/button';
 
-interface WorkApprovalPanelProps {
+interface WorkflowApprovalPanelProps {
   visible: boolean;
   onApprove: () => void;
   onReject: () => void;
 }
 
-export function WorkApprovalPanel({ visible, onApprove, onReject }: WorkApprovalPanelProps) {
+export function WorkflowApprovalPanel({ visible, onApprove, onReject }: WorkflowApprovalPanelProps) {
   if (!visible) {
     return null;
   }

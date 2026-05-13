@@ -14,11 +14,11 @@ interface WorkflowRecord {
   createdAt: string;
 }
 
-interface WorkWorkflowRecordsProps {
+interface WorkflowRecordsProps {
   records: WorkflowRecord[];
 }
 
-export function WorkWorkflowRecords({ records }: WorkWorkflowRecordsProps) {
+export function WorkflowRecords({ records }: WorkflowRecordsProps) {
   if (records.length === 0) {
     return null;
   }

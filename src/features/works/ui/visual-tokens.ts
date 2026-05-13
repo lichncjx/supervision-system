@@ -21,5 +21,11 @@ export const ERROR_BOX = 'rounded border border-red-200 bg-rose-50 p-3 text-sm t
 // 提示信息框（蓝色）
 export const HINT_BOX = 'rounded border border-blue-200 bg-blue-50 p-3 text-sm text-slate-600'
 
+// 只读展示字段 label（比 FIELD_LABEL 更轻量）
+export const DISPLAY_LABEL = 'text-xs font-medium text-slate-500'
+
+// 只读展示字段 value
+export const DISPLAY_VALUE = 'text-sm text-slate-900'
+
 // 辅助文字
 export const MUTED_TEXT = 'text-xs text-gray-400'

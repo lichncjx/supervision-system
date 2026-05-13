@@ -9,13 +9,13 @@ import { Button } from '@/components/ui/button';
 import { workTypeColors } from '@/lib/status-colors';
 import { WorkAttachmentPanel } from '@/features/attachments/ui/work-attachment-panel';
 import { WorkOperationPanel } from '@/features/works/ui/work-operation-panel';
-import { WorkWorkflowRecords } from '@/features/workflow/ui/work-workflow-records';
-import { WorkApprovalPanel } from '@/features/workflow/ui/work-approval-panel';
+import { WorkflowRecords } from '@/features/workflow/ui/workflow-records';
+import { WorkflowApprovalPanel } from '@/features/workflow/ui/workflow-approval-panel';
 import { WorkDraftEditPanel } from '@/features/works/ui/work-draft-edit-panel';
 import { WorkDisplayInfo } from '@/features/works/ui/work-display-info';
-import { WorkDecomposePanel } from '@/features/workflow/ui/work-decompose-panel';
+import { WorkDecomposePanel } from '@/features/works/ui/work-decompose-panel';
 import { WorkActionDialogs } from '@/features/works/ui/work-action-dialogs';
-import { WorkPendingAdjustmentPanel } from '@/features/workflow/ui/work-pending-adjustment-panel';
+import { WorkPendingAdjustmentPanel } from '@/features/works/ui/work-pending-adjustment-panel';
 import { WorkflowProgress } from '@/features/workflow/ui/workflow-progress';
 import { useWorkDetailPermissions } from '@/features/works/client/use-work-detail-permissions';
 import { useWorkDetailData } from '@/features/works/client/use-work-detail-data';
@@ -237,7 +237,7 @@ export default function WorkDetailPage() {
         }}
       />
 
-      <WorkApprovalPanel
+      <WorkflowApprovalPanel
         visible={perms.canApprove}
         onApprove={approvalActions.handleApprove}
         onReject={approvalActions.handleReject}
@@ -245,7 +245,7 @@ export default function WorkDetailPage() {
 
       <WorkPendingAdjustmentPanel work={work} />
 
-      <WorkWorkflowRecords records={workflowRecords} />
+      <WorkflowRecords records={workflowRecords} />
 
       <WorkActionDialogs
         isAdjustDialogOpen={isAdjustDialogOpen}

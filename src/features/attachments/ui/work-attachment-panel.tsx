@@ -2,6 +2,7 @@
 
 import { Button } from '@/components/ui/button';
 import { Upload, Download } from 'lucide-react';
+import { FIELD_LABEL } from '@/features/works/ui/visual-tokens';
 
 interface WorkAttachment {
   id: number;
@@ -37,7 +38,7 @@ export function WorkAttachmentPanel({
     <div className="rounded-xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50/50 p-5">
       <h3 className="font-semibold text-slate-800 mb-4">附件管理</h3>
         <div className="flex items-center justify-between mb-4">
-          <span className="text-sm font-medium">附件列表</span>
+          <span className={FIELD_LABEL}>附件列表</span>
           {canUpload && (
             <label className="inline-flex items-center text-sm text-sky-600 cursor-pointer hover:text-sky-700">
               <Upload className="h-4 w-4 mr-1" />

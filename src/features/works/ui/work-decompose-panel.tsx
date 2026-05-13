@@ -5,6 +5,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { WorkFormNodes } from '@/features/works/ui/work-form-nodes';
 import type { WorkNode } from '@/features/works/domain/work-client.types';
+import { FIELD_LABEL } from '@/features/works/ui/visual-tokens';
 
 interface WorkDecomposePanelProps {
   visible: boolean;
@@ -46,7 +47,7 @@ export function WorkDecomposePanel({
         </div>
 
         <div>
-          <label className="text-sm font-medium">工作计划</label>
+          <label className={FIELD_LABEL + ' mb-1 block'}>工作计划</label>
           <Textarea
             value={editForm.workPlan || ''}
             onChange={(e) => setEditForm((prev: any) => ({ ...prev, workPlan: e.target.value }))}
@@ -55,7 +56,7 @@ export function WorkDecomposePanel({
         </div>
 
         <div>
-          <label className="text-sm font-medium">计划完成时间</label>
+          <label className={FIELD_LABEL + ' mb-1 block'}>计划完成时间</label>
           <Input
             type="date"
             value={editForm.planCompleteTime || ''}
@@ -71,7 +72,7 @@ export function WorkDecomposePanel({
           nodePlaceholderPrefix="任务节点"
         />
 
-        <Button onClick={onSubmitDecomposition}>
+        <Button onClick={onSubmitDecomposition} className="rounded-full">
           提交分解结果
         </Button>
       </div>

@@ -9,7 +9,7 @@ export function WorkflowProgress({ work }: { work: Work }) {
 
   return (
     <div className="space-y-3">
-      <div className="font-medium">审批流程</div>
+      <div className="text-sm font-semibold text-slate-500 tracking-wide">审批流程</div>
 
       <div className="flex flex-wrap gap-3">
         {steps.map((step, index) => {

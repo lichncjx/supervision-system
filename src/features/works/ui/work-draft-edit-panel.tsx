@@ -15,6 +15,7 @@ import {
   TodoSpecificFields,
 } from '@/features/works/ui/work-form-fields';
 import type { Cooperator, WorkNode } from '@/features/works/domain/work-client.types';
+import { FIELD_LABEL } from './visual-tokens';
 
 interface WorkDraftEditPanelProps {
   visible: boolean;
@@ -75,7 +76,7 @@ export function WorkDraftEditPanel({
           <p className="text-sm text-slate-500">可继续完善事项信息、上传附件后提交审批</p>
         )}
         {!isRegularDraft && rejectReason && (
-          <div className="p-3 bg-rose-50/50 rounded text-red-700 break-words whitespace-pre-wrap">
+          <div className="p-3 bg-rose-50 border border-red-200 rounded text-sm text-red-700 break-words whitespace-pre-wrap">
             退回原因：{rejectReason}
           </div>
         )}
@@ -192,7 +193,7 @@ export function WorkDraftEditPanel({
             />
 
             <div>
-              <label className="text-sm font-medium">
+              <label className={FIELD_LABEL + ' mb-1 block'}>
                 {isRegularDraft ? '修改说明' : '修改说明 / 重新提交原因'}
               </label>
               <Textarea

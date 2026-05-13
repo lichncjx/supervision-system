@@ -16,6 +16,7 @@ import {
   TodoSpecificFields,
 } from '@/features/works/ui/work-form-fields';
 import type { WorkNode, Cooperator } from '@/features/works/domain/work-client.types';
+import { FIELD_LABEL } from './visual-tokens';
 
 interface WorkActionDialogsProps {
   isAdjustDialogOpen: boolean;
@@ -66,7 +67,7 @@ export function WorkActionDialogs({
     <>
       {/* 申请调整Dialog */}
       <Dialog open={isAdjustDialogOpen} onOpenChange={setIsAdjustDialogOpen}>
-        <DialogContent>
+        <DialogContent className="rounded-xl border-slate-200/80 max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>申请调整</DialogTitle>
             <DialogDescription>
@@ -75,7 +76,7 @@ export function WorkActionDialogs({
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium">
+              <label className={FIELD_LABEL + ' mb-1 block'}>
                 公司审批领导
                 <span className="text-xs text-slate-400 ml-1">（负责本次调整审批的公司领导）</span>
               </label>
@@ -94,7 +95,7 @@ export function WorkActionDialogs({
             </div>
 
             <div>
-              <label className="text-sm font-medium">调整原因</label>
+              <label className={FIELD_LABEL + ' mb-1 block'}>调整原因</label>
               <Textarea
                 value={adjustReason}
                 onChange={(e) => setAdjustReason(e.target.value)}
@@ -105,7 +106,7 @@ export function WorkActionDialogs({
 
             {/* 拟调整内容 */}
             <div className="border-t pt-4">
-              <h5 className="text-sm font-medium mb-3">拟调整内容</h5>
+              <h5 className={FIELD_LABEL + ' mb-3 block'}>拟调整内容</h5>
               
               {/* 重点工作/主要工作调整表单 */}
               {isPriorityOrMain && (
@@ -223,6 +224,7 @@ export function WorkActionDialogs({
           <DialogFooter>
             <Button
               variant="outline"
+              className="rounded-full"
               onClick={() => {
                 setIsAdjustDialogOpen(false);
               }}
@@ -230,6 +232,7 @@ export function WorkActionDialogs({
               取消
             </Button>
             <Button
+              className="rounded-full"
               onClick={async () => {
                 await onSubmitAdjust();
                 setIsAdjustDialogOpen(false);
@@ -243,7 +246,7 @@ export function WorkActionDialogs({
 
       {/* 申请取消Dialog */}
       <Dialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
-        <DialogContent>
+        <DialogContent className="rounded-xl border-slate-200/80 max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>申请取消</DialogTitle>
             <DialogDescription>
@@ -252,7 +255,7 @@ export function WorkActionDialogs({
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium">
+              <label className={FIELD_LABEL + ' mb-1 block'}>
                 公司审批领导
                 <span className="text-xs text-slate-400 ml-1">（负责本次取消审批的公司领导）</span>
               </label>
@@ -271,7 +274,7 @@ export function WorkActionDialogs({
             </div>
 
             <div>
-              <label className="text-sm font-medium">取消原因</label>
+              <label className={FIELD_LABEL + ' mb-1 block'}>取消原因</label>
               <Textarea
                 value={cancelReason}
                 onChange={(e) => setCancelReason(e.target.value)}
@@ -283,6 +286,7 @@ export function WorkActionDialogs({
           <DialogFooter>
             <Button
               variant="outline"
+              className="rounded-full"
               onClick={() => {
                 setIsCancelDialogOpen(false);
               }}
@@ -291,6 +295,7 @@ export function WorkActionDialogs({
             </Button>
             <Button
               variant="destructive"
+              className="rounded-full"
               onClick={async () => {
                 await onSubmitCancel();
                 setIsCancelDialogOpen(false);

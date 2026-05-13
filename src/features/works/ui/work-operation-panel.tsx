@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { StatusBadge } from '@/features/works/ui/badges';
 import { CheckCircle, Download, Loader2 } from 'lucide-react';
 import { getCurrentProcessDescription, type Attachment } from '@/lib/work-store';
+import { DISPLAY_LABEL, FIELD_LABEL } from './visual-tokens';
 
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return bytes + ' B';
@@ -100,11 +101,11 @@ export function WorkOperationPanel({
       <div className="space-y-6">
         <div className="space-y-2">
           <div>
-            <span className="text-sm text-slate-500">当前状态：</span>
+            <span className={DISPLAY_LABEL}>当前状态：</span>
             <StatusBadge status={work.status} work={work} />
           </div>
           <div>
-            <span className="text-sm text-slate-500">当前环节：</span>
+            <span className={DISPLAY_LABEL}>当前环节：</span>
             <span className="text-blue-600">
               {getCurrentProcessDescription(work.status, work.currentApproverRole, work.currentApproverId)}
             </span>
@@ -115,12 +116,12 @@ export function WorkOperationPanel({
           <h4 className="font-medium">提交完成材料</h4>
           <div className="space-y-3">
             <div>
-              <label className="text-sm font-medium">完成见证材料说明</label>
+              <label className={FIELD_LABEL + ' mb-1 block'}>完成见证材料说明</label>
               <Textarea value={proof} onChange={(e) => onProofChange(e.target.value)} rows={3} />
             </div>
 
             <div>
-              <label className="text-sm font-medium">上传见证材料附件</label>
+              <label className={FIELD_LABEL + ' mb-1 block'}>上传见证材料附件</label>
               <Input
                 type="file"
                 multiple
@@ -138,7 +139,7 @@ export function WorkOperationPanel({
               {evidenceAttachments.length > 0 && (
                 <div className="mt-2 space-y-2">
                   {evidenceAttachments.map((att) => (
-                    <div key={att.id} className="flex items-center justify-between rounded border p-2 text-sm">
+                    <div key={att.id} className="flex items-center justify-between rounded-lg border border-slate-200 p-2 text-sm">
                       <div className="min-w-0 flex-1">
                         <div className="font-medium break-words">{att.fileName}</div>
                         <div className="text-xs text-slate-500">
@@ -153,7 +154,7 @@ export function WorkOperationPanel({
                           target="_blank"
                           rel="noopener noreferrer"
                         >
-                          <Button type="button" variant="outline" size="sm">
+                          <Button type="button" variant="outline" size="sm" className="rounded-full">
                             <Download className="h-4 w-4 mr-1" />
                             下载
                           </Button>
@@ -162,6 +163,7 @@ export function WorkOperationPanel({
                           type="button"
                           variant="outline"
                           size="sm"
+                          className="rounded-full"
                           onClick={() => onDeleteEvidence(att.id)}
                         >
                           删除
@@ -173,7 +175,7 @@ export function WorkOperationPanel({
               )}
             </div>
 
-            <Button onClick={onComplete}>
+            <Button onClick={onComplete} className="rounded-full">
               <CheckCircle className="h-4 w-4 mr-2" />
               提交完成材料
             </Button>
@@ -183,11 +185,11 @@ export function WorkOperationPanel({
         <div className="space-y-4 border-t pt-4">
           <h4 className="font-medium text-slate-600">其他操作</h4>
           <div className="flex gap-3">
-            <Button variant="outline" onClick={handleOpenAdjust}>
+            <Button variant="outline" className="rounded-full" onClick={handleOpenAdjust}>
               申请调整
             </Button>
 
-            <Button variant="destructive" onClick={handleOpenCancel}>
+            <Button variant="destructive" className="rounded-full" onClick={handleOpenCancel}>
               申请取消
             </Button>
           </div>
