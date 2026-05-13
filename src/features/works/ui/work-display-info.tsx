@@ -91,7 +91,7 @@ function PriorityMainWorkDisplayInfo({ work, departments }: WorkDisplayInfoProps
         {work.nodes && work.nodes.length > 0 ? (
           <div className="space-y-3">
             {work.nodes.map((node: any, index: number) => (
-              <div key={node.id} className="border border-slate-200 bg-slate-50/70 rounded-lg p-3">
+              <div key={node.id ?? index} className="border border-slate-200 bg-slate-50/70 rounded-lg p-3">
                 <div className="font-medium break-words">
                   {index + 1}. {node.title}
                   {node.completeTime ? `（节点完成时间：${node.completeTime}）` : ''}
@@ -99,7 +99,7 @@ function PriorityMainWorkDisplayInfo({ work, departments }: WorkDisplayInfoProps
                 {node.children && node.children.length > 0 && (
                   <div className="pl-5 mt-2 space-y-1 text-sm text-slate-500">
                     {node.children.map((child: any, childIndex: number) => (
-                      <div key={child.id} className="break-words">
+                      <div key={child.id ?? `${index}-${childIndex}`} className="break-words">
                         {index + 1}.{childIndex + 1} {child.title}
                         {child.completeTime ? `（完成日期：${child.completeTime}）` : ''}
                       </div>
@@ -127,8 +127,8 @@ function PriorityMainWorkDisplayInfo({ work, departments }: WorkDisplayInfoProps
           <div>
             <span className={DISPLAY_LABEL}>见证材料附件：</span>
             <div className="mt-2 space-y-2">
-              {evidenceAttachments.map((att: any) => (
-                <div key={att.id} className="flex items-center justify-between rounded-lg border border-slate-200 p-2 text-sm">
+              {evidenceAttachments.map((att: any, i: number) => (
+                <div key={att.id ?? i} className="flex items-center justify-between rounded-lg border border-slate-200 p-2 text-sm">
                   <div className="min-w-0">
                     <div className="font-medium break-words">{att.fileName}</div>
                     <div className="text-xs text-slate-500">
@@ -164,8 +164,8 @@ function PriorityMainWorkDisplayInfo({ work, departments }: WorkDisplayInfoProps
       {work.adjustHistory && work.adjustHistory.length > 0 && (
         <div className="p-3 bg-purple-50 border border-purple-200 rounded text-sm text-purple-700 space-y-2">
           <div className="font-medium">调整记录</div>
-          {(work.adjustHistory as any[]).map((item) => (
-            <div key={item.id} className="border-t border-purple-100 pt-2 first:border-t-0 first:pt-0">
+          {(work.adjustHistory as any[]).map((item, i: number) => (
+            <div key={item.id ?? i} className="border-t border-purple-100 pt-2 first:border-t-0 first:pt-0">
               <div>调整原因：{item.reason || '-'}</div>
               <div>原计划完成时间：{item.fromTime || '-'}</div>
               <div>现计划完成时间：{item.toTime || '-'}</div>
@@ -265,7 +265,7 @@ function TodoWorkDisplayInfo({ work, departments }: WorkDisplayInfoProps) {
           <p className="font-medium mb-2">任务分解节点：</p>
           <div className="space-y-3">
             {work.nodes.map((node: any, index: number) => (
-              <div key={node.id} className="border border-slate-200 bg-slate-50/70 rounded-lg p-3">
+              <div key={node.id ?? index} className="border border-slate-200 bg-slate-50/70 rounded-lg p-3">
                 <div className="font-medium break-words">
                   {index + 1}. {node.title}
                   {node.completeTime ? `（节点完成时间：${node.completeTime}）` : ''}
@@ -273,7 +273,7 @@ function TodoWorkDisplayInfo({ work, departments }: WorkDisplayInfoProps) {
                 {node.children && node.children.length > 0 && (
                   <div className="pl-5 mt-2 space-y-1 text-sm text-slate-500">
                     {node.children.map((child: any, childIndex: number) => (
-                      <div key={child.id} className="break-words">
+                      <div key={child.id ?? `${index}-${childIndex}`} className="break-words">
                         {index + 1}.{childIndex + 1} {child.title}
                         {child.completeTime ? `（完成日期：${child.completeTime}）` : ''}
                       </div>
@@ -309,8 +309,8 @@ function TodoWorkDisplayInfo({ work, departments }: WorkDisplayInfoProps) {
           <div>
             <span className={DISPLAY_LABEL}>见证材料附件：</span>
             <div className="mt-2 space-y-2">
-              {evidenceAttachments.map((att: any) => (
-                <div key={att.id} className="flex items-center justify-between rounded-lg border border-slate-200 p-2 text-sm">
+              {evidenceAttachments.map((att: any, i: number) => (
+                <div key={att.id ?? i} className="flex items-center justify-between rounded-lg border border-slate-200 p-2 text-sm">
                   <div className="min-w-0">
                     <div className="font-medium break-words">{att.fileName}</div>
                     <div className="text-xs text-slate-500">

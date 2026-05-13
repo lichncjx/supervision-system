@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
@@ -17,12 +17,30 @@ import { WorkDecomposePanel } from '@/features/works/ui/work-decompose-panel';
 import { WorkActionDialogs } from '@/features/works/ui/work-action-dialogs';
 import { WorkPendingAdjustmentPanel } from '@/features/works/ui/work-pending-adjustment-panel';
 import { WorkflowProgress } from '@/features/workflow/ui/workflow-progress';
-import { useWorkDetailPermissions } from '@/features/works/client/use-work-detail-permissions';
 import { useWorkDetailData } from '@/features/works/client/use-work-detail-data';
-import { useWorkEditActions } from '@/features/works/client/use-work-edit-actions';
-import { useWorkAttachmentActions } from '@/features/attachments/client/use-work-attachment-actions';
-import { useWorkflowRequestActions } from '@/features/workflow/client/use-workflow-request-actions';
-import { useWorkflowApprovalActions } from '@/features/workflow/client/use-workflow-approval-actions';
+import { uploadFiles, deleteAttachment } from '@/features/attachments/client/attachment-api';
+import {
+  canEditRegularDraftWork,
+  canSubmitDraftWork,
+  canHandleReturnedDraftWork,
+  canDecomposeTodoWork,
+  canApproveWork,
+} from '@/features/works/client/work-client-permissions';
+import { isWorkStatusTerminal, isReturnedDraftWork } from '@/lib/work-status';
+import { isWorkRelatedToDepartment } from '@/features/works/client/work-filters';
+import {
+  updateWork,
+  deleteWork,
+  submitWork,
+  resubmitRejectedWork,
+  submitComplete,
+  submitAdjust,
+  submitCancel,
+  submitTodoDecomposition,
+  approveWork,
+  rejectWork,
+  type WorkEditablePatch,
+} from '@/lib/work-store';
 
 export default function WorkDetailPage() {
   const params = useParams<{ type: string; id: string }>();
@@ -49,7 +67,13 @@ export default function WorkDetailPage() {
     departmentManagers,
     refresh,
     onRefresh,
-  } = useWorkDetailData({ type, id, approvalLeaderId, setApprovalLeaderId });
+  } = useWorkDetailData(id);
+
+  useEffect(() => {
+    if (companyLeaders.length > 0 && !approvalLeaderId) {
+      setApprovalLeaderId(String(companyLeaders[0].id));
+    }
+  }, [companyLeaders, approvalLeaderId]);
 
   React.useEffect(() => {
     if (work) {
@@ -79,43 +103,7 @@ export default function WorkDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [work?.id, refresh]);
 
-  const perms = useWorkDetailPermissions(work, user);
-
-  const uploadActions = useWorkAttachmentActions({
-    work,
-    user,
-    onRefresh,
-  });
-
-  const editActions = useWorkEditActions({
-    work,
-    user,
-    onRefresh,
-    editForm,
-    setEditMode,
-    router,
-    type,
-  });
-
-  const requestActions = useWorkflowRequestActions({
-    work,
-    user,
-    onRefresh,
-    editForm,
-    setEditMode,
-    editReason,
-    companyLeaders,
-    adjustReason,
-    cancelReason,
-    approvalLeaderId,
-    proof,
-  });
-
-  const approvalActions = useWorkflowApprovalActions({
-    work,
-    user,
-    onRefresh,
-  });
+  const [uploading, setUploading] = useState(false);
 
   if (!work) {
     return (
@@ -127,6 +115,255 @@ export default function WorkDetailPage() {
       </div>
     );
   }
+
+  const workId = work.id;
+
+  const isAdmin = user?.role === 'ADMIN';
+  const isSupervisor = user?.role === 'SUPERVISOR';
+  const canEditDraft = isAdmin || canEditRegularDraftWork(user, work);
+  const canSubmitDraft = isAdmin || canSubmitDraftWork(user, work);
+  const canHandleReturnedCreate = isAdmin || canHandleReturnedDraftWork(user, work);
+  const canDecomposeTodo = isAdmin || canDecomposeTodoWork(user, work);
+  const canApprove = user ? canApproveWork(user, work) : false;
+
+  const isRelatedDept = isWorkRelatedToDepartment(work, user?.departmentId);
+  const canEdit = user && (
+    isAdmin || isSupervisor ||
+    ((user.role === 'DEPARTMENT_MANAGER' || user.role === 'DEPARTMENT_LEADER') &&
+      isRelatedDept && !isWorkStatusTerminal(work.status) && !isReturnedDraftWork(work)) ||
+    ((work.type === '重点' || work.type === '主要') && isRelatedDept && !isWorkStatusTerminal(work.status))
+  );
+  const canDeleteAttachment = (att: { userId: number }) =>
+    isAdmin || isSupervisor || user?.id === att.userId;
+
+  const handleUploadEvidence = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setUploading(true);
+    try { await uploadFiles(workId, files, 'evidence'); } catch (err: any) {
+      console.error(err);
+      alert(err.message || '上传失败');
+    }
+    setUploading(false);
+    e.target.value = '';
+    onRefresh();
+  };
+
+  const handleDeleteEvidence = async (attachmentId: number) => {
+    if (!confirm('确定要删除该证明材料附件吗？')) return;
+    try { await deleteAttachment(attachmentId); } catch (err: any) {
+      console.error(err);
+      alert(err.message || '删除失败');
+      return;
+    }
+    onRefresh();
+  };
+
+  const handleUploadAttachments = async (files: FileList) => {
+    if (!user) return;
+    try { await uploadFiles(workId, files); } catch (err: any) {
+      console.error(err);
+      alert(err.message || '上传失败');
+    }
+    onRefresh();
+  };
+
+  const handleDeleteAttachment = async (attachmentId: number) => {
+    if (!confirm('确定要删除该附件吗？')) return;
+    try { await deleteAttachment(attachmentId); } catch (err: any) {
+      console.error(err);
+      alert(err.message || '删除失败');
+      return;
+    }
+    onRefresh();
+  };
+
+  const handleSaveDraft = async () => {
+    if (!user) return;
+    try {
+      await updateWork(work.id, editForm);
+      setEditMode(false);
+      alert('草稿已保存');
+      onRefresh();
+    } catch (error) {
+      console.error(error);
+      alert('保存草稿失败');
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!confirm('确认删除该退回事项？')) return;
+    try {
+      await deleteWork(work.id);
+      router.push(`/${type}`);
+    } catch (error) {
+      console.error(error);
+      alert('删除失败，请查看控制台错误');
+    }
+  };
+
+  const handlePropose = async () => {
+    if (!user) return;
+    try {
+      await submitWork(work, user);
+      onRefresh();
+      alert('已提交审批');
+    } catch (error) {
+      console.error(error);
+      alert('提交审批失败，请查看控制台错误');
+    }
+  };
+
+  const handleResubmit = async () => {
+    if (!user) return;
+    if (!editReason.trim()) {
+      alert('请填写修改说明或重新提交原因');
+      return;
+    }
+    const selectedProposedLeader =
+      work.type === '待办'
+        ? companyLeaders.find((l) => l.id === Number(editForm.proposedLeaderId))
+        : null;
+    if (work.type === '待办' && !selectedProposedLeader) {
+      alert('请选择事项提出领导');
+      return;
+    }
+    const patch: WorkEditablePatch = {
+      ...editForm,
+      title: editForm.workItem || editForm.title || work.title,
+    };
+    if (work.type === '待办' && selectedProposedLeader) {
+      patch.proposedLeader = selectedProposedLeader.name;
+      patch.proposedLeaderId = selectedProposedLeader.id;
+      patch.proposedLeaderRole = selectedProposedLeader.role;
+    }
+    try {
+      await resubmitRejectedWork(work, user, patch);
+      setEditMode(false);
+      onRefresh();
+      alert('已修改并重新提交审批');
+    } catch (error) {
+      console.error(error);
+      alert('提交失败，请查看控制台错误');
+    }
+  };
+
+  const handleComplete = async () => {
+    if (!user) return;
+    if (!proof.trim()) {
+      alert('请填写见证材料说明');
+      return;
+    }
+    try {
+      await submitComplete(work, user, proof);
+      onRefresh();
+      alert('已提交完成材料');
+    } catch (error) {
+      console.error(error);
+      alert('提交失败，请查看控制台错误');
+    }
+  };
+
+  const handleAdjust = async () => {
+    if (!user) return;
+    if (!adjustReason.trim()) {
+      alert('请填写调整原因');
+      return;
+    }
+    const leader = companyLeaders.find((l) => l.id === Number(approvalLeaderId));
+    if (!leader) {
+      alert('请选择公司审批领导');
+      return;
+    }
+    const pendingAdjustment: WorkEditablePatch = {
+      ...editForm,
+      title: editForm.workItem || editForm.title || work.title,
+    };
+    try {
+      await submitAdjust(work, user, adjustReason, pendingAdjustment);
+      onRefresh();
+      alert('已提交调整申请，等待审批');
+    } catch (error) {
+      console.error(error);
+      alert('提交失败，请查看控制台错误');
+    }
+  };
+
+  const handleCancel = async () => {
+    if (!user) return;
+    if (!cancelReason.trim()) {
+      alert('请填写取消原因');
+      return;
+    }
+    const leader = companyLeaders.find((l) => l.id === Number(approvalLeaderId));
+    if (!leader) {
+      alert('请选择公司审批领导');
+      return;
+    }
+    try {
+      await submitCancel(work, user, cancelReason);
+      onRefresh();
+      alert('已提交取消申请');
+    } catch (error) {
+      console.error(error);
+      alert('提交失败，请查看控制台错误');
+    }
+  };
+
+  const handleDecompose = async () => {
+    if (!user) return;
+    if (!editForm.workPlan?.trim()) {
+      alert('请填写工作计划');
+      return;
+    }
+    if (!editForm.planCompleteTime) {
+      alert('请填写计划完成时间');
+      return;
+    }
+    const validNodes = (editForm.nodes || []).filter((n: any) => n.title?.trim());
+    if (validNodes.length === 0) {
+      alert('请至少填写一个任务节点');
+      return;
+    }
+    if (validNodes.some((n: any) => !n.completeTime)) {
+      alert('请填写每个任务节点的完成时间');
+      return;
+    }
+    try {
+      await submitTodoDecomposition(work, user, { ...editForm, title: editForm.workItem || work.title });
+      onRefresh();
+      alert('已提交待办事项分解，等待审批');
+    } catch (error) {
+      console.error(error);
+      alert('提交失败，请查看控制台错误');
+    }
+  };
+
+  const handleApprove = async () => {
+    if (!user) return;
+    try {
+      await approveWork(user, work);
+      onRefresh();
+      alert('审批已通过');
+    } catch (error) {
+      console.error(error);
+      alert('审批失败，请查看控制台错误');
+    }
+  };
+
+  const handleReject = async () => {
+    const reason = prompt('请输入退回原因：');
+    if (reason === null) return;
+    if (!user) return;
+    try {
+      await rejectWork(work, user, reason || '审批退回');
+      onRefresh();
+      alert('已退回');
+    } catch (error) {
+      console.error(error);
+      alert('退回失败，请查看控制台错误');
+    }
+  };
 
   const isPriorityOrMain = work.type === '重点' || work.type === '主要';
   const isTodo = work.type === '待办';
@@ -167,14 +404,14 @@ export default function WorkDetailPage() {
 
       <WorkAttachmentPanel
         attachments={(work.attachments || []).filter(a => a.category !== 'evidence')}
-        canUpload={!!perms.canEdit}
-        canDelete={perms.canDeleteAttachment}
-        onUpload={uploadActions.handleUploadAttachments}
-        onDelete={uploadActions.handleDeleteAttachment}
+        canUpload={!!canEdit}
+        canDelete={canDeleteAttachment}
+        onUpload={handleUploadAttachments}
+        onDelete={handleDeleteAttachment}
       />
 
       <WorkDraftEditPanel
-        visible={!!perms.canHandleReturnedCreate || !!perms.canEditDraft}
+        visible={!!canHandleReturnedCreate || !!canEditDraft}
         rejectReason={work.rejectReason || ''}
         editMode={editMode}
         setEditMode={setEditMode}
@@ -188,22 +425,22 @@ export default function WorkDetailPage() {
         companyLeaders={companyLeaders}
         departmentLeaders={departmentLeaders}
         departmentManagers={departmentManagers}
-        onResubmit={requestActions.handleResubmit}
-        onSaveDraft={editActions.handleSaveDraft}
-        isRegularDraft={perms.isRegularDraft}
-        onDelete={editActions.handleDelete}
+        onResubmit={handleResubmit}
+        onSaveDraft={handleSaveDraft}
+        isRegularDraft={canEditDraft}
+        onDelete={handleDelete}
       />
 
       <WorkDecomposePanel
-        visible={!!perms.canDecomposeTodo}
+        visible={!!canDecomposeTodo}
         editForm={editForm}
         setEditForm={setEditForm}
         rejectReason={work.rejectReason || ''}
         isReturned={!!(work.status === 'pending_decompose' && (work.rejectReason || work.rejectedFromStatus))}
-        onSubmitDecomposition={requestActions.handleDecompose}
+        onSubmitDecomposition={handleDecompose}
       />
 
-      {perms.canSubmitDraft && (
+      {canSubmitDraft && (
         <div className="rounded-xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50/50 overflow-hidden stagger-3">
           <div className="p-4">
             <div className="flex items-center gap-4">
@@ -211,7 +448,7 @@ export default function WorkDetailPage() {
                 <span className="text-sm text-slate-500">当前为草稿状态，请提交审批：</span>
                 <p className="text-xs text-slate-400 mt-1">提交后将由系统按工作流规则自动分配审批节点；责任领导、责任人仅用于业务留痕。</p>
               </div>
-              <Button onClick={requestActions.handlePropose} className="rounded-full">提交审批</Button>
+              <Button onClick={handlePropose} className="rounded-full">提交审批</Button>
             </div>
           </div>
         </div>
@@ -222,10 +459,10 @@ export default function WorkDetailPage() {
         proof={proof}
         onProofChange={setProof}
         evidenceAttachments={(work.attachments || []).filter(a => a.category === 'evidence')}
-        onUploadEvidence={uploadActions.handleUploadEvidence}
-        onDeleteEvidence={uploadActions.handleDeleteEvidence}
-        uploading={uploadActions.uploading}
-        onComplete={requestActions.handleComplete}
+        onUploadEvidence={handleUploadEvidence}
+        onDeleteEvidence={handleDeleteEvidence}
+        uploading={uploading}
+        onComplete={handleComplete}
         onOpenAdjustDialog={(editForm, adjustReason) => {
           setEditForm(editForm);
           setAdjustReason(adjustReason);
@@ -238,9 +475,9 @@ export default function WorkDetailPage() {
       />
 
       <WorkflowApprovalPanel
-        visible={perms.canApprove}
-        onApprove={approvalActions.handleApprove}
-        onReject={approvalActions.handleReject}
+        visible={canApprove}
+        onApprove={handleApprove}
+        onReject={handleReject}
       />
 
       <WorkPendingAdjustmentPanel work={work} />
@@ -264,8 +501,8 @@ export default function WorkDetailPage() {
         departments={departments}
         isPriorityOrMain={isPriorityOrMain}
         isTodo={isTodo}
-        onSubmitAdjust={requestActions.handleAdjust}
-        onSubmitCancel={requestActions.handleCancel}
+        onSubmitAdjust={handleAdjust}
+        onSubmitCancel={handleCancel}
       />
     </div>
   );

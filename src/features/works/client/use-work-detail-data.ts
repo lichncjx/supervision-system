@@ -4,19 +4,7 @@ import { useState, useEffect } from 'react';
 import { getCompanyLeaders, getDepartments, getDepartmentLeaders, getDepartmentManagers } from '@/lib/auth';
 import { getWorkById, getWorkflowRecords, type Work, type WorkflowRecord } from '@/lib/work-store';
 
-interface UseWorkDetailDataParams {
-  type: string;
-  id: string;
-  approvalLeaderId: string;
-  setApprovalLeaderId: (v: string) => void;
-}
-
-export function useWorkDetailData({
-  type: _type,
-  id,
-  approvalLeaderId,
-  setApprovalLeaderId,
-}: UseWorkDetailDataParams) {
+export function useWorkDetailData(id: string) {
   const [refresh, setRefresh] = useState(0);
   const [work, setWork] = useState<Work | undefined>();
   const [workflowRecords, setWorkflowRecords] = useState<WorkflowRecord[]>([]);
@@ -35,43 +23,29 @@ export function useWorkDetailData({
       ]);
       setCompanyLeaders(leaders);
       setDepartments(depts);
-      if (leaders.length > 0 && !approvalLeaderId) {
-        setApprovalLeaderId(String(leaders[0].id));
-      }
     };
     fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    const fetchWork = async () => {
-      const data = await getWorkById(Number(id));
-      setWork(data);
-    };
-    fetchWork();
+    getWorkById(Number(id)).then(setWork);
   }, [id, refresh]);
 
   useEffect(() => {
-    const fetchWorkflowRecords = async () => {
-      if (work) {
-        const records = await getWorkflowRecords(work.id);
-        setWorkflowRecords(records);
-      }
-    };
-    fetchWorkflowRecords();
+    if (work) {
+      getWorkflowRecords(work.id).then(setWorkflowRecords);
+    }
   }, [work, refresh]);
 
   useEffect(() => {
     if (work && (work.type === '重点' || work.type === '主要') && work.departmentId) {
-      const fetchDeptUsers = async () => {
-        const [leaders, managers] = await Promise.all([
-          getDepartmentLeaders(work.departmentId!),
-          getDepartmentManagers(work.departmentId!),
-        ]);
+      Promise.all([
+        getDepartmentLeaders(work.departmentId!),
+        getDepartmentManagers(work.departmentId!),
+      ]).then(([leaders, managers]) => {
         setDepartmentLeaders(leaders);
         setDepartmentManagers(managers);
-      };
-      fetchDeptUsers();
+      });
     }
   }, [work?.departmentId, work?.type, work]);
 

@@ -233,6 +233,8 @@ export default function NewWorkPage() {
   const TitleIcon = routeType === 'priority' ? Star : routeType === 'main' ? ListTodo : CheckSquare;
 
   const businessDepts = departments.filter((d) => d.isBusiness !== false);
+  const isDepartmentUser = user?.role === 'DEPARTMENT_MANAGER' || user?.role === 'DEPARTMENT_LEADER';
+  const showNodes = isPriorityOrMain || (isTodo && isDepartmentUser);
 
   const draftHint = (
     <div className={HINT_BOX}>
@@ -260,29 +262,14 @@ export default function NewWorkPage() {
 
   const sidebar = (
     <>
-      {isPriorityOrMain && (
+      {showNodes && (
         <>
           <WorkFormNodes
             nodes={nodes}
             onChange={setNodes}
-            nodeLabel="工作节点（可选）"
-            addButtonLabel="新增工作节点"
-            nodePlaceholderPrefix="工作节点"
-            error={fieldError('nodes')}
-            onTouched={() => handleBlur('nodes')}
-            fieldId="field-nodes"
-          />
-          <p className="text-xs text-gray-400">如需拆解阶段任务，可添加节点；未添加节点不影响提交。</p>
-        </>
-      )}
-      {isTodo && user && (user.role === 'DEPARTMENT_MANAGER' || user.role === 'DEPARTMENT_LEADER') && (
-        <>
-          <WorkFormNodes
-            nodes={nodes}
-            onChange={setNodes}
-            nodeLabel="任务节点（可选）"
-            addButtonLabel="新增任务节点"
-            nodePlaceholderPrefix="任务节点"
+            nodeLabel={isPriorityOrMain ? '工作节点（可选）' : '任务节点（可选）'}
+            addButtonLabel={isPriorityOrMain ? '新增工作节点' : '新增任务节点'}
+            nodePlaceholderPrefix={isPriorityOrMain ? '工作节点' : '任务节点'}
             error={fieldError('nodes')}
             onTouched={() => handleBlur('nodes')}
             fieldId="field-nodes"
