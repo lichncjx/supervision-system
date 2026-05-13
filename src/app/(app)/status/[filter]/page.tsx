@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Eye } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
@@ -19,7 +19,7 @@ import {
 } from '@/lib/work-store';
 import { getDepartments, isCompanyLevel, isSupervisionAdmin } from '@/lib/auth';
 import { StatusBadge } from '@/features/works/ui/badges';
-import { Input } from '@/components/ui/input';
+import { WorkListToolbar } from '@/features/works/ui/work-list-toolbar';
 import { getWorkTypeAccent, getWorkTypeText } from '@/lib/status-colors';
 
 type StatusPageFilter =
@@ -91,9 +91,9 @@ const getMonthLabel = (month: string) => {
   return `${year}年${Number(m)}月`;
 };
 
-const selectClass = 'rounded-full border border-slate-200 h-10 px-4 text-sm text-slate-600 bg-slate-50';
 
 export default function StatusFilterPage() {
+  const router = useRouter();
   const params = useParams<{ filter: string }>();
   const filter = params?.filter || 'all';
   const { user } = useAuth();
@@ -205,45 +205,26 @@ export default function StatusFilterPage() {
         </h1>
       </div>
 
-      <div className="stagger-2 rounded-xl border border-slate-200/80 bg-white/70 backdrop-blur-sm p-4">
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-          <Input
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
-            placeholder="搜索事项名称..."
-            className="rounded-full"
-          />
-
-          <select value={monthFilter} onChange={(e) => setMonthFilter(e.target.value)} className={selectClass}>
-            <option value="">全部月份</option>
-            {monthOptions.map((month) => (
-              <option key={month} value={month}>{getMonthLabel(month)}</option>
-            ))}
-          </select>
-
-          <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as WorkType | '全部')} className={selectClass}>
-            <option value="全部">全部类型</option>
-            <option value="重点">重点工作</option>
-            <option value="主要">主要工作</option>
-            <option value="待办">待办事项</option>
-          </select>
-
-          {companyLevel && (
-            <select value={departmentFilter} onChange={(e) => setDepartmentFilter(e.target.value === '全部' ? '全部' : Number(e.target.value))} className={selectClass}>
-              <option value="全部">全部部门</option>
-              {departments.filter((d) => d.id !== 1).map((dept) => (
-                <option key={dept.id} value={dept.id}>{dept.name}</option>
-              ))}
-            </select>
-          )}
-
-          <button
-            onClick={() => { setKeyword(''); setMonthFilter(''); setTypeFilter('全部'); setDepartmentFilter('全部'); }}
-            className="rounded-full border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 px-4 py-2 text-sm font-medium transition-colors"
-          >
-            重置
-          </button>
-        </div>
+      <div className="stagger-2">
+        <WorkListToolbar
+          keyword={keyword}
+          onKeywordChange={setKeyword}
+          monthFilter={monthFilter}
+          onMonthFilterChange={setMonthFilter}
+          monthOptions={monthOptions}
+          getMonthLabel={getMonthLabel}
+          departmentFilter={departmentFilter}
+          onDepartmentFilterChange={(v) => setDepartmentFilter(v)}
+          departments={departments}
+          companyLevel={companyLevel}
+          statusFilter={filter as WorkStatusFilter}
+          onStatusFilterChange={() => {}}
+          typeFilter={typeFilter}
+          onTypeFilterChange={(v) => setTypeFilter(v as WorkType | '全部')}
+          hideStatusFilter
+          onReset={() => { setKeyword(''); setMonthFilter(''); setTypeFilter('全部'); setDepartmentFilter('全部'); }}
+          onRefresh={() => router.refresh()}
+        />
         <div className="text-sm text-slate-500 mt-3">
           共 {list.length} 项
         </div>
