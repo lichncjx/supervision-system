@@ -33,8 +33,8 @@ export default function AlertPage() {
 
   const load = async () => {
     const [expiring, overdue] = await Promise.all([
-      queryWorks(user, { status: 'expiring', keyword: keyword || undefined } as any),
-      queryWorks(user, { status: 'overdue', keyword: keyword || undefined } as any),
+      queryWorks(user, { status: 'expiring' } as any),
+      queryWorks(user, { status: 'overdue' } as any),
     ]);
     setExpiringWorks(expiring);
     setOverdueWorks(overdue);
@@ -43,7 +43,7 @@ export default function AlertPage() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, keyword]);
+  }, [user]);
 
   const expiringCount = expiringWorks.length;
   const overdueCount = overdueWorks.length;

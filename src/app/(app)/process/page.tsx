@@ -38,8 +38,8 @@ export default function ApprovalPage() {
 
   const load = async () => {
     const [approving, handling] = await Promise.all([
-      queryWorks(user, { status: 'approving', keyword: keyword || undefined } as any),
-      queryWorks(user, { status: 'handling', keyword: keyword || undefined } as any),
+      queryWorks(user, { status: 'approving' } as any),
+      queryWorks(user, { status: 'handling' } as any),
     ]);
     setApprovingWorks(approving);
     setHandlingWorks(handling);
@@ -48,7 +48,7 @@ export default function ApprovalPage() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, keyword]);
+  }, [user]);
 
   const approvingCount = approvingWorks.length;
   const handlingCount = handlingWorks.length;
