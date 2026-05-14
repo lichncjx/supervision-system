@@ -243,56 +243,11 @@ export function canApproveWorkItem(
   return false
 }
 
-export function canHandleWorkItem(
-  user: PermissionUser,
-  workItem: PermissionWorkItem,
-): boolean {
-  if (user.role === Role.ADMIN || user.role === Role.SUPERVISOR) return false
-
-  const status = normalizeStatus(workItem.status)
-  const returnedDraftOwnerId =
-    workItem.firstSubmitterId ?? workItem.creatorId
-
-  // DRAFT (returned from proposal rejection): only firstSubmitterId/creatorId
-  if (status === WorkItemStatus.DRAFT && isReturnedDraftWork(workItem)) {
-    return returnedDraftOwnerId === user.id
-  }
-
-  // IN_PROGRESS (returned from adjust/cancel/complete rejection): only firstSubmitterId/creatorId
-  if (status === WorkItemStatus.IN_PROGRESS && isReturnedInProgressWork(workItem)) {
-    return returnedDraftOwnerId === user.id
-  }
-
-  if (isDepartmentLevelRole(user.role)) {
-    if (!isWorkMainResponsibleDepartment(workItem, user.departmentId))
-      return false
-
-    // PENDING_DECOMPOSE: main-responsible-department department-level roles
-    if (status === WorkItemStatus.PENDING_DECOMPOSE) return true
-
-    // DRAFT (non-returned): only the creator within the main responsible department
-    if (status === WorkItemStatus.DRAFT) {
-      return workItem.creatorId === user.id
-    }
-
-    return false
-  }
-
-  // Non-department roles (VICE_PRESIDENT, PRESIDENT): DRAFT only for creator/firstSubmitter
-  if (status === WorkItemStatus.DRAFT) {
-    return returnedDraftOwnerId === user.id
-  }
-
-  return false
-}
-
 /**
  * Broad operation permission for workflow actions (submit completion, adjust, cancel)
  * and attachment uploads on non-terminal items.
  *
- * Differs from canHandleWorkItem (which is narrow — 待办理 only).
- * IN_PROGRESS for department roles in the main responsible department passes here
- * but does NOT pass canHandleWorkItem (unless returned).
+ * This is the foundation — canHandleWorkItem builds on it by narrowing.
  */
 export function canOperateWorkItem(
   user: PermissionUser,
@@ -303,26 +258,59 @@ export function canOperateWorkItem(
   const status = normalizeStatus(workItem.status)
   if (status === 'COMPLETED' || status === 'CANCELLED') return false
 
-  if (isDepartmentLevelRole(user.role)) {
-    if (!isWorkMainResponsibleDepartment(workItem, user.departmentId))
-      return false
-    return (
-      status === WorkItemStatus.IN_PROGRESS ||
-      status === WorkItemStatus.PENDING_DECOMPOSE
-    )
-  }
-
   const ownerId = workItem.firstSubmitterId ?? workItem.creatorId
-  if (
-    ownerId === user.id &&
-    (status === WorkItemStatus.DRAFT ||
-      status === WorkItemStatus.IN_PROGRESS ||
-      status === WorkItemStatus.PENDING_DECOMPOSE)
-  ) {
-    return true
+
+  if (isDepartmentLevelRole(user.role)) {
+    if (isWorkMainResponsibleDepartment(workItem, user.departmentId)) {
+      if (
+        status === WorkItemStatus.IN_PROGRESS ||
+        status === WorkItemStatus.PENDING_DECOMPOSE
+      )
+        return true
+      if (status === WorkItemStatus.DRAFT && workItem.creatorId === user.id)
+        return true
+      return false
+    }
+    // Not main dept, but owner can still operate on own non-terminal items
+    if (ownerId !== user.id) return false
+    return status !== 'COMPLETED' && status !== 'CANCELLED'
   }
 
-  return false
+  // Non-department roles: operate on own non-terminal items
+  if (ownerId !== user.id) return false
+  return status !== 'COMPLETED' && status !== 'CANCELLED'
+}
+
+/**
+ * Narrow handling check — only items that require immediate user action (待办理).
+ *
+ * Builds on canOperateWorkItem and further narrows:
+ * - ADMIN/SUPERVISOR never have 待办理.
+ * - IN_PROGRESS only counts when returned from approval (rejected adjust/cancel/complete).
+ * - DRAFT (non-returned) for department roles outside their main department is excluded.
+ */
+export function canHandleWorkItem(
+  user: PermissionUser,
+  workItem: PermissionWorkItem,
+): boolean {
+  if (user.role === Role.ADMIN || user.role === Role.SUPERVISOR) return false
+  if (!canOperateWorkItem(user, workItem)) return false
+
+  const status = normalizeStatus(workItem.status)
+  const ownerId = workItem.firstSubmitterId ?? workItem.creatorId
+
+  if (status === WorkItemStatus.IN_PROGRESS)
+    return isReturnedInProgressWork(workItem) && ownerId === user.id
+
+  if (
+    status === WorkItemStatus.DRAFT &&
+    !isReturnedDraftWork(workItem) &&
+    isDepartmentLevelRole(user.role) &&
+    !isWorkMainResponsibleDepartment(workItem, user.departmentId)
+  )
+    return false
+
+  return true
 }
 
 export function canEditWorkItem(
