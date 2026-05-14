@@ -3,41 +3,51 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Download } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
-import { getCompanyLeaders, getDepartments, getDepartmentLeaders, getDepartmentManagers } from '@/lib/auth';
+import { Button } from '@/components/ui/button';
+import { StatusBadge } from '@/features/works/ui/badges';
+import { getCurrentProcessDescription } from '@/lib/work-store';
 import {
-  getWorkById,
+  TYPE_THEME,
+  PANEL,
+  PANEL_PADDED,
+} from '@/features/works/ui/visual-tokens';
+import { WorkAttachmentPanel } from '@/features/attachments/ui/work-attachment-panel';
+import { WorkCompletePanel } from '@/features/works/ui/work-complete-panel';
+import { WorkflowRecords } from '@/features/workflow/ui/workflow-records';
+import { WorkflowApprovalPanel } from '@/features/workflow/ui/workflow-approval-panel';
+import { WorkDraftEditPanel } from '@/features/works/ui/work-draft-edit-panel';
+import { WorkDisplayInfo } from '@/features/works/ui/work-display-info';
+import { WorkDecomposePanel } from '@/features/works/ui/work-decompose-panel';
+import { WorkActionDialogs } from '@/features/works/ui/work-action-dialogs';
+import { WorkPendingAdjustmentPanel } from '@/features/works/ui/work-pending-adjustment-panel';
+import { WorkSidebarActions } from '@/features/works/ui/work-sidebar-actions';
+import { WorkflowProgress } from '@/features/workflow/ui/workflow-progress';
+import { useWorkDetailData } from '@/features/works/client/use-work-detail-data';
+import { uploadFiles, deleteAttachment } from '@/features/attachments/client/attachment-api';
+import {
+  canEditRegularDraftWork,
+  canSubmitDraftWork,
+  canHandleReturnedDraftWork,
+  canDecomposeTodoWork,
+  canApproveWork,
+} from '@/features/works/client/work-client-permissions';
+import { isWorkStatusTerminal, isReturnedDraftWork } from '@/lib/work-status';
+import { isWorkRelatedToDepartment } from '@/features/works/client/work-filters';
+import {
+  updateWork,
+  deleteWork,
+  submitWork,
+  resubmitRejectedWork,
   submitComplete,
   submitAdjust,
   submitCancel,
   submitTodoDecomposition,
   approveWork,
   rejectWork,
-  canApproveWork,
-  resubmitRejectedWork,
-  deleteWork,
-  getWorkflowRecords,
-  submitWork,
   type WorkEditablePatch,
-  type Work,
-  type WorkflowRecord,
-  getCurrentProcessDescription,
 } from '@/lib/work-store';
-import { Button } from '@/components/ui/button';
-import { workTypeColors } from '@/lib/status-colors';
-import { WorkAttachmentPanel } from '@/features/attachments/ui/work-attachment-panel';
-import { WorkOperationPanel } from '@/features/works/ui/work-operation-panel';
-import { WorkWorkflowRecords } from '@/features/workflow/ui/work-workflow-records';
-import { WorkApprovalPanel } from '@/features/workflow/ui/work-approval-panel';
-import { WorkReturnedPanel } from '@/features/works/ui/work-returned-panel';
-import { WorkDecomposePanel } from '@/features/workflow/ui/work-decompose-panel';
-import { WorkActionDialogs } from '@/features/works/ui/work-action-dialogs';
-import { WorkPendingAdjustmentPanel } from '@/features/workflow/ui/work-pending-adjustment-panel';
-import { StatusBadge } from '@/features/works/ui/badges';
-import { WorkflowProgress } from '@/features/workflow/ui/workflow-progress';
-import { ExpandableText } from '@/components/common/expandable-text';
-import { isReturnedDraftWork, isWorkStatusTerminal } from '@/lib/work-status';
 
 export default function WorkDetailPage() {
   const params = useParams<{ type: string; id: string }>();
@@ -45,76 +55,33 @@ export default function WorkDetailPage() {
   const id = params?.id || '';
   const { user } = useAuth();
   const router = useRouter();
-  const [companyLeaders, setCompanyLeaders] = useState<Array<{ id: number; name: string; role: string }>>([]);
-  const [departments, setDepartments] = useState<Array<{ id: number; name: string; code: string; isBusiness: boolean }>>([]);
   const [proof, setProof] = useState('');
-  const [uploading, setUploading] = useState(false);
   const [adjustReason, setAdjustReason] = useState('');
   const [cancelReason, setCancelReason] = useState('');
   const [approvalLeaderId, setApprovalLeaderId] = useState('');
-  const [refresh, setRefresh] = useState(0);
   const [editMode, setEditMode] = useState(false);
   const [isAdjustDialogOpen, setIsAdjustDialogOpen] = useState(false);
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
   const [editForm, setEditForm] = useState<any>({});
   const [editReason, setEditReason] = useState('');
-  // Phase 2: department leaders/managers for returned panel dropdowns
-  const [departmentLeaders, setDepartmentLeaders] = useState<Array<{ id: number; name: string; role: string; departmentId: number }>>([]);
-  const [departmentManagers, setDepartmentManagers] = useState<Array<{ id: number; name: string; role: string; departmentId: number }>>([]);
 
-  const [work, setWork] = useState<Work | undefined>();
-  const [workflowRecords, setWorkflowRecords] = useState<WorkflowRecord[]>([]);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      const [leaders, depts] = await Promise.all([
-        getCompanyLeaders(),
-        getDepartments(),
-      ]);
-      setCompanyLeaders(leaders);
-      setDepartments(depts);
-      if (leaders.length > 0 && !approvalLeaderId) {
-        setApprovalLeaderId(String(leaders[0].id));
-      }
-    };
-    fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const {
+    work,
+    workflowRecords,
+    companyLeaders,
+    departments,
+    departmentLeaders,
+    departmentManagers,
+    refresh,
+    onRefresh,
+  } = useWorkDetailData(id);
 
   useEffect(() => {
-    const fetchWork = async () => {
-      const data = await getWorkById(Number(id));
-      setWork(data);
-    };
-    fetchWork();
-  }, [id, refresh]);
-
-  useEffect(() => {
-    const fetchWorkflowRecords = async () => {
-      if (work) {
-        const records = await getWorkflowRecords(work.id);
-        setWorkflowRecords(records);
-      }
-    };
-    fetchWorkflowRecords();
-  }, [work, refresh]);
-
-  // Phase 2: fetch department leaders/managers for priority/main returned panel
-  useEffect(() => {
-    if (work && (work.type === '重点' || work.type === '主要') && work.departmentId) {
-      const fetchDeptUsers = async () => {
-        const [leaders, managers] = await Promise.all([
-          getDepartmentLeaders(work.departmentId!),
-          getDepartmentManagers(work.departmentId!),
-        ]);
-        setDepartmentLeaders(leaders);
-        setDepartmentManagers(managers);
-      };
-      fetchDeptUsers();
+    if (companyLeaders.length > 0 && !approvalLeaderId) {
+      setApprovalLeaderId(String(companyLeaders[0].id));
     }
-  }, [work?.departmentId, work?.type]);
+  }, [companyLeaders, approvalLeaderId]);
 
-  // 初始化编辑表单
   React.useEffect(() => {
     if (work) {
       setEditForm({
@@ -143,6 +110,8 @@ export default function WorkDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [work?.id, refresh]);
 
+  const [uploading, setUploading] = useState(false);
+
   if (!work) {
     return (
       <div className="text-center py-12">
@@ -154,68 +123,97 @@ export default function WorkDetailPage() {
     );
   }
 
-  const isCurrentUserRelatedDepartment = () => {
-    if (!user?.departmentId) return false;
+  const workId = work.id;
 
-    if (work.departmentId === user.departmentId) return true;
-
-    if (Array.isArray(work.cooperators)) {
-      return work.cooperators.some((c: any) => c.departmentId === user.departmentId);
-    }
-
-    return false;
-  };
-
-  const canDecomposeTodo =
-    user &&
-    work.type === '待办' &&
-    work.status === 'pending_decompose' &&
-    (
-      user.role === 'ADMIN' ||
-      (
-        (user.role === 'DEPARTMENT_MANAGER' || user.role === 'DEPARTMENT_LEADER') &&
-        isCurrentUserRelatedDepartment()
-      )
-    );
-
-  const canHandleReturnedCreate =
-    user &&
-    isReturnedDraftWork(work) &&
-    (
-      user.role === 'ADMIN' ||
-      // firstSubmitterId ?? creatorId 的 fallback 仅用于兼容历史数据
-      user.id === (work.firstSubmitterId ?? work.creatorId)
-    );
-
+  const isAdmin = user?.role === 'ADMIN';
+  const isSupervisor = user?.role === 'SUPERVISOR';
+  const canEditDraft = isAdmin || canEditRegularDraftWork(user, work);
+  const canSubmitDraft = isAdmin || canSubmitDraftWork(user, work);
+  const canHandleReturnedCreate = isAdmin || canHandleReturnedDraftWork(user, work);
+  const canDecomposeTodo = isAdmin || canDecomposeTodoWork(user, work);
   const canApprove = user ? canApproveWork(user, work) : false;
 
+  const isRelatedDept = isWorkRelatedToDepartment(work, user?.departmentId);
   const canEdit = user && (
-    user.role === 'ADMIN' ||
-    user.role === 'SUPERVISOR' ||
-    (
-      (user.role === 'DEPARTMENT_MANAGER' || user.role === 'DEPARTMENT_LEADER') &&
-      isCurrentUserRelatedDepartment() &&
-      !isWorkStatusTerminal(work.status) &&
-      !isReturnedDraftWork(work)
-    ) ||
-    (
-      // 同部门且相关可编辑（不依赖姓名字段判断权限）
-      (work.type === '重点' || work.type === '主要') &&
-      isCurrentUserRelatedDepartment() &&
-      !isWorkStatusTerminal(work.status)
-    )
+    isAdmin || isSupervisor ||
+    ((user.role === 'DEPARTMENT_MANAGER' || user.role === 'DEPARTMENT_LEADER') &&
+      isRelatedDept && !isWorkStatusTerminal(work.status) && !isReturnedDraftWork(work)) ||
+    ((work.type === '重点' || work.type === '主要') && isRelatedDept && !isWorkStatusTerminal(work.status))
   );
+  const canDeleteAttachment = (att: { userId: number }) =>
+    isAdmin || isSupervisor || user?.id === att.userId;
 
-  const canSubmitDraft = user && work.status === 'draft' && !isReturnedDraftWork(work) && (
-    user.role === 'ADMIN' ||
-    user.id === work.creatorId
-  );
+  const handleUploadEvidence = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setUploading(true);
+    try { await uploadFiles(workId, files, 'evidence'); } catch (err: any) {
+      console.error(err);
+      alert(err.message || '上传失败');
+    }
+    setUploading(false);
+    e.target.value = '';
+    onRefresh();
+  };
 
-  const handleSubmitDraft = async () => {
+  const handleDeleteEvidence = async (attachmentId: number) => {
+    if (!confirm('确定要删除该证明材料附件吗？')) return;
+    try { await deleteAttachment(attachmentId); } catch (err: any) {
+      console.error(err);
+      alert(err.message || '删除失败');
+      return;
+    }
+    onRefresh();
+  };
+
+  const handleUploadAttachments = async (files: FileList) => {
+    if (!user) return;
+    try { await uploadFiles(workId, files); } catch (err: any) {
+      console.error(err);
+      alert(err.message || '上传失败');
+    }
+    onRefresh();
+  };
+
+  const handleDeleteAttachment = async (attachmentId: number) => {
+    if (!confirm('确定要删除该附件吗？')) return;
+    try { await deleteAttachment(attachmentId); } catch (err: any) {
+      console.error(err);
+      alert(err.message || '删除失败');
+      return;
+    }
+    onRefresh();
+  };
+
+  const handleSaveDraft = async () => {
+    if (!user) return;
+    try {
+      await updateWork(work.id, editForm);
+      setEditMode(false);
+      alert('草稿已保存');
+      onRefresh();
+    } catch (error) {
+      console.error(error);
+      alert('保存草稿失败');
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!confirm('确认删除该退回事项？')) return;
+    try {
+      await deleteWork(work.id);
+      router.push(`/${type}`);
+    } catch (error) {
+      console.error(error);
+      alert('删除失败，请查看控制台错误');
+    }
+  };
+
+  const handlePropose = async () => {
     if (!user) return;
     try {
       await submitWork(work, user);
-      setRefresh(refresh + 1);
+      onRefresh();
       alert('已提交审批');
     } catch (error) {
       console.error(error);
@@ -223,162 +221,38 @@ export default function WorkDetailPage() {
     }
   };
 
-  const handleUploadEvidence = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    setUploading(true);
-    for (const file of Array.from(files)) {
-      const formData = new FormData();
-      formData.append('workItemId', String(work.id));
-      formData.append('file', file);
-      formData.append('category', 'evidence');
-
-      try {
-        const res = await fetch('/api/upload', {
-          method: 'POST',
-          body: formData,
-          credentials: 'include',
-        });
-        const data = await res.json();
-        if (!res.ok || !data.success) {
-          alert(data.error || '上传失败');
-        }
-      } catch (err) {
-        console.error(err);
-        alert('上传失败');
-      }
+  const handleResubmit = async () => {
+    if (!user) return;
+    if (!editReason.trim()) {
+      alert('请填写修改说明或重新提交原因');
+      return;
     }
-    setUploading(false);
-    e.target.value = '';
-    setRefresh((v) => v + 1);
-  };
-
-  const handleDeleteEvidence = async (attachmentId: number) => {
-    if (!confirm('确定要删除该证明材料附件吗？')) return;
+    const selectedProposedLeader =
+      work.type === '待办'
+        ? companyLeaders.find((l) => l.id === Number(editForm.proposedLeaderId))
+        : null;
+    if (work.type === '待办' && !selectedProposedLeader) {
+      alert('请选择事项提出领导');
+      return;
+    }
+    const patch: WorkEditablePatch = {
+      ...editForm,
+      title: editForm.workItem || editForm.title || work.title,
+    };
+    if (work.type === '待办' && selectedProposedLeader) {
+      patch.proposedLeader = selectedProposedLeader.name;
+      patch.proposedLeaderId = selectedProposedLeader.id;
+      patch.proposedLeaderRole = selectedProposedLeader.role;
+    }
     try {
-      const res = await fetch(`/api/attachments/${attachmentId}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        alert(data.error || '删除失败');
-        return;
-      }
-      setRefresh((v) => v + 1);
-    } catch (err) {
-      console.error(err);
-      alert('删除失败');
+      await resubmitRejectedWork(work, user, patch);
+      setEditMode(false);
+      onRefresh();
+      alert('已修改并重新提交审批');
+    } catch (error) {
+      console.error(error);
+      alert('提交失败，请查看控制台错误');
     }
-  };
-
-  // 节点操作函数
-  const updateNodeTitle = (nodeId: number, title: string) => {
-    setEditForm((prev: any) => ({
-      ...prev,
-      nodes: prev.nodes.map((node: any) =>
-        node.id === nodeId ? { ...node, title } : node
-      ),
-    }));
-  };
-
-  const addNode = () => {
-    setEditForm((prev: any) => ({
-      ...prev,
-      nodes: [
-        ...prev.nodes,
-        {
-          id: Date.now(),
-          title: '',
-          completeTime: '',
-          children: [],
-        },
-      ],
-    }));
-  };
-
-  const updateNodeCompleteTime = (nodeId: number, completeTime: string) => {
-    setEditForm((prev: any) => ({
-      ...prev,
-      nodes: prev.nodes.map((node: any) =>
-        node.id === nodeId ? { ...node, completeTime: completeTime } : node
-      ),
-    }));
-  };
-
-  const deleteNode = (nodeId: number) => {
-    setEditForm((prev: any) => ({
-      ...prev,
-      nodes: prev.nodes.filter((node: any) => node.id !== nodeId),
-    }));
-  };
-
-  const addSubNode = (nodeId: number) => {
-    setEditForm((prev: any) => ({
-      ...prev,
-      nodes: prev.nodes.map((node: any) =>
-        node.id === nodeId
-          ? {
-              ...node,
-              children: [
-                ...node.children,
-                {
-                  id: Date.now(),
-                  title: '',
-                  completeTime: '',
-                },
-              ],
-            }
-          : node
-      ),
-    }));
-  };
-
-  const updateSubNodeTitle = (nodeId: number, subNodeId: number, title: string) => {
-    setEditForm((prev: any) => ({
-      ...prev,
-      nodes: prev.nodes.map((node: any) =>
-        node.id === nodeId
-          ? {
-              ...node,
-              children: node.children.map((child: any) =>
-                child.id === subNodeId ? { ...child, title } : child
-              ),
-            }
-          : node
-      ),
-    }));
-  };
-
-  const updateSubNodeCompleteTime = (nodeId: number, subNodeId: number, completeTime: string) => {
-    setEditForm((prev: any) => ({
-      ...prev,
-      nodes: prev.nodes.map((node: any) =>
-        node.id === nodeId
-          ? {
-              ...node,
-              children: node.children.map((child: any) =>
-                child.id === subNodeId ? { ...child, completeTime: completeTime } : child
-              ),
-            }
-          : node
-      ),
-    }));
-  };
-
-  const deleteSubNode = (nodeId: number, subNodeId: number) => {
-    setEditForm((prev: any) => ({
-      ...prev,
-      nodes: prev.nodes.map((node: any) =>
-        node.id === nodeId
-          ? {
-              ...node,
-              children: node.children.filter((child: any) => child.id !== subNodeId),
-            }
-          : node
-      ),
-    }));
   };
 
   const handleComplete = async () => {
@@ -387,10 +261,9 @@ export default function WorkDetailPage() {
       alert('请填写见证材料说明');
       return;
     }
-
     try {
       await submitComplete(work, user, proof);
-      setRefresh(refresh + 1);
+      onRefresh();
       alert('已提交完成材料');
     } catch (error) {
       console.error(error);
@@ -398,71 +271,24 @@ export default function WorkDetailPage() {
     }
   };
 
-  const handleResubmit = async () => {
+  const handleAdjust = async () => {
     if (!user) return;
-
-    if (!editReason.trim()) {
-      alert('请填写修改说明或重新提交原因');
-      return;
-    }
-
-    const selectedProposedLeader =
-      work.type === '待办'
-        ? companyLeaders.find((leader) => leader.id === Number(editForm.proposedLeaderId))
-        : null;
-
-    if (work.type === '待办' && !selectedProposedLeader) {
-      alert('请选择事项提出领导');
-      return;
-    }
-
-    const patch: WorkEditablePatch = {
-      ...editForm,
-      title: editForm.workItem || editForm.title || work.title,
-    };
-
-    if (work.type === '待办' && selectedProposedLeader) {
-      patch.proposedLeader = selectedProposedLeader.name;
-      patch.proposedLeaderId = selectedProposedLeader.id;
-      patch.proposedLeaderRole = selectedProposedLeader.role;
-    }
-
-    try {
-      await resubmitRejectedWork(work, user, patch);
-      setEditMode(false);
-      setRefresh((v) => v + 1);
-      alert('已修改并重新提交审批');
-    } catch (error) {
-      console.error(error);
-      alert('提交失败，请查看控制台错误');
-    }
-  };
-
-  const handleAdjustSubmit = async () => {
-    if (!user) return;
-
     if (!adjustReason.trim()) {
       alert('请填写调整原因');
       return;
     }
-
+    const leader = companyLeaders.find((l) => l.id === Number(approvalLeaderId));
+    if (!leader) {
+      alert('请选择公司审批领导');
+      return;
+    }
     const pendingAdjustment: WorkEditablePatch = {
       ...editForm,
       title: editForm.workItem || editForm.title || work.title,
     };
-
-    const selectedApprovalLeader = companyLeaders.find(
-      (leader) => leader.id === Number(approvalLeaderId)
-    );
-
-    if (!selectedApprovalLeader) {
-      alert('请选择公司审批领导');
-      return;
-    }
-
     try {
       await submitAdjust(work, user, adjustReason, pendingAdjustment);
-      setRefresh((v) => v + 1);
+      onRefresh();
       alert('已提交调整申请，等待审批');
     } catch (error) {
       console.error(error);
@@ -472,25 +298,48 @@ export default function WorkDetailPage() {
 
   const handleCancel = async () => {
     if (!user) return;
-
     if (!cancelReason.trim()) {
       alert('请填写取消原因');
       return;
     }
-
-    const selectedApprovalLeader = companyLeaders.find(
-      (leader) => leader.id === Number(approvalLeaderId)
-    );
-
-    if (!selectedApprovalLeader) {
+    const leader = companyLeaders.find((l) => l.id === Number(approvalLeaderId));
+    if (!leader) {
       alert('请选择公司审批领导');
       return;
     }
-
     try {
       await submitCancel(work, user, cancelReason);
-      setRefresh((v) => v + 1);
+      onRefresh();
       alert('已提交取消申请');
+    } catch (error) {
+      console.error(error);
+      alert('提交失败，请查看控制台错误');
+    }
+  };
+
+  const handleDecompose = async () => {
+    if (!user) return;
+    if (!editForm.workPlan?.trim()) {
+      alert('请填写工作计划');
+      return;
+    }
+    if (!editForm.planCompleteTime) {
+      alert('请填写计划完成时间');
+      return;
+    }
+    const validNodes = (editForm.nodes || []).filter((n: any) => n.title?.trim());
+    if (validNodes.length === 0) {
+      alert('请至少填写一个任务节点');
+      return;
+    }
+    if (validNodes.some((n: any) => !n.completeTime)) {
+      alert('请填写每个任务节点的完成时间');
+      return;
+    }
+    try {
+      await submitTodoDecomposition(work, user, { ...editForm, title: editForm.workItem || work.title });
+      onRefresh();
+      alert('已提交待办事项分解，等待审批');
     } catch (error) {
       console.error(error);
       alert('提交失败，请查看控制台错误');
@@ -501,7 +350,7 @@ export default function WorkDetailPage() {
     if (!user) return;
     try {
       await approveWork(user, work);
-      setRefresh((v) => v + 1);
+      onRefresh();
       alert('审批已通过');
     } catch (error) {
       console.error(error);
@@ -513,10 +362,9 @@ export default function WorkDetailPage() {
     const reason = prompt('请输入退回原因：');
     if (reason === null) return;
     if (!user) return;
-
     try {
       await rejectWork(work, user, reason || '审批退回');
-      setRefresh((v) => v + 1);
+      onRefresh();
       alert('已退回');
     } catch (error) {
       console.error(error);
@@ -524,567 +372,208 @@ export default function WorkDetailPage() {
     }
   };
 
-  const handleUploadAttachments = async (files: FileList) => {
-    if (!user) return;
-    for (const file of Array.from(files)) {
-      const formData = new FormData();
-      formData.append('workItemId', String(work.id));
-      formData.append('file', file);
-
-      try {
-        const res = await fetch('/api/upload', {
-          method: 'POST',
-          body: formData,
-          credentials: 'include',
-        });
-        const data = await res.json();
-        if (!res.ok || !data.success) {
-          alert(data.error || '上传失败');
-        }
-      } catch (err) {
-        console.error(err);
-        alert('上传失败');
-      }
-    }
-    setRefresh((v) => v + 1);
-  };
-
-  const handleDeleteAttachment = async (attachmentId: number) => {
-    try {
-      const res = await fetch(`/api/attachments/${attachmentId}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        alert(data.error || '删除失败');
-        return;
-      }
-      setRefresh((v) => v + 1);
-    } catch (err) {
-      console.error(err);
-      alert('删除失败');
-    }
-  };
-
-  const canDeleteAttachment = (attachment: { userId: number }): boolean => {
-    if (!user) return false;
-    // ADMIN / SUPERVISOR 可删除所有附件
-    if (user.role === 'ADMIN' || user.role === 'SUPERVISOR') return true;
-    // 上传者本人可删除自己上传的附件
-    if (user.id === attachment.userId) return true;
-    // 其他任何人不可删除他人附件
-    return false;
-  };
-
-  const getDepartmentName = (id: number) => {
-    return departments.find((d) => d.id === id)?.name || '-';
-  };
-
   const isPriorityOrMain = work.type === '重点' || work.type === '主要';
   const isTodo = work.type === '待办';
   const typeColorKey = work.type === '重点' ? 'priority' : work.type === '主要' ? 'main' : 'todo';
 
-  const renderPriorityOrMainInfo = () => {
-    return (
-      <div className="space-y-2">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <span className="text-sm text-slate-500">业务类别：</span>
-            <span>{work.businessCategory || '-'}</span>
-          </div>
-          <div>
-            <span className="text-sm text-slate-500">工作事项：</span>
-            <span>{work.workItem || '-'}</span>
-          </div>
-          <div>
-            <span className="text-sm text-slate-500">工作节点：</span>
-            <span>{work.workNode || '-'}</span>
-          </div>
-          <div>
-            <span className="text-sm text-slate-500">计划完成时间：</span>
-            <span>{work.completeTime || '-'}</span>
-          </div>
-          <div>
-            <span className="text-sm text-slate-500">完成形式：</span>
-            <span>{work.completeForm || '-'}</span>
-          </div>
-          <div>
-            <span className="text-sm text-slate-500">主办部门：</span>
-            <span>{getDepartmentName(work.departmentId ?? 0)}</span>
-          </div>
-          <div>
-            <span className="text-sm text-slate-500">责任领导：</span>
-            <span>{work.responsibleLeader || '-'}</span>
-          </div>
-          <div>
-            <span className="text-sm text-slate-500">责任人：</span>
-            <span>{work.responsiblePerson || '-'}</span>
-          </div>
-          {work.type === '重点' && (
-            <div>
-              <span className="text-sm text-slate-500">是否为创新工作：</span>
-              <span>{work.isInnovation ? '是' : '否'}</span>
-            </div>
-          )}
-          <div>
-            <span className="text-sm text-slate-500">当前状态：</span>
-            <StatusBadge status={work.status} work={work} />
-          </div>
-          <div>
-            <span className="text-sm text-slate-500">当前环节：</span>
-            <span className="text-blue-600">{getCurrentProcessDescription(
-              work.status,
-              work.currentApproverRole,
-              work.currentApproverId
-            )}</span>
-          </div>
-        </div>
+  const theme = TYPE_THEME[typeColorKey];
 
-        {work.rejectReason && (
-          <div className="p-3 bg-rose-50/50 rounded text-sm text-rose-600 break-words whitespace-pre-wrap">
-            <div>退回人：{work.rejectedBy || '-'}</div>
-            <div>退回原因：{work.rejectReason}</div>
-            {work.rejectedAt && (
-              <div>退回时间：{new Date(work.rejectedAt).toLocaleString()}</div>
-            )}
-          </div>
-        )}
+  const buildEditFormFromWork = () => ({
+    title: work.title || '', workItem: work.workItem || work.title || '',
+    businessCategory: work.businessCategory || '', isInnovation: !!work.isInnovation,
+    completeTime: work.completeTime || '', completeForm: work.completeForm || '',
+    departmentId: work.departmentId, responsibleLeader: work.responsibleLeader || '',
+    responsiblePerson: work.responsiblePerson || '', proposedLeader: work.proposedLeader || '',
+    proposedLeaderId: work.proposedLeaderId ? String(work.proposedLeaderId) : '',
+    proposedLeaderRole: work.proposedLeaderRole || '', proposedScene: work.proposedScene || '',
+    formedTime: work.formedTime || '', cooperators: work.cooperators || [],
+    workPlan: work.workPlan || '', planCompleteTime: work.planCompleteTime || '',
+    progress: work.progress || '', nodes: work.nodes || [],
+  });
 
-        <div>
-          <p className="font-medium mb-2">工作节点：</p>
-          {work.nodes && work.nodes.length > 0 ? (
-            <div className="space-y-3">
-              {work.nodes.map((node: any, index: number) => (
-                <div key={node.id} className="border rounded p-3 bg-slate-50">
-                  <div className="font-medium break-words">
-                    {index + 1}. {node.title}
-                    {node.completeTime ? `（节点完成时间：${node.completeTime}）` : ''}
-                  </div>
-                  {node.children && node.children.length > 0 && (
-                    <div className="pl-5 mt-2 space-y-1 text-sm text-slate-500">
-                      {node.children.map((child: any, childIndex: number) => (
-                        <div key={child.id} className="break-words">
-                          {index + 1}.{childIndex + 1} {child.title}
-                          {child.completeTime ? `（完成日期：${child.completeTime}）` : ''}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-slate-500">暂无工作节点</p>
-          )}
-        </div>
-
-        {work.proof && (
-          <div>
-            <span className="text-sm text-slate-500">见证材料说明：</span>
-            <p className="mt-1 p-2 bg-slate-50 rounded break-words whitespace-pre-wrap overflow-hidden">{work.proof}</p>
-          </div>
-        )}
-        {(() => {
-          const evidenceAttachments = (work.attachments || []).filter(a => a.category === 'evidence');
-          if (evidenceAttachments.length === 0) return null;
-          return (
-            <div>
-              <span className="text-sm text-slate-500">见证材料附件：</span>
-              <div className="mt-2 space-y-2">
-                {evidenceAttachments.map((att) => (
-                  <div key={att.id} className="flex items-center justify-between rounded border p-2 text-sm">
-                    <div className="min-w-0">
-                      <div className="font-medium break-words">{att.fileName}</div>
-                      <div className="text-xs text-slate-500">
-                        上传人：{att.userName || '-'}
-                        上传时间：{att.uploadedAt ? new Date(att.uploadedAt).toLocaleString() : '-'}
-                      </div>
-                    </div>
-                    <a href={`/api/attachments/${att.id}/download`} target="_blank" rel="noopener noreferrer">
-                      <Button variant="outline" size="sm" className="rounded-full">
-                        <Download className="h-4 w-4 mr-1" />
-                        下载
-                      </Button>
-                    </a>
-                  </div>
-                ))}
-              </div>
-            </div>
-          );
-        })()}
-
-        {work.adjustReason && (
-          <div>
-            <p className="break-words whitespace-pre-wrap overflow-hidden">
-              调整原因：{work.adjustReason}
-            </p>
-          </div>
-        )}
-        {work.adjustNewTime && (
-          <p>
-            调整后时间：{work.adjustNewTime}
-          </p>
-        )}
-        {work.adjustHistory && work.adjustHistory.length > 0 && (
-          <div className="p-3 bg-purple-50/50 rounded text-sm text-purple-600 space-y-2">
-            <div className="font-medium">调整记录</div>
-            {work.adjustHistory.map((item) => (
-              <div key={item.id} className="border-t border-purple-100 pt-2 first:border-t-0 first:pt-0">
-                <div>调整原因：{item.reason || '-'}</div>
-                <div>原计划完成时间：{item.fromTime || '-'}</div>
-                <div>现计划完成时间：{item.toTime || '-'}</div>
-                <div>审批人：{item.approvedBy || '-'}</div>
-                <div>审批时间：{item.approvedAt ? new Date(item.approvedAt).toLocaleString() : '-'}</div>
-              </div>
-            ))}
-          </div>
-        )}
-        {work.cancelReason && (
-          <div>
-            <span className="text-sm text-slate-500">取消原因：</span>
-            <p className="mt-1 p-2 bg-slate-50 rounded break-words whitespace-pre-wrap overflow-hidden">{work.cancelReason}</p>
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  const renderTodoInfo = () => {
-    return (
-      <div className="space-y-2">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <span className="text-sm text-slate-500">事项提出领导：</span>
-            <span>{work.proposedLeader || '-'}</span>
-            <span className="text-xs text-slate-400 ml-2">（提出该待办事项，默认也是审批领导）</span>
-          </div>
-          <div>
-            <span className="text-sm text-slate-500">事项提出场景：</span>
-            <span>{work.proposedScene || '-'}</span>
-          </div>
-          <div>
-            <span className="text-sm text-slate-500">待办事项：</span>
-            <span>{work.workItem || '-'}</span>
-          </div>
-          <div>
-            <span className="text-sm text-slate-500">形成时间：</span>
-            <span>{work.formedTime || '-'}</span>
-          </div>
-          <div>
-            <span className="text-sm text-slate-500">主责部门：</span>
-            <span>{getDepartmentName(work.departmentId ?? 0)}</span>
-          </div>
-          <div>
-            <span className="text-sm text-slate-500">责任领导：</span>
-            <span>{work.responsibleLeader || '-'}</span>
-          </div>
-          <div>
-            <span className="text-sm text-slate-500">责任人：</span>
-            <span>{work.responsiblePerson || '-'}</span>
-          </div>
-          <div>
-            <span className="text-sm text-slate-500">配合部门：</span>
-            <span>
-              {work.cooperators && work.cooperators.length > 0
-                ? work.cooperators.map((c: any) => getDepartmentName(c.departmentId) || c.departmentName).join('、')
-                : '-'}
-            </span>
-          </div>
-          <div>
-            <span className="text-sm text-slate-500">配合责任人：</span>
-            <span>
-              {work.cooperators && work.cooperators.length > 0
-                ? work.cooperators.map((c: any) => c.person).filter(Boolean).join('、')
-                : '-'}
-            </span>
-          </div>
-          <div>
-            <span className="text-sm text-slate-500">工作计划：</span>
-            <span>{work.workPlan || '-'}</span>
-          </div>
-          <div>
-            <span className="text-sm text-slate-500">计划完成时间：</span>
-            <span>{work.planCompleteTime || '-'}</span>
-          </div>
-          <div>
-            <span className="text-sm text-slate-500">进展情况：</span>
-            <ExpandableText text={work.progress} />
-          </div>
-          <div>
-            <span className="text-sm text-slate-500">当前状态：</span>
-            <StatusBadge status={work.status} work={work} />
-          </div>
-          <div>
-            <span className="text-sm text-slate-500">当前环节：</span>
-            <span className="text-blue-600">{getCurrentProcessDescription(
-              work.status,
-              work.currentApproverRole,
-              work.currentApproverId
-            )}</span>
-          </div>
-        </div>
-
-        {work.nodes && work.nodes.length > 0 && (
-          <div>
-            <p className="font-medium mb-2">任务分解节点：</p>
-            <div className="space-y-3">
-              {work.nodes.map((node: any, index: number) => (
-                <div key={node.id} className="border rounded p-3 bg-slate-50">
-                  <div className="font-medium break-words">
-                    {index + 1}. {node.title}
-                    {node.completeTime ? `（节点完成时间：${node.completeTime}）` : ''}
-                  </div>
-                  {node.children && node.children.length > 0 && (
-                    <div className="pl-5 mt-2 space-y-1 text-sm text-slate-500">
-                      {node.children.map((child: any, childIndex: number) => (
-                        <div key={child.id} className="break-words">
-                          {index + 1}.{childIndex + 1} {child.title}
-                          {child.completeTime ? `（完成日期：${child.completeTime}）` : ''}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {work.rejectReason && (
-          <div className="p-3 bg-rose-50/50 rounded text-sm text-rose-600 break-words whitespace-pre-wrap">
-            <div>退回人：{work.rejectedBy || '-'}</div>
-            <div>退回原因：{work.rejectReason}</div>
-            {work.rejectedAt && (
-              <div>退回时间：{new Date(work.rejectedAt).toLocaleString()}</div>
-            )}
-          </div>
-        )}
-
-        {work.proof && (
-          <div>
-            <span className="text-sm text-slate-500">见证材料说明：</span>
-            <p className="mt-1 p-2 bg-slate-50 rounded break-words whitespace-pre-wrap overflow-hidden">{work.proof}</p>
-          </div>
-        )}
-        {(() => {
-          const evidenceAttachments = (work.attachments || []).filter(a => a.category === 'evidence');
-          if (evidenceAttachments.length === 0) return null;
-          return (
-            <div>
-              <span className="text-sm text-slate-500">见证材料附件：</span>
-              <div className="mt-2 space-y-2">
-                {evidenceAttachments.map((att) => (
-                  <div key={att.id} className="flex items-center justify-between rounded border p-2 text-sm">
-                    <div className="min-w-0">
-                      <div className="font-medium break-words">{att.fileName}</div>
-                      <div className="text-xs text-slate-500">
-                        上传人：{att.userName || '-'}
-                        上传时间：{att.uploadedAt ? new Date(att.uploadedAt).toLocaleString() : '-'}
-                      </div>
-                    </div>
-                    <a href={`/api/attachments/${att.id}/download`} target="_blank" rel="noopener noreferrer">
-                      <Button variant="outline" size="sm" className="rounded-full">
-                        <Download className="h-4 w-4 mr-1" />
-                        下载
-                      </Button>
-                    </a>
-                  </div>
-                ))}
-              </div>
-            </div>
-          );
-        })()}
-        {work.adjustReason && (
-          <div>
-            <p className="break-words whitespace-pre-wrap overflow-hidden">
-              调整原因：{work.adjustReason}
-            </p>
-          </div>
-        )}
-        {work.adjustNewTime && (
-          <p>
-            调整后时间：{work.adjustNewTime}
-          </p>
-        )}
-        {work.cancelReason && (
-          <div>
-            <span className="text-sm text-slate-500">取消原因：</span>
-            <p className="mt-1 p-2 bg-slate-50 rounded break-words whitespace-pre-wrap overflow-hidden">{work.cancelReason}</p>
-          </div>
-        )}
-      </div>
-    );
-  };
+  const showSidebarNodes = !canEditDraft && !canHandleReturnedCreate && !canDecomposeTodo;
+  const showSidebarCooperators = isTodo && !canEditDraft && !canHandleReturnedCreate;
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Link href={`/${type}`}>
-          <Button variant="outline" size="sm" className="rounded-full">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            返回列表
-          </Button>
-        </Link>
-        <h1 className="stagger-1 flex items-center gap-3 text-2xl font-bold text-slate-800">
-          <span className="w-1 h-6 rounded-full bg-slate-500" />
-          事项详情
-        </h1>
-      </div>
+      {/* Light Hero Header */}
+      <div className="relative overflow-hidden rounded-2xl border border-slate-200/60 bg-gradient-to-br from-white via-white to-white px-5 py-4">
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br opacity-[0.07]" style={{ backgroundImage: `linear-gradient(135deg, ${theme.accentHex}33, transparent 60%)` }} />
+        <div className={`absolute inset-x-0 top-0 h-[3px] rounded-t-2xl ${theme.accent}`} />
 
-      <div className="rounded-xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50/50 overflow-hidden stagger-1">
-        <div className="p-5">
-          <div className="flex items-center gap-3">
-            <span className={`w-1.5 h-8 rounded-full ${workTypeColors[typeColorKey]?.text?.replace('text-', 'bg-') || 'bg-slate-400'}`} />
-            <h2 className="font-semibold text-slate-800">{work.title}</h2>
+        <div className="relative flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div className="space-y-4">
+            <Link href={`/${type}`}>
+              <Button variant="outline" size="sm" className="rounded-full">
+                <ArrowLeft className="h-4 w-4" />
+                返回列表
+              </Button>
+            </Link>
+
+            <h1 className="flex items-center gap-3 text-2xl font-bold leading-tight text-slate-900">
+              <span className={`h-8 w-1 rounded-full ${theme.accent}`} />
+              {work.title}
+            </h1>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <StatusBadge status={work.status} work={work} />
+            {work.currentApproverRole && (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200/80 bg-slate-50/80 px-3 py-1 text-xs font-medium text-slate-600">
+                当前环节：{getCurrentProcessDescription(work.status, work.currentApproverRole, work.currentApproverId)}
+              </span>
+            )}
           </div>
         </div>
-        <div className="space-y-4 p-5">
-          {isPriorityOrMain && renderPriorityOrMainInfo()}
-          {isTodo && renderTodoInfo()}
-        </div>
       </div>
 
-      <div className="rounded-xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50/50 overflow-hidden stagger-2">
-        <div className="p-4">
-          <WorkflowProgress work={work} />
-        </div>
-      </div>
+      {/* Body: Main + Sidebar */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
+        {/* Main Area */}
+        <div className="lg:col-span-3 space-y-6">
+          <div className={`${PANEL_PADDED}`}>
+            <WorkDisplayInfo work={work} departments={departments} hideNodes={true} hideCooperators={isTodo} />
+          </div>
 
-      <WorkAttachmentPanel
-        attachments={(work.attachments || []).filter(a => a.category !== 'evidence')}
-        canUpload={!!canEdit}
-        canDelete={canDeleteAttachment}
-        onUpload={handleUploadAttachments}
-        onDelete={handleDeleteAttachment}
-      />
+          <div className={`${PANEL_PADDED}`}>
+            <WorkflowProgress work={work} />
+          </div>
 
-      <WorkReturnedPanel
-        visible={!!canHandleReturnedCreate}
-        rejectReason={work.rejectReason || ''}
-        editMode={editMode}
-        setEditMode={setEditMode}
-        editForm={editForm}
-        setEditForm={setEditForm}
-        editReason={editReason}
-        setEditReason={setEditReason}
-        isPriorityOrMain={isPriorityOrMain}
-        isTodo={isTodo}
-        departments={departments}
-        companyLeaders={companyLeaders}
-        departmentLeaders={departmentLeaders}
-        departmentManagers={departmentManagers}
-        onResubmit={handleResubmit}
-        updateNodeTitle={updateNodeTitle}
-        updateNodeCompleteTime={updateNodeCompleteTime}
-        deleteNode={deleteNode}
-        addNode={addNode}
-        addSubNode={addSubNode}
-        updateSubNodeTitle={updateSubNodeTitle}
-        updateSubNodeCompleteTime={updateSubNodeCompleteTime}
-        deleteSubNode={deleteSubNode}
-        onDelete={async () => {
-          if (!confirm('确认删除该退回事项？')) return;
-          try {
-            await deleteWork(work.id);
-            router.push(`/${type}`);
-          } catch (error) {
-            console.error(error);
-            alert('删除失败，请查看控制台错误');
-          }
-        }}
-      />
-
-      <WorkDecomposePanel
-        visible={!!canDecomposeTodo}
-        editForm={editForm}
-        setEditForm={setEditForm}
-        updateNodeTitle={updateNodeTitle}
-        updateNodeCompleteTime={updateNodeCompleteTime}
-        deleteNode={deleteNode}
-        addNode={addNode}
-        addSubNode={addSubNode}
-        updateSubNodeTitle={updateSubNodeTitle}
-        updateSubNodeCompleteTime={updateSubNodeCompleteTime}
-        deleteSubNode={deleteSubNode}
-        onSubmitDecomposition={async () => {
-          if (!user) return;
-          if (!editForm.workPlan?.trim()) {
-            alert('请填写工作计划');
-            return;
-          }
-          if (!editForm.planCompleteTime) {
-            alert('请填写计划完成时间');
-            return;
-          }
-
-          const validNodes = (editForm.nodes || []).filter((node: any) => node.title?.trim());
-
-          if (validNodes.length === 0) {
-            alert('请至少填写一个任务节点');
-            return;
-          }
-
-          if (validNodes.some((node: any) => !node.completeTime)) {
-            alert('请填写每个任务节点的完成时间');
-            return;
-          }
-
-          try {
-            await submitTodoDecomposition(work, user, {
-              ...editForm,
-              title: editForm.workItem || work.title,
-            });
-
-            setRefresh((v) => v + 1);
-            alert('已提交待办事项分解，等待审批');
-          } catch (error) {
-            console.error(error);
-            alert('提交失败，请查看控制台错误');
-          }
-        }}
-      />
-
-      {canSubmitDraft && (
-        <div className="rounded-xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50/50 overflow-hidden stagger-3">
-          <div className="p-4">
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-slate-500">当前为草稿状态，请提交审批：</span>
-              <Button onClick={handleSubmitDraft} className="rounded-full">提交审批</Button>
+          {canSubmitDraft && (
+            <div className={`${PANEL} overflow-hidden`}>
+              <div className={`flex items-center gap-4 p-5 bg-gradient-to-r ${theme.lightGradient}`}>
+                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${theme.accent} text-white shadow-lg`}>
+                  <span className="text-lg">↑</span>
+                </div>
+                <div className="flex-1">
+                  <span className="text-sm font-semibold text-slate-800">当前为草稿状态，请提交审批</span>
+                  <p className="text-xs text-slate-500 mt-0.5">提交后将由系统按工作流规则自动分配审批节点；责任领导、责任人仅用于业务留痕。</p>
+                </div>
+                <Button onClick={handlePropose} className={`rounded-full ${theme.button} border-0`}>
+                  提交审批
+                </Button>
+              </div>
             </div>
-          </div>
+          )}
+
+          <WorkCompletePanel
+            proof={proof}
+            onProofChange={setProof}
+            evidenceAttachments={(work.attachments || []).filter(a => a.category === 'evidence')}
+            onUploadEvidence={handleUploadEvidence}
+            onDeleteEvidence={handleDeleteEvidence}
+            uploading={uploading}
+            onComplete={handleComplete}
+          />
+
+          <WorkflowApprovalPanel visible={canApprove} onApprove={handleApprove} onReject={handleReject} />
+          <WorkPendingAdjustmentPanel work={work} />
+          <WorkflowRecords records={workflowRecords} />
         </div>
-      )}
 
-      <WorkOperationPanel
-        work={work}
-        proof={proof}
-        onProofChange={setProof}
-        evidenceAttachments={(work.attachments || []).filter(a => a.category === 'evidence')}
-        onUploadEvidence={handleUploadEvidence}
-        onDeleteEvidence={handleDeleteEvidence}
-        uploading={uploading}
-        onComplete={handleComplete}
-        onOpenAdjustDialog={(editForm, adjustReason) => {
-          setEditForm(editForm);
-          setAdjustReason(adjustReason);
-          setIsAdjustDialogOpen(true);
-        }}
-        onOpenCancelDialog={(cancelReason) => {
-          setCancelReason(cancelReason);
-          setIsCancelDialogOpen(true);
-        }}
-      />
+        {/* Sidebar */}
+        <aside className="lg:col-span-2 space-y-4">
+          <WorkAttachmentPanel
+            attachments={(work.attachments || []).filter(a => a.category !== 'evidence')}
+            canUpload={!!canEdit}
+            canDelete={canDeleteAttachment}
+            onUpload={handleUploadAttachments}
+            onDelete={handleDeleteAttachment}
+          />
 
-      <WorkApprovalPanel
-        visible={canApprove}
-        onApprove={handleApprove}
-        onReject={handleReject}
-      />
+          <WorkDraftEditPanel
+            visible={!!canHandleReturnedCreate || !!canEditDraft}
+            rejectReason={work.rejectReason || ''}
+            editMode={editMode}
+            setEditMode={setEditMode}
+            editForm={editForm}
+            setEditForm={setEditForm}
+            editReason={editReason}
+            setEditReason={setEditReason}
+            isPriorityOrMain={isPriorityOrMain}
+            isTodo={isTodo}
+            departments={departments}
+            companyLeaders={companyLeaders}
+            departmentLeaders={departmentLeaders}
+            departmentManagers={departmentManagers}
+            onResubmit={handleResubmit}
+            onSaveDraft={handleSaveDraft}
+            isRegularDraft={canEditDraft}
+            onDelete={handleDelete}
+          />
 
-      <WorkPendingAdjustmentPanel work={work} />
+          <WorkDecomposePanel
+            visible={!!canDecomposeTodo}
+            editForm={editForm}
+            setEditForm={setEditForm}
+            rejectReason={work.rejectReason || ''}
+            isReturned={!!(work.status === 'pending_decompose' && (work.rejectReason || work.rejectedFromStatus))}
+            onSubmitDecomposition={handleDecompose}
+          />
 
-      <WorkWorkflowRecords records={workflowRecords} />
+          {/* Read-only nodes */}
+          {showSidebarNodes && work.nodes && work.nodes.length > 0 && (
+            <div className={PANEL_PADDED}>
+              <h3 className="text-sm font-semibold text-slate-500 tracking-wide mb-3">
+                {isTodo ? '任务分解节点' : '工作节点'}
+              </h3>
+              <div className="space-y-2">
+                {work.nodes.map((node: any, index: number) => (
+                  <div key={node.id ?? index} className="border border-slate-200 bg-slate-50/70 rounded-lg p-3">
+                    <div className="text-sm font-medium break-words">
+                      {index + 1}. {node.title}
+                      {node.completeTime ? `（节点完成时间：${node.completeTime}）` : ''}
+                    </div>
+                    {node.children && node.children.length > 0 && (
+                      <div className="pl-4 mt-1.5 space-y-0.5 text-xs text-slate-500">
+                        {node.children.map((child: any, childIndex: number) => (
+                          <div key={child.id ?? `${index}-${childIndex}`} className="break-words">
+                            {index + 1}.{childIndex + 1} {child.title}
+                            {child.completeTime ? `（完成日期：${child.completeTime}）` : ''}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Read-only cooperators */}
+          {showSidebarCooperators && work.cooperators && work.cooperators.length > 0 && (
+            <div className={PANEL_PADDED}>
+              <h3 className="text-sm font-semibold text-slate-500 tracking-wide mb-3">配合方</h3>
+              <div className="space-y-2">
+                {work.cooperators.map((c: any, idx: number) => (
+                  <div key={idx} className="border border-slate-200 bg-slate-50/70 rounded-lg p-3 text-sm">
+                    <div className="font-medium">{c.departmentName || departments.find(d => d.id === c.departmentId)?.name || String(c.departmentId)}</div>
+                    {(c.leader || c.person) && (
+                      <div className="text-xs text-slate-500 mt-1">
+                        {c.leader && <span>领导：{c.leader}</span>}
+                        {c.leader && c.person && <span className="mx-2">|</span>}
+                        {c.person && <span>责任人：{c.person}</span>}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <WorkSidebarActions
+            onAdjust={() => {
+              setEditForm(buildEditFormFromWork());
+              setAdjustReason('');
+              setIsAdjustDialogOpen(true);
+            }}
+            onCancel={() => {
+              setCancelReason('');
+              setIsCancelDialogOpen(true);
+            }}
+          />
+        </aside>
+      </div>
 
       <WorkActionDialogs
         isAdjustDialogOpen={isAdjustDialogOpen}
@@ -1103,16 +592,8 @@ export default function WorkDetailPage() {
         departments={departments}
         isPriorityOrMain={isPriorityOrMain}
         isTodo={isTodo}
-        onSubmitAdjust={handleAdjustSubmit}
+        onSubmitAdjust={handleAdjust}
         onSubmitCancel={handleCancel}
-        updateNodeTitle={updateNodeTitle}
-        updateNodeCompleteTime={updateNodeCompleteTime}
-        deleteNode={deleteNode}
-        addNode={addNode}
-        addSubNode={addSubNode}
-        updateSubNodeTitle={updateSubNodeTitle}
-        updateSubNodeCompleteTime={updateSubNodeCompleteTime}
-        deleteSubNode={deleteSubNode}
       />
     </div>
   );

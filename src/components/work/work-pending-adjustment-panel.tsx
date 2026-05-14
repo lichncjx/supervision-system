@@ -1,1 +1,1 @@
-export { WorkPendingAdjustmentPanel } from '@/features/workflow/ui/work-pending-adjustment-panel'
+export { WorkPendingAdjustmentPanel } from '@/features/works/ui/work-pending-adjustment-panel'

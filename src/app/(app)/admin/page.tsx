@@ -6,6 +6,8 @@ import { useAuth } from '@/components/providers/auth-provider';
 import { getRoleName, type Role } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Dialog,
   DialogContent,
@@ -393,47 +395,45 @@ export default function AdminPage() {
 
             <div className="w-[140px]">
               <label className="block text-xs font-medium text-slate-400 mb-1">角色</label>
-              <select
-                className="rounded-full border-slate-200 bg-slate-50 h-10 px-4 w-full text-sm text-slate-600"
+              <Select
                 value={form.role}
-                onChange={(e) =>
+                onValueChange={(v) =>
                   setForm({
                     ...form,
-                    role: e.target.value as Role,
-                  departmentId:
-                    e.target.value === 'ADMIN' ||
-                    e.target.value === 'SUPERVISOR' ||
-                    e.target.value === 'VICE_PRESIDENT' ||
-                    e.target.value === 'PRESIDENT'
-                      ? 1
-                      : 2,
-                })
-              }
-            >
-              {roleOptions.map((r) => (
-                <option key={r.value} value={r.value}>
-                  {r.label}
-                </option>
-              ))}
-            </select>
+                    role: v as Role,
+                    departmentId: ['ADMIN', 'SUPERVISOR', 'VICE_PRESIDENT', 'PRESIDENT'].includes(v) ? 1 : 2,
+                  })
+                }
+              >
+                <SelectTrigger className="rounded-full border-slate-200 bg-slate-50 h-10 px-4 w-full text-sm text-slate-600">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {roleOptions.map((r) => (
+                    <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
           </div>
 
           <div className="w-[150px]">
             <label className="block text-xs font-medium text-slate-400 mb-1">所属部门</label>
-            <select
-              className="rounded-full border-slate-200 bg-slate-50 h-10 px-4 w-full text-sm text-slate-600"
-              value={form.departmentId}
+            <Select
+              value={String(form.departmentId)}
               disabled={isCompanyRole}
-              onChange={(e) => setForm({ ...form, departmentId: Number(e.target.value) })}
+              onValueChange={(v) => setForm({ ...form, departmentId: Number(v) })}
             >
-              {departments
-                .filter((d) => (isCompanyRole ? d.id === 1 : d.id !== 1))
-                .map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.name}
-                  </option>
-                ))}
-            </select>
+              <SelectTrigger className="rounded-full border-slate-200 bg-slate-50 h-10 px-4 w-full text-sm text-slate-600">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {departments
+                  .filter((d) => (isCompanyRole ? d.id === 1 : d.id !== 1))
+                  .map((d) => (
+                    <SelectItem key={d.id} value={String(d.id)}>{d.name}</SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <button onClick={handleAddUser} className="inline-flex items-center gap-1.5 rounded-full bg-slate-800 px-5 py-2.5 text-sm font-medium text-white hover:bg-slate-900 transition-colors">
@@ -447,16 +447,20 @@ export default function AdminPage() {
       <div className="rounded-xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50/50 overflow-hidden">
         <div className="flex items-center justify-between px-5 pt-5">
           <h2 className="font-semibold text-slate-800">用户列表</h2>
-          <select
-            value={deptFilter}
-            onChange={(e) => handleDeptFilterChange(e.target.value === '全部' ? '全部' : Number(e.target.value))}
-            className="rounded-full border border-slate-200 h-8 px-3 text-sm text-slate-600 bg-slate-50"
+          <Select
+            value={typeof deptFilter === 'number' ? String(deptFilter) : deptFilter}
+            onValueChange={(v) => handleDeptFilterChange(v === '全部' ? '全部' : Number(v))}
           >
-            <option value="全部">全部部门</option>
-            {departments.filter(d => d.isBusiness).map(d => (
-              <option key={d.id} value={d.id}>{d.name}</option>
-            ))}
-          </select>
+            <SelectTrigger className="rounded-full border border-slate-200 h-8 px-3 text-sm text-slate-600 bg-slate-50 w-[160px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="全部">全部部门</SelectItem>
+              {departments.filter(d => d.isBusiness).map(d => (
+                <SelectItem key={d.id} value={String(d.id)}>{d.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div className="p-5">
           <div className="space-y-3">
@@ -606,47 +610,46 @@ export default function AdminPage() {
               <Input
                 value={editForm.name}
                 onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                className="mt-1"
+                className="rounded-full mt-1"
               />
             </div>
 
             <div>
               <label className="text-sm font-medium">角色</label>
-              <select
-                className="rounded-full border-slate-200 bg-slate-50 h-10 px-4 w-full text-sm text-slate-600 mt-1"
+              <Select
                 value={editForm.role}
-                onChange={(e) => {
-                  const newRole = e.target.value as Role;
-                  const isCompany = ['ADMIN', 'SUPERVISOR', 'VICE_PRESIDENT', 'PRESIDENT'].includes(newRole);
-                  setEditForm({
-                    ...editForm,
-                    role: newRole,
-                    departmentId: isCompany ? 1 : editForm.departmentId,
-                  });
+                onValueChange={(v) => {
+                  const isCompany = ['ADMIN', 'SUPERVISOR', 'VICE_PRESIDENT', 'PRESIDENT'].includes(v);
+                  setEditForm({ ...editForm, role: v as Role, departmentId: isCompany ? 1 : editForm.departmentId });
                 }}
               >
-                {roleOptions.map((r) => (
-                  <option key={r.value} value={r.value}>
-                    {r.label}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="rounded-full border-slate-200 bg-slate-50 h-10 px-4 w-full text-sm text-slate-600 mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {roleOptions.map((r) => (
+                    <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div>
               <label className="text-sm font-medium">所属部门</label>
-              <select
-                className="rounded-full border-slate-200 bg-slate-50 h-10 px-4 w-full text-sm text-slate-600 mt-1"
-                value={editForm.departmentId}
+              <Select
+                value={String(editForm.departmentId)}
                 disabled={['ADMIN', 'SUPERVISOR', 'VICE_PRESIDENT', 'PRESIDENT'].includes(editForm.role)}
-                onChange={(e) => setEditForm({ ...editForm, departmentId: Number(e.target.value) })}
+                onValueChange={(v) => setEditForm({ ...editForm, departmentId: Number(v) })}
               >
-                {departments.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.name}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="rounded-full border-slate-200 bg-slate-50 h-10 px-4 w-full text-sm text-slate-600 mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {departments.map((d) => (
+                    <SelectItem key={d.id} value={String(d.id)}>{d.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div>
@@ -654,7 +657,7 @@ export default function AdminPage() {
               <Input
                 value={editForm.email}
                 onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-                className="mt-1"
+                className="rounded-full mt-1"
                 placeholder="可选"
               />
             </div>
@@ -664,17 +667,16 @@ export default function AdminPage() {
               <Input
                 value={editForm.phone}
                 onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-                className="mt-1"
+                className="rounded-full mt-1"
                 placeholder="可选"
               />
             </div>
 
             <div>
               <label className="text-sm font-medium">
-                <input
-                  type="checkbox"
+                <Checkbox
                   checked={editForm.isActive}
-                  onChange={(e) => setEditForm({ ...editForm, isActive: e.target.checked })}
+                  onCheckedChange={(checked) => setEditForm({ ...editForm, isActive: !!checked })}
                   className="mr-2"
                 />
                 启用状态

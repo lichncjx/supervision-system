@@ -4,7 +4,20 @@ import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { WorkFormNodes } from '@/features/works/ui/work-form-nodes';
+import { WorkFormCooperators } from '@/features/works/ui/work-form-cooperators';
+import {
+  WorkItemField,
+  ProposedLeaderField,
+  DepartmentField,
+  ResponsibleFields,
+  PlanCompleteTimeField,
+  IsInnovationField,
+  TodoSpecificFields,
+} from '@/features/works/ui/work-form-fields';
+import type { WorkNode, Cooperator } from '@/features/works/domain/work-client.types';
+import { FIELD_LABEL } from './visual-tokens';
 
 interface WorkActionDialogsProps {
   isAdjustDialogOpen: boolean;
@@ -25,14 +38,6 @@ interface WorkActionDialogsProps {
   isTodo: boolean;
   onSubmitAdjust: () => void;
   onSubmitCancel: () => void;
-  updateNodeTitle: (nodeId: number, title: string) => void;
-  updateNodeCompleteTime: (nodeId: number, completeTime: string) => void;
-  deleteNode: (nodeId: number) => void;
-  addNode: () => void;
-  addSubNode: (nodeId: number) => void;
-  updateSubNodeTitle: (nodeId: number, subNodeId: number, title: string) => void;
-  updateSubNodeCompleteTime: (nodeId: number, subNodeId: number, completeTime: string) => void;
-  deleteSubNode: (nodeId: number, subNodeId: number) => void;
 }
 
 export function WorkActionDialogs({
@@ -54,55 +59,16 @@ export function WorkActionDialogs({
   isTodo,
   onSubmitAdjust,
   onSubmitCancel,
-  updateNodeTitle,
-  updateNodeCompleteTime,
-  deleteNode,
-  addNode,
-  addSubNode,
-  updateSubNodeTitle,
-  updateSubNodeCompleteTime,
-  deleteSubNode,
 }: WorkActionDialogsProps) {
-  const cooperators = Array.isArray(editForm.cooperators) ? editForm.cooperators : [];
+  const nodes: WorkNode[] = Array.isArray(editForm.nodes) ? editForm.nodes : [];
+  const cooperators: Cooperator[] = Array.isArray(editForm.cooperators) ? editForm.cooperators : [];
   const businessDepts = departments.filter((d) => (d as any).isBusiness !== false);
-
-  function addCooperator() {
-    setEditForm((prev: any) => ({
-      ...prev,
-      cooperators: [...(Array.isArray(prev.cooperators) ? prev.cooperators : []), { departmentId: 0, departmentName: '', leader: '', person: '' }],
-    }));
-  }
-
-  function removeCooperator(idx: number) {
-    setEditForm((prev: any) => ({
-      ...prev,
-      cooperators: (Array.isArray(prev.cooperators) ? prev.cooperators : []).filter((_: any, i: number) => i !== idx),
-    }));
-  }
-
-  function updateCooperator(idx: number, field: string, value: any) {
-    setEditForm((prev: any) => {
-      const list = Array.isArray(prev.cooperators) ? [...prev.cooperators] : [];
-      if (field === 'departmentId') {
-        const newId = Number(value);
-        if (list.some((c: any, i: number) => i !== idx && c.departmentId === newId)) {
-          alert('该配合部门已存在，请勿重复添加');
-          return prev;
-        }
-        const dept = businessDepts.find((d) => d.id === newId);
-        list[idx] = { ...list[idx], departmentId: newId, departmentName: dept?.name || '' };
-      } else {
-        list[idx] = { ...list[idx], [field]: value };
-      }
-      return { ...prev, cooperators: list };
-    });
-  }
 
   return (
     <>
       {/* 申请调整Dialog */}
       <Dialog open={isAdjustDialogOpen} onOpenChange={setIsAdjustDialogOpen}>
-        <DialogContent>
+        <DialogContent className="rounded-xl border-slate-200/80 max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>申请调整</DialogTitle>
             <DialogDescription>
@@ -111,26 +77,24 @@ export function WorkActionDialogs({
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium">
+              <label className={FIELD_LABEL + ' mb-1 block'}>
                 公司审批领导
                 <span className="text-xs text-slate-400 ml-1">（负责本次调整审批的公司领导）</span>
               </label>
-              <select
-                value={approvalLeaderId}
-                onChange={(e) => setApprovalLeaderId(e.target.value)}
-                className="rounded-lg border-slate-200 bg-white/60"
-              >
-                <option value="">请选择公司审批领导</option>
-                {companyLeaders.map((leader) => (
-                  <option key={leader.id} value={leader.id}>
-                    {leader.name}
-                  </option>
-                ))}
-              </select>
+              <Select value={approvalLeaderId} onValueChange={setApprovalLeaderId}>
+                <SelectTrigger className="w-full rounded-lg">
+                  <SelectValue placeholder="请选择公司审批领导" />
+                </SelectTrigger>
+                <SelectContent>
+                  {companyLeaders.map((leader) => (
+                    <SelectItem key={leader.id} value={String(leader.id)}>{leader.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div>
-              <label className="text-sm font-medium">调整原因</label>
+              <label className={FIELD_LABEL + ' mb-1 block'}>调整原因</label>
               <Textarea
                 value={adjustReason}
                 onChange={(e) => setAdjustReason(e.target.value)}
@@ -141,302 +105,116 @@ export function WorkActionDialogs({
 
             {/* 拟调整内容 */}
             <div className="border-t pt-4">
-              <h5 className="text-sm font-medium mb-3">拟调整内容</h5>
+              <h5 className={FIELD_LABEL + ' mb-3 block'}>拟调整内容</h5>
               
               {/* 重点工作/主要工作调整表单 */}
               {isPriorityOrMain && (
                 <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-medium">工作事项</label>
-                      <Input
-                        value={editForm.workItem || ''}
-                        onChange={(e) => setEditForm((prev: any) => ({ ...prev, workItem: e.target.value }))}
-                        placeholder="请输入工作事项"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">业务类别</label>
-                      <Input
-                        value={editForm.businessCategory || ''}
-                        onChange={(e) => setEditForm((prev: any) => ({ ...prev, businessCategory: e.target.value }))}
-                        placeholder="请输入业务类别"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">计划完成时间</label>
-                      <Input
-                        type="date"
-                        value={editForm.completeTime || ''}
-                        onChange={(e) => setEditForm((prev: any) => ({ ...prev, completeTime: e.target.value }))}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">完成形式</label>
-                      <Input
-                        value={editForm.completeForm || ''}
-                        onChange={(e) => setEditForm((prev: any) => ({ ...prev, completeForm: e.target.value }))}
-                        placeholder="请输入完成形式"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">责任部门</label>
-                      <select
-                        value={editForm.departmentId || ''}
-                        onChange={(e) => setEditForm((prev: any) => ({ ...prev, departmentId: Number(e.target.value) }))}
-                        className="rounded-lg border-slate-200 bg-white/60"
-                      >
-                        {departments.map((d) => (
-                          <option key={d.id} value={d.id}>
-                            {d.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">责任领导</label>
-                      <Input
-                        value={editForm.responsibleLeader || ''}
-                        onChange={(e) => setEditForm((prev: any) => ({ ...prev, responsibleLeader: e.target.value }))}
-                        placeholder="请输入责任领导"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">责任人</label>
-                      <Input
-                        value={editForm.responsiblePerson || ''}
-                        onChange={(e) => setEditForm((prev: any) => ({ ...prev, responsiblePerson: e.target.value }))}
-                        placeholder="请输入责任人姓名"
-                      />
-                    </div>
-                    <div>
-                      <label className="flex items-center gap-3">
-                        <input
-                          type="checkbox"
-                          checked={editForm.isInnovation || false}
-                          onChange={(e) => setEditForm((prev: any) => ({ ...prev, isInnovation: e.target.checked }))}
-                          className="h-4 w-4"
-                        />
-                        <span>是否为创新工作</span>
-                      </label>
-                    </div>
-                  </div>
+                  <WorkItemField
+                    label="工作事项"
+                    value={editForm.workItem || ''}
+                    onChange={(v) => setEditForm((prev: any) => ({ ...prev, workItem: v }))}
+                    placeholder="请输入工作事项"
+                  />
+                  <WorkItemField
+                    label="业务类别"
+                    value={editForm.businessCategory || ''}
+                    onChange={(v) => setEditForm((prev: any) => ({ ...prev, businessCategory: v }))}
+                    placeholder="请输入业务类别"
+                  />
+                  <PlanCompleteTimeField
+                    label="计划完成时间"
+                    value={editForm.completeTime || ''}
+                    onChange={(v) => setEditForm((prev: any) => ({ ...prev, completeTime: v }))}
+                  />
+                  <WorkItemField
+                    label="完成形式"
+                    value={editForm.completeForm || ''}
+                    onChange={(v) => setEditForm((prev: any) => ({ ...prev, completeForm: v }))}
+                    placeholder="请输入完成形式"
+                  />
+                  <DepartmentField
+                    label="责任部门"
+                    value={editForm.departmentId ? String(editForm.departmentId) : ''}
+                    onChange={(v) => setEditForm((prev: any) => ({ ...prev, departmentId: Number(v) }))}
+                    departments={departments}
+                  />
+                  <ResponsibleFields
+                    leaderValue={editForm.responsibleLeader || ''}
+                    onLeaderChange={(v) => setEditForm((prev: any) => ({ ...prev, responsibleLeader: v }))}
+                    personValue={editForm.responsiblePerson || ''}
+                    onPersonChange={(v) => setEditForm((prev: any) => ({ ...prev, responsiblePerson: v }))}
+                  />
+                  <IsInnovationField
+                    isInnovation={!!editForm.isInnovation}
+                    onChange={(v) => setEditForm((prev: any) => ({ ...prev, isInnovation: v }))}
+                  />
 
-                  {/* 工作节点编辑 */}
-                  <div>
-                    <label className="text-sm font-medium block mb-2">工作节点</label>
-                    <div className="space-y-3">
-                      {editForm.nodes && editForm.nodes.length > 0 && editForm.nodes.map((node: any, _index: number) => (
-                        <div key={node.id} className="border rounded p-3 bg-slate-50/50">
-                          <div className="flex items-center gap-2">
-                            <Input
-                              value={node.title}
-                              onChange={(e) => updateNodeTitle(node.id, e.target.value)}
-                              placeholder="节点名称"
-                              className="flex-1"
-                            />
-                            <Input
-                              type="date"
-                              value={node.completeTime || ''}
-                              onChange={(e) => updateNodeCompleteTime(node.id, e.target.value)}
-                              className="w-40"
-                            />
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => addSubNode(node.id)}
-                            >
-                              添加子节点
-                            </Button>
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => deleteNode(node.id)}
-                            >
-                              删除
-                            </Button>
-                          </div>
-                          {node.children && node.children.length > 0 && (
-                            <div className="pl-5 mt-2 space-y-2">
-                              {node.children.map((child: any, _childIndex: number) => (
-                                <div key={child.id} className="flex items-center gap-2">
-                                  <Input
-                                    value={child.title}
-                                    onChange={(e) => updateSubNodeTitle(node.id, child.id, e.target.value)}
-                                    placeholder="子节点名称"
-                                    className="flex-1"
-                                  />
-                                  <Input
-                                    type="date"
-                                    value={child.completeTime || ''}
-                                    onChange={(e) => updateSubNodeCompleteTime(node.id, child.id, e.target.value)}
-                                    className="w-40"
-                                  />
-                                  <Button
-                                    variant="destructive"
-                                    size="sm"
-                                    onClick={() => deleteSubNode(node.id, child.id)}
-                                  >
-                                    删除
-                                  </Button>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                      <Button variant="outline" onClick={addNode}>
-                        添加工作节点
-                      </Button>
-                    </div>
-                  </div>
+                  <WorkFormNodes
+                    nodes={nodes}
+                    onChange={(value) => setEditForm((prev: any) => ({ ...prev, nodes: value }))}
+                    nodeLabel="工作节点（可选）"
+                    nodePlaceholderPrefix="工作节点"
+                  />
                 </div>
               )}
 
               {/* 待办事项调整表单 */}
               {isTodo && (
                 <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-medium">待办事项</label>
-                      <Input
-                        value={editForm.workItem || ''}
-                        onChange={(e) => setEditForm((prev: any) => ({ ...prev, workItem: e.target.value }))}
-                        placeholder="请输入待办事项"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">事项提出领导</label>
-                      <select
-                        value={editForm.proposedLeaderId || ''}
-                        onChange={(e) => {
-                          const selected = companyLeaders.find((leader) => leader.id === Number(e.target.value));
-                          setEditForm((prev: any) => ({
-                            ...prev,
-                            proposedLeaderId: e.target.value,
-                            proposedLeader: selected?.name || '',
-                            proposedLeaderRole: selected?.role || '',
-                          }));
-                        }}
-                        className="rounded-lg border-slate-200 bg-white/60"
-                      >
-                        <option value="">请选择事项提出领导</option>
-                        {companyLeaders.map((leader) => (
-                          <option key={leader.id} value={leader.id}>
-                            {leader.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">事项提出场景</label>
-                      <Input
-                        value={editForm.proposedScene || ''}
-                        onChange={(e) => setEditForm((prev: any) => ({ ...prev, proposedScene: e.target.value }))}
-                        placeholder="请输入事项提出场景"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">形成时间</label>
-                      <Input
-                        type="date"
-                        value={editForm.formedTime || ''}
-                        onChange={(e) => setEditForm((prev: any) => ({ ...prev, formedTime: e.target.value }))}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">主责部门</label>
-                      <select
-                        value={editForm.departmentId || ''}
-                        onChange={(e) => setEditForm((prev: any) => ({ ...prev, departmentId: Number(e.target.value) }))}
-                        className="rounded-lg border-slate-200 bg-white/60"
-                      >
-                        <option value="">请选择主责部门</option>
-                        {businessDepts.map((d) => (
-                          <option key={d.id} value={d.id}>{d.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">责任领导</label>
-                      <Input
-                        value={editForm.responsibleLeader || ''}
-                        onChange={(e) => setEditForm((prev: any) => ({ ...prev, responsibleLeader: e.target.value }))}
-                        placeholder="请输入责任领导姓名"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">责任人</label>
-                      <Input
-                        value={editForm.responsiblePerson || ''}
-                        onChange={(e) => setEditForm((prev: any) => ({ ...prev, responsiblePerson: e.target.value }))}
-                        placeholder="请输入责任人姓名"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">工作计划</label>
-                      <Input
-                        value={editForm.workPlan || ''}
-                        onChange={(e) => setEditForm((prev: any) => ({ ...prev, workPlan: e.target.value }))}
-                        placeholder="请输入工作计划"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">计划完成时间</label>
-                      <Input
-                        type="date"
-                        value={editForm.planCompleteTime || ''}
-                        onChange={(e) => setEditForm((prev: any) => ({ ...prev, planCompleteTime: e.target.value }))}
-                      />
-                    </div>
-                    <div className="md:col-span-2">
-                      <label className="text-sm font-medium">进展情况</label>
-                      <Textarea
-                        value={editForm.progress || ''}
-                        onChange={(e) => setEditForm((prev: any) => ({ ...prev, progress: e.target.value }))}
-                        rows={3}
-                        placeholder="请输入进展情况"
-                      />
-                    </div>
-                  </div>
-
-                  {/* 配合方 */}
-                  <div className="border-t pt-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <label className="text-sm font-medium">配合方</label>
-                      <Button type="button" variant="outline" size="sm" onClick={addCooperator}>添加配合方</Button>
-                    </div>
-                    {cooperators.length === 0 && (
-                      <p className="text-xs text-slate-400">暂无配合方</p>
-                    )}
-                    {cooperators.map((c: any, idx: number) => (
-                      <div key={idx} className="flex items-center gap-2 mb-2">
-                        <select
-                          value={c.departmentId || ''}
-                          onChange={(e) => updateCooperator(idx, 'departmentId', e.target.value)}
-                          className="flex-1 rounded-lg border-slate-200 bg-white/60 text-sm"
-                        >
-                          <option value="">选择配合部门</option>
-                          {businessDepts.map((d) => (
-                            <option key={d.id} value={d.id}>{d.name}</option>
-                          ))}
-                        </select>
-                        <Input
-                          value={c.leader || ''}
-                          onChange={(e) => updateCooperator(idx, 'leader', e.target.value)}
-                          placeholder="配合责任领导（可选）"
-                          className="flex-1"
-                        />
-                        <Input
-                          value={c.person || ''}
-                          onChange={(e) => updateCooperator(idx, 'person', e.target.value)}
-                          placeholder="配合责任人（可选）"
-                          className="flex-1"
-                        />
-                        <Button type="button" variant="destructive" size="sm" onClick={() => removeCooperator(idx)}>删除</Button>
-                      </div>
-                    ))}
-                  </div>
+                  <WorkItemField
+                    label="待办事项"
+                    value={editForm.workItem || ''}
+                    onChange={(v) => setEditForm((prev: any) => ({ ...prev, workItem: v }))}
+                    placeholder="请输入待办事项"
+                  />
+                  <ProposedLeaderField
+                    value={editForm.proposedLeaderId || ''}
+                    onChange={(v) => {
+                      const selected = companyLeaders.find((leader) => leader.id === Number(v));
+                      setEditForm((prev: any) => ({
+                        ...prev,
+                        proposedLeaderId: v,
+                        proposedLeader: selected?.name || '',
+                        proposedLeaderRole: selected?.role || '',
+                      }));
+                    }}
+                    leaders={companyLeaders}
+                    disabled={false}
+                  />
+                  <TodoSpecificFields
+                    proposedScene={editForm.proposedScene || ''}
+                    onProposedSceneChange={(v) => setEditForm((prev: any) => ({ ...prev, proposedScene: v }))}
+                    formedTime={editForm.formedTime || ''}
+                    onFormedTimeChange={(v) => setEditForm((prev: any) => ({ ...prev, formedTime: v }))}
+                    workPlan={editForm.workPlan || ''}
+                    onWorkPlanChange={(v) => setEditForm((prev: any) => ({ ...prev, workPlan: v }))}
+                    progress={editForm.progress || ''}
+                    onProgressChange={(v) => setEditForm((prev: any) => ({ ...prev, progress: v }))}
+                  />
+                  <PlanCompleteTimeField
+                    label="计划完成时间"
+                    value={editForm.planCompleteTime || ''}
+                    onChange={(v) => setEditForm((prev: any) => ({ ...prev, planCompleteTime: v }))}
+                  />
+                  <DepartmentField
+                    label="主责部门"
+                    value={editForm.departmentId ? String(editForm.departmentId) : ''}
+                    onChange={(v) => setEditForm((prev: any) => ({ ...prev, departmentId: Number(v) }))}
+                    departments={businessDepts}
+                    placeholder="请选择主责部门"
+                  />
+                  <ResponsibleFields
+                    leaderValue={editForm.responsibleLeader || ''}
+                    onLeaderChange={(v) => setEditForm((prev: any) => ({ ...prev, responsibleLeader: v }))}
+                    personValue={editForm.responsiblePerson || ''}
+                    onPersonChange={(v) => setEditForm((prev: any) => ({ ...prev, responsiblePerson: v }))}
+                  />
+                  <WorkFormCooperators
+                    cooperators={cooperators}
+                    onChange={(value) => setEditForm((prev: any) => ({ ...prev, cooperators: value }))}
+                    departments={businessDepts}
+                  />
                 </div>
               )}
             </div>
@@ -444,6 +222,7 @@ export function WorkActionDialogs({
           <DialogFooter>
             <Button
               variant="outline"
+              className="rounded-full"
               onClick={() => {
                 setIsAdjustDialogOpen(false);
               }}
@@ -451,6 +230,7 @@ export function WorkActionDialogs({
               取消
             </Button>
             <Button
+              className="rounded-full"
               onClick={async () => {
                 await onSubmitAdjust();
                 setIsAdjustDialogOpen(false);
@@ -464,7 +244,7 @@ export function WorkActionDialogs({
 
       {/* 申请取消Dialog */}
       <Dialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
-        <DialogContent>
+        <DialogContent className="rounded-xl border-slate-200/80 max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>申请取消</DialogTitle>
             <DialogDescription>
@@ -473,26 +253,24 @@ export function WorkActionDialogs({
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium">
+              <label className={FIELD_LABEL + ' mb-1 block'}>
                 公司审批领导
                 <span className="text-xs text-slate-400 ml-1">（负责本次取消审批的公司领导）</span>
               </label>
-              <select
-                value={approvalLeaderId}
-                onChange={(e) => setApprovalLeaderId(e.target.value)}
-                className="rounded-lg border-slate-200 bg-white/60"
-              >
-                <option value="">请选择公司审批领导</option>
-                {companyLeaders.map((leader) => (
-                  <option key={leader.id} value={leader.id}>
-                    {leader.name}
-                  </option>
-                ))}
-              </select>
+              <Select value={approvalLeaderId} onValueChange={setApprovalLeaderId}>
+                <SelectTrigger className="w-full rounded-lg">
+                  <SelectValue placeholder="请选择公司审批领导" />
+                </SelectTrigger>
+                <SelectContent>
+                  {companyLeaders.map((leader) => (
+                    <SelectItem key={leader.id} value={String(leader.id)}>{leader.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div>
-              <label className="text-sm font-medium">取消原因</label>
+              <label className={FIELD_LABEL + ' mb-1 block'}>取消原因</label>
               <Textarea
                 value={cancelReason}
                 onChange={(e) => setCancelReason(e.target.value)}
@@ -504,6 +282,7 @@ export function WorkActionDialogs({
           <DialogFooter>
             <Button
               variant="outline"
+              className="rounded-full"
               onClick={() => {
                 setIsCancelDialogOpen(false);
               }}
@@ -512,6 +291,7 @@ export function WorkActionDialogs({
             </Button>
             <Button
               variant="destructive"
+              className="rounded-full"
               onClick={async () => {
                 await onSubmitCancel();
                 setIsCancelDialogOpen(false);

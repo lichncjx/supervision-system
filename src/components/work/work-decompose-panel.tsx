@@ -1,1 +1,1 @@
-export { WorkDecomposePanel } from '@/features/workflow/ui/work-decompose-panel'
+export { WorkDecomposePanel } from '@/features/works/ui/work-decompose-panel'

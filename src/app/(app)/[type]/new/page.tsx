@@ -1,16 +1,28 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Star, ListTodo, CheckSquare } from 'lucide-react';
+import { Star, ListTodo, CheckSquare } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { getCompanyLeaders, getDepartments } from '@/lib/auth';
-import { addWork, submitWork, type WorkType, type WorkNode } from '@/lib/work-store';
+import { addWork, type WorkType, type WorkNode } from '@/lib/work-store';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
+import { WorkFormShell } from '@/features/works/ui/work-form-shell';
+import { WorkFormSectionCard } from '@/features/works/ui/work-form-section-card';
+import { WorkFormNodes } from '@/features/works/ui/work-form-nodes';
+import { WorkFormCooperators } from '@/features/works/ui/work-form-cooperators';
+import {
+  WorkItemField,
+  IsInnovationField,
+  ProposedLeaderField,
+  DepartmentField,
+  PlanCompleteTimeField,
+  TodoSpecificFields,
+} from '@/features/works/ui/work-form-fields';
+import { validateCreateWorkFormFields, type CreateWorkFormField } from '@/features/works/ui/work-form-validations';
+import { buildCreateWorkPayload } from '@/features/works/client/build-create-work-payload';
+import { ERROR_BOX, HINT_BOX, STICKY_ACTION_BAR } from '@/features/works/ui/visual-tokens';
 
 export default function NewWorkPage() {
   const params = useParams<{ type: string }>();
@@ -47,98 +59,7 @@ export default function NewWorkPage() {
 
   const [isInnovation, setIsInnovation] = useState(false);
 
-  const [nodes, setNodes] = useState<WorkNode[]>([
-    {
-      id: Date.now(),
-      title: '',
-      completeTime: '',
-      children: [],
-    },
-  ]);
-
-  // 节点操作函数
-  const addNode = () => {
-    setNodes([
-      ...nodes,
-      {
-        id: Date.now(),
-        title: '',
-        completeTime: '',
-        children: [],
-      },
-    ]);
-  };
-
-  const updateNodeCompleteTime = (nodeId: number, completeTime: string) => {
-    setNodes(nodes.map((node) =>
-      node.id === nodeId ? { ...node, completeTime: completeTime } : node
-    ));
-  };
-
-  const updateNodeTitle = (nodeId: number, title: string) => {
-    setNodes(nodes.map((node) =>
-      node.id === nodeId ? { ...node, title } : node
-    ));
-  };
-
-  const deleteNode = (nodeId: number) => {
-    setNodes(nodes.filter((node) => node.id !== nodeId));
-  };
-
-  const addSubNode = (nodeId: number) => {
-    setNodes(nodes.map((node) =>
-      node.id === nodeId
-        ? {
-            ...node,
-            children: [
-              ...node.children,
-              {
-                id: Date.now(),
-                title: '',
-                completeTime: '',
-              },
-            ],
-          }
-        : node
-    ));
-  };
-
-  const updateSubNodeTitle = (nodeId: number, subNodeId: number, title: string) => {
-    setNodes(nodes.map((node) =>
-      node.id === nodeId
-        ? {
-            ...node,
-            children: node.children.map((child) =>
-              child.id === subNodeId ? { ...child, title } : child
-            ),
-          }
-        : node
-    ));
-  };
-
-  const deleteSubNode = (nodeId: number, subNodeId: number) => {
-    setNodes(nodes.map((node) =>
-      node.id === nodeId
-        ? {
-            ...node,
-            children: node.children.filter((child) => child.id !== subNodeId),
-          }
-        : node
-    ));
-  };
-
-  const updateSubNodeCompleteTime = (nodeId: number, subNodeId: number, completeTime: string) => {
-    setNodes(nodes.map((node) =>
-      node.id === nodeId
-        ? {
-            ...node,
-            children: node.children.map((child) =>
-              child.id === subNodeId ? { ...child, completeTime: completeTime } : child
-            ),
-          }
-        : node
-    ));
-  };
+  const [nodes, setNodes] = useState<WorkNode[]>([]);
 
   // 重点工作和主要工作表单
   const [priorityMainForm, setPriorityMainForm] = useState({
@@ -169,6 +90,64 @@ export default function NewWorkPage() {
     planCompleteTime: '',
     progress: '',
   });
+
+  const [touched, setTouched] = useState<Set<string>>(new Set());
+  const [errors, setErrors] = useState<Partial<Record<CreateWorkFormField, string>>>({});
+  const [submitAttempted, setSubmitAttempted] = useState(false);
+
+  const stateRef = useRef({
+    priorityMainForm,
+    todoForm,
+    nodes,
+    isInnovation,
+    companyLeaders,
+    user,
+    isPriorityOrMain,
+    isTodo,
+  });
+  stateRef.current = {
+    priorityMainForm,
+    todoForm,
+    nodes,
+    isInnovation,
+    companyLeaders,
+    user,
+    isPriorityOrMain,
+    isTodo,
+  };
+
+  const runValidation = useCallback(() => {
+    const s = stateRef.current;
+    if (!s.user) return {};
+    return validateCreateWorkFormFields({
+      user: s.user,
+      isPriorityOrMain: s.isPriorityOrMain,
+      isTodo: s.isTodo,
+      priorityMainWorkItem: s.priorityMainForm.workItem,
+      priorityMainDepartmentId: s.priorityMainForm.departmentId,
+      todoWorkItem: s.todoForm.workItem,
+      todoDepartmentId: s.todoForm.departmentId,
+      todoProposedLeaderId: s.todoForm.proposedLeaderId,
+      companyLeaders: s.companyLeaders,
+      nodes: s.nodes,
+    });
+  }, []);
+
+  const handleBlur = (field: CreateWorkFormField) => {
+    setTouched((prev) => {
+      const next = new Set(prev);
+      next.add(field);
+      return next;
+    });
+    const nextErrors = runValidation();
+    setErrors(nextErrors);
+  };
+
+  const fieldError = (field: CreateWorkFormField) => {
+    if (!errors[field]) return undefined;
+    if (submitAttempted || touched.has(field)) return errors[field];
+    return undefined;
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -204,126 +183,38 @@ export default function NewWorkPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!user) {
-      alert('请先登录');
+    const nextErrors = runValidation();
+    setErrors(nextErrors);
+    setSubmitAttempted(true);
+
+    const errorKeys = Object.keys(nextErrors) as CreateWorkFormField[];
+    if (errorKeys.length > 0) {
+      const firstField = errorKeys[0];
+      const el = document.getElementById(`field-${firstField}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
       return;
     }
 
-    if (isPriorityOrMain) {
-      if (!priorityMainForm.workItem.trim()) {
-        alert('请输入工作事项');
-        return;
-      }
-      if (!priorityMainForm.departmentId) {
-        alert('请选择责任部门');
-        return;
-      }
-    } else if (isTodo) {
-      if (!todoForm.workItem.trim()) {
-        alert('请输入待办事项');
-        return;
-      }
-      if (!todoForm.departmentId) {
-        alert('请选择主责部门');
-        return;
-      }
-      if (!todoForm.proposedLeaderId) {
-        alert('请选择事项提出领导');
-        return;
-      }
-    }
-
-    const selectedProposedLeader = isTodo
-      ? companyLeaders.find((leader) => leader.id === Number(todoForm.proposedLeaderId))
-      : null;
-
-    if (isTodo && !selectedProposedLeader) {
-      alert('请选择事项提出领导');
-      return;
-    }
-
-    // 待办事项由部门发起时也必须填写节点
-    const validNodes = nodes
-      .filter((node) => node.title.trim())
-      .map((node) => ({
-        ...node,
-        children: node.children.filter((child) => child.title.trim()),
-      }));
-
-    if (
-      isTodo &&
-      (user.role === 'DEPARTMENT_MANAGER' || user.role === 'DEPARTMENT_LEADER')
-    ) {
-      if (validNodes.length === 0) {
-        alert('请至少填写一个任务节点');
-        return;
-      }
-
-      if (validNodes.some((node) => !node.completeTime)) {
-        alert('请填写每个任务节点的完成时间');
-        return;
-      }
-    }
+    if (!user) return;
 
     try {
-      let createdWork;
-      if (isPriorityOrMain) {
-        createdWork = await addWork({
-          id: Date.now(),
-          title: priorityMainForm.workItem,
-          type,
-          departmentId: Number(priorityMainForm.departmentId),
-          creatorRole: user.role,
-          creatorId: user.id,
-          action: 'create',
-          status: 'draft',
-          needCeo: type === '重点',
-          isInnovation: type === '重点' ? isInnovation : false,
-          nodes: nodes.filter((node) => node.title.trim()).map((node) => ({
-            ...node,
-            children: node.children.filter((child) => child.title.trim()),
-          })),
-          businessCategory: priorityMainForm.businessCategory,
-          workItem: priorityMainForm.workItem,
-          workNode: priorityMainForm.workNode,
-          completeTime: priorityMainForm.completeTime,
-          completeForm: priorityMainForm.completeForm,
-          responsibleLeader: priorityMainForm.responsibleLeader,
-          responsiblePerson: priorityMainForm.responsiblePerson,
-        });
-      } else if (isTodo) {
-        const cooperators = todoForm.cooperators.filter((c) => c.departmentId > 0);
-        createdWork = await addWork({
-          id: Date.now(),
-          title: todoForm.workItem,
-          type: '待办',
-          departmentId: todoForm.departmentId || 2,
-          creatorRole: user.role,
-          creatorId: user.id,
-          action: 'todo_decompose',
-          status: 'draft',
-          needCeo: false,
-          proposedLeader: selectedProposedLeader?.name || '',
-          proposedLeaderId: selectedProposedLeader?.id,
-          proposedLeaderRole: selectedProposedLeader?.role,
-          approvalLeaderId: selectedProposedLeader?.id,
-          proposedScene: todoForm.proposedScene,
-          workItem: todoForm.workItem,
-          formedTime: todoForm.formedTime,
-          cooperators,
-          workPlan: todoForm.workPlan,
-          planCompleteTime: todoForm.planCompleteTime,
-          progress: todoForm.progress,
-          nodes: validNodes,
-        });
-      }
+      const payload = buildCreateWorkPayload({
+        type,
+        user,
+        priorityMainForm,
+        todoForm,
+        isInnovation,
+        nodes,
+        companyLeaders,
+      });
 
-      // 提交审批
+      const createdWork = await addWork(payload);
+
       if (createdWork) {
-        await submitWork(createdWork, user);
+        router.push(`/${routeType}/${createdWork.id}`);
       }
-
-      router.push(`/${routeType}`);
     } catch (error) {
       console.error(error);
       alert('创建失败，请查看控制台错误');
@@ -337,490 +228,225 @@ export default function NewWorkPage() {
   };
 
   const accentBar = routeType === 'priority' ? 'bg-rose-500' : routeType === 'main' ? 'bg-sky-500' : 'bg-emerald-500';
-  const iconColor = routeType === 'priority' ? 'text-rose-500' : routeType === 'main' ? 'text-sky-500' : 'text-emerald-500';
   const TitleIcon = routeType === 'priority' ? Star : routeType === 'main' ? ListTodo : CheckSquare;
+  const themeKey = routeType === 'priority' ? 'priority' : routeType === 'main' ? 'main' : 'todo';
 
   const businessDepts = departments.filter((d) => d.isBusiness !== false);
+  const isDepartmentUser = user?.role === 'DEPARTMENT_MANAGER' || user?.role === 'DEPARTMENT_LEADER';
+  const showNodes = isPriorityOrMain || (isTodo && isDepartmentUser);
+
+  const draftHint = (
+    <div className={HINT_BOX}>
+      <p className="font-medium text-slate-700 mb-1">保存草稿提示</p>
+      <ul className="list-disc list-inside space-y-0.5">
+        <li>保存草稿后，可在详情页继续完善信息、上传附件，并提交审批。</li>
+        <li>责任领导、责任人仅用于业务留痕，不决定审批去向。</li>
+        <li>部门主管提交后由本部门领导审批，再由公司领导审批；部门领导提交后由公司领导审批。</li>
+        <li>公司领导发起的待办事项直接进入待分解。</li>
+      </ul>
+    </div>
+  );
+
+  const errorSummary =
+    submitAttempted && Object.keys(errors).length > 0 ? (
+      <div className={ERROR_BOX}>
+        <p className="font-semibold mb-2">请完善以下信息后再提交</p>
+        <ul className="list-disc list-inside space-y-0.5">
+          {Object.values(errors).map((msg, i) => (
+            <li key={i}>{msg}</li>
+          ))}
+        </ul>
+      </div>
+    ) : null;
+
+  const sidebar = (
+    <>
+      {showNodes && (
+        <>
+          <WorkFormNodes
+            nodes={nodes}
+            onChange={setNodes}
+            nodeLabel={isPriorityOrMain ? '工作节点（可选）' : '任务节点（可选）'}
+            nodePlaceholderPrefix={isPriorityOrMain ? '工作节点' : '任务节点'}
+            error={fieldError('nodes')}
+            onTouched={() => handleBlur('nodes')}
+            fieldId="field-nodes"
+          />
+          <p className="text-xs text-gray-400">如需拆解阶段任务，可添加节点；未添加节点不影响提交。</p>
+        </>
+      )}
+      {isTodo && (
+        <WorkFormCooperators
+          cooperators={todoForm.cooperators}
+          onChange={(cooperators) => setTodoForm({ ...todoForm, cooperators })}
+          departments={businessDepts}
+        />
+      )}
+      {draftHint}
+    </>
+  );
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
+    <WorkFormShell
+      backHref={`/${routeType}`}
+      title={titleMap[type]}
+      accentBar={accentBar}
+      icon={<TitleIcon className="h-6 w-6" />}
+      themeKey={themeKey}
+      sidebar={sidebar}
+      onSubmit={handleSubmit}
+    >
+      {errorSummary}
+
+      {isPriorityOrMain && (
+        <>
+          <WorkFormSectionCard title="基本信息">
+            <WorkItemField
+              label="业务类别"
+              value={priorityMainForm.businessCategory}
+              onChange={(v) => setPriorityMainForm({ ...priorityMainForm, businessCategory: v })}
+              placeholder="请输入业务类别"
+            />
+
+            <WorkItemField
+              label="工作事项"
+              value={priorityMainForm.workItem}
+              onChange={(v) => setPriorityMainForm({ ...priorityMainForm, workItem: v })}
+              placeholder="请输入工作事项"
+              error={fieldError('workItem')}
+              onBlur={() => handleBlur('workItem')}
+              fieldId="field-workItem"
+            />
+
+            {type === '重点' && (
+              <IsInnovationField
+                isInnovation={isInnovation}
+                onChange={setIsInnovation}
+              />
+            )}
+
+            <PlanCompleteTimeField
+              label="计划完成时间"
+              value={priorityMainForm.completeTime}
+              onChange={(v) => setPriorityMainForm({ ...priorityMainForm, completeTime: v })}
+            />
+
+            <WorkItemField
+              label="完成形式"
+              value={priorityMainForm.completeForm}
+              onChange={(v) => setPriorityMainForm({ ...priorityMainForm, completeForm: v })}
+              placeholder="请输入完成形式"
+            />
+          </WorkFormSectionCard>
+
+          <WorkFormSectionCard title="责任分工">
+            <div className="flex gap-4 [&>div]:flex-1">
+              <DepartmentField
+                label="责任部门"
+                value={priorityMainForm.departmentId}
+                onChange={(v) => setPriorityMainForm({ ...priorityMainForm, departmentId: v })}
+                departments={departments}
+                error={fieldError('departmentId')}
+                onBlur={() => handleBlur('departmentId')}
+                fieldId="field-departmentId"
+              />
+              <WorkItemField
+                label="责任领导"
+                value={priorityMainForm.responsibleLeader}
+                onChange={(v) => setPriorityMainForm({ ...priorityMainForm, responsibleLeader: v })}
+                placeholder="请输入责任领导姓名"
+              />
+              <WorkItemField
+                label="责任人"
+                value={priorityMainForm.responsiblePerson}
+                onChange={(v) => setPriorityMainForm({ ...priorityMainForm, responsiblePerson: v })}
+                placeholder="请输入责任人姓名"
+              />
+            </div>
+          </WorkFormSectionCard>
+        </>
+      )}
+
+      {isTodo && (
+        <>
+          <WorkFormSectionCard title="基本信息">
+            <ProposedLeaderField
+              value={todoForm.proposedLeaderId}
+              onChange={(v) => setTodoForm({ ...todoForm, proposedLeaderId: v })}
+              leaders={companyLeaders}
+              disabled={user?.role === 'VICE_PRESIDENT' || user?.role === 'PRESIDENT'}
+              error={fieldError('proposedLeaderId')}
+              onBlur={() => handleBlur('proposedLeaderId')}
+              fieldId="field-proposedLeaderId"
+            />
+
+            <TodoSpecificFields
+              proposedScene={todoForm.proposedScene}
+              onProposedSceneChange={(v) => setTodoForm({ ...todoForm, proposedScene: v })}
+              formedTime={todoForm.formedTime}
+              onFormedTimeChange={(v) => setTodoForm({ ...todoForm, formedTime: v })}
+              workPlan={todoForm.workPlan}
+              onWorkPlanChange={(v) => setTodoForm({ ...todoForm, workPlan: v })}
+              progress={todoForm.progress}
+              onProgressChange={(v) => setTodoForm({ ...todoForm, progress: v })}
+            />
+
+            <WorkItemField
+              label="待办事项"
+              value={todoForm.workItem}
+              onChange={(v) => setTodoForm({ ...todoForm, workItem: v })}
+              placeholder="请输入待办事项"
+              error={fieldError('workItem')}
+              onBlur={() => handleBlur('workItem')}
+              fieldId="field-workItem"
+            />
+
+            <PlanCompleteTimeField
+              label="计划完成时间"
+              value={todoForm.planCompleteTime}
+              onChange={(v) => setTodoForm({ ...todoForm, planCompleteTime: v })}
+            />
+          </WorkFormSectionCard>
+
+          <WorkFormSectionCard title="责任分工">
+            <div className="flex gap-4 [&>div]:flex-1">
+              <DepartmentField
+                label="主责部门"
+                value={todoForm.departmentId ? String(todoForm.departmentId) : ''}
+                onChange={(v) => setTodoForm({ ...todoForm, departmentId: v ? Number(v) : 0 })}
+                departments={businessDepts}
+                placeholder="请选择主责部门"
+                error={fieldError('departmentId')}
+                onBlur={() => handleBlur('departmentId')}
+                fieldId="field-departmentId"
+              />
+              <WorkItemField
+                label="责任领导"
+                value={todoForm.responsibleLeader}
+                onChange={(v) => setTodoForm({ ...todoForm, responsibleLeader: v })}
+                placeholder="请输入责任领导姓名"
+              />
+              <WorkItemField
+                label="责任人"
+                value={todoForm.responsiblePerson}
+                onChange={(v) => setTodoForm({ ...todoForm, responsiblePerson: v })}
+                placeholder="请输入责任人姓名"
+              />
+            </div>
+          </WorkFormSectionCard>
+        </>
+      )}
+
+      <div className={STICKY_ACTION_BAR}>
         <Link href={`/${routeType}`}>
-          <Button variant="outline" size="sm">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            返回列表
+          <Button variant="outline" type="button" className="rounded-full border-slate-200 bg-white/80">
+            取消
           </Button>
         </Link>
-        <h1 className="flex items-center gap-3 text-2xl font-bold text-slate-800">
-          <span className={`w-1 h-6 rounded-full ${accentBar}`} />
-          <TitleIcon className={`h-6 w-6 ${iconColor}`} />
-          {titleMap[type]}
-        </h1>
+        <Button type="submit" className="rounded-full bg-slate-950 px-5 text-white shadow-lg shadow-slate-950/15 hover:bg-slate-800">
+          保存草稿
+        </Button>
       </div>
-
-      <Card>
-        <CardContent className="p-6">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {isPriorityOrMain && (
-              <>
-                <div>
-                  <label className="block text-sm font-medium mb-1">业务类别</label>
-                  <Input 
-                    value={priorityMainForm.businessCategory} 
-                    onChange={(e) => setPriorityMainForm({ ...priorityMainForm, businessCategory: e.target.value })} 
-                    placeholder="请输入业务类别"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-1">工作事项</label>
-                  <Input 
-                    value={priorityMainForm.workItem} 
-                    onChange={(e) => setPriorityMainForm({ ...priorityMainForm, workItem: e.target.value })} 
-                    placeholder="请输入工作事项"
-                  />
-                </div>
-
-                {type === '重点' && (
-                  <div>
-                    <label className="block text-sm font-medium mb-1">是否为创新工作</label>
-                    <select
-                      value={isInnovation ? '是' : '否'}
-                      onChange={(e) => setIsInnovation(e.target.value === '是')}
-                      className="w-full border rounded-md p-2"
-                    >
-                      <option value="否">否</option>
-                      <option value="是">是</option>
-                    </select>
-                  </div>
-                )}
-
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium">工作节点</label>
-                    <Button type="button" variant="outline" size="sm" onClick={addNode}>
-                      新增工作节点
-                    </Button>
-                  </div>
-
-                  <div className="space-y-4">
-                    {nodes.map((node, nodeIndex) => (
-                      <div key={node.id} className="border rounded-lg p-4 space-y-3 bg-gray-50">
-                        <div className="flex gap-2 items-center">
-                          <Input
-                            value={node.title}
-                            onChange={(e) => updateNodeTitle(node.id, e.target.value)}
-                            placeholder={`工作节点${nodeIndex + 1}`}
-                            className="flex-1"
-                          />
-                          <span className="text-sm text-gray-500">节点完成时间</span>
-                          <Input
-                            type="date"
-                            value={node.completeTime || ''}
-                            onChange={(e) => updateNodeCompleteTime(node.id, e.target.value)}
-                            className="w-40"
-                          />
-                          <Button
-                            type="button"
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => deleteNode(node.id)}
-                            disabled={nodes.length === 1}
-                          >
-                            删除节点
-                          </Button>
-                        </div>
-
-                        <div className="pl-6 space-y-2">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm text-gray-500">子节点</span>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => addSubNode(node.id)}
-                            >
-                              新增子节点
-                            </Button>
-                          </div>
-
-                          {node.children.length === 0 && (
-                            <div className="text-sm text-gray-400">暂无子节点</div>
-                          )}
-
-                          {node.children.map((child, childIndex) => (
-                            <div key={child.id} className="grid grid-cols-1 md:grid-cols-[1fr_180px_auto] gap-2 items-center">
-                              <Input
-                                value={child.title}
-                                onChange={(e) =>
-                                  updateSubNodeTitle(node.id, child.id, e.target.value)
-                                }
-                                placeholder={`子节点${childIndex + 1}`}
-                                className="flex-1"
-                              />
-
-                              <Input
-                                type="date"
-                                value={child.completeTime || ''}
-                                onChange={(e) =>
-                                  updateSubNodeCompleteTime(node.id, child.id, e.target.value)
-                                }
-                                placeholder="完成日期"
-                              />
-
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => deleteSubNode(node.id, child.id)}
-                              >
-                                删除
-                              </Button>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-1">计划完成时间</label>
-                  <Input 
-                    type="date"
-                    value={priorityMainForm.completeTime} 
-                    onChange={(e) => setPriorityMainForm({ ...priorityMainForm, completeTime: e.target.value })} 
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-1">完成形式</label>
-                  <Input 
-                    value={priorityMainForm.completeForm} 
-                    onChange={(e) => setPriorityMainForm({ ...priorityMainForm, completeForm: e.target.value })} 
-                    placeholder="请输入完成形式"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-1">责任部门</label>
-                  <select
-                    value={priorityMainForm.departmentId}
-                    onChange={(e) => setPriorityMainForm({ ...priorityMainForm, departmentId: e.target.value })}
-                    className="w-full border rounded-md p-2"
-                  >
-                    {departments.map((d) => (
-                      <option key={d.id} value={d.id}>
-                        {d.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    责任领导
-                    <span className="text-xs text-gray-400 ml-1">（姓名文本，仅用于展示和留痕）</span>
-                  </label>
-                  <Input
-                    value={priorityMainForm.responsibleLeader}
-                    onChange={(e) => setPriorityMainForm({ ...priorityMainForm, responsibleLeader: e.target.value })}
-                    placeholder="请输入责任领导姓名"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    责任人
-                    <span className="text-xs text-gray-400 ml-1">（姓名文本，仅用于展示和留痕）</span>
-                  </label>
-                  <Input
-                    value={priorityMainForm.responsiblePerson}
-                    onChange={(e) => setPriorityMainForm({ ...priorityMainForm, responsiblePerson: e.target.value })}
-                    placeholder="请输入责任人姓名"
-                  />
-                </div>
-              </>
-            )}
-
-            {isTodo && (
-              <>
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    事项提出领导
-                    <span className="text-xs text-gray-400 ml-1">（提出该待办事项的公司领导，默认也是审批领导）</span>
-                  </label>
-                  <select
-                    value={todoForm.proposedLeaderId}
-                    disabled={user?.role === 'VICE_PRESIDENT' || user?.role === 'PRESIDENT'}
-                    onChange={(e) => setTodoForm({ ...todoForm, proposedLeaderId: e.target.value })}
-                    className="w-full border rounded-md p-2"
-                  >
-                    <option value="">请选择事项提出领导</option>
-                    {companyLeaders.map((leader) => (
-                      <option key={leader.id} value={leader.id}>
-                        {leader.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-1">事项提出场景</label>
-                  <Input 
-                    value={todoForm.proposedScene} 
-                    onChange={(e) => setTodoForm({ ...todoForm, proposedScene: e.target.value })} 
-                    placeholder="请输入事项提出场景"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-1">待办事项</label>
-                  <Input 
-                    value={todoForm.workItem} 
-                    onChange={(e) => setTodoForm({ ...todoForm, workItem: e.target.value })} 
-                    placeholder="请输入待办事项"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-1">形成时间</label>
-                  <Input 
-                    type="date"
-                    value={todoForm.formedTime} 
-                    onChange={(e) => setTodoForm({ ...todoForm, formedTime: e.target.value })} 
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-1">主责部门</label>
-                  <select
-                    value={todoForm.departmentId || ''}
-                    onChange={(e) => setTodoForm({ ...todoForm, departmentId: Number(e.target.value) })}
-                    className="w-full border rounded-md p-2"
-                  >
-                    <option value="">请选择主责部门</option>
-                    {businessDepts.map((d) => (
-                      <option key={d.id} value={d.id}>{d.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    责任领导
-                    <span className="text-xs text-gray-400 ml-1">（姓名文本，仅用于展示和留痕）</span>
-                  </label>
-                  <Input
-                    value={todoForm.responsibleLeader}
-                    onChange={(e) => setTodoForm({ ...todoForm, responsibleLeader: e.target.value })}
-                    placeholder="请输入责任领导姓名"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    责任人
-                    <span className="text-xs text-gray-400 ml-1">（姓名文本，仅用于展示和留痕）</span>
-                  </label>
-                  <Input
-                    value={todoForm.responsiblePerson}
-                    onChange={(e) => setTodoForm({ ...todoForm, responsiblePerson: e.target.value })}
-                    placeholder="请输入责任人姓名"
-                  />
-                </div>
-
-                {/* 配合方 */}
-                <div className="border-t pt-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <label className="text-sm font-medium">配合方</label>
-                    <Button type="button" variant="outline" size="sm" onClick={() => {
-                      setTodoForm({
-                        ...todoForm,
-                        cooperators: [...todoForm.cooperators, { departmentId: 0, departmentName: '', leader: '', person: '' }],
-                      });
-                    }}>添加配合方</Button>
-                  </div>
-                  {todoForm.cooperators.length === 0 && (
-                    <p className="text-xs text-gray-400">暂无配合方</p>
-                  )}
-                  {todoForm.cooperators.map((c, idx) => (
-                    <div key={idx} className="flex items-center gap-2 mb-2">
-                      <select
-                        value={c.departmentId || ''}
-                        onChange={(e) => {
-                          const newId = Number(e.target.value);
-                          const list = [...todoForm.cooperators];
-                          if (list.some((item, i) => i !== idx && item.departmentId === newId)) {
-                            alert('该配合部门已存在，请勿重复添加');
-                            return;
-                          }
-                          const dept = businessDepts.find((d) => d.id === newId);
-                          list[idx] = { ...list[idx], departmentId: newId, departmentName: dept?.name || '' };
-                          setTodoForm({ ...todoForm, cooperators: list });
-                        }}
-                        className="flex-1 border rounded-md p-2 text-sm"
-                      >
-                        <option value="">选择配合部门</option>
-                        {businessDepts.map((d) => (
-                          <option key={d.id} value={d.id}>{d.name}</option>
-                        ))}
-                      </select>
-                      <Input
-                        value={c.leader || ''}
-                        onChange={(e) => {
-                          const list = [...todoForm.cooperators];
-                          list[idx] = { ...list[idx], leader: e.target.value };
-                          setTodoForm({ ...todoForm, cooperators: list });
-                        }}
-                        placeholder="配合责任领导（可选）"
-                      />
-                      <Input
-                        value={c.person || ''}
-                        onChange={(e) => {
-                          const list = [...todoForm.cooperators];
-                          list[idx] = { ...list[idx], person: e.target.value };
-                          setTodoForm({ ...todoForm, cooperators: list });
-                        }}
-                        placeholder="配合责任人（可选）"
-                      />
-                      <Button type="button" variant="destructive" size="sm" onClick={() => {
-                        setTodoForm({ ...todoForm, cooperators: todoForm.cooperators.filter((_, i) => i !== idx) });
-                      }}>删除</Button>
-                    </div>
-                  ))}
-                </div>
-
-                {user && (user.role === 'DEPARTMENT_MANAGER' || user.role === 'DEPARTMENT_LEADER') && (
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <label className="text-sm font-medium">任务节点</label>
-                      <Button type="button" variant="outline" size="sm" onClick={addNode}>
-                        新增任务节点
-                      </Button>
-                    </div>
-
-                    <div className="space-y-4">
-                      {nodes.map((node, nodeIndex) => (
-                        <div key={node.id} className="border rounded-lg p-4 space-y-3 bg-gray-50">
-                          <div className="flex gap-2 items-center">
-                            <Input
-                              value={node.title}
-                              onChange={(e) => updateNodeTitle(node.id, e.target.value)}
-                              placeholder={`任务节点${nodeIndex + 1}`}
-                              className="flex-1"
-                            />
-                            <span className="text-sm text-gray-500">节点完成时间</span>
-                            <Input
-                              type="date"
-                              value={node.completeTime || ''}
-                              onChange={(e) => updateNodeCompleteTime(node.id, e.target.value)}
-                              className="w-40"
-                            />
-                            <Button
-                              type="button"
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => deleteNode(node.id)}
-                              disabled={nodes.length === 1}
-                            >
-                              删除节点
-                            </Button>
-                          </div>
-
-                          <div className="pl-6 space-y-2">
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm text-gray-500">子节点</span>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => addSubNode(node.id)}
-                              >
-                                新增子节点
-                              </Button>
-                            </div>
-
-                            {node.children.length === 0 && (
-                              <div className="text-sm text-gray-400">暂无子节点</div>
-                            )}
-
-                            {node.children.map((child, childIndex) => (
-                              <div
-                                key={child.id}
-                                className="grid grid-cols-1 md:grid-cols-[1fr_180px_auto] gap-2 items-center"
-                              >
-                                <Input
-                                  value={child.title}
-                                  onChange={(e) => updateSubNodeTitle(node.id, child.id, e.target.value)}
-                                  placeholder={`子节点${childIndex + 1}`}
-                                />
-
-                                <Input
-                                  type="date"
-                                  value={child.completeTime || ''}
-                                  onChange={(e) => updateSubNodeCompleteTime(node.id, child.id, e.target.value)}
-                                />
-
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => deleteSubNode(node.id, child.id)}
-                                >
-                                  删除
-                                </Button>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                <div>
-                  <label className="block text-sm font-medium mb-1">工作计划</label>
-                  <Textarea 
-                    value={todoForm.workPlan} 
-                    onChange={(e) => setTodoForm({ ...todoForm, workPlan: e.target.value })} 
-                    placeholder="请输入工作计划"
-                    rows={3}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-1">计划完成时间</label>
-                  <Input 
-                    type="date"
-                    value={todoForm.planCompleteTime} 
-                    onChange={(e) => setTodoForm({ ...todoForm, planCompleteTime: e.target.value })} 
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-1">进展情况</label>
-                  <Textarea 
-                    value={todoForm.progress} 
-                    onChange={(e) => setTodoForm({ ...todoForm, progress: e.target.value })} 
-                    placeholder="请输入进展情况"
-                    rows={3}
-                  />
-                </div>
-              </>
-            )}
-
-            <div className="flex gap-3">
-              <Button type="submit">
-                保存并提交
-              </Button>
-              <Link href={`/${routeType}`}>
-                <Button variant="outline" type="button">取消</Button>
-              </Link>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+    </WorkFormShell>
   );
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import { type Work } from '@/lib/work-store';
+import { PANEL_PADDED } from '@/features/works/ui/visual-tokens';
 
 interface WorkPendingAdjustmentPanelProps {
   work: Work;
@@ -12,7 +13,7 @@ export function WorkPendingAdjustmentPanel({ work }: WorkPendingAdjustmentPanelP
   }
 
   return (
-    <div className="rounded-xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50/50 p-5">
+    <div className={PANEL_PADDED}>
       <h3 className="font-semibold text-slate-800 mb-4">待审批调整内容</h3>
       <div className="space-y-2 text-sm">
         <div className="text-purple-600 break-words whitespace-pre-wrap">
@@ -41,7 +42,7 @@ export function WorkPendingAdjustmentPanel({ work }: WorkPendingAdjustmentPanelP
             <p className="font-medium mt-2">调整后节点：</p>
             <div className="space-y-2">
               {work.pendingAdjustment.nodes.map((node: any, index: number) => (
-                <div key={node.id} className="border rounded p-2 bg-slate-50/50">
+                <div key={node.id} className="border border-slate-200 bg-slate-50/70 rounded-lg p-3">
                   <div className="font-medium break-words">
                     {index + 1}. {node.title}
                   </div>

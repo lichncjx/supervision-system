@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface WorkListPaginationProps {
   page: number;
@@ -39,16 +40,17 @@ export function WorkListPagination({
       </div>
       <div className="flex items-center gap-2">
         <span className="text-sm text-slate-400">每页</span>
-        <select
-          value={pageSize}
-          onChange={(e) => onPageSizeChange(Number(e.target.value))}
-          className="rounded-full border border-slate-200 h-8 px-3 text-sm text-slate-600 bg-slate-50"
-        >
-          <option value={10}>10</option>
-          <option value={20}>20</option>
-          <option value={50}>50</option>
-          <option value={100}>100</option>
-        </select>
+        <Select value={String(pageSize)} onValueChange={(v) => onPageSizeChange(Number(v))}>
+          <SelectTrigger className="rounded-full border border-slate-200 h-8 px-3 text-sm text-slate-600 bg-slate-50 w-[70px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="10">10</SelectItem>
+            <SelectItem value="20">20</SelectItem>
+            <SelectItem value="50">50</SelectItem>
+            <SelectItem value="100">100</SelectItem>
+          </SelectContent>
+        </Select>
         <span className="text-sm text-slate-400">条</span>
         <button
           onClick={handlePrev}

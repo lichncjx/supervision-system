@@ -60,13 +60,13 @@ export function PriorityMainWorkListItem({ item, routeType, getDepartmentName }:
       </div>
       {item.nodes && item.nodes.length > 0 && (
         <div className="mt-2 text-xs text-slate-600 space-y-1">
-          {item.nodes.map((node: any) => (
-            <div key={node.id} className="break-words">
+          {item.nodes.map((node: any, i: number) => (
+            <div key={node.id || i} className="break-words">
               <div>节点：{node.title}{node.completeTime ? `（节点完成时间：${node.completeTime}）` : ''}</div>
               {node.children && node.children.length > 0 && (
                 <div className="pl-4 text-slate-500">
-                  {node.children.map((child: any) => (
-                    <div key={child.id} className="break-words">
+                  {node.children.map((child: any, j: number) => (
+                    <div key={child.id || j} className="break-words">
                       - {child.title}
                       {child.completeTime ? `（完成日期：${child.completeTime}）` : ''}
                     </div>

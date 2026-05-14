@@ -30,6 +30,45 @@ function isSelectedCompanyApprover(user: User, work: Work) {
   return false
 }
 
+// 原子权限函数 —— 不含 ADMIN/SUPERVISOR，只判断普通业务角色能否办理
+
+export function canEditRegularDraftWork(
+  user: User | null | undefined,
+  work: Work,
+): boolean {
+  if (!user) return false
+  if (work.status !== 'draft') return false
+  if (isReturnedDraftWork(work)) return false
+  return work.creatorId === user.id
+}
+
+export function canSubmitDraftWork(
+  user: User | null | undefined,
+  work: Work,
+): boolean {
+  return canEditRegularDraftWork(user, work)
+}
+
+export function canHandleReturnedDraftWork(
+  user: User | null | undefined,
+  work: Work,
+): boolean {
+  if (!user) return false
+  if (!isReturnedDraftWork(work)) return false
+  return user.id === (work.firstSubmitterId ?? work.creatorId)
+}
+
+export function canDecomposeTodoWork(
+  user: User | null | undefined,
+  work: Work,
+): boolean {
+  if (!user) return false
+  if (work.type !== '待办') return false
+  if (work.status !== 'pending_decompose') return false
+  if (user.role !== 'DEPARTMENT_MANAGER' && user.role !== 'DEPARTMENT_LEADER') return false
+  return isWorkRelatedToDepartment(work, user.departmentId)
+}
+
 export function canHandleWork(
   user: User | null | undefined,
   work: Work,
@@ -37,23 +76,10 @@ export function canHandleWork(
   if (!user) return false
   if (user.role === 'SUPERVISOR' || user.role === 'ADMIN') return false
 
-  if (isReturnedDraftWork(work)) {
-    const submitterId = work.firstSubmitterId ?? work.creatorId
-    return submitterId === user.id
-  }
-  if (work.status === 'draft' && work.creatorId === user.id) return true
-  if (isReturnedDraftWork(work)) {
-    const submitterId = work.firstSubmitterId ?? work.creatorId
-    return submitterId === user.id
-  }
-  if (
-    work.type === '待办' &&
-    work.status === 'pending_decompose' &&
-    (user.role === 'DEPARTMENT_MANAGER' ||
-      user.role === 'DEPARTMENT_LEADER') &&
-    isWorkRelatedToDepartment(work, user.departmentId)
-  )
-    return true
+  if (canHandleReturnedDraftWork(user, work)) return true
+  if (canEditRegularDraftWork(user, work)) return true
+  if (canDecomposeTodoWork(user, work)) return true
+
   if (
     (work.type === '重点' || work.type === '主要') &&
     work.status === 'in_progress' &&
