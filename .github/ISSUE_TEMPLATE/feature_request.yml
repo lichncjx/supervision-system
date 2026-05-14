@@ -114,7 +114,7 @@ body:
       label: AI 开发约束
       description: 给 Claude / Codex / Trae / Copilot 等 AI Agent 的额外要求。
       placeholder: |
-        1. 请先阅读 AGENTS.md 和 docs/GitHub协作流程.md。
+        1. 请先阅读 AGENTS.md 和 docs/core/GitHub协作流程.md。
         2. 不要擅自重构数据库结构。
         3. 不要绕过服务端权限校验。
         4. 涉及统计时，必须保证首页数量与列表数量一致。

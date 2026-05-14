@@ -21,7 +21,7 @@ export interface Work {
   // departmentId: 事项唯一主责部门
   departmentId?: number
   departmentName?: string
-  // cooperators: 配合方列表 JSON，结构见 docs/责任事项方模型设计.md
+  // cooperators: 配合方列表 JSON，结构见 docs/design/责任事项方模型设计.md
   cooperators?: Cooperator[]
 
   // ---- 业务人员 ID 字段（xxxId = 真实关联字段，用于权限、流程、审批、待处理判断）----
