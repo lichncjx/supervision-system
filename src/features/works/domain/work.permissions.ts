@@ -253,7 +253,9 @@ export function canOperateWorkItem(
   user: PermissionUser,
   workItem: PermissionWorkItem,
 ): boolean {
-  if (user.role === Role.ADMIN || user.role === Role.SUPERVISOR) return true
+  // ADMIN/SUPERVISOR do not initiate workflow state changes.
+  // Attachment uploads are handled by canUploadAttachment's own bypass.
+  if (user.role === Role.ADMIN || user.role === Role.SUPERVISOR) return false
 
   const status = normalizeStatus(workItem.status)
   if (status === 'COMPLETED' || status === 'CANCELLED') return false
