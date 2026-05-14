@@ -13,7 +13,7 @@
 
 ## 工作流程
 
-1. 创建 feature/fix/logic 分支并提交 PR。
+1. 创建任务分支（feature/fix/logic/docs/chore）并提交 PR。
 2. Vercel 自动构建并生成 Preview 预览链接（出现在 PR 页面）。
 3. 在 Preview 环境中验收功能。
 4. 验收通过后合并 PR 到 main。
@@ -75,7 +75,7 @@ DATABASE_URL="postgresql://..." DIRECT_URL="postgresql://..." pnpm prisma:deploy
 pnpm prisma:generate
 ```
 
-- 涉及 migration 的变更（如 Phase 2 WorkItem 四列新增、Phase 3A Attachment.category 新增）合并到 `main` 后，需重新执行上述命令。
+- 涉及 Prisma schema 或 migration 变更合并到 `main` 后，需重新执行上述命令。
 
 - 可选：执行 `pnpm prisma:seed` 填充测试数据。
 - 每次 PR 部署使用同一套 schema，数据在 PR 之间可选择性清理。

@@ -98,9 +98,9 @@ docs/
 
 ## 后续建议
 
-以下问题在本轮文档重构中未处理，建议在后续 Issue 中单独处理：
+以下问题已在本轮或前一轮文档治理中处理，或待后续 Issue 单独处理：
 
-1. **内容重叠**：`docs/deploy/部署说明.md` 与 `docs/deploy/Vercel预览环境说明.md` 均涉及 Vercel/Supabase 环境配置，建议以 Vercel预览环境说明.md 为主进行合并。
-2. **业务规则交叉引用**：`docs/core/业务规则.md` 与 `docs/rules/` 下的专题文档存在部分重叠描述，建议后续逐一核对并消除重复。
-3. **历史字段残留**：`docs/deploy/部署说明-群晖.md` 中仍提及 Phase 2 的 `deptLeaderId`/`deptManagerId` 等已删除字段的回填说明，建议更新为当前字段体系。
-4. **待修复问题时效性**：`docs/release/待修复问题.md` 中的遗留事项已部分过时，建议重新评估并更新。
+1. **内容重叠（待后续合并）**：`docs/deploy/部署说明.md` 与 `docs/deploy/Vercel预览环境说明.md` 均涉及 Vercel/Supabase 环境配置。本轮已添加交叉引用，后续可评估合并。
+2. **业务规则交叉引用（待后续核对）**：`docs/core/业务规则.md` 与 `docs/rules/` 下的专题文档存在部分重叠描述，建议后续逐一核对并消除重复。
+3. **历史字段残留（已修复）**：`docs/deploy/部署说明-群晖.md` 中 Phase 2 的 `deptLeaderId`/`deptManagerId` 等已删除字段的回填说明已更新为当前字段体系。
+4. **待修复问题时效性（待后续评估）**：`docs/release/待修复问题.md` 中的遗留事项已部分过时，建议重新评估并更新。
