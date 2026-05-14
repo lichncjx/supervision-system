@@ -43,7 +43,6 @@ export {
   updateWork,
   deleteWork,
   resubmitRejectedWork,
-  getFilteredWorks,
 } from '@/features/works/client/work-api'
 export {
   approveWork,

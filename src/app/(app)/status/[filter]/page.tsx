@@ -8,11 +8,8 @@ import { useAuth } from '@/components/providers/auth-provider';
 import {
   getWorkDueDate,
   queryWorks,
-  canHandleWork,
-  canApproveWork,
   sortWorksByDueDate,
   getVisibleWorks,
-  isSupervisorTrackingWork,
   type WorkStatusFilter,
   type WorkType,
   type Work,
@@ -112,7 +109,7 @@ export default function StatusFilterPage() {
   const safeFilterTitle = filterTitle[safeFilter] || '事项列表';
 
   const queryStatus =
-    ['all', 'draft', 'returnedDraft', 'pendingDecompose', 'inProgress', 'completed', 'cancelled', 'overdue', 'expiring'].includes(safeFilter)
+    ['all', 'draft', 'returnedDraft', 'pendingDecompose', 'inProgress', 'completed', 'cancelled', 'overdue', 'expiring', 'approving', 'handling'].includes(safeFilter)
       ? (safeFilter as WorkStatusFilter)
       : 'all';
 
@@ -151,20 +148,6 @@ export default function StatusFilterPage() {
       let filteredList = newList;
       if (monthFilter) {
         filteredList = filteredList.filter((work) => getWorkMonth(work) === monthFilter);
-      }
-
-      if (safeFilter === 'approving') {
-        filteredList = filteredList.filter((w) =>
-          user?.role === 'SUPERVISOR'
-            ? isSupervisorTrackingWork(w)
-            : canApproveWork(user, w)
-        );
-      } else if (safeFilter === 'handling') {
-        filteredList = filteredList.filter((w) =>
-          user?.role === 'SUPERVISOR'
-            ? isSupervisorTrackingWork(w)
-            : canHandleWork(user, w)
-        );
       }
 
       setList(sortWorksByDueDate(filteredList));

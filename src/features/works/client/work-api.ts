@@ -1,13 +1,6 @@
 import { isCompanyLevel, type User } from '@/lib/auth'
-import {
-  isReturnedDraftWork,
-  isWorkStatusInProgress,
-  isWorkStatusInPendingApprovalFilter,
-} from '@/lib/work-status'
 import type { WorkType, WorkQuery } from '@/features/works/domain/work-client.types'
-import type { Work, WorkEditablePatch, WorkFilter } from './work-view.types'
-import { canHandleWork } from './work-client-permissions'
-import { isOverdueWork, isExpiringWork } from './work-date.utils'
+import type { Work, WorkEditablePatch } from './work-view.types'
 import { sortWorksByDueDate } from './work-sort'
 import { isWorkRelatedToDepartment, isCompanyVisibleWork } from './work-filters'
 import { transformWorkFromAPI } from './work-view-model'
@@ -61,39 +54,36 @@ export async function getWorkById(id: number): Promise<Work | undefined> {
   }
 }
 
+const CLIENT_TYPE_TO_SERVER: Record<string, string> = {
+  '重点': 'priority',
+  '主要': 'main',
+  '待办': 'todo',
+}
+
 export async function queryWorks(
   user: User | null | undefined,
   query: WorkQuery,
 ): Promise<Work[]> {
-  let list = await getVisibleWorks(user)
+  const params = new URLSearchParams()
+  if (query.type && query.type !== '全部')
+    params.set('type', CLIENT_TYPE_TO_SERVER[query.type] || query.type)
+  if (query.status && query.status !== 'all')
+    params.set('status', query.status)
+  if (query.departmentId && query.departmentId !== '全部')
+    params.set('departmentId', String(query.departmentId))
+  if (query.keyword && query.keyword.trim())
+    params.set('keyword', query.keyword.trim())
 
-  if (query.type && query.type !== '全部') list = list.filter((w) => w.type === query.type)
-  if (query.departmentId && query.departmentId !== '全部') {
-    list = list.filter((w) => isWorkRelatedToDepartment(w, Number(query.departmentId)))
+  const url = `/api/works${params.toString() ? '?' + params.toString() : ''}`
+
+  try {
+    const response = await fetch(url, { credentials: 'include' })
+    if (!response.ok) return []
+    const data = await response.json()
+    return data.map(transformWorkFromAPI)
+  } catch {
+    return []
   }
-  if (query.status && query.status !== 'all') {
-    if (query.status === 'approving') list = list.filter((w) => isWorkStatusInPendingApprovalFilter(w.status))
-    if (query.status === 'handling') list = list.filter((w) => canHandleWork(user, w))
-    if (query.status === 'draft') list = list.filter((w) => w.status === 'draft' && !isReturnedDraftWork(w))
-    if (query.status === 'returnedDraft') list = list.filter((w) => isReturnedDraftWork(w))
-    if (query.status === 'pendingDecompose') list = list.filter((w) => w.status === 'pending_decompose')
-    if (query.status === 'inProgress') list = list.filter((w) => isWorkStatusInProgress(w.status))
-    if (query.status === 'completed') list = list.filter((w) => w.status === 'completed')
-    if (query.status === 'cancelled') list = list.filter((w) => w.status === 'cancelled')
-    if (query.status === 'overdue') list = list.filter((w) => isOverdueWork(w))
-    if (query.status === 'expiring') list = list.filter((w) => isExpiringWork(w))
-  }
-  if (query.keyword && query.keyword.trim()) {
-    const keyword = query.keyword.trim()
-    list = list.filter((w) =>
-      [w.title, w.workItem, w.description, w.businessCategory,
-       w.proposedLeader, w.proposedScene, w.responsibleLeader,
-       w.responsiblePerson, w.progress, w.workPlan]
-        .filter(Boolean)
-        .some((v) => String(v).includes(keyword)),
-    )
-  }
-  return sortWorksByDueDate(list)
 }
 
 export async function addWork(work: Omit<Work, 'createdAt' | 'updatedAt'>): Promise<Work> {
@@ -182,21 +172,3 @@ export async function resubmitRejectedWork(work: Work, user: User, patch: WorkEd
   return await getWorkById(work.id)
 }
 
-export async function getFilteredWorks(
-  user: User | null | undefined,
-  filter: WorkFilter,
-): Promise<Work[]> {
-  const list = await getVisibleWorks(user)
-  if (filter === 'all') return list
-  if (filter === 'draft') return list.filter((w) => w.status === 'draft' && !isReturnedDraftWork(w))
-  if (filter === 'returnedDraft') return list.filter((w) => isReturnedDraftWork(w))
-  if (filter === 'pendingDecompose') return list.filter((w) => w.status === 'pending_decompose')
-  if (filter === 'approving') return list.filter((w) => isWorkStatusInPendingApprovalFilter(w.status))
-  if (filter === 'handling') return list.filter((w) => canHandleWork(user, w))
-  if (filter === 'inProgress') return list.filter((w) => isWorkStatusInProgress(w.status))
-  if (filter === 'completed') return list.filter((w) => w.status === 'completed')
-  if (filter === 'cancelled') return list.filter((w) => w.status === 'cancelled')
-  if (filter === 'overdue') return list.filter((w) => isOverdueWork(w))
-  if (filter === 'expiring') return list.filter((w) => isExpiringWork(w))
-  return list
-}
