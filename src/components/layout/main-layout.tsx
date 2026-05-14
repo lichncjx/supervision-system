@@ -181,7 +181,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                       'flex items-center gap-2 px-3.5 py-1.5 text-sm font-medium rounded-full transition-all duration-200',
                       active
                         ? 'bg-slate-900 text-white shadow-sm shadow-slate-900/10'
-                        : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100/80'
+                        : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100/80'
                     )}
                   >
                     <Icon className={cn('h-3.5 w-3.5', active ? 'text-white/80' : item.color)} />
