@@ -6,7 +6,7 @@ import {
   WorkItemType,
   ApprovalType,
 } from '@prisma/client'
-import { isReturnedDraftWork } from './work-status.rules'
+import { isReturnedDraftWork, isReturnedInProgressWork } from './work-status.rules'
 
 const GLOBAL_VIEW_ROLES: Role[] = [Role.ADMIN, Role.SUPERVISOR]
 const DEPARTMENT_ROLES: Role[] = [Role.DEPARTMENT_MANAGER, Role.DEPARTMENT_LEADER]
@@ -252,24 +252,33 @@ export function canHandleWorkItem(
   const status = normalizeStatus(workItem.status)
   const returnedDraftOwnerId =
     workItem.firstSubmitterId ?? workItem.creatorId
-  const returnedDraft = isReturnedDraftWork(workItem)
 
-  if (status === WorkItemStatus.DRAFT && returnedDraft) {
+  // DRAFT (returned from proposal rejection): only firstSubmitterId/creatorId
+  if (status === WorkItemStatus.DRAFT && isReturnedDraftWork(workItem)) {
+    return returnedDraftOwnerId === user.id
+  }
+
+  // IN_PROGRESS (returned from adjust/cancel/complete rejection): only firstSubmitterId/creatorId
+  if (status === WorkItemStatus.IN_PROGRESS && isReturnedInProgressWork(workItem)) {
     return returnedDraftOwnerId === user.id
   }
 
   if (isDepartmentLevelRole(user.role)) {
     if (!isWorkMainResponsibleDepartment(workItem, user.departmentId))
       return false
-    if (status === WorkItemStatus.DRAFT && returnedDraftOwnerId === user.id)
-      return true
-    return (
-      status === WorkItemStatus.DRAFT ||
-      status === WorkItemStatus.PENDING_DECOMPOSE ||
-      status === WorkItemStatus.IN_PROGRESS
-    )
+
+    // PENDING_DECOMPOSE: main-responsible-department department-level roles
+    if (status === WorkItemStatus.PENDING_DECOMPOSE) return true
+
+    // DRAFT (non-returned): only the creator within the main responsible department
+    if (status === WorkItemStatus.DRAFT) {
+      return workItem.creatorId === user.id
+    }
+
+    return false
   }
 
+  // Non-department roles (VICE_PRESIDENT, PRESIDENT): DRAFT only for creator/firstSubmitter
   if (status === WorkItemStatus.DRAFT) {
     return returnedDraftOwnerId === user.id
   }
