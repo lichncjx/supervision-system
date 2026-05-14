@@ -24,7 +24,7 @@
 | 任何开发任务 | `AGENTS.md`、`docs/core/GitHub协作流程.md` |
 | 项目背景、模块、目录、接口概览 | `docs/core/项目说明.md` |
 | 权限、审批流、状态机、统计口径 | `docs/core/业务规则.md` |
-| 业务人员字段、人员体系、附件权限 | `docs/core/业务人员与附件权限规则.md` |
+| 业务人员字段、人员体系、附件权限 | `docs/rules/业务人员与附件权限规则.md` |
 | Git 分支、Issue、PR、CI | `docs/core/GitHub协作流程.md` |
 | 群晖部署、迁移、运维排查 | `docs/deploy/部署说明-群晖.md` |
 | 发布前验证 | `docs/release/测试发布检查清单.md` |
@@ -36,7 +36,7 @@
 - `CLAUDE.md`：Claude Code 轻量入口，只引用 `AGENTS.md` 和必要文档，不重复规则正文。
 - `README.md`：新开发者快速上手和文档导航，不承载完整业务规则、部署步骤或 Git 流程。
 - `docs/core/业务规则.md`：权限、审批流、状态机、统计口径的唯一权威文档。
-- `docs/core/业务人员与附件权限规则.md`：业务人员字段命名体系、人员分类、附件机制和附件权限的集中参考。
+- `docs/rules/业务人员与附件权限规则.md`：业务人员字段命名体系、人员分类、附件机制和附件权限的集中参考。
 - `docs/core/项目说明.md`：项目背景、功能模块、目录结构、数据模型和 API 概览。
 - `docs/core/GitHub协作流程.md`：Issue、分支、PR、CI、验收流程。
 - `docs/deploy/部署说明-群晖.md`：部署、迁移、运维排查的唯一权威文档。

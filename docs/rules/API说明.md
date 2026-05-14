@@ -1,19 +1,14 @@
 # API说明
 
-## 当前状态口径
-
-当前系统运行态统一为 9 状态：`DRAFT`、`PENDING_DECOMPOSE`、`PROPOSING`、`IN_PROGRESS`、`ADJUSTING`、`CANCELLING`、`COMPLETING`、`COMPLETED`、`CANCELLED`。`REJECTED` 已取消，退回待修改由 `DRAFT` + 退回痕迹派生；`APPROVED` 已取消，立项通过后进入 `IN_PROGRESS`；完成审批统一为 `COMPLETING`；取消审批统一为 `CANCELLING`。
+> 当前系统运行态为 9 状态，详见 [状态机设计](状态机设计.md)。
 
 ## 首页调用链
 
-PR 6.3 后首页调用链为：
+首页通过 `GET /api/dashboard` 获取 `summary`、`lists.expiringAndOverdue`、`lists.myActionRequired`。首页不再通过 `/api/works` 或 `getVisibleWorks(user)` 拉全量事项后前端计算列表。
 
-| 调用 | 用途 | 说明 |
-| --- | --- | --- |
-| `GET /api/dashboard` | 首页卡片统计、临超期轻量列表、待处理轻量列表 | 首页不再通过 `/api/works` 或 `getVisibleWorks(user)` 拉全量事项后前端计算列表 |
-| `GET /api/excel/completion-rate` | 管理员 / 督办导出完成率 | 仍独立提供，未并入 `GET /api/dashboard` |
+`GET /api/dashboard/summary` 继续保留兼容，并与 `GET /api/dashboard` 复用同一套 summary 计算 helper。
 
-`GET /api/dashboard/summary` 继续保留兼容，并与 `GET /api/dashboard.summary` 复用同一套 summary 计算 helper。
+完成率由 `GET /api/dashboard/completion-rate` / `GET /api/excel/completion-rate` 独立提供，未并入 `GET /api/dashboard`。
 
 ## GET /api/dashboard
 
@@ -63,6 +58,54 @@ GET /api/dashboard?limit=5
 
 `inProgressCount` 只统计 `IN_PROGRESS`，`completingCount` 只统计 `COMPLETING`。`thisMonthDue` 仅为 `expiring` 的兼容别名。
 
+### Summary 字段口径
+
+| 字段 | 当前口径 |
+| --- | --- |
+| `total` | 当前用户可见事项总数 |
+| `priorityTotal` / `mainTotal` / `todoTotal` | 当前用户可见范围内按事项类型统计 |
+| `priorityCompleted` / `mainCompleted` / `todoCompleted` | 对应类型中 `COMPLETED` 数量 |
+| `pendingApprovalCount` | `canApproveWorkItem(user, work)` 为 true |
+| `pendingHandlingCount` | `canHandleWorkItem(user, work)` 为 true |
+| `myActionRequiredCount` | `pendingApprovalCount + pendingHandlingCount` |
+| `inProgressCount` | 只统计 `IN_PROGRESS` |
+| `completingCount` | 只统计 `COMPLETING` |
+| `completedCount` | `COMPLETED` |
+| `cancelledCount` | `CANCELLED` |
+| `expiringCount` | 非终态且计划时间在当前日期起 7 天窗口内 |
+| `overdueCount` | 非终态且计划时间早于当前日期 |
+
+兼容字段 `approving`、`handling`、`inProgress`、`completing`、`completed`、`cancelled`、`expiring`、`overdue`、`thisMonthDue` 仍保留。
+
+### 派生展示口径
+
+“退回待修改”不是数据库状态，不写入 `WorkItemStatus`。页面和筛选按以下规则派生：
+
+`status = DRAFT`，且存在 `rejectReason`、`rejectedFromStatus`、`rejectedAt`，或最新 workflow record 为 `reject` / `rejected`。
+
+普通草稿仍显示为”草稿”；符合上述规则的草稿显示为”退回待修改”。退回待修改的办理人优先按 `firstSubmitterId` 判断，兼容历史数据时回退到 `creatorId`。
+
+### 状态页和列表页筛选
+
+| 筛选 | 当前口径 |
+| --- | --- |
+| 草稿 | `DRAFT` 且无退回痕迹 |
+| 退回待修改 | `DRAFT` + 退回痕迹 |
+| 待分解 | `PENDING_DECOMPOSE` |
+| 审批中 | `PROPOSING` / `ADJUSTING` / `CANCELLING` / `COMPLETING` |
+| 待办理 | `canHandleWorkItem(user, work)` |
+| 进行中 | `IN_PROGRESS` |
+| 已完成 | `COMPLETED` |
+| 已取消 | `CANCELLED` |
+| 临期 | 非 `COMPLETED` / `CANCELLED` 且计划时间在 7 天窗口内 |
+| 超期 | 非 `COMPLETED` / `CANCELLED` 且计划时间早于当前日期 |
+
+### 轻量列表
+
+`lists.expiringAndOverdue` 只返回当前用户可见、非终态、临期或超期事项，按超期优先和计划时间升序排序。
+
+`lists.myActionRequired` 只返回 `canApproveWorkItem` 或 `canHandleWorkItem` 命中的事项。`SUPERVISOR` 的督办跟踪口径仍未拆分为独立字段，继续作为后续遗留项。
+
 ## WorkDashboardItem
 
 首页轻量列表不返回完整 `WorkItem`：
@@ -71,7 +114,7 @@ GET /api/dashboard?limit=5
 {
   id: number;
   title: string;
-  type: "PRIORITY" | "MAIN" | "TODO";
+  type: “PRIORITY” | “MAIN” | “TODO”;
   typeLabel: string;
   status: string;
   statusLabel: string;
@@ -89,7 +132,7 @@ GET /api/dashboard?limit=5
   dueTime: string | null;
   isOverdue: boolean;
   isExpiring: boolean;
-  actionType: "approval" | "handling" | "view";
+  actionType: “approval” | “handling” | “view”;
   currentApproverName: string | null;
 }
 ```
@@ -127,4 +170,4 @@ GET /api/dashboard?limit=5
 
 `GET /api/excel/export` 的数据范围与 `/api/works` 可见范围一致，并使用统一状态元数据输出状态文案。导出状态筛选同样不接受旧状态值。
 
-`POST /api/excel/import/[type]` 普通导入默认创建 `DRAFT`，状态列仅允许空、`DRAFT` 或“草稿”；审批中、进行中、终态和旧状态不得通过普通导入写入，必须通过 workflow 流转。
+`POST /api/excel/import/[type]` 普通导入默认创建 `DRAFT`，状态列仅允许空、`DRAFT` 或”草稿”；审批中、进行中、终态和旧状态不得通过普通导入写入，必须通过 workflow 流转。
