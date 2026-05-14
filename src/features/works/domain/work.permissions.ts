@@ -333,10 +333,7 @@ export function canEditWorkItem(
     return true
   }
 
-  return (
-    isDepartmentLevelRole(user.role) &&
-    isWorkMainResponsibleDepartment(workItem, user.departmentId)
-  )
+  return false
 }
 
 export function canCreateWork(user: PermissionUser): boolean {
