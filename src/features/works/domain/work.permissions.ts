@@ -269,7 +269,7 @@ export function canOperateWorkItem(
         status === WorkItemStatus.PENDING_DECOMPOSE
       )
         return true
-      if (status === WorkItemStatus.DRAFT && workItem.creatorId === user.id)
+      if (status === WorkItemStatus.DRAFT && ownerId === user.id)
         return true
       return false
     }
