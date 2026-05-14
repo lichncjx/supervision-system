@@ -108,7 +108,7 @@ body:
     attributes:
       label: AI 开发约束
       placeholder: |
-        1. 请先阅读 AGENTS.md 和 docs/GitHub协作流程.md。
+        1. 请先阅读 AGENTS.md 和 docs/core/GitHub协作流程.md。
         2. 请先分析影响范围，不要直接编码。
         3. 不要擅自重构数据库。
         4. 不要删除历史审批记录。
