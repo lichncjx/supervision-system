@@ -2,6 +2,7 @@ import { Role, WorkItemStatus, WorkItemType } from '@prisma/client'
 import {
   canApproveWorkItem,
   canHandleWorkItem,
+  canOperateWorkItem,
   isWorkMainResponsibleDepartment,
   type PermissionWorkItem,
 } from '@/features/works/domain/work.permissions'
@@ -117,6 +118,13 @@ export function canUserHandle(
   workItem: PermissionWorkItem,
 ) {
   return canHandleWorkItem(toPermissionUser(user), workItem)
+}
+
+export function canUserOperate(
+  user: UserSession,
+  workItem: PermissionWorkItem,
+) {
+  return canOperateWorkItem(toPermissionUser(user), workItem)
 }
 
 export function canUserCancelDraft(

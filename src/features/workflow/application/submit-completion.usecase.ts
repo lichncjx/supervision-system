@@ -1,7 +1,7 @@
 import { ActionType, ApprovalType, WorkItemStatus, WorkItemType } from '@prisma/client'
 import type { UserSession, WorkflowResult } from '@/features/workflow/domain/workflow.types'
 import {
-  canUserHandle,
+  canUserOperate,
   companyLeaderAssignment,
   getProcessFirstApprover,
 } from '@/features/workflow/domain/workflow.rules'
@@ -27,7 +27,7 @@ export async function submitCompletion(
     return { success: false, error: '只有进行中事项可以提交完成申请' }
   }
 
-  if (!canUserHandle(user, workItem)) {
+  if (!canUserOperate(user, workItem)) {
     return { success: false, error: '无权提交完成申请' }
   }
 
@@ -45,6 +45,8 @@ export async function submitCompletion(
     approvalType: ApprovalType.COMPLETE,
     currentApproverId: approver.currentApproverId,
     currentApproverRole: approver.currentApproverRole,
+    rejectReason: null,
+    rejectedFromStatus: null,
   })
 
   await createWorkflowRecord({

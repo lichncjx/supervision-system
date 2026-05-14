@@ -1,7 +1,7 @@
 import { Role } from '@prisma/client'
 import {
   canViewWorkItem,
-  canHandleWorkItem,
+  canOperateWorkItem,
 } from '@/features/works/domain/work.permissions'
 import type { AttPermUser, AttPermWorkItem, AttPermAttachment } from './attachment.types'
 
@@ -26,7 +26,7 @@ export function canUploadAttachment(
   )
     return false
 
-  return canHandleWorkItem(user, workItem)
+  return canOperateWorkItem(user, workItem)
 }
 
 export function canDeleteAttachment(

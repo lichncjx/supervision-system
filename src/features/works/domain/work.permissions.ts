@@ -286,6 +286,45 @@ export function canHandleWorkItem(
   return false
 }
 
+/**
+ * Broad operation permission for workflow actions (submit completion, adjust, cancel)
+ * and attachment uploads on non-terminal items.
+ *
+ * Differs from canHandleWorkItem (which is narrow — 待办理 only).
+ * IN_PROGRESS for department roles in the main responsible department passes here
+ * but does NOT pass canHandleWorkItem (unless returned).
+ */
+export function canOperateWorkItem(
+  user: PermissionUser,
+  workItem: PermissionWorkItem,
+): boolean {
+  if (user.role === Role.ADMIN || user.role === Role.SUPERVISOR) return true
+
+  const status = normalizeStatus(workItem.status)
+  if (status === 'COMPLETED' || status === 'CANCELLED') return false
+
+  if (isDepartmentLevelRole(user.role)) {
+    if (!isWorkMainResponsibleDepartment(workItem, user.departmentId))
+      return false
+    return (
+      status === WorkItemStatus.IN_PROGRESS ||
+      status === WorkItemStatus.PENDING_DECOMPOSE
+    )
+  }
+
+  const ownerId = workItem.firstSubmitterId ?? workItem.creatorId
+  if (
+    ownerId === user.id &&
+    (status === WorkItemStatus.DRAFT ||
+      status === WorkItemStatus.IN_PROGRESS ||
+      status === WorkItemStatus.PENDING_DECOMPOSE)
+  ) {
+    return true
+  }
+
+  return false
+}
+
 export function canEditWorkItem(
   user: PermissionUser,
   workItem: PermissionWorkItem,
