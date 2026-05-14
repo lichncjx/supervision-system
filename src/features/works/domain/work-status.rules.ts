@@ -63,6 +63,28 @@ export function isReturnedDraftWork(
   return latestAction === 'reject' || latestAction === 'rejected'
 }
 
+export function isReturnedInProgressWork(
+  work: ReturnedDraftLike | null | undefined,
+): boolean {
+  if (!work || normalizeWorkStatus(work.status) !== 'in_progress') return false
+
+  if (
+    hasValue(work.rejectReason) ||
+    hasValue(work.rejectedFromStatus) ||
+    hasValue(work.rejectedAt)
+  ) {
+    return true
+  }
+
+  const latestRecord = Array.isArray(work.workflowRecords)
+    ? work.workflowRecords[0]
+    : null
+  const latestAction = String(
+    latestRecord?.action || latestRecord?.actionType || '',
+  ).toLowerCase()
+  return latestAction === 'reject' || latestAction === 'rejected'
+}
+
 export function getWorkStatusLabel(status: unknown): string {
   return getWorkStatusMeta(status)?.label || String(status)
 }

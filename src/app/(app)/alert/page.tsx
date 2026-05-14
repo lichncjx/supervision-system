@@ -8,10 +8,7 @@ import { AlertTriangle, Eye } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { getDepartments } from '@/lib/auth';
 import {
-  getVisibleWorks,
-  isExpiringWork,
-  isOverdueWork,
-  sortWorksByDueDate,
+  queryWorks,
   type Work,
 } from '@/lib/work-store';
 import { StatusBadge } from '@/features/works/ui/badges';
@@ -20,7 +17,8 @@ import { WorkSearchBar } from '@/features/works/ui/work-search-bar';
 
 export default function AlertPage() {
   const { user } = useAuth();
-  const [works, setWorks] = useState<Work[]>([]);
+  const [expiringWorks, setExpiringWorks] = useState<Work[]>([]);
+  const [overdueWorks, setOverdueWorks] = useState<Work[]>([]);
   const [tab, setTab] = useState<'expiring' | 'overdue' | 'all'>('expiring');
   const [keyword, setKeyword] = useState('');
   const [departments, setDepartments] = useState<Array<{ id: number; name: string; code: string; isBusiness: boolean }>>([]);
@@ -34,8 +32,12 @@ export default function AlertPage() {
   }, []);
 
   const load = async () => {
-    const worksData = await getVisibleWorks(user);
-    setWorks([...worksData]);
+    const [expiring, overdue] = await Promise.all([
+      queryWorks(user, { status: 'expiring' } as any),
+      queryWorks(user, { status: 'overdue' } as any),
+    ]);
+    setExpiringWorks(expiring);
+    setOverdueWorks(overdue);
   };
 
   useEffect(() => {
@@ -43,20 +45,19 @@ export default function AlertPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
-  const expiringCount = useMemo(
-    () => works.filter((w) => isExpiringWork(w)).length,
-    [works]
-  );
-  const overdueCount = useMemo(
-    () => works.filter((w) => isOverdueWork(w)).length,
-    [works]
-  );
+  const expiringCount = expiringWorks.length;
+  const overdueCount = overdueWorks.length;
 
-  const baseList = useMemo(() => {
-    const expiring = sortWorksByDueDate(works.filter((w) => isExpiringWork(w)));
-    const overdue = sortWorksByDueDate(works.filter((w) => isOverdueWork(w)));
-    return tab === 'expiring' ? expiring : tab === 'overdue' ? overdue : works;
-  }, [works, tab]);
+  const allWorks = useMemo(() => {
+    const seen = new Set<number>();
+    const merged: Work[] = [];
+    for (const w of [...expiringWorks, ...overdueWorks]) {
+      if (!seen.has(w.id)) { seen.add(w.id); merged.push(w); }
+    }
+    return merged;
+  }, [expiringWorks, overdueWorks]);
+
+  const baseList = tab === 'expiring' ? expiringWorks : tab === 'overdue' ? overdueWorks : allWorks;
 
   const { list, total, totalPages, page, setPage, pageSize, setPageSize } =
     useSearchAndPagination(baseList, keyword, [tab, keyword]);

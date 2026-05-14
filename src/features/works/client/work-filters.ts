@@ -22,6 +22,14 @@ export function isWorkRelatedToDepartment(
   return getWorkDepartmentIds(work).includes(Number(departmentId))
 }
 
+export function isWorkMainResponsibleDepartment(
+  work: Work,
+  departmentId?: number | null,
+) {
+  if (!departmentId) return false
+  return Number(work.departmentId) === Number(departmentId)
+}
+
 export function isCompanyVisibleWork(work: Work) {
   if (work.type !== '重点' && work.type !== '主要') return true
   const companyVisibleStatuses: Status[] = [

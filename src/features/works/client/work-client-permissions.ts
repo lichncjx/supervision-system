@@ -1,8 +1,8 @@
 import type { User } from '@/lib/auth'
 import type { Work } from '@/features/works/client/work-view.types'
 import type { Status } from '@/features/works/domain/work-client.types'
-import { isReturnedDraftWork } from '@/lib/work-status'
-import { isWorkRelatedToDepartment } from './work-filters'
+import { isReturnedDraftWork, isReturnedInProgressWork } from '@/lib/work-status'
+import { isWorkRelatedToDepartment, isWorkMainResponsibleDepartment } from './work-filters'
 
 function isSelectedCompanyApprover(user: User, work: Work) {
   if (user.role === 'ADMIN' || user.role === 'SUPERVISOR') return false
@@ -58,6 +58,15 @@ export function canHandleReturnedDraftWork(
   return user.id === (work.firstSubmitterId ?? work.creatorId)
 }
 
+export function canHandleReturnedInProgressWork(
+  user: User | null | undefined,
+  work: Work,
+): boolean {
+  if (!user) return false
+  if (!isReturnedInProgressWork(work)) return false
+  return user.id === (work.firstSubmitterId ?? work.creatorId)
+}
+
 export function canDecomposeTodoWork(
   user: User | null | undefined,
   work: Work,
@@ -66,7 +75,7 @@ export function canDecomposeTodoWork(
   if (work.type !== '待办') return false
   if (work.status !== 'pending_decompose') return false
   if (user.role !== 'DEPARTMENT_MANAGER' && user.role !== 'DEPARTMENT_LEADER') return false
-  return isWorkRelatedToDepartment(work, user.departmentId)
+  return isWorkMainResponsibleDepartment(work, user.departmentId)
 }
 
 export function canHandleWork(
@@ -79,23 +88,8 @@ export function canHandleWork(
   if (canHandleReturnedDraftWork(user, work)) return true
   if (canEditRegularDraftWork(user, work)) return true
   if (canDecomposeTodoWork(user, work)) return true
+  if (canHandleReturnedInProgressWork(user, work)) return true
 
-  if (
-    (work.type === '重点' || work.type === '主要') &&
-    work.status === 'in_progress' &&
-    (user.role === 'DEPARTMENT_MANAGER' ||
-      user.role === 'DEPARTMENT_LEADER') &&
-    isWorkRelatedToDepartment(work, user.departmentId)
-  )
-    return true
-  if (
-    work.type === '待办' &&
-    work.status === 'in_progress' &&
-    (user.role === 'DEPARTMENT_MANAGER' ||
-      user.role === 'DEPARTMENT_LEADER') &&
-    isWorkRelatedToDepartment(work, user.departmentId)
-  )
-    return true
   return false
 }
 

@@ -6,7 +6,7 @@ import {
   WorkItemType,
   ApprovalType,
 } from '@prisma/client'
-import { isReturnedDraftWork } from './work-status.rules'
+import { isReturnedDraftWork, isReturnedInProgressWork } from './work-status.rules'
 
 const GLOBAL_VIEW_ROLES: Role[] = [Role.ADMIN, Role.SUPERVISOR]
 const DEPARTMENT_ROLES: Role[] = [Role.DEPARTMENT_MANAGER, Role.DEPARTMENT_LEADER]
@@ -243,38 +243,76 @@ export function canApproveWorkItem(
   return false
 }
 
-export function canHandleWorkItem(
+/**
+ * Broad operation permission for workflow actions (submit completion, adjust, cancel)
+ * and attachment uploads on non-terminal items.
+ *
+ * This is the foundation — shouldHandleWorkItem builds on it by narrowing.
+ */
+export function canOperateWorkItem(
+  user: PermissionUser,
+  workItem: PermissionWorkItem,
+): boolean {
+  // ADMIN/SUPERVISOR do not initiate workflow state changes.
+  // Attachment uploads are handled by canUploadAttachment's own bypass.
+  if (user.role === Role.ADMIN || user.role === Role.SUPERVISOR) return false
+
+  const status = normalizeStatus(workItem.status)
+  if (status === 'COMPLETED' || status === 'CANCELLED') return false
+
+  const ownerId = workItem.firstSubmitterId ?? workItem.creatorId
+
+  if (isDepartmentLevelRole(user.role)) {
+    if (isWorkMainResponsibleDepartment(workItem, user.departmentId)) {
+      if (
+        status === WorkItemStatus.IN_PROGRESS ||
+        status === WorkItemStatus.PENDING_DECOMPOSE
+      )
+        return true
+      if (status === WorkItemStatus.DRAFT && ownerId === user.id)
+        return true
+      return false
+    }
+    // Not main dept, but owner can still operate on own non-terminal items
+    if (ownerId !== user.id) return false
+    return status !== 'COMPLETED' && status !== 'CANCELLED'
+  }
+
+  // Non-department roles: operate on own non-terminal items
+  if (ownerId !== user.id) return false
+  return status !== 'COMPLETED' && status !== 'CANCELLED'
+}
+
+/**
+ * Narrow handling check — only items that require immediate user action (待办理).
+ *
+ * Builds on canOperateWorkItem and further narrows:
+ * - ADMIN/SUPERVISOR never have 待办理.
+ * - IN_PROGRESS only counts when returned from approval (rejected adjust/cancel/complete).
+ * - DRAFT (non-returned) for department roles outside their main department is excluded.
+ */
+export function shouldHandleWorkItem(
   user: PermissionUser,
   workItem: PermissionWorkItem,
 ): boolean {
   if (user.role === Role.ADMIN || user.role === Role.SUPERVISOR) return false
+  if (!canOperateWorkItem(user, workItem)) return false
 
   const status = normalizeStatus(workItem.status)
-  const returnedDraftOwnerId =
-    workItem.firstSubmitterId ?? workItem.creatorId
-  const returnedDraft = isReturnedDraftWork(workItem)
+  const ownerId = workItem.firstSubmitterId ?? workItem.creatorId
 
-  if (status === WorkItemStatus.DRAFT && returnedDraft) {
-    return returnedDraftOwnerId === user.id
-  }
+  if (status === WorkItemStatus.IN_PROGRESS)
+    return isReturnedInProgressWork(workItem) && ownerId === user.id
 
-  if (isDepartmentLevelRole(user.role)) {
-    if (!isWorkMainResponsibleDepartment(workItem, user.departmentId))
-      return false
-    if (status === WorkItemStatus.DRAFT && returnedDraftOwnerId === user.id)
-      return true
-    return (
-      status === WorkItemStatus.DRAFT ||
-      status === WorkItemStatus.PENDING_DECOMPOSE ||
-      status === WorkItemStatus.IN_PROGRESS
-    )
-  }
+  if (
+    status === WorkItemStatus.DRAFT &&
+    !isReturnedDraftWork(workItem) &&
+    isDepartmentLevelRole(user.role) &&
+    !isWorkMainResponsibleDepartment(workItem, user.departmentId)
+  )
+    return false
 
-  if (status === WorkItemStatus.DRAFT) {
-    return returnedDraftOwnerId === user.id
-  }
-
-  return false
+  return true
 }
 
 export function canEditWorkItem(
@@ -297,10 +335,7 @@ export function canEditWorkItem(
     return true
   }
 
-  return (
-    isDepartmentLevelRole(user.role) &&
-    isWorkMainResponsibleDepartment(workItem, user.departmentId)
-  )
+  return false
 }
 
 export function canCreateWork(user: PermissionUser): boolean {

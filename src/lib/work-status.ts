@@ -15,6 +15,7 @@ export {
   normalizeWorkStatus,
   getWorkStatusMeta,
   isReturnedDraftWork,
+  isReturnedInProgressWork,
   getWorkStatusLabel,
   getWorkDisplayStatusLabel,
   getWorkStatusDescription,

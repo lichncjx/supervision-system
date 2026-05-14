@@ -1,7 +1,7 @@
 import { ActionType, ApprovalType, WorkItemStatus } from '@prisma/client'
 import type { UserSession, WorkflowResult } from '@/features/workflow/domain/workflow.types'
 import {
-  canUserHandle,
+  canUserOperate,
   canUserCancelDraft,
   ensureMainResponsibleDepartment,
   getProcessFirstApprover,
@@ -37,6 +37,8 @@ export async function submitCancellation(
       approvalType: null,
       currentApproverId: null,
       currentApproverRole: null,
+      rejectReason: null,
+      rejectedFromStatus: null,
     })
 
     await createWorkflowRecord({
@@ -65,7 +67,7 @@ export async function submitCancellation(
     return { success: false, error: '只有草稿或进行中事项可以申请取消' }
   }
 
-  if (!canUserHandle(user, workItem)) {
+  if (!canUserOperate(user, workItem)) {
     return { success: false, error: '无权申请取消' }
   }
 
@@ -83,6 +85,8 @@ export async function submitCancellation(
     approvalType: ApprovalType.CANCEL,
     currentApproverId: approver.currentApproverId,
     currentApproverRole: approver.currentApproverRole,
+    rejectReason: null,
+    rejectedFromStatus: null,
   })
 
   await createWorkflowRecord({

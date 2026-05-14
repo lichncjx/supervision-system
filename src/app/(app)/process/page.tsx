@@ -12,9 +12,8 @@ import {
   canApproveWork,
   canHandleWork,
   getWorkDueDate,
-  getVisibleWorks,
+  queryWorks,
   rejectWork,
-  sortWorksByDueDate,
   type Work,
 } from '@/lib/work-store';
 import { StatusBadge } from '@/features/works/ui/badges';
@@ -23,7 +22,8 @@ import { WorkSearchBar } from '@/features/works/ui/work-search-bar';
 
 export default function ApprovalPage() {
   const { user } = useAuth();
-  const [works, setWorks] = useState<Work[]>([]);
+  const [approvingWorks, setApprovingWorks] = useState<Work[]>([]);
+  const [handlingWorks, setHandlingWorks] = useState<Work[]>([]);
   const [tab, setTab] = useState<'approving' | 'handling' | 'all'>('approving');
   const [keyword, setKeyword] = useState('');
   const [departments, setDepartments] = useState<Array<{ id: number; name: string; code: string; isBusiness: boolean }>>([]);
@@ -37,8 +37,12 @@ export default function ApprovalPage() {
   }, []);
 
   const load = async () => {
-    const worksData = await getVisibleWorks(user);
-    setWorks([...worksData]);
+    const [approving, handling] = await Promise.all([
+      queryWorks(user, { status: 'approving' } as any),
+      queryWorks(user, { status: 'handling' } as any),
+    ]);
+    setApprovingWorks(approving);
+    setHandlingWorks(handling);
   };
 
   useEffect(() => {
@@ -46,21 +50,19 @@ export default function ApprovalPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
-  const approvingCount = useMemo(
-    () => (user ? works.filter((w) => canApproveWork(user, w)).length : 0),
-    [works, user]
-  );
-  const handlingCount = useMemo(
-    () => (user ? works.filter((w) => canHandleWork(user, w)).length : 0),
-    [works, user]
-  );
+  const approvingCount = approvingWorks.length;
+  const handlingCount = handlingWorks.length;
 
-  const baseList = useMemo(() => {
-    if (!user) return [];
-    const approving = sortWorksByDueDate(works.filter((w) => canApproveWork(user, w)));
-    const handling = sortWorksByDueDate(works.filter((w) => canHandleWork(user, w)));
-    return tab === 'approving' ? approving : tab === 'handling' ? handling : works;
-  }, [works, tab, user]);
+  const allWorks = useMemo(() => {
+    const seen = new Set<number>();
+    const merged: Work[] = [];
+    for (const w of [...approvingWorks, ...handlingWorks]) {
+      if (!seen.has(w.id)) { seen.add(w.id); merged.push(w); }
+    }
+    return merged;
+  }, [approvingWorks, handlingWorks]);
+
+  const baseList = tab === 'approving' ? approvingWorks : tab === 'handling' ? handlingWorks : allWorks;
 
   const { list, total, totalPages, page, setPage, pageSize, setPageSize } =
     useSearchAndPagination(baseList, keyword, [tab, keyword]);
@@ -70,8 +72,7 @@ export default function ApprovalPage() {
   const handleApprove = async (work: Work) => {
     if (!user) return;
     await approveWork(user, work);
-    const worksData = await getVisibleWorks(user);
-    setWorks([...worksData]);
+    await load();
   };
 
   const handleReject = async (work: Work) => {
@@ -80,8 +81,7 @@ export default function ApprovalPage() {
 
     try {
       await rejectWork(work, user, reason || '审批退回');
-      const worksData = await getVisibleWorks(user);
-      setWorks([...worksData]);
+      await load();
       alert('已退回');
     } catch (error) {
       console.error(error);

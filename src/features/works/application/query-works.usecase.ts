@@ -8,7 +8,7 @@ export interface QueryWorksParams {
 
 export type StatusFilter =
   | { kind: 'where'; where: Prisma.WorkItemWhereInput }
-  | { kind: 'post'; where: Prisma.WorkItemWhereInput; postFilter: 'handling' | 'overdue' | 'expiring' }
+  | { kind: 'post'; where: Prisma.WorkItemWhereInput; postFilter: 'handling' | 'overdue' | 'expiring' | 'approving' }
   | { kind: 'invalid' }
 
 const APPROVING_STATUSES = [WorkItemStatus.PROPOSING, WorkItemStatus.ADJUSTING, WorkItemStatus.CANCELLING, WorkItemStatus.COMPLETING]
@@ -33,7 +33,7 @@ export function parseWorkStatusFilter(raw: string | null): StatusFilter {
   if (lower === 'pendingdecompose' || lower === 'pending_decompose') return { kind: 'where', where: { status: WorkItemStatus.PENDING_DECOMPOSE } }
   const exact = Object.values(WorkItemStatus).find((v) => v === normalized.toUpperCase())
   if (exact) return { kind: 'where', where: { status: exact } }
-  if (lower === 'approving') return { kind: 'where', where: { status: { in: APPROVING_STATUSES } } }
+  if (lower === 'approving') return { kind: 'post', where: { status: { in: APPROVING_STATUSES } }, postFilter: 'approving' }
   if (lower === 'inprogress' || lower === 'in_progress') return { kind: 'where', where: { status: WorkItemStatus.IN_PROGRESS } }
   if (lower === 'completed') return { kind: 'where', where: { status: WorkItemStatus.COMPLETED } }
   if (lower === 'cancelled') return { kind: 'where', where: { status: WorkItemStatus.CANCELLED } }
@@ -41,8 +41,7 @@ export function parseWorkStatusFilter(raw: string | null): StatusFilter {
   if (lower === 'overdue' || lower === 'expiring') return { kind: 'post', where: { status: { notIn: TERMINAL_STATUSES } }, postFilter: lower as 'overdue' | 'expiring' }
   return { kind: 'invalid' }
 }
-import { canViewWorkItem } from '@/features/works/domain/work.permissions'
-import { canHandleWorkItem } from '@/features/works/domain/work.permissions'
+import { canViewWorkItem, shouldHandleWorkItem, canApproveWorkItem } from '@/features/works/domain/work.permissions'
 import type { PermissionUser } from '@/features/works/domain/work.permissions'
 import { buildWorksWhere } from '@/features/works/infrastructure/work.query-builder'
 import {
@@ -154,7 +153,9 @@ function applyPostFilter(
 
   return works.filter((work) => {
     if (statusFilter.postFilter === 'handling')
-      return canHandleWorkItem(currentUser, work)
+      return shouldHandleWorkItem(currentUser, work)
+    if (statusFilter.postFilter === 'approving')
+      return canApproveWorkItem(currentUser, work)
     if (statusFilter.postFilter === 'overdue')
       return isOverdueWork(work, today)
     if (statusFilter.postFilter === 'expiring')

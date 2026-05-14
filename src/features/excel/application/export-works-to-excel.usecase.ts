@@ -20,7 +20,7 @@ export type ExportWorksToExcelResult =
 import {
   buildWorkVisibilityWhere,
   canViewWorkItem,
-  canHandleWorkItem,
+  shouldHandleWorkItem,
   getCooperatorDepartmentIds,
   getResponsibleDepartmentIds,
 } from '@/lib/server-permissions'
@@ -201,7 +201,7 @@ export async function exportWorksToExcelUseCase(
       if (rawStatusLower === 'approving')
         return APPROVING_STATUSES.includes(workItem.status)
       if (rawStatusLower === 'handling')
-        return canHandleWorkItem(permUser, workItem)
+        return shouldHandleWorkItem(permUser, workItem)
       if (
         rawStatusLower === 'inprogress' ||
         rawStatusLower === 'in_progress'

@@ -66,7 +66,7 @@ GET /api/dashboard?limit=5
 | `priorityTotal` / `mainTotal` / `todoTotal` | 当前用户可见范围内按事项类型统计 |
 | `priorityCompleted` / `mainCompleted` / `todoCompleted` | 对应类型中 `COMPLETED` 数量 |
 | `pendingApprovalCount` | `canApproveWorkItem(user, work)` 为 true |
-| `pendingHandlingCount` | `canHandleWorkItem(user, work)` 为 true |
+| `pendingHandlingCount` | `shouldHandleWorkItem(user, work)` 为 true |
 | `myActionRequiredCount` | `pendingApprovalCount + pendingHandlingCount` |
 | `inProgressCount` | 只统计 `IN_PROGRESS` |
 | `completingCount` | 只统计 `COMPLETING` |
@@ -93,7 +93,7 @@ GET /api/dashboard?limit=5
 | 退回待修改 | `DRAFT` + 退回痕迹 |
 | 待分解 | `PENDING_DECOMPOSE` |
 | 审批中 | `PROPOSING` / `ADJUSTING` / `CANCELLING` / `COMPLETING` |
-| 待办理 | `canHandleWorkItem(user, work)` |
+| 待办理 | `shouldHandleWorkItem(user, work)` |
 | 进行中 | `IN_PROGRESS` |
 | 已完成 | `COMPLETED` |
 | 已取消 | `CANCELLED` |
@@ -104,7 +104,7 @@ GET /api/dashboard?limit=5
 
 `lists.expiringAndOverdue` 只返回当前用户可见、非终态、临期或超期事项，按超期优先和计划时间升序排序。
 
-`lists.myActionRequired` 只返回 `canApproveWorkItem` 或 `canHandleWorkItem` 命中的事项。`SUPERVISOR` 的督办跟踪口径仍未拆分为独立字段，继续作为后续遗留项。
+`lists.myActionRequired` 只返回 `canApproveWorkItem` 或 `shouldHandleWorkItem` 命中的事项。`SUPERVISOR` 的督办跟踪口径仍未拆分为独立字段，继续作为后续遗留项。
 
 ## WorkDashboardItem
 
@@ -151,7 +151,7 @@ GET /api/dashboard?limit=5
 | `returnedDraft` / `returned_draft` | `DRAFT` + 退回痕迹 |
 | `PENDING_DECOMPOSE` / `pendingDecompose` | 待分解 |
 | `approving` | `PROPOSING` / `ADJUSTING` / `CANCELLING` / `COMPLETING` |
-| `handling` | `canHandleWorkItem(user, work)` |
+| `handling` | `shouldHandleWorkItem(user, work)` |
 | `IN_PROGRESS` / `inProgress` | 进行中 |
 | `COMPLETED` / `completed` | 已完成 |
 | `CANCELLED` / `cancelled` | 已取消 |
