@@ -247,7 +247,7 @@ export function canApproveWorkItem(
  * Broad operation permission for workflow actions (submit completion, adjust, cancel)
  * and attachment uploads on non-terminal items.
  *
- * This is the foundation — canHandleWorkItem builds on it by narrowing.
+ * This is the foundation — shouldHandleWorkItem builds on it by narrowing.
  */
 export function canOperateWorkItem(
   user: PermissionUser,
@@ -289,7 +289,7 @@ export function canOperateWorkItem(
  * - IN_PROGRESS only counts when returned from approval (rejected adjust/cancel/complete).
  * - DRAFT (non-returned) for department roles outside their main department is excluded.
  */
-export function canHandleWorkItem(
+export function shouldHandleWorkItem(
   user: PermissionUser,
   workItem: PermissionWorkItem,
 ): boolean {

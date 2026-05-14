@@ -1,7 +1,7 @@
 import { WorkItemType } from '@prisma/client'
 import {
   canApproveWorkItem,
-  canHandleWorkItem,
+  shouldHandleWorkItem,
   type PermissionUser,
 } from '@/features/works/domain/work.permissions'
 import { normalizeWorkStatus, getWorkStatusLabel } from '@/lib/work-status'
@@ -68,7 +68,7 @@ export function getActionType(
   workItem: any,
 ): WorkDashboardItem['actionType'] {
   if (canApproveWorkItem(user, workItem)) return 'approval'
-  if (canHandleWorkItem(user, workItem)) return 'handling'
+  if (shouldHandleWorkItem(user, workItem)) return 'handling'
   return 'view'
 }
 
@@ -136,7 +136,7 @@ export function sortExpiringAndOverdue(works: any[], now: Date) {
 
 export function actionPriority(user: PermissionUser, work: any): number {
   if (canApproveWorkItem(user, work)) return 0
-  if (canHandleWorkItem(user, work)) return 1
+  if (shouldHandleWorkItem(user, work)) return 1
   return 2
 }
 
@@ -171,7 +171,7 @@ export function buildSummary(
   const todoWorks = visibleWorks.filter((w) => w.type === WorkItemType.TODO)
   const completedWorks = visibleWorks.filter((w) => COMPLETED_STATUSES.includes(w.status as any))
   const pendingApprovalWorks = visibleWorks.filter((w) => canApproveWorkItem(user, w))
-  const pendingHandlingWorks = visibleWorks.filter((w) => canHandleWorkItem(user, w))
+  const pendingHandlingWorks = visibleWorks.filter((w) => shouldHandleWorkItem(user, w))
   const expiringWorks = visibleWorks.filter((w) => isExpiringWorkItem(w, now))
   const overdueWorks = visibleWorks.filter((w) => isOverdueWorkItem(w, now))
 

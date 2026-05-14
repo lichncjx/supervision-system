@@ -2,7 +2,7 @@ export {
   canViewWorkItem,
   canAccessWorkItem,
   canApproveWorkItem,
-  canHandleWorkItem,
+  shouldHandleWorkItem,
   canOperateWorkItem,
   canEditWorkItem,
   canCreateWork,

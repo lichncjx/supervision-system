@@ -42,7 +42,7 @@ export function parseWorkStatusFilter(raw: string | null): StatusFilter {
   return { kind: 'invalid' }
 }
 import { canViewWorkItem } from '@/features/works/domain/work.permissions'
-import { canHandleWorkItem } from '@/features/works/domain/work.permissions'
+import { shouldHandleWorkItem } from '@/features/works/domain/work.permissions'
 import type { PermissionUser } from '@/features/works/domain/work.permissions'
 import { buildWorksWhere } from '@/features/works/infrastructure/work.query-builder'
 import {
@@ -154,7 +154,7 @@ function applyPostFilter(
 
   return works.filter((work) => {
     if (statusFilter.postFilter === 'handling')
-      return canHandleWorkItem(currentUser, work)
+      return shouldHandleWorkItem(currentUser, work)
     if (statusFilter.postFilter === 'overdue')
       return isOverdueWork(work, today)
     if (statusFilter.postFilter === 'expiring')

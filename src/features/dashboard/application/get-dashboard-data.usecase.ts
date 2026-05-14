@@ -4,7 +4,7 @@ import {
   buildWorkVisibilityWhere,
   canViewWorkItem,
   canApproveWorkItem,
-  canHandleWorkItem,
+  shouldHandleWorkItem,
   type PermissionUser,
 } from '@/lib/server-permissions'
 import {
@@ -57,7 +57,7 @@ export async function getDashboardDataUseCase(
     visibleWorks.filter(
       (workItem: any) =>
         canApproveWorkItem(permUser, workItem) ||
-        canHandleWorkItem(permUser, workItem),
+        shouldHandleWorkItem(permUser, workItem),
     ) as any[],
     now,
   )
