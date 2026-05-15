@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
+import prisma from '@/shared/db/prisma';
 import { getUserFromToken } from '@/lib/server-auth';
 
 const ACTION_MAP: Record<string, string> = {

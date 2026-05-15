@@ -1,7 +1,7 @@
 import * as XLSX from 'xlsx'
 import type { Work } from '@/lib/work-store'
 import type { User } from '@/lib/auth'
-import type { ExcelRouteType } from '@/lib/excel-utils'
+import type { ExcelRouteType } from '@/features/excel/domain/excel.types'
 import { getDepartmentsForExcel, getCompanyLeadersForExcel } from './excel-api'
 
 type ImportedWork = Omit<Work, 'createdAt' | 'updatedAt'>

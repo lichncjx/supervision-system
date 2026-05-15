@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchAndPagination } from '@/hooks/use-search-pagination';
 import Link from 'next/link';
-import { getWorkTypeAccent, getWorkTypeText } from '@/lib/status-colors';
+import { getWorkTypeAccent, getWorkTypeText } from '@/features/works/ui/status-colors';
 import { AlertTriangle, Eye } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { getDepartments } from '@/lib/auth';

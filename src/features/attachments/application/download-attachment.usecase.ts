@@ -1,9 +1,7 @@
 import type { CurrentUser } from '@/shared/auth/current-user'
 import type { Role } from '@prisma/client'
-import {
-  canViewAttachment,
-  type AttPermWorkItem,
-} from '@/lib/attachment-permissions'
+import { canViewAttachment } from '@/features/attachments/domain/attachment.permissions'
+import type { AttPermWorkItem } from '@/features/attachments/domain/attachment.types'
 import { findAttachmentWithWorkItem } from '@/features/attachments/infrastructure/attachment.repository'
 import {
   readAttachmentFile,

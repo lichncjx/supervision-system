@@ -17,7 +17,7 @@ import {
 import { getDepartments, isCompanyLevel, isSupervisionAdmin } from '@/lib/auth';
 import { StatusBadge } from '@/features/works/ui/badges';
 import { WorkListToolbar } from '@/features/works/ui/work-list-toolbar';
-import { getWorkTypeAccent, getWorkTypeText } from '@/lib/status-colors';
+import { getWorkTypeAccent, getWorkTypeText } from '@/features/works/ui/status-colors';
 
 type StatusPageFilter =
   | 'all'

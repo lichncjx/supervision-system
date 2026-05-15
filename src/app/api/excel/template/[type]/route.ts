@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromToken } from '@/lib/server-auth';
-import { getExcelTemplate, type ExcelRouteType } from '@/lib/excel-utils';
+import type { ExcelRouteType } from '@/features/excel/domain/excel.types';
+import { getExcelTemplate } from '@/features/excel/infrastructure/excel-template-generator';
 
 export async function GET(
   request: NextRequest,

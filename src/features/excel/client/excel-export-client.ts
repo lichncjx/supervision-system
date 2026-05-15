@@ -1,6 +1,6 @@
 import * as XLSX from 'xlsx'
 import type { Work } from '@/lib/work-store'
-import type { ExcelRouteType } from '@/lib/excel-utils'
+import type { ExcelRouteType } from '@/features/excel/domain/excel.types'
 import { getDepartmentNameForExcel } from './excel-api'
 
 export async function exportWorksToExcel(

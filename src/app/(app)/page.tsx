@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { statusColors, expiryColors, workTypeColors } from '@/lib/status-colors';
+import { statusColors, expiryColors, workTypeColors } from '@/features/works/ui/status-colors';
 
 const pillColors = { ...statusColors, ...expiryColors };
 import { Textarea } from '@/components/ui/textarea';

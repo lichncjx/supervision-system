@@ -27,8 +27,8 @@ export type UploadAttachmentResult =
 import {
   canViewAttachment,
   canUploadAttachment,
-  type AttPermWorkItem,
-} from '@/lib/attachment-permissions'
+} from '@/features/attachments/domain/attachment.permissions'
+import type { AttPermWorkItem } from '@/features/attachments/domain/attachment.types'
 import {
   findWorkItemForUpload,
   createAttachmentRecord,

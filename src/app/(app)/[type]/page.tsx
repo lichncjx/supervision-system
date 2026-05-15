@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { useAuth } from '@/components/providers/auth-provider';
 import { isCompanyLevel, getDepartments } from '@/lib/auth';
 import { getVisibleWorks, queryWorks, type Work, type WorkType, type WorkStatusFilter } from '@/lib/work-store';
-import { workTypeColors, getStatusAccent } from '@/lib/status-colors';
+import { workTypeColors, getStatusAccent } from '@/features/works/ui/status-colors';
 import { Plus, Download, Upload, FileSpreadsheet, Star, ListTodo, CheckSquare } from 'lucide-react';
 import { WorkListToolbar } from '@/features/works/ui/work-list-toolbar';
 import { PriorityMainWorkListItem } from '@/features/works/ui/priority-main-work-list-item';

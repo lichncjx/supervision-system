@@ -1,10 +1,7 @@
 import type { CurrentUser } from '@/shared/auth/current-user'
 import type { Role } from '@prisma/client'
-import {
-  canDeleteAttachment,
-  type AttPermWorkItem,
-  type AttPermAttachment,
-} from '@/lib/attachment-permissions'
+import { canDeleteAttachment } from '@/features/attachments/domain/attachment.permissions'
+import type { AttPermWorkItem, AttPermAttachment } from '@/features/attachments/domain/attachment.types'
 import {
   findAttachmentWithWorkItem,
   deleteAttachmentRecord,
