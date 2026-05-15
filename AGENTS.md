@@ -97,7 +97,8 @@ Context7 请求需要在 Codex 默认沙箱外执行；如果遇到 DNS、ENOTFO
 
 1. API 路由 (`src/app/api/`) 只做三件事：解析参数、调用 usecase、返回响应。
 2. **禁止在 API 路由中直接写业务逻辑或数据访问**——业务逻辑属于 `application/`，数据访问属于 `infrastructure/`。
-3. 参照 `src/app/api/works/route.ts` → `features/works/application/` 的模式。
+3. 认证统一使用 `getCurrentUserOrAuthError(request)`，不要在每个路由中重复 token 验证和用户查询。
+4. 参照 `src/app/api/works/route.ts` → `features/works/application/` 的模式。
 
 ### 跨模块依赖原则
 

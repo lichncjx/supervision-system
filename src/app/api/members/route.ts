@@ -1,17 +1,13 @@
 import { NextResponse, NextRequest } from 'next/server'
-import { verifyToken } from '@/shared/auth/jwt'
-import { prisma } from '@/shared/db/prisma'
+import { getCurrentUserOrAuthError } from '@/shared/auth/get-current-user-or-auth-error'
 import { Role } from '@prisma/client'
 import { queryMembersUseCase } from '@/features/members/application/query-members.usecase'
 import { createMemberUseCase } from '@/features/members/application/create-member.usecase'
 
 export async function GET(request: NextRequest) {
   try {
-    const token = request.cookies.get('token')?.value
-    if (!token) return NextResponse.json({ error: '未登录' }, { status: 401 })
-
-    const decoded = verifyToken(token)
-    if (!decoded) return NextResponse.json({ error: '登录已过期' }, { status: 401 })
+    const auth = await getCurrentUserOrAuthError(request)
+    if (!auth.ok) return auth.response
 
     const { searchParams } = new URL(request.url)
     const departmentIdRaw = searchParams.get('departmentId')
@@ -46,14 +42,10 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const token = request.cookies.get('token')?.value
-    if (!token) return NextResponse.json({ error: '未登录' }, { status: 401 })
+    const auth = await getCurrentUserOrAuthError(request)
+    if (!auth.ok) return auth.response
 
-    const decoded = verifyToken(token)
-    if (!decoded) return NextResponse.json({ error: '登录已过期' }, { status: 401 })
-
-    const currentUser = await prisma.user.findUnique({ where: { id: decoded.userId } })
-    if (!currentUser || currentUser.role !== Role.ADMIN) {
+    if (auth.user.role !== Role.ADMIN) {
       return NextResponse.json({ error: '权限不足' }, { status: 403 })
     }
 
