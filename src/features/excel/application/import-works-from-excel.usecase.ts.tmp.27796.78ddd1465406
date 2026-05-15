@@ -92,8 +92,9 @@ export async function importWorksFromExcelUseCase(
         workItem: data.workItem,
         isInnovation: data.isInnovation || false,
         workNode: data.workNode || null,
-        completeTime: data.completeTime
-          ? new Date(data.completeTime)
+        completeTime: null,
+        planCompleteTime: data.planCompleteTime
+          ? new Date(data.planCompleteTime)
           : null,
         completeForm: data.completeForm || null,
         responsibleLeader: data.responsibleLeader || null,

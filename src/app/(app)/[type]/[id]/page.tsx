@@ -90,7 +90,6 @@ export default function WorkDetailPage() {
         description: work.description || '',
         businessCategory: work.businessCategory || '',
         isInnovation: !!work.isInnovation,
-        completeTime: work.completeTime || '',
         completeForm: work.completeForm || '',
         departmentId: work.departmentId,
         responsibleLeader: work.responsibleLeader || '',
@@ -324,7 +323,7 @@ export default function WorkDetailPage() {
       return;
     }
     if (!editForm.planCompleteTime) {
-      alert('请填写计划完成时间');
+      alert('请填写完成时间');
       return;
     }
     const validNodes = (editForm.nodes || []).filter((n: any) => n.title?.trim());
@@ -381,7 +380,7 @@ export default function WorkDetailPage() {
   const buildEditFormFromWork = () => ({
     title: work.title || '', workItem: work.workItem || work.title || '',
     businessCategory: work.businessCategory || '', isInnovation: !!work.isInnovation,
-    completeTime: work.completeTime || '', completeForm: work.completeForm || '',
+    completeForm: work.completeForm || '',
     departmentId: work.departmentId, responsibleLeader: work.responsibleLeader || '',
     responsiblePerson: work.responsiblePerson || '', proposedLeader: work.proposedLeader || '',
     proposedLeaderId: work.proposedLeaderId ? String(work.proposedLeaderId) : '',

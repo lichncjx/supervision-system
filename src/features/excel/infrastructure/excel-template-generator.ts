@@ -70,7 +70,7 @@ export function getExcelTemplate(
         '配合部门',
         '配合责任人',
         '工作计划',
-        '计划完成时间',
+        '完成时间',
         '进展情况',
       ]
       example = [

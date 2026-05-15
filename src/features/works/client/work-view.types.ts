@@ -60,6 +60,7 @@ export interface Work {
   businessCategory?: string
   workItem?: string
   workNode?: string
+  // Reserved for future actual completion time; plan deadlines use planCompleteTime.
   completeTime?: string
   completeForm?: string
   proposedScene?: string
@@ -73,7 +74,7 @@ export interface Work {
   adjustReason?: string
   cancelReason?: string
   adjustNewTime?: string
-  adjustTimeType?: 'completeTime' | 'planCompleteTime'
+  adjustTimeType?: 'planCompleteTime'
   rejectReason?: string | null
   rejectedAt?: string
   rejectedFrom?: Status
@@ -101,7 +102,6 @@ export type WorkEditablePatch = Partial<
     | 'workNode'
     | 'nodes'
     | 'isInnovation'
-    | 'completeTime'
     | 'completeForm'
     | 'departmentId'
     | 'cooperators'

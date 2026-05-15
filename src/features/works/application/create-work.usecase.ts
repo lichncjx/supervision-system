@@ -28,7 +28,6 @@ export interface CreateWorkBody {
   workItem?: string
   workNode?: string
   businessCategory?: string
-  completeTime?: string
   completeForm?: string
   isInnovation?: boolean
   responsibleLeader?: string
@@ -134,7 +133,7 @@ export async function createWorkUseCase(
     workItem: rest.workItem,
     workNode: rest.workNode,
     businessCategory: rest.businessCategory,
-    completeTime: convertToDateTime(rest.completeTime),
+    completeTime: null,
     completeForm: rest.completeForm,
     isInnovation: rest.isInnovation || false,
     responsibleLeader: rest.responsibleLeader,

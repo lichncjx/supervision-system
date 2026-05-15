@@ -77,7 +77,7 @@ function getRouteType(type: string) {
 }
 
 const getWorkMonth = (work: any) => {
-  const date = work.completeTime || work.planCompleteTime || work.due_date || '';
+  const date = work.planCompleteTime || work.due_date || '';
   if (!date) return '';
   return String(date).slice(0, 7);
 };
@@ -238,7 +238,7 @@ export default function StatusFilterPage() {
                     <span className="text-slate-400">
                       责任部门：{getDepartmentName(work.departmentId ?? 0)}
                     </span>
-                    <span className="text-slate-400">计划完成时间：{getWorkDueDate(work) || '-'}</span>
+                    <span className="text-slate-400">完成时间：{getWorkDueDate(work) || '-'}</span>
                   </div>
 
                   {work.progress && (

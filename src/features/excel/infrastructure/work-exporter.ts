@@ -65,7 +65,7 @@ function buildRow(item: ExportWorkRow, index: number) {
     item.workItem || item.title || '',
     isPriorityOrMain ? (item.isInnovation ? '是' : '否') : '',
     isPriorityOrMain ? item.workNode || '' : '',
-    formatDate(item.completeTime),
+    formatDate(item.planCompleteTime),
     isPriorityOrMain ? item.completeForm || '' : '',
     deptName,
     item.responsibleLeader || '',

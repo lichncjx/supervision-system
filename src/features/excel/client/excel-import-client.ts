@@ -71,7 +71,7 @@ export async function importWorksFromExcel(
                 businessCategory: r['业务类别'] || '',
                 workItem: r['工作事项'],
                 workNode: r['工作节点'] || '',
-                completeTime: r['完成时间'] || '',
+                planCompleteTime: r['完成时间'] || '',
                 completeForm: r['完成形式'] || '',
                 responsibleLeader: r['责任领导'] || '',
                 responsiblePerson: r['责任人'] || '',
@@ -97,7 +97,7 @@ export async function importWorksFromExcel(
                 businessCategory: r['业务类别'] || '',
                 workItem: r['工作事项'],
                 workNode: r['工作节点'] || '',
-                completeTime: r['完成时间'] || '',
+                planCompleteTime: r['完成时间'] || '',
                 completeForm: r['完成形式'] || '',
                 responsibleLeader: r['责任领导'] || '',
                 responsiblePerson: r['责任人'] || '',
@@ -166,7 +166,7 @@ export async function importWorksFromExcel(
                 responsiblePerson: r['主责责任人'] || '',
                 cooperators,
                 workPlan: r['工作计划'] || '',
-                planCompleteTime: r['计划完成时间'] || '',
+                planCompleteTime: r['完成时间'] || '',
                 progress: r['进展情况'] || '',
               }
               break

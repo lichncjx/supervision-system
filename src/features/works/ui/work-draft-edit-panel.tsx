@@ -108,9 +108,9 @@ export function WorkDraftEditPanel({
                     placeholder="请输入业务类别"
                   />
                   <PlanCompleteTimeField
-                    label="计划完成时间"
-                    value={editForm.completeTime || ''}
-                    onChange={(v) => setEditForm((prev: any) => ({ ...prev, completeTime: v }))}
+                    label="完成时间"
+                    value={editForm.planCompleteTime || ''}
+                    onChange={(v) => setEditForm((prev: any) => ({ ...prev, planCompleteTime: v }))}
                   />
                   <WorkItemField
                     label="完成形式"
@@ -156,7 +156,7 @@ export function WorkDraftEditPanel({
                     onProgressChange={(v) => setEditForm((prev: any) => ({ ...prev, progress: v }))}
                   />
                   <PlanCompleteTimeField
-                    label="计划完成时间"
+                    label="完成时间"
                     value={editForm.planCompleteTime || ''}
                     onChange={(v) => setEditForm((prev: any) => ({ ...prev, planCompleteTime: v }))}
                   />

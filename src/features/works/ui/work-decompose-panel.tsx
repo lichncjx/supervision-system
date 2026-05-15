@@ -56,7 +56,7 @@ export function WorkDecomposePanel({
         </div>
 
         <div>
-          <label className={FIELD_LABEL + ' mb-1 block'}>计划完成时间</label>
+          <label className={FIELD_LABEL + ' mb-1 block'}>完成时间</label>
           <Input
             type="date"
             value={editForm.planCompleteTime || ''}

@@ -40,7 +40,7 @@ export function TodoWorkListItem({ item, routeType, getDepartmentName }: TodoWor
           </span>
         </div>
         <div>
-          <span className="text-slate-400">计划完成时间：</span>
+          <span className="text-slate-400">完成时间：</span>
           <span className="text-slate-600">{item.planCompleteTime || '-'}</span>
         </div>
         <div className="break-words text-xs text-slate-600 max-w-full">
@@ -53,8 +53,8 @@ export function TodoWorkListItem({ item, routeType, getDepartmentName }: TodoWor
         </div>
         {item.adjustHistory && item.adjustHistory.length > 0 && (
           <div className="text-xs text-purple-600 bg-purple-50/50 rounded px-2 py-1 break-words">
-            原计划完成时间：{item.adjustHistory[item.adjustHistory.length - 1].fromTime || '-'}；
-            现计划完成时间：{item.adjustHistory[item.adjustHistory.length - 1].toTime || '-'}
+            原完成时间：{item.adjustHistory[item.adjustHistory.length - 1].fromTime || '-'}；
+            现完成时间：{item.adjustHistory[item.adjustHistory.length - 1].toTime || '-'}
           </div>
         )}
       </div>

@@ -149,7 +149,7 @@ export default function ApprovalPage() {
                         <span className={`font-medium ${getWorkTypeText(work.type)}`}>{work.type}</span>
                         <StatusBadge status={work.status} work={work} />
                         <span className="text-slate-400">责任部门：{departments.find((d) => d.id === work.departmentId)?.name || '-'}</span>
-                        <span className="text-slate-400">计划完成时间：{getWorkDueDate(work) || '-'}</span>
+                        <span className="text-slate-400">完成时间：{getWorkDueDate(work) || '-'}</span>
                       </div>
                       {work.type === '待办' && (
                         <div className="text-xs text-slate-500 mt-1">
@@ -166,10 +166,10 @@ export default function ApprovalPage() {
                         </div>
                       )}
                       {work.pendingAdjustmentFromTime && (
-                        <div className="text-xs text-purple-600 mt-1">原计划完成时间：{work.pendingAdjustmentFromTime}</div>
+                        <div className="text-xs text-purple-600 mt-1">原完成时间：{work.pendingAdjustmentFromTime}</div>
                       )}
                       {work.pendingAdjustmentToTime && (
-                        <div className="text-xs text-purple-600 mt-1">现计划完成时间：{work.pendingAdjustmentToTime}</div>
+                        <div className="text-xs text-purple-600 mt-1">现完成时间：{work.pendingAdjustmentToTime}</div>
                       )}
                       {work.approvalLeader && (
                         <div className="text-xs text-sky-600 mt-1">公司审批领导：{work.approvalLeader}</div>

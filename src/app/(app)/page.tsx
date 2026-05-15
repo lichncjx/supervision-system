@@ -41,7 +41,7 @@ function getDashboardTypeKey(type: DashboardWorkType) {
 }
 
 function getDashboardWorkDate(work: DashboardWorkItem) {
-  return work.dueTime || work.completeTime || work.planCompleteTime || null;
+  return work.dueTime || work.planCompleteTime || null;
 }
 
 export default function DashboardPage() {
@@ -339,7 +339,7 @@ export default function DashboardPage() {
                       <div className="text-xs text-slate-500 mt-1.5 flex items-center gap-2 flex-wrap">
                         <span className={`font-medium ${typeColor.text}`}>{work.typeLabel || work.type}</span>
                         <StatusBadge status={work.status} work={work} />
-                        <span className="text-slate-400">计划完成时间：{date || '-'}</span>
+                        <span className="text-slate-400">完成时间：{date || '-'}</span>
                       </div>
                     </div>
                   </Link>

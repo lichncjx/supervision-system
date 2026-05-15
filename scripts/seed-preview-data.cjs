@@ -119,7 +119,7 @@ async function createPreviewWorks(departments, users) {
     responsibleLeader: leaderA.name,
     responsiblePerson: managerA.name,
     cooperators: [{ departmentId: techDept.id, departmentName: techDept.name, leader: leaderB.name, person: managerB.name }],
-    completeTime: daysFromNow(30),
+    planCompleteTime: daysFromNow(30),
     completeForm: '演示验收材料',
   };
 
@@ -213,7 +213,7 @@ async function createPreviewWorks(departments, users) {
       ...commonPriority,
       title: `${PREVIEW_PREFIX} 已完成重点工作`,
       status: WorkItemStatus.COMPLETED,
-      completeTime: daysFromNow(-5),
+      planCompleteTime: daysFromNow(-5),
       workItem: '用于演示已完成状态。',
     },
     {

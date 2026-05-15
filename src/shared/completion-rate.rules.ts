@@ -1,7 +1,6 @@
 export interface CompletionRateWorksInput {
   type: string
   status: string
-  completeTime: Date | null
   planCompleteTime: Date | null
 }
 
@@ -16,8 +15,7 @@ export function isCompletionRateCancelled(work: CompletionRateWorksInput) {
 export function isCompletionRateOverdue(work: CompletionRateWorksInput) {
   if (isCompletionRateCompleted(work) || isCompletionRateCancelled(work))
     return false
-  const due =
-    work.type === 'TODO' ? work.planCompleteTime : work.completeTime
+  const due = work.planCompleteTime
   return due ? due < new Date() : false
 }
 

@@ -28,8 +28,8 @@ export function PriorityMainWorkListItem({ item, routeType, getDepartmentName }:
           <span className="text-slate-600">{item.workNode || '-'}</span>
         </div>
         <div>
-          <span className="text-slate-400">计划完成时间：</span>
-          <span className="text-slate-600">{item.completeTime || '-'}</span>
+          <span className="text-slate-400">完成时间：</span>
+          <span className="text-slate-600">{item.planCompleteTime || '-'}</span>
         </div>
         <div>
           <span className="text-slate-400">完成形式：</span>
@@ -53,8 +53,8 @@ export function PriorityMainWorkListItem({ item, routeType, getDepartmentName }:
         </div>
         {item.adjustHistory && item.adjustHistory.length > 0 && (
           <div className="text-xs text-purple-600 bg-purple-50/50 rounded px-2 py-1 break-words">
-            原计划完成时间：{item.adjustHistory[item.adjustHistory.length - 1].fromTime || '-'}；
-            现计划完成时间：{item.adjustHistory[item.adjustHistory.length - 1].toTime || '-'}
+            原完成时间：{item.adjustHistory[item.adjustHistory.length - 1].fromTime || '-'}；
+            现完成时间：{item.adjustHistory[item.adjustHistory.length - 1].toTime || '-'}
           </div>
         )}
       </div>

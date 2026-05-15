@@ -66,19 +66,15 @@ function normalizeStatusFilter(status: string | null): string | null {
 
 function getDueDate(workItem: {
   type: WorkItemType
-  completeTime: Date | null
   planCompleteTime: Date | null
 }): Date | null {
-  return workItem.type === WorkItemType.TODO
-    ? workItem.planCompleteTime
-    : workItem.completeTime
+  return workItem.planCompleteTime
 }
 
 function isOverdueWork(
   workItem: {
     type: WorkItemType
     status: WorkItemStatus
-    completeTime: Date | null
     planCompleteTime: Date | null
   },
   now: Date,
@@ -92,7 +88,6 @@ function isExpiringWork(
   workItem: {
     type: WorkItemType
     status: WorkItemStatus
-    completeTime: Date | null
     planCompleteTime: Date | null
   },
   now: Date,
