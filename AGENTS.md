@@ -26,6 +26,7 @@
 | 权限、审批流、状态机、统计口径 | `docs/core/业务规则.md` |
 | 业务人员字段、人员体系、附件权限 | `docs/rules/业务人员与附件权限规则.md` |
 | Git 分支、Issue、PR、CI | `docs/core/GitHub协作流程.md` |
+| 代码组织、分层、目录、API 路由、表归属 | `docs/design/后端模块化架构约定.md` |
 | 群晖部署、迁移、运维排查 | `docs/deploy/部署说明-群晖.md` |
 | 发布前验证 | `docs/release/测试发布检查清单.md` |
 | 正式发布记录 | `docs/release/发布记录.md` |
@@ -77,68 +78,11 @@ Context7 请求需要在 Codex 默认沙箱外执行；如果遇到 DNS、ENOTFO
 
 ## 代码组织规范
 
-### 项目目录结构
+项目采用 **Modular Monolith + Feature-based Layered Architecture**。
 
-当前项目采用 `src/features/<领域>/` 按业务领域分层，`src/shared/` 放跨模块共享代码。详见 `docs/core/项目说明.md` 的目录结构章节。
+每个业务模块放在 `src/features/<领域>/`，内部分 5 层：`domain/`、`application/`、`infrastructure/`、`client/`、`ui/`。
 
-### features 分层约定
-
-每个 feature 模块按职责分 5 层，不是所有模块都需要所有层：
-
-| 层 | 目录 | 职责 | 是否必须 |
-|----|------|------|:---:|
-| application | `application/` | 业务用例（usecase），编排 domain + infrastructure | 有业务逻辑时必须 |
-| domain | `domain/` | 领域规则、权限判断、纯函数 | 有领域规则时必须 |
-| infrastructure | `infrastructure/` | 数据访问（repository）、外部服务 | 有数据访问时必须 |
-| client | `client/` | 前端组件、API 调用辅助、客户端类型 | 有前端组件时必须 |
-| ui | `ui/` | 可复用 UI 组件 | 有 UI 组件时必须 |
-
-### API 路由规范
-
-1. API 路由 (`src/app/api/`) 只做三件事：解析参数、调用 usecase、返回响应。
-2. **禁止在 API 路由中直接写业务逻辑或数据访问**——业务逻辑属于 `application/`，数据访问属于 `infrastructure/`。
-3. 认证统一使用 `getCurrentUserOrAuthError(request)`。
-4. **禁止在 API 路由中 import `prisma`**。路由不接触数据库，数据访问必须通过 `infrastructure/` 层。
-5. 路由中允许 import `@prisma/client` 的枚举（如 `Role`），但仅用于权限判断（参照 `src/app/api/users/route.ts`）。
-6. 参照 `src/app/api/works/route.ts` → `features/works/application/` 的模式。
-
-**反例（禁止）：**
-```ts
-// ❌ 路由中直接 import prisma 并查询
-import prisma from '@/shared/db/prisma'
-const members = await prisma.member.findMany({ ... })
-```
-
-**正例：**
-```ts
-// ✅ 路由只调 usecase
-import { queryMembersUseCase } from '@/features/members/application/query-members.usecase'
-const result = await queryMembersUseCase({ ... })
-```
-
-### 跨模块依赖原则
-
-1. 模块间通过 `infrastructure/`（数据访问）和 `domain/`（领域规则）互相引用。
-2. 每个 repository 只能访问自己领域的数据表，不得查询其他领域的表。
-3. 新增领域时，必须先建立 `application/`、`domain/`、`infrastructure/` 目录结构，再编写代码。
-
-**正确归属规则：**
-
-| 查询的表 | 所属 repository |
-|----------|----------------|
-| `workItem` | `works/infrastructure/work.repository.ts` |
-| `member` | `members/infrastructure/member.repository.ts` |
-| `department` | `departments/infrastructure/department.repository.ts` |
-| `user` | `users/infrastructure/user.repository.ts` |
-| `workflowRecord` | `workflow/infrastructure/workflow.repository.ts` |
-| `operationLog` | 各模块写各模块的日志，无统一 repository |
-| `attachment` | `attachments/infrastructure/attachment.repository.ts` |
-
-**反例（禁止）：**
-- `works/infrastructure/work.repository.ts` 包含 `findDepartmentById` → 应在 `departments/`
-- `dashboard/infrastructure/dashboard.repository.ts` 包含 `findBusinessDepartments` → 应在 `departments/`
-- `workflow/infrastructure/workflow.repository.ts` 包含 `findPresidentUser` → 应在 `users/`
-- `excel/infrastructure/work-import.repository.ts` 包含 `findDepartmentsForImport` → 应在 `departments/`
+完整的分层职责、依赖方向、命名约定、API 路由规范、跨模块表归属规则，见 **`docs/design/后端模块化架构约定.md`**（权威文档）。
 
 ### 新增 Feature 检查清单
 
@@ -146,7 +90,7 @@ const result = await queryMembersUseCase({ ... })
 - [ ] 建立标准的 feature 目录结构（按需包含 application/domain/infrastructure/client/ui）
 - [ ] API 路由只做参数解析和调用 usecase
 - [ ] 数据访问放在该 feature 的 `infrastructure/` 下
-- [ ] 跨模块引用遵循依赖原则
+- [ ] 跨模块引用遵循 `docs/design/后端模块化架构约定.md` 的依赖原则
 
 ## 开发边界
 
