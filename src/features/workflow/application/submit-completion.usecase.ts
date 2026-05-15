@@ -5,11 +5,10 @@ import {
   companyLeaderAssignment,
   getProcessFirstApprover,
 } from '@/features/workflow/domain/workflow.rules'
+import { findWorkForUpdateById, updateWorkItem } from '@/features/works/infrastructure/work.repository'
 import {
-  findWorkItemById,
   createWorkflowRecord,
   createOperationLog,
-  updateWorkItemForWorkflow,
 } from '@/features/workflow/infrastructure/workflow.repository'
 
 export async function submitCompletion(
@@ -18,7 +17,7 @@ export async function submitCompletion(
   proof: string,
   comment?: string,
 ): Promise<WorkflowResult> {
-  const workItem = await findWorkItemById(workItemId)
+  const workItem = await findWorkForUpdateById(workItemId)
   if (!workItem) {
     return { success: false, error: '事项不存在' }
   }
@@ -37,7 +36,7 @@ export async function submitCompletion(
       ? companyLeaderAssignment(workItem, 'approval')
       : getProcessFirstApprover(workItem, user)
 
-  const updated = await updateWorkItemForWorkflow(workItemId, {
+  const updated = await updateWorkItem(workItemId, {
     status: WorkItemStatus.COMPLETING,
     action: ActionType.COMPLETE,
     proof,

@@ -6,13 +6,11 @@ import {
   isPresidentApprovalNode,
   shouldEscalateCancelToPresident,
 } from '@/features/workflow/domain/workflow.rules'
-import {
-  findPresidentUser,
-  type WorkflowWorkItem,
-} from '@/features/workflow/infrastructure/workflow.repository'
+import { type WorkflowWorkItem } from '@/features/workflow/infrastructure/workflow.repository'
+import { findPresident } from '@/features/users/infrastructure/user.repository'
 
 export async function presidentAssignment(): Promise<ApproverAssignment> {
-  const president = await findPresidentUser()
+  const president = await findPresident()
 
   return {
     currentApproverId: president?.id ?? null,

@@ -1,8 +1,8 @@
 import type { CurrentUser } from '@/shared/auth/current-user'
 import { validateAndParseExcel } from '@/features/excel/infrastructure/work-import-parser'
+import { findDepartmentsForImport } from '@/features/departments/infrastructure/department.repository'
+import { findCompanyLeaders } from '@/features/users/infrastructure/user.repository'
 import {
-  findDepartmentsForImport,
-  findCompanyLeadersForImport,
   createImportedWorkItems,
 } from '@/features/excel/infrastructure/work-import.repository'
 import { validateImportScope } from '@/features/excel/domain/excel-import.rules'
@@ -34,7 +34,7 @@ export async function importWorksFromExcelUseCase(
   const { currentUser, type, fileBuffer } = input
 
   const departments = await findDepartmentsForImport()
-  const companyLeaders = await findCompanyLeadersForImport()
+  const companyLeaders = await findCompanyLeaders()
 
   const { rows, errors } = await validateAndParseExcel(
     fileBuffer,

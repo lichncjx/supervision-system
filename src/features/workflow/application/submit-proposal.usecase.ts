@@ -1,11 +1,10 @@
 import { ActionType, ApprovalType, Role, WorkItemStatus, WorkItemType } from '@prisma/client'
 import type { UserSession, WorkflowResult } from '@/features/workflow/domain/workflow.types'
 import { getProposalFirstApprover, canUserSubmit } from '@/features/workflow/domain/workflow.rules'
+import { findWorkForUpdateById, updateWorkItem } from '@/features/works/infrastructure/work.repository'
 import {
-  findWorkItemById,
   createWorkflowRecord,
   createOperationLog,
-  updateWorkItemForWorkflow,
 } from '@/features/workflow/infrastructure/workflow.repository'
 
 export async function submitProposal(
@@ -13,7 +12,7 @@ export async function submitProposal(
   user: UserSession,
   comment?: string,
 ): Promise<WorkflowResult> {
-  const workItem = await findWorkItemById(workItemId)
+  const workItem = await findWorkForUpdateById(workItemId)
   if (!workItem) {
     return { success: false, error: '事项不存在' }
   }
@@ -32,7 +31,7 @@ export async function submitProposal(
     workItem.type === WorkItemType.TODO &&
     (user.role === Role.VICE_PRESIDENT || user.role === Role.PRESIDENT)
   ) {
-    const updated = await updateWorkItemForWorkflow(workItemId, {
+    const updated = await updateWorkItem(workItemId, {
       status: WorkItemStatus.PENDING_DECOMPOSE,
       action: ActionType.TODO_DECOMPOSE,
       beforeApprovalStatus: null,
@@ -66,7 +65,7 @@ export async function submitProposal(
   }
 
   const approver = getProposalFirstApprover(workItem, user)
-  const updated = await updateWorkItemForWorkflow(workItemId, {
+  const updated = await updateWorkItem(workItemId, {
     status: WorkItemStatus.PROPOSING,
     action: ActionType.CREATE,
     beforeApprovalStatus: oldStatus,

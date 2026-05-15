@@ -119,8 +119,26 @@ const result = await queryMembersUseCase({ ... })
 ### 跨模块依赖原则
 
 1. 模块间通过 `infrastructure/`（数据访问）和 `domain/`（领域规则）互相引用。
-2. 不要将不属于该领域的数据访问或业务规则放在另一个领域的文件中（如 `works/infrastructure/work.repository.ts` 不应包含 `findMembersByIds`）。
+2. 每个 repository 只能访问自己领域的数据表，不得查询其他领域的表。
 3. 新增领域时，必须先建立 `application/`、`domain/`、`infrastructure/` 目录结构，再编写代码。
+
+**正确归属规则：**
+
+| 查询的表 | 所属 repository |
+|----------|----------------|
+| `workItem` | `works/infrastructure/work.repository.ts` |
+| `member` | `members/infrastructure/member.repository.ts` |
+| `department` | `departments/infrastructure/department.repository.ts` |
+| `user` | `users/infrastructure/user.repository.ts` |
+| `workflowRecord` | `workflow/infrastructure/workflow.repository.ts` |
+| `operationLog` | 各模块写各模块的日志，无统一 repository |
+| `attachment` | `attachments/infrastructure/attachment.repository.ts` |
+
+**反例（禁止）：**
+- `works/infrastructure/work.repository.ts` 包含 `findDepartmentById` → 应在 `departments/`
+- `dashboard/infrastructure/dashboard.repository.ts` 包含 `findBusinessDepartments` → 应在 `departments/`
+- `workflow/infrastructure/workflow.repository.ts` 包含 `findPresidentUser` → 应在 `users/`
+- `excel/infrastructure/work-import.repository.ts` 包含 `findDepartmentsForImport` → 应在 `departments/`
 
 ### 新增 Feature 检查清单
 

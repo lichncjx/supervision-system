@@ -15,14 +15,6 @@ export async function findWorksForCompletionRate(
   })
 }
 
-export async function findBusinessDepartments() {
-  return prisma.department.findMany({
-    where: { isBusiness: true },
-    select: { id: true, name: true },
-    orderBy: { name: 'asc' },
-  })
-}
-
 export function createCompletionRateLog(params: {
   userId: number
   userName: string

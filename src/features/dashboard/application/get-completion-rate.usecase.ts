@@ -7,11 +7,13 @@ import { isDepartmentLevelRole, isGlobalViewRole } from '@/features/users/domain
 import { calculateDepartmentStats, type CompletionRateStat } from '@/shared/completion-rate.rules'
 import {
   findWorksForDashboardCompletionRate,
-  findBusinessDepartments,
-  findDepartmentById,
   findDepartmentIdsFromVisibleWorks,
-  findDepartmentsByIds,
 } from '@/features/dashboard/infrastructure/dashboard.repository'
+import {
+  findBusinessDepartments,
+  findDepartmentByIdForDashboard as findDepartmentById,
+  findDepartmentsByIds,
+} from '@/features/departments/infrastructure/department.repository'
 
 export interface GetCompletionRateInput {
   currentUser: BaseCurrentUser

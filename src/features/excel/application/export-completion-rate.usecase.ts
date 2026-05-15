@@ -13,9 +13,9 @@ export type ExportCompletionRateResult =
 import { getResponsibleDepartmentIds } from '@/features/works/domain/work.permissions'
 import {
   findWorksForCompletionRate,
-  findBusinessDepartments,
   createCompletionRateLog,
 } from '@/features/excel/infrastructure/completion-rate.repository'
+import { findBusinessDepartments } from '@/features/departments/infrastructure/department.repository'
 import { generateCompletionRateBuffer } from '@/features/excel/infrastructure/completion-rate-exporter'
 import { calculateDepartmentStats, type CompletionRateStat } from '@/shared/completion-rate.rules'
 

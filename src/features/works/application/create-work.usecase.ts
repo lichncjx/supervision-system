@@ -2,9 +2,9 @@ import type { CurrentUser } from '@/shared/auth/current-user'
 import { Role, WorkItemType, WorkItemStatus } from '@prisma/client'
 import {
   createWorkItem,
-  findDepartmentById,
   createWorkOperationLog,
 } from '@/features/works/infrastructure/work.repository'
+import { findDepartmentById } from '@/features/departments/infrastructure/department.repository'
 import {
   validateMemberAssignments,
   type MemberAssignment,
