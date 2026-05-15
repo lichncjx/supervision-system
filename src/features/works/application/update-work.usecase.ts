@@ -4,6 +4,7 @@ import { canEditWorkItem } from '@/features/works/domain/work.permissions'
 import type { PermissionUser } from '@/features/works/domain/work.permissions'
 import {
   findWorkForUpdateById,
+  findMembersByIds,
   updateWorkItem,
   createWorkUpdateOperationLog,
 } from '@/features/works/infrastructure/work.repository'
@@ -22,6 +23,7 @@ function toUpdateWorkResponse(work: any): UpdateWorkResponseDto {
 
 export interface UpdateWorkBody {
   title?: string
+  departmentId?: number
   workItem?: string
   workNode?: string
   businessCategory?: string
@@ -73,6 +75,34 @@ export async function updateWorkUseCase(
       kind: 'error',
       status: 403,
       message: '只能修改草稿或已退回状态的本权限事项',
+    }
+  }
+
+  // Validate member IDs if provided
+  const effectiveDeptId = body.departmentId ?? work.departmentId
+  if (body.responsibleLeaderMemberId != null || body.responsiblePersonMemberId != null) {
+    const memberIds = [body.responsibleLeaderMemberId, body.responsiblePersonMemberId].filter((id): id is number => id != null)
+    const members = await findMembersByIds(memberIds)
+    const memberMap = new Map(members.map((m) => [m.id, m]))
+
+    for (const id of memberIds) {
+      const member = memberMap.get(id)
+      if (!member) {
+        return { kind: 'error', status: 400, message: `人员 ID ${id} 不存在` }
+      }
+      if (!member.isActive) {
+        return { kind: 'error', status: 400, message: `人员 "${member.name}" 已停用` }
+      }
+      if (member.departmentId !== effectiveDeptId) {
+        return { kind: 'error', status: 400, message: `人员 "${member.name}" 不属于目标部门` }
+      }
+    }
+
+    if (body.responsibleLeaderMemberId != null) {
+      const leader = memberMap.get(body.responsibleLeaderMemberId)!
+      if (!leader.isLeader) {
+        return { kind: 'error', status: 400, message: `"${leader.name}" 不是部门领导` }
+      }
     }
   }
 

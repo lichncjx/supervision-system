@@ -3,6 +3,7 @@ import { Role, WorkItemType, WorkItemStatus } from '@prisma/client'
 import {
   createWorkItem,
   findDepartmentById,
+  findMembersByIds,
   createWorkOperationLog,
 } from '@/features/works/infrastructure/work.repository'
 interface CreateWorkResponseDto { id: number; title: string; type: string; departmentId: number | null; cooperators: unknown; departmentName: string; proposedLeader: string | null; proposedLeaderId: number | null; status: string; createdAt: string; updatedAt: string }
@@ -124,6 +125,33 @@ export async function createWorkUseCase(
 
   if (!department) {
     return { kind: 'error', status: 400, message: '责任部门不存在' }
+  }
+
+  // Validate member IDs if provided
+  if (rest.responsibleLeaderMemberId != null || rest.responsiblePersonMemberId != null) {
+    const memberIds = [rest.responsibleLeaderMemberId, rest.responsiblePersonMemberId].filter((id): id is number => id != null)
+    const members = await findMembersByIds(memberIds)
+    const memberMap = new Map(members.map((m) => [m.id, m]))
+
+    for (const id of memberIds) {
+      const member = memberMap.get(id)
+      if (!member) {
+        return { kind: 'error', status: 400, message: `人员 ID ${id} 不存在` }
+      }
+      if (!member.isActive) {
+        return { kind: 'error', status: 400, message: `人员 "${member.name}" 已停用` }
+      }
+      if (member.departmentId !== departmentId) {
+        return { kind: 'error', status: 400, message: `人员 "${member.name}" 不属于所选部门` }
+      }
+    }
+
+    if (rest.responsibleLeaderMemberId != null) {
+      const leader = memberMap.get(rest.responsibleLeaderMemberId)!
+      if (!leader.isLeader) {
+        return { kind: 'error', status: 400, message: `"${leader.name}" 不是部门领导` }
+      }
+    }
   }
 
   const workData = {

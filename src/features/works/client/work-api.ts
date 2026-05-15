@@ -125,8 +125,8 @@ export async function updateWork(id: number, patch: Partial<Work>): Promise<Work
   if (patch.isInnovation !== undefined) data.isInnovation = patch.isInnovation
   if (patch.responsibleLeader !== undefined) data.responsibleLeader = patch.responsibleLeader
   if (patch.responsiblePerson !== undefined) data.responsiblePerson = patch.responsiblePerson
-  if (patch.responsibleLeaderMemberId !== undefined) data.responsibleLeaderMemberId = patch.responsibleLeaderMemberId
-  if (patch.responsiblePersonMemberId !== undefined) data.responsiblePersonMemberId = patch.responsiblePersonMemberId
+  if ('responsibleLeaderMemberId' in patch) data.responsibleLeaderMemberId = patch.responsibleLeaderMemberId ?? null
+  if ('responsiblePersonMemberId' in patch) data.responsiblePersonMemberId = patch.responsiblePersonMemberId ?? null
   if (patch.proposedLeader !== undefined) data.proposedLeader = patch.proposedLeader
   if (patch.proposedLeaderId !== undefined) data.proposedLeaderId = patch.proposedLeaderId
   if (patch.proposedScene !== undefined) data.proposedScene = patch.proposedScene
