@@ -56,8 +56,6 @@ export default function AdminMembersPage() {
   const [importSortOrder, setImportSortOrder] = useState(0)
   const [importDeptId, setImportDeptId] = useState<number>(0)
 
-  useEffect(() => { fetchData() }, [])
-
   const fetchData = async () => {
     let depts: Department[] = []
     try {
@@ -73,6 +71,8 @@ export default function AdminMembersPage() {
     } catch { /* ignore */ }
     await loadMembers(depts)
   }
+
+  useEffect(() => { fetchData() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const businessDeptIds = new Set(departments.filter((d) => d.isBusiness).map((d) => d.id))
 

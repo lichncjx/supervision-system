@@ -1,4 +1,5 @@
 import { prisma } from '@/shared/db/prisma'
+import { toMemberResponse, type MemberResponse } from '@/features/members/domain/member.types'
 
 export interface UpdateMemberInput {
   memberId: number
@@ -12,27 +13,8 @@ export interface UpdateMemberInput {
 }
 
 export type UpdateMemberResult =
-  | { kind: 'ok'; data: ReturnType<typeof toMemberResponse>; warnings?: string[] }
+  | { kind: 'ok'; data: MemberResponse; warnings?: string[] }
   | { kind: 'error'; status: number; message: string }
-
-function toMemberResponse(m: any) {
-  return {
-    id: m.id,
-    name: m.name,
-    departmentId: m.departmentId,
-    departmentName: m.department?.name ?? '',
-    phone: m.phone,
-    isLeader: m.isLeader,
-    sortOrder: m.sortOrder,
-    isActive: m.isActive,
-    userId: m.userId,
-    user: m.user
-      ? { id: m.user.id, username: m.user.username, name: m.user.name, isActive: m.user.isActive }
-      : null,
-    createdAt: m.createdAt,
-    updatedAt: m.updatedAt,
-  }
-}
 
 export async function updateMemberUseCase(
   input: UpdateMemberInput,
