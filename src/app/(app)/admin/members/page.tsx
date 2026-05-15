@@ -83,7 +83,7 @@ export default function AdminMembersPage() {
       const all: MemberInfo[] = []
       for (const dept of source) {
         if (!dept.isBusiness) continue
-        const res = await fetch(`/api/members?departmentId=${dept.id}`, { credentials: 'include' })
+        const res = await fetch(`/api/members?departmentId=${dept.id}&includeInactive=true`, { credentials: 'include' })
         if (res.ok) all.push(...(await res.json()))
       }
       setMembers(all)

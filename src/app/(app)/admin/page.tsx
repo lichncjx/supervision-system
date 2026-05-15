@@ -114,7 +114,7 @@ export default function AdminPage() {
       let count = 0
       for (const dept of depts) {
         if (!dept.isBusiness) continue
-        const mRes = await fetch(`/api/members?departmentId=${dept.id}`, { credentials: 'include' })
+        const mRes = await fetch(`/api/members?departmentId=${dept.id}&includeInactive=true`, { credentials: 'include' })
         if (mRes.ok) count += (await mRes.json()).length
       }
       setMemberCount(count)

@@ -18,6 +18,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const departmentIdRaw = searchParams.get('departmentId')
     const isLeaderRaw = searchParams.get('isLeader')
+    const includeInactive = searchParams.get('includeInactive')
 
     if (!departmentIdRaw) {
       return NextResponse.json({ error: '缺少 departmentId 参数' }, { status: 400 })
@@ -30,7 +31,10 @@ export async function GET(request: NextRequest) {
 
     const where: Record<string, unknown> = {
       departmentId,
-      isActive: true,
+    }
+
+    if (includeInactive !== 'true') {
+      where.isActive = true
     }
 
     if (isLeaderRaw !== null) {

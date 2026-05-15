@@ -136,7 +136,14 @@ export function WorkActionDialogs({
                   <DepartmentField
                     label="责任部门"
                     value={editForm.departmentId ? String(editForm.departmentId) : ''}
-                    onChange={(v) => setEditForm((prev: any) => ({ ...prev, departmentId: Number(v) }))}
+                    onChange={(v) => setEditForm((prev: any) => ({
+                      ...prev,
+                      departmentId: Number(v),
+                      responsibleLeader: '',
+                      responsiblePerson: '',
+                      responsibleLeaderMemberId: undefined,
+                      responsiblePersonMemberId: undefined,
+                    }))}
                     departments={departments}
                   />
                   <ResponsibleFields
@@ -205,7 +212,14 @@ export function WorkActionDialogs({
                   <DepartmentField
                     label="主责部门"
                     value={editForm.departmentId ? String(editForm.departmentId) : ''}
-                    onChange={(v) => setEditForm((prev: any) => ({ ...prev, departmentId: Number(v) }))}
+                    onChange={(v) => setEditForm((prev: any) => ({
+                      ...prev,
+                      departmentId: Number(v),
+                      responsibleLeader: '',
+                      responsiblePerson: '',
+                      responsibleLeaderMemberId: undefined,
+                      responsiblePersonMemberId: undefined,
+                    }))}
                     departments={businessDepts}
                     placeholder="请选择主责部门"
                   />
