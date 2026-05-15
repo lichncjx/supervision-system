@@ -79,7 +79,7 @@ export default function ItemListPage() {
         );
 
   const getWorkMonth = (work: Work) => {
-    const date = work.completeTime || work.planCompleteTime || '';
+    const date = work.planCompleteTime || '';
     if (!date) return '';
     return String(date).slice(0, 7);
   };

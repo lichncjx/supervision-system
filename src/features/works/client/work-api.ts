@@ -90,7 +90,7 @@ export async function addWork(work: Omit<Work, 'createdAt' | 'updatedAt'>): Prom
   const data: any = {
     type: work.type, title: work.title, departmentId: work.departmentId,
     workItem: work.workItem, workNode: work.workNode,
-    businessCategory: work.businessCategory, completeTime: work.completeTime,
+    businessCategory: work.businessCategory,
     completeForm: work.completeForm, isInnovation: work.isInnovation,
     responsibleLeader: work.responsibleLeader, responsiblePerson: work.responsiblePerson,
     proposedLeader: work.proposedLeader, proposedLeaderId: work.proposedLeaderId,
@@ -118,7 +118,6 @@ export async function updateWork(id: number, patch: Partial<Work>): Promise<Work
   if (patch.workItem !== undefined) data.workItem = patch.workItem
   if (patch.workNode !== undefined) data.workNode = patch.workNode
   if (patch.businessCategory !== undefined) data.businessCategory = patch.businessCategory
-  if (patch.completeTime !== undefined) data.completeTime = patch.completeTime
   if (patch.completeForm !== undefined) data.completeForm = patch.completeForm
   if (patch.isInnovation !== undefined) data.isInnovation = patch.isInnovation
   if (patch.responsibleLeader !== undefined) data.responsibleLeader = patch.responsibleLeader

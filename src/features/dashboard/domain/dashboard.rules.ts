@@ -28,16 +28,13 @@ export function serializeDate(date: Date | null): string | null {
 
 export function getWorkDueDate(workItem: {
   type: WorkItemType
-  completeTime: Date | null
   planCompleteTime: Date | null
 }): Date | null {
-  return workItem.type === WorkItemType.TODO
-    ? workItem.planCompleteTime
-    : workItem.completeTime
+  return workItem.planCompleteTime
 }
 
 export function isOverdueWorkItem(
-  workItem: { status: any; completeTime: Date | null; planCompleteTime: Date | null; type: WorkItemType },
+  workItem: { status: any; planCompleteTime: Date | null; type: WorkItemType },
   now: Date,
 ): boolean {
   if (TERMINAL_STATUSES.includes(workItem.status as any)) return false
@@ -46,7 +43,7 @@ export function isOverdueWorkItem(
 }
 
 export function isExpiringWorkItem(
-  workItem: { status: any; completeTime: Date | null; planCompleteTime: Date | null; type: WorkItemType },
+  workItem: { status: any; planCompleteTime: Date | null; type: WorkItemType },
   now: Date,
 ): boolean {
   if (TERMINAL_STATUSES.includes(workItem.status as any)) return false

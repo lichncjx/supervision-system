@@ -112,16 +112,13 @@ const EXPIRING_DAYS = 7
 
 function getDueDate(work: {
   type: WorkItemType
-  completeTime: Date | null
   planCompleteTime: Date | null
 }) {
-  return work.type === WorkItemType.TODO
-    ? work.planCompleteTime
-    : work.completeTime
+  return work.planCompleteTime
 }
 
 function isOverdueWork(
-  work: { type: WorkItemType; status: WorkItemStatus; completeTime: Date | null; planCompleteTime: Date | null },
+  work: { type: WorkItemType; status: WorkItemStatus; planCompleteTime: Date | null },
   now: Date,
 ) {
   if (TERMINAL_STATUSES.includes(work.status)) return false
@@ -130,7 +127,7 @@ function isOverdueWork(
 }
 
 function isExpiringWork(
-  work: { type: WorkItemType; status: WorkItemStatus; completeTime: Date | null; planCompleteTime: Date | null },
+  work: { type: WorkItemType; status: WorkItemStatus; planCompleteTime: Date | null },
   now: Date,
 ) {
   if (TERMINAL_STATUSES.includes(work.status)) return false

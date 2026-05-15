@@ -728,7 +728,7 @@ async function verifyExcelImport(baseUrl, loginByUsername, deptByCode, userByUse
     '责任人',
     '配合方',
     '工作计划',
-    '计划完成时间',
+    '完成时间',
     '进展情况',
   ];
   const invalidRows = [
@@ -1029,8 +1029,8 @@ function workflowBaseData({ title, type, status, creator, dept, vp, needMainLead
     proposedLeaderId: vp.id,
     approvalLeaderId: vp.id,
     needMainLeaderCancel,
-    completeTime: type === 'TODO' ? null : dueDate,
-    planCompleteTime: type === 'TODO' ? dueDate : null,
+    completeTime: null,
+    planCompleteTime: dueDate,
     completeForm: 'target-contract workflow',
     nodes: JSON.stringify([{ title: 'workflow-node', completeTime: dueDate.toISOString() }]),
     responsibleLeader: '测试责任领导',
@@ -1807,7 +1807,7 @@ async function verifyStateFilters(baseUrl, loginByUsername, deptByCode, userByUs
       approvalLeaderId: userByUsername.vp_a.id,
       rejectReason: 'target-contract returned draft',
       rejectedFromStatus: 'PROPOSING',
-      completeTime: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      planCompleteTime: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     },
   });
 

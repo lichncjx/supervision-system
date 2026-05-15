@@ -30,7 +30,7 @@ export async function exportWorksToExcel(
           work.workItem || '',
           work.isInnovation ? '是' : '否',
           work.workNode || '',
-          work.completeTime || '',
+          work.planCompleteTime || '',
           work.completeForm || '',
           await getDepartmentNameForExcel(work.departmentId),
           work.responsibleLeader || '',
@@ -55,7 +55,7 @@ export async function exportWorksToExcel(
           work.businessCategory || '',
           work.workItem || '',
           work.workNode || '',
-          work.completeTime || '',
+          work.planCompleteTime || '',
           work.completeForm || '',
           await getDepartmentNameForExcel(work.departmentId),
           work.responsibleLeader || '',
@@ -75,7 +75,7 @@ export async function exportWorksToExcel(
         '配合部门',
         '配合责任人',
         '工作计划',
-        '计划完成时间',
+        '完成时间',
         '进展情况',
       ]
       rows = await Promise.all(

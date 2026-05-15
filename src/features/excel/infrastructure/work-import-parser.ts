@@ -87,7 +87,7 @@ export async function validateAndParseExcel(
       const workItem = getCell('工作事项')
       const isInnovationStr = getCell('是否为创新工作')
       const workNode = getCell('工作节点')
-      const completeTimeStr = getCell('完成时间')
+      const planCompleteTimeStr = getCell('完成时间')
       const completeForm = getCell('完成形式')
       const departmentName = getCell('责任部门')
       const responsibleLeader = getCell('责任领导')
@@ -113,11 +113,11 @@ export async function validateAndParseExcel(
           reason: '只能填写"是"或"否"',
         })
       }
-      if (!completeTimeStr || !parseExcelDate(completeTimeStr)) {
+      if (!planCompleteTimeStr || !parseExcelDate(planCompleteTimeStr)) {
         errors.push({
           row: rowNum,
           field: '完成时间',
-          value: completeTimeStr,
+          value: planCompleteTimeStr,
           reason: '必填字段，格式为 YYYY-MM-DD',
         })
       }
@@ -192,7 +192,7 @@ export async function validateAndParseExcel(
             workItem,
             isInnovation: isInnovationStr === '是',
             workNode,
-            completeTime: parseExcelDate(completeTimeStr),
+            planCompleteTime: parseExcelDate(planCompleteTimeStr),
             completeForm,
             departmentName,
             departmentId: resolvedDeptId,
@@ -209,7 +209,7 @@ export async function validateAndParseExcel(
       const businessCategory = getCell('业务类别')
       const workItem = getCell('工作事项')
       const workNode = getCell('工作节点')
-      const completeTimeStr = getCell('完成时间')
+      const planCompleteTimeStr = getCell('完成时间')
       const completeForm = getCell('完成形式')
       const departmentName = getCell('责任部门')
       const responsibleLeader = getCell('责任领导')
@@ -224,11 +224,11 @@ export async function validateAndParseExcel(
           reason: '必填字段不能为空',
         })
       }
-      if (!completeTimeStr || !parseExcelDate(completeTimeStr)) {
+      if (!planCompleteTimeStr || !parseExcelDate(planCompleteTimeStr)) {
         errors.push({
           row: rowNum,
           field: '完成时间',
-          value: completeTimeStr,
+          value: planCompleteTimeStr,
           reason: '必填字段，格式为 YYYY-MM-DD',
         })
       }
@@ -302,7 +302,7 @@ export async function validateAndParseExcel(
             businessCategory,
             workItem,
             workNode,
-            completeTime: parseExcelDate(completeTimeStr),
+            planCompleteTime: parseExcelDate(planCompleteTimeStr),
             completeForm,
             departmentName,
             departmentId: resolvedDeptId,
@@ -326,7 +326,7 @@ export async function validateAndParseExcel(
       const responsiblePerson = getCell('责任人')
       const cooperatorsStr = getCell('配合方')
       const workPlan = getCell('工作计划')
-      const planCompleteTimeStr = getCell('计划完成时间')
+      const planCompleteTimeStr = getCell('完成时间')
       const progress = getCell('进展情况')
 
       if (!workItem) {
@@ -359,7 +359,7 @@ export async function validateAndParseExcel(
       ) {
         errors.push({
           row: rowNum,
-          field: '计划完成时间',
+          field: '完成时间',
           value: planCompleteTimeStr,
           reason: '必填字段，格式为 YYYY-MM-DD',
         })

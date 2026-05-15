@@ -176,7 +176,7 @@ async function main() {
       title: `${RUN_ID} returned draft`,
       workItem: `${RUN_ID} returned draft`,
       departmentId,
-      completeTime: '2026-12-31',
+      planCompleteTime: '2026-12-31',
     });
     assert('department manager creates priority draft', Boolean(returned.body?.id), `id=${returned.body?.id}`);
 
@@ -227,7 +227,7 @@ async function main() {
       title: `${RUN_ID} priority cancel`,
       workItem: `${RUN_ID} priority cancel`,
       departmentId,
-      completeTime: '2026-12-31',
+      planCompleteTime: '2026-12-31',
     });
     assert('department manager creates priority for cancel', Boolean(priority.body?.id), `id=${priority.body?.id}`);
 

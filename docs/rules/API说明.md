@@ -127,8 +127,8 @@ GET /api/dashboard?limit=5
     leader?: string;
     person?: string;
   }>;
-  completeTime: string | null;
-  planCompleteTime: string | null;
+  completeTime: string | null; // 预留：实际完成时间，当前不承载计划完成时间
+  planCompleteTime: string | null; // 计划完成时间
   dueTime: string | null;
   isOverdue: boolean;
   isExpiring: boolean;

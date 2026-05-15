@@ -66,7 +66,7 @@ export default function NewWorkPage() {
     businessCategory: '',
     workItem: '',
     workNode: '',
-    completeTime: '',
+    planCompleteTime: '',
     completeForm: '',
     departmentId: String(user?.departmentId || 2),
     responsibleLeader: '',
@@ -326,9 +326,9 @@ export default function NewWorkPage() {
             )}
 
             <PlanCompleteTimeField
-              label="计划完成时间"
-              value={priorityMainForm.completeTime}
-              onChange={(v) => setPriorityMainForm({ ...priorityMainForm, completeTime: v })}
+              label="完成时间"
+              value={priorityMainForm.planCompleteTime}
+              onChange={(v) => setPriorityMainForm({ ...priorityMainForm, planCompleteTime: v })}
             />
 
             <WorkItemField
@@ -402,7 +402,7 @@ export default function NewWorkPage() {
             />
 
             <PlanCompleteTimeField
-              label="计划完成时间"
+              label="完成时间"
               value={todoForm.planCompleteTime}
               onChange={(v) => setTodoForm({ ...todoForm, planCompleteTime: v })}
             />

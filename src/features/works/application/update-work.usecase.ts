@@ -25,7 +25,6 @@ export interface UpdateWorkBody {
   workItem?: string
   workNode?: string
   businessCategory?: string
-  completeTime?: string
   completeForm?: string
   isInnovation?: boolean
   responsibleLeader?: string
@@ -81,8 +80,6 @@ export async function updateWorkUseCase(
   if (body.workNode !== undefined) updateData.workNode = body.workNode
   if (body.businessCategory !== undefined)
     updateData.businessCategory = body.businessCategory
-  if (body.completeTime !== undefined)
-    updateData.completeTime = convertToDateTime(body.completeTime)
   if (body.completeForm !== undefined)
     updateData.completeForm = body.completeForm
   if (body.isInnovation !== undefined)

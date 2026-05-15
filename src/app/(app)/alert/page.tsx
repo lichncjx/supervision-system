@@ -124,7 +124,7 @@ export default function AlertPage() {
                         <span className={`font-medium ${getWorkTypeText(work.type)}`}>{work.type}</span>
                         <StatusBadge status={work.status} work={work} />
                         <span className="text-slate-400">责任部门：{departments.find((d) => d.id === work.departmentId)?.name || '-'}</span>
-                        <span className="text-slate-400">计划完成时间：{work.completeTime || work.planCompleteTime || '-'}</span>
+                        <span className="text-slate-400">完成时间：{work.planCompleteTime || '-'}</span>
                       </div>
                       {work.rejectReason && (
                         <div className="text-xs text-rose-600 mt-1.5 break-words bg-rose-50/50 rounded px-2 py-1">

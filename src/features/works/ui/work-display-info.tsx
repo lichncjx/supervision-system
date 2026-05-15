@@ -40,7 +40,7 @@ function PriorityMainWorkDisplayInfo({ work, departments, hideNodes, hideCoopera
         </div>
         <div>
           <span className={DISPLAY_LABEL}>完成时间：</span>
-          <span>{work.completeTime || '-'}</span>
+          <span>{work.planCompleteTime || '-'}</span>
         </div>
         <div>
           <span className={DISPLAY_LABEL}>完成形式：</span>

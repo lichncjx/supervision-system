@@ -20,10 +20,10 @@ export function WorkPendingAdjustmentPanel({ work }: WorkPendingAdjustmentPanelP
           调整原因：{work.pendingAdjustmentReason || '-'}
         </div>
         <div>
-          原计划完成时间：{work.pendingAdjustmentFromTime || '-'}
+          原完成时间：{work.pendingAdjustmentFromTime || '-'}
         </div>
         <div>
-          现计划完成时间：{work.pendingAdjustmentToTime || '-'}
+          现完成时间：{work.pendingAdjustmentToTime || '-'}
         </div>
         <div>
           公司审批领导：{work.approvalLeader || '-'}
@@ -32,7 +32,7 @@ export function WorkPendingAdjustmentPanel({ work }: WorkPendingAdjustmentPanelP
           调整后事项：{work.pendingAdjustment.workItem || work.pendingAdjustment.title || '-'}
         </div>
         <div>
-          调整后完成时间：{work.pendingAdjustment.completeTime || work.pendingAdjustment.planCompleteTime || '-'}
+          调整后完成时间：{work.pendingAdjustment.planCompleteTime || '-'}
         </div>
         <div>
           调整后完成形式：{work.pendingAdjustment.completeForm || '-'}

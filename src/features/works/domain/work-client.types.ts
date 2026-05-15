@@ -47,7 +47,7 @@ export interface WorkNode {
 export interface AdjustHistory {
   id: number
   reason: string
-  field: 'completeTime' | 'planCompleteTime'
+  field: 'planCompleteTime'
   fromTime?: string
   toTime?: string
   requestedAt: string

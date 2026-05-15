@@ -71,7 +71,7 @@ function buildWorkItems(ctx) {
         approvalLeaderId: user.vpA.id,
         responsibleLeader: '业务责任领导A',
         responsiblePerson: '事项实际责任人A',
-        completeTime: farFuture,
+        planCompleteTime: farFuture,
       },
     },
     {
@@ -91,7 +91,7 @@ function buildWorkItems(ctx) {
         approvalLeaderId: user.vpA.id,
         responsibleLeader: '业务责任领导A2',
         responsiblePerson: '事项实际责任人A2',
-        completeTime: farFuture,
+        planCompleteTime: farFuture,
       },
     },
     {
@@ -177,7 +177,7 @@ function buildWorkItems(ctx) {
         approvalLeaderId: user.vpA.id,
         responsibleLeader: '业务责任领导待审',
         responsiblePerson: '事项实际责任人待审',
-        completeTime: farFuture,
+        planCompleteTime: farFuture,
       },
     },
     {
@@ -200,7 +200,7 @@ function buildWorkItems(ctx) {
         approvalLeaderId: user.vpA.id,
         responsibleLeader: '业务责任领导公司审',
         responsiblePerson: '事项实际责任人公司审',
-        completeTime: farFuture,
+        planCompleteTime: farFuture,
       },
     },
     {
@@ -243,7 +243,7 @@ function buildWorkItems(ctx) {
         approvalLeaderId: user.vpA.id,
         responsibleLeader: '业务责任领导调整',
         responsiblePerson: '事项实际责任人调整',
-        completeTime: farFuture,
+        planCompleteTime: farFuture,
       },
     },
     {
@@ -268,7 +268,7 @@ function buildWorkItems(ctx) {
         approvalLeaderId: user.president.id,
         responsibleLeader: '业务责任领导取消',
         responsiblePerson: '事项实际责任人取消',
-        completeTime: farFuture,
+        planCompleteTime: farFuture,
       },
     },
     {
@@ -313,7 +313,7 @@ function buildWorkItems(ctx) {
         approvalLeaderId: user.vpA.id,
         responsibleLeader: '业务责任领导完成',
         responsiblePerson: '事项实际责任人完成',
-        completeTime: farFuture,
+        planCompleteTime: farFuture,
       },
     },
     {
@@ -332,7 +332,7 @@ function buildWorkItems(ctx) {
         approvalLeaderId: user.vpA.id,
         responsibleLeader: '业务责任领导完成归档',
         responsiblePerson: '事项实际责任人完成归档',
-        completeTime: overdue,
+        planCompleteTime: overdue,
       },
     },
     {
@@ -351,7 +351,7 @@ function buildWorkItems(ctx) {
         approvalLeaderId: user.vpA.id,
         responsibleLeader: '业务责任领导取消归档',
         responsiblePerson: '事项实际责任人取消归档',
-        completeTime: overdue,
+        planCompleteTime: overdue,
       },
     },
     {
@@ -390,7 +390,7 @@ function buildWorkItems(ctx) {
         approvalLeaderId: user.vpA.id,
         responsibleLeader: '业务责任领导超期',
         responsiblePerson: '事项实际责任人超期',
-        completeTime: overdue,
+        planCompleteTime: overdue,
       },
     },
     {
@@ -409,7 +409,7 @@ function buildWorkItems(ctx) {
         approvalLeaderId: user.vpA.id,
         responsibleLeader: '业务责任领导草稿',
         responsiblePerson: '事项实际责任人草稿',
-        completeTime: farFuture,
+        planCompleteTime: farFuture,
       },
     },
     {
@@ -439,8 +439,7 @@ function getTargetStatus(work) {
 }
 
 function getDueDate(work) {
-  if (work.type === 'TODO') return work.planCompleteTime || null;
-  return work.completeTime || null;
+  return work.planCompleteTime || null;
 }
 
 function getResponsibleDepartmentIds(work) {

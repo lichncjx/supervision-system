@@ -8,7 +8,7 @@ interface BuildCreateWorkPayloadParams {
     businessCategory: string;
     workItem: string;
     workNode: string;
-    completeTime: string;
+    planCompleteTime: string;
     completeForm: string;
     departmentId: string;
     responsibleLeader: string;
@@ -74,7 +74,7 @@ export function buildCreateWorkPayload({
       businessCategory: priorityMainForm.businessCategory,
       workItem: priorityMainForm.workItem,
       workNode: priorityMainForm.workNode,
-      completeTime: priorityMainForm.completeTime,
+      planCompleteTime: priorityMainForm.planCompleteTime,
       completeForm: priorityMainForm.completeForm,
       responsibleLeader: priorityMainForm.responsibleLeader,
       responsiblePerson: priorityMainForm.responsiblePerson,
