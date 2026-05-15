@@ -15,6 +15,7 @@ export interface MemberSelectProps {
   value: number | undefined
   onChange: (memberId: number | undefined, name: string) => void
   filterLeaders?: boolean
+  excludeLeaders?: boolean
   placeholder?: string
   disabled?: boolean
 }
@@ -24,6 +25,7 @@ export function MemberSelect({
   value,
   onChange,
   filterLeaders,
+  excludeLeaders,
   placeholder,
   disabled,
 }: MemberSelectProps) {
@@ -43,6 +45,8 @@ export function MemberSelect({
     url.searchParams.set('departmentId', String(departmentId))
     if (filterLeaders) {
       url.searchParams.set('isLeader', 'true')
+    } else if (excludeLeaders) {
+      url.searchParams.set('isLeader', 'false')
     }
 
     fetch(url.toString(), { credentials: 'include' })
@@ -63,7 +67,7 @@ export function MemberSelect({
     return () => {
       cancelled = true
     }
-  }, [departmentId, filterLeaders])
+  }, [departmentId, filterLeaders, excludeLeaders])
 
   return (
     <Select

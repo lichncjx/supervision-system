@@ -70,6 +70,11 @@ Context7 请求需要在 Codex 默认沙箱外执行；如果遇到 DNS、ENOTFO
 10. 退回后修改的处理人判定使用 `firstSubmitterId`（首次提交审批人），不是 `creatorId`；同部门其他主管/领导不应因部门关联而获得处理权限。
 11. 涉及权限、状态、审批、统计的修改必须说明影响范围。
 
+## UI 开发规范
+
+1. 表单控件优先使用 shadcn/ui 组件（`Checkbox`、`Select`、`Dialog`、`Button`、`Input` 等），避免使用原生 HTML 控件。
+2. 图标统一使用 `lucide-react`。
+
 ## 开发边界
 
 1. 不要擅自重构数据库结构。

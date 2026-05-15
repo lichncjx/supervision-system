@@ -240,6 +240,9 @@ export default function NewWorkPage() {
 
   const businessDepts = departments.filter((d) => d.isBusiness !== false);
   const isDepartmentUser = user?.role === 'DEPARTMENT_MANAGER' || user?.role === 'DEPARTMENT_LEADER';
+  const deptOptions = isDepartmentUser
+    ? businessDepts.filter((d) => d.id === user?.departmentId)
+    : businessDepts;
   const showNodes = isPriorityOrMain || (isTodo && isDepartmentUser);
 
   const draftHint = (
@@ -286,7 +289,7 @@ export default function NewWorkPage() {
         <WorkFormCooperators
           cooperators={todoForm.cooperators}
           onChange={(cooperators) => setTodoForm({ ...todoForm, cooperators })}
-          departments={businessDepts}
+          departments={businessDepts.filter((d) => d.id !== todoForm.departmentId)}
         />
       )}
       {draftHint}
@@ -351,8 +354,16 @@ export default function NewWorkPage() {
               <DepartmentField
                 label="责任部门"
                 value={priorityMainForm.departmentId}
-                onChange={(v) => setPriorityMainForm({ ...priorityMainForm, departmentId: v })}
-                departments={departments}
+                onChange={(v) => setPriorityMainForm({
+                  ...priorityMainForm,
+                  departmentId: v,
+                  responsibleLeader: '',
+                  responsiblePerson: '',
+                  responsibleLeaderMemberId: undefined,
+                  responsiblePersonMemberId: undefined,
+                })}
+                departments={deptOptions}
+                placeholder="请选择责任部门"
                 error={fieldError('departmentId')}
                 onBlur={() => handleBlur('departmentId')}
                 fieldId="field-departmentId"
@@ -431,7 +442,7 @@ export default function NewWorkPage() {
                     responsiblePersonMemberId: undefined,
                   })
                 }}
-                departments={businessDepts}
+                departments={deptOptions}
                 placeholder="请选择主责部门"
                 error={fieldError('departmentId')}
                 onBlur={() => handleBlur('departmentId')}

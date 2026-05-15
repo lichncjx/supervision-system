@@ -198,7 +198,7 @@ export function WorkDraftEditPanel({
                   <WorkFormCooperators
                     cooperators={cooperators}
                     onChange={(value) => setEditForm((prev: any) => ({ ...prev, cooperators: value }))}
-                    departments={businessDepts}
+                    departments={businessDepts.filter((d) => d.id !== editForm.departmentId)}
                   />
                 </WorkFormSectionCard>
               </>

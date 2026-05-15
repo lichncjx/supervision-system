@@ -177,7 +177,6 @@ export function ResponsibleFields({
       <div>
         <label className={FIELD_LABEL + ' mb-1'}>
           责任领导
-          <span className="text-xs text-gray-400 ml-1">（用于业务留痕）</span>
         </label>
         {useMembers ? (
           <MemberSelect
@@ -202,7 +201,6 @@ export function ResponsibleFields({
       <div>
         <label className={FIELD_LABEL + ' mb-1'}>
           责任人
-          <span className="text-xs text-gray-400 ml-1">（用于业务留痕）</span>
         </label>
         {useMembers ? (
           <MemberSelect
@@ -212,6 +210,7 @@ export function ResponsibleFields({
               onPersonMemberIdChange?.(id);
               onPersonChange(name);
             }}
+            excludeLeaders
             placeholder="请选择责任人"
           />
         ) : (

@@ -106,6 +106,7 @@ export function WorkFormCooperators({
                   list[idx] = { ...list[idx], personMemberId: id, person: name };
                   onChange(list);
                 }}
+                excludeLeaders
                 placeholder="选择配合责任人"
               />
             </div>
