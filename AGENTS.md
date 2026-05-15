@@ -97,8 +97,24 @@ Context7 请求需要在 Codex 默认沙箱外执行；如果遇到 DNS、ENOTFO
 
 1. API 路由 (`src/app/api/`) 只做三件事：解析参数、调用 usecase、返回响应。
 2. **禁止在 API 路由中直接写业务逻辑或数据访问**——业务逻辑属于 `application/`，数据访问属于 `infrastructure/`。
-3. 认证统一使用 `getCurrentUserOrAuthError(request)`，不要在每个路由中重复 token 验证和用户查询。
-4. 参照 `src/app/api/works/route.ts` → `features/works/application/` 的模式。
+3. 认证统一使用 `getCurrentUserOrAuthError(request)`。
+4. **禁止在 API 路由中 import `prisma`**。路由不接触数据库，数据访问必须通过 `infrastructure/` 层。
+5. 路由中允许 import `@prisma/client` 的枚举（如 `Role`），但仅用于权限判断（参照 `src/app/api/users/route.ts`）。
+6. 参照 `src/app/api/works/route.ts` → `features/works/application/` 的模式。
+
+**反例（禁止）：**
+```ts
+// ❌ 路由中直接 import prisma 并查询
+import prisma from '@/shared/db/prisma'
+const members = await prisma.member.findMany({ ... })
+```
+
+**正例：**
+```ts
+// ✅ 路由只调 usecase
+import { queryMembersUseCase } from '@/features/members/application/query-members.usecase'
+const result = await queryMembersUseCase({ ... })
+```
 
 ### 跨模块依赖原则
 
