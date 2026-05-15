@@ -7,7 +7,7 @@ import { ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/features/works/ui/badges';
-import { getCurrentProcessDescription } from '@/lib/work-store';
+import { getCurrentProcessDescription } from '@/features/works/client/work-display.utils';
 import {
   TYPE_THEME,
   PANEL,
@@ -35,19 +35,17 @@ import {
 } from '@/features/works/client/work-client-permissions';
 import { isWorkStatusTerminal, isReturnedDraftWork } from '@/features/works/domain/work-status.rules';
 import { isWorkRelatedToDepartment } from '@/features/works/client/work-filters';
+import { updateWork, deleteWork, resubmitRejectedWork } from '@/features/works/client/work-api';
 import {
-  updateWork,
-  deleteWork,
   submitWork,
-  resubmitRejectedWork,
   submitComplete,
   submitAdjust,
   submitCancel,
   submitTodoDecomposition,
   approveWork,
   rejectWork,
-  type WorkEditablePatch,
-} from '@/lib/work-store';
+} from '@/features/workflow/client/workflow-api';
+import type { WorkEditablePatch } from '@/features/works/client/work-view.types';
 
 export default function WorkDetailPage() {
   const params = useParams<{ type: string; id: string }>();

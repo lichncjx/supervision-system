@@ -5,7 +5,8 @@ import { Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ExpandableText } from '@/components/common/expandable-text';
 import { StatusBadge } from '@/features/works/ui/badges';
-import { getCurrentProcessDescription, type Work } from '@/lib/work-store';
+import { getCurrentProcessDescription } from '@/features/works/client/work-display.utils';
+import type { Work } from '@/features/works/client/work-view.types';
 import { DISPLAY_LABEL } from './visual-tokens';
 
 interface WorkDisplayInfoProps {

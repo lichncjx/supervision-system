@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, RefreshCw } from 'lucide-react';
-import type { WorkStatusFilter } from '@/lib/work-store';
+import type { WorkStatusFilter } from '@/features/works/domain/work-client.types';
 
 interface WorkListToolbarProps {
   keyword: string;

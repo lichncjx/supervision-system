@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { Eye } from 'lucide-react';
 import { StatusBadge } from '@/features/works/ui/badges';
-import type { Work } from '@/lib/work-store';
+import type { Work } from '@/features/works/client/work-view.types';
 
 interface PriorityMainWorkListItemProps {
   item: Work;

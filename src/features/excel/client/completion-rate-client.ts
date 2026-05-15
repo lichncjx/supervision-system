@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx'
-import type { Work } from '@/lib/work-store'
+import type { Work } from '@/features/works/client/work-view.types'
 import { getDepartmentsForExcel } from './excel-api'
 
 export async function exportCompanyCompletionRate(works: Work[]) {
