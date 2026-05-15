@@ -41,7 +41,9 @@ export interface WorkDashboardItem {
   cooperators: Array<{
     departmentId: number
     departmentName?: string
+    leaderMemberId?: number
     leader?: string
+    personMemberId?: number
     person?: string
   }>
   completeTime: string | null

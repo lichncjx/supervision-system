@@ -50,6 +50,9 @@ export interface Work {
   responsibleLeader?: string
   // responsiblePerson: 主责责任人姓名文本，仅用于展示、导入导出、历史留痕，不参与权限判断
   responsiblePerson?: string
+  // Member references for structured personnel selection (Issue #56 stage 3).
+  responsibleLeaderMemberId?: number
+  responsiblePersonMemberId?: number
 
   // ---- 事项基本信息 ----
   status: WorkStatus
@@ -106,12 +109,14 @@ export type WorkEditablePatch = Partial<
     | 'departmentId'
     | 'cooperators'
     | 'responsibleLeader'
+    | 'responsibleLeaderMemberId'
     | 'proposedLeader'
     | 'proposedLeaderId'
     | 'proposedLeaderRole'
     | 'proposedScene'
     | 'formedTime'
     | 'responsiblePerson'
+    | 'responsiblePersonMemberId'
     | 'workPlan'
     | 'planCompleteTime'
     | 'progress'
