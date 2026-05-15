@@ -97,6 +97,24 @@ export async function updateWorkUseCase(
     }
   }
 
+  // Validate cooperator member IDs
+  const cooperators = Array.isArray(body.cooperators) ? body.cooperators : []
+  if (cooperators.some((c: any) => c.leaderMemberId != null || c.personMemberId != null)) {
+    const coopAssignments: MemberAssignment[] = []
+    for (const c of cooperators) {
+      if (c.leaderMemberId != null) {
+        coopAssignments.push({ memberId: c.leaderMemberId, role: 'leader', departmentId: c.departmentId })
+      }
+      if (c.personMemberId != null) {
+        coopAssignments.push({ memberId: c.personMemberId, role: 'person', departmentId: c.departmentId })
+      }
+    }
+    const coopErrors = await validateMemberAssignments(coopAssignments)
+    if (coopErrors.length > 0) {
+      return { kind: 'error', status: 400, message: `配合方: ${coopErrors[0].message}` }
+    }
+  }
+
   const updateData: Record<string, unknown> = {}
   if (body.title !== undefined) updateData.title = body.title
   if (body.workItem !== undefined) updateData.workItem = body.workItem

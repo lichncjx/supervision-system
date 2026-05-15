@@ -7,7 +7,7 @@ export interface MemberAssignment {
 }
 
 export interface MemberValidationError {
-  kind: 'not_found' | 'inactive' | 'wrong_department' | 'not_leader'
+  kind: 'not_found' | 'inactive' | 'wrong_department' | 'not_leader' | 'not_person'
   memberId: number
   memberName?: string
   message: string
@@ -41,6 +41,9 @@ export async function validateMemberAssignments(
 
     if (a.role === 'leader' && !member.isLeader) {
       errors.push({ kind: 'not_leader', memberId: a.memberId, memberName: member.name, message: `"${member.name}" 不是部门领导` })
+    }
+    if (a.role === 'person' && member.isLeader) {
+      errors.push({ kind: 'not_person', memberId: a.memberId, memberName: member.name, message: `"${member.name}" 是部门领导，不能选为责任人` })
     }
   }
 

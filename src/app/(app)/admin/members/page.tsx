@@ -80,13 +80,15 @@ export default function AdminMembersPage() {
     const source = depts || departments
     setIsLoading(true)
     try {
-      const all: MemberInfo[] = []
-      for (const dept of source) {
-        if (!dept.isBusiness) continue
-        const res = await fetch(`/api/members?departmentId=${dept.id}&includeInactive=true`, { credentials: 'include' })
-        if (res.ok) all.push(...(await res.json()))
-      }
-      setMembers(all)
+      const results = await Promise.all(
+        source
+          .filter((d) => d.isBusiness)
+          .map((dept) =>
+            fetch(`/api/members?departmentId=${dept.id}&includeInactive=true`, { credentials: 'include' })
+              .then((res) => (res.ok ? res.json() : []))
+          ),
+      )
+      setMembers(results.flat())
     } catch { /* ignore */ }
     setIsLoading(false)
   }
