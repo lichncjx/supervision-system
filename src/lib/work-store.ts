@@ -2,7 +2,6 @@ export type {
   WorkType,
   WorkStatusFilter,
   WorkQuery,
-  Status,
   ActionType,
   WorkSubNode,
   WorkNode,
@@ -12,7 +11,7 @@ export type {
 export type { Work, WorkEditablePatch, WorkFilter } from '@/features/works/client/work-view.types'
 export type { Attachment } from '@/features/attachments/domain/attachment-client.types'
 export type { WorkflowStep, WorkflowRecord } from '@/features/workflow/domain/workflow-client.types'
-export type { WorkStatusValue } from '@/lib/work-status'
+export type { WorkStatus } from '@/lib/work-status'
 
 export { getWorkStatusLabel as getStatusName } from '@/lib/work-status'
 export { getWorkDisplayStatusLabel as getWorkDisplayStatusName } from '@/lib/work-status'

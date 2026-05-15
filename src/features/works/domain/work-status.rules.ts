@@ -1,10 +1,9 @@
 import {
   WORK_STATUS_META,
-  ALL_WORK_STATUS_META,
   PRISMA_WORK_STATUS_TO_VALUE,
   PENDING_APPROVAL_FILTER_STATUS_VALUES,
 } from './work-status'
-import type { WorkStatusValue, WorkStatusVisualGroup, CurrentWorkStatusValue } from './work-status'
+import type { WorkStatus, WorkStatusVisualGroup } from './work-status'
 
 export interface ReturnedDraftLike {
   status?: unknown
@@ -22,14 +21,14 @@ function hasValue(value: unknown): boolean {
   return String(value).trim().length > 0
 }
 
-export function normalizeWorkStatus(status: unknown): WorkStatusValue | undefined {
+export function normalizeWorkStatus(status: unknown): WorkStatus | undefined {
   if (typeof status !== 'string') return undefined
 
   const trimmed = status.trim()
   if (!trimmed) return undefined
 
-  const lower = trimmed.toLowerCase() as WorkStatusValue
-  if (lower in ALL_WORK_STATUS_META) {
+  const lower = trimmed.toLowerCase() as WorkStatus
+  if (lower in WORK_STATUS_META) {
     return lower
   }
 
@@ -38,7 +37,7 @@ export function normalizeWorkStatus(status: unknown): WorkStatusValue | undefine
 
 export function getWorkStatusMeta(status: unknown) {
   const normalized = normalizeWorkStatus(status)
-  return normalized ? ALL_WORK_STATUS_META[normalized] : undefined
+  return normalized ? WORK_STATUS_META[normalized] : undefined
 }
 
 export function isReturnedDraftWork(
@@ -120,7 +119,7 @@ export function getWorkStatusVisualGroup(
 
 export function isCurrentWorkStatus(
   status: unknown,
-): status is CurrentWorkStatusValue {
+): status is WorkStatus {
   return Boolean(normalizeWorkStatus(status))
 }
 
@@ -152,7 +151,7 @@ export function isWorkStatusInPendingApprovalFilter(status: unknown): boolean {
   const normalized = normalizeWorkStatus(status)
   return Boolean(
     normalized &&
-      (PENDING_APPROVAL_FILTER_STATUS_VALUES as readonly WorkStatusValue[]).includes(
+      (PENDING_APPROVAL_FILTER_STATUS_VALUES as readonly WorkStatus[]).includes(
         normalized,
       ),
   )

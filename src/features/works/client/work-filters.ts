@@ -1,4 +1,4 @@
-import type { Status } from '@/features/works/domain/work-client.types'
+import type { WorkStatus } from '@/lib/work-status'
 import type { Work } from '@/features/works/client/work-view.types'
 
 export function getWorkDepartmentIds(work: Work) {
@@ -32,16 +32,16 @@ export function isWorkMainResponsibleDepartment(
 
 export function isCompanyVisibleWork(work: Work) {
   if (work.type !== '重点' && work.type !== '主要') return true
-  const companyVisibleStatuses: Status[] = [
+  const companyVisibleWorkStatuses: WorkStatus[] = [
     'proposing', 'in_progress', 'adjusting', 'cancelling',
     'completing', 'completed', 'cancelled',
   ]
-  return companyVisibleStatuses.includes(work.status)
+  return companyVisibleWorkStatuses.includes(work.status)
 }
 
 export function isSupervisorTrackingWork(work: Work) {
-  const trackingStatuses: Status[] = [
+  const trackingWorkStatuses: WorkStatus[] = [
     'pending_decompose', 'proposing', 'adjusting', 'cancelling', 'completing',
   ]
-  return trackingStatuses.includes(work.status)
+  return trackingWorkStatuses.includes(work.status)
 }

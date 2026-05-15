@@ -1,12 +1,12 @@
 import type {
   WorkType,
-  Status,
   ActionType,
   WorkNode,
   Cooperator,
   AdjustHistory,
   WorkStatusFilter,
 } from '@/features/works/domain/work-client.types'
+import type { WorkStatus } from '@/lib/work-status'
 import type { Attachment } from '@/features/attachments/domain/attachment-client.types'
 
 export type WorkFilter = WorkStatusFilter
@@ -52,7 +52,7 @@ export interface Work {
   responsiblePerson?: string
 
   // ---- 事项基本信息 ----
-  status: Status
+  status: WorkStatus
   action: ActionType
   needCeo: boolean
   isInnovation?: boolean
@@ -77,8 +77,8 @@ export interface Work {
   adjustTimeType?: 'planCompleteTime'
   rejectReason?: string | null
   rejectedAt?: string
-  rejectedFrom?: Status
-  rejectedFromStatus?: Status | null
+  rejectedFrom?: WorkStatus
+  rejectedFromStatus?: WorkStatus | null
   rejectedBy?: string
   adjustHistory?: AdjustHistory[]
   pendingAdjustment?: WorkEditablePatch
