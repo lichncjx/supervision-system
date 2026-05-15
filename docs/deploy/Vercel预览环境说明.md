@@ -112,6 +112,6 @@ pnpm prisma:generate
 
 1. **不要在 Preview 环境中存放真实业务数据。**
 2. Preview 数据库应使用测试专用数据。
-3. 不要修改 Dockerfile、docker-compose、deploy.sh、migrate.sh。
+3. 不要修改 Dockerfile、docker-compose、scripts/deploy.sh、scripts/migrate.sh。
 4. 不要修改业务逻辑、权限、审批流、状态机。
 5. Supabase 免费计划有连接数和计算时间限制，Preview 环境注意用量。
