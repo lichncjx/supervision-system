@@ -21,7 +21,7 @@ import {
 import { useAuth } from '@/components/providers/auth-provider';
 import { getRoleName } from '@/features/users/domain/role.rules';
 import { changePassword } from '@/features/users/client/auth-api';
-import { cn } from '@/lib/utils';
+import { cn } from '@/shared/ui/cn';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {

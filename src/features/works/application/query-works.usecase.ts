@@ -48,7 +48,8 @@ import {
   findManyWorks,
   type WorkListRow,
 } from '@/features/works/infrastructure/work.repository'
-import { formatDate, processNodesForDisplay, processAdjustHistory } from '@/lib/utils'
+import { formatDate } from '@/shared/utils/date'
+import { processNodesForDisplay, processAdjustHistory } from '@/features/works/application/work-display.utils'
 
 interface WorkListItemDto { id: number; title: string; type: string; status: string; departmentId: number | null; cooperators: unknown; departmentName: string; creatorId: number | null; creatorName: string; creatorRole: string; workItem: string | null; workNode: string | null; businessCategory: string | null; completeTime: string | null; completeForm: string | null; isInnovation: boolean | null; responsibleLeader: string | null; responsiblePerson: string | null; proposedLeader: string | null; proposedLeaderId: number | null; proposedScene: string | null; formedTime: string | null; workPlan: string | null; planCompleteTime: string | null; progress: string | null; action: string | null; approvalLeaderId: number | null; currentApproverId: number | null; currentApproverRole: string | null; firstSubmitterId: number | null; rejectReason: string | null; rejectedFromStatus: string | null; beforeApprovalStatus: string | null; approvalType: string | null; nodes: unknown; adjustHistory: unknown; createdAt: string; updatedAt: string }
 

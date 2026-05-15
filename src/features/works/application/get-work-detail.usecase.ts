@@ -3,7 +3,8 @@ import { canViewWorkItem } from '@/features/works/domain/work.permissions'
 import type { PermissionUser } from '@/features/works/domain/work.permissions'
 import { findWorkDetailById } from '@/features/works/infrastructure/work.repository'
 import type { WorkDetailRow } from '@/features/works/infrastructure/work.repository'
-import { formatDate, processNodesForDisplay, processAdjustHistory } from '@/lib/utils'
+import { formatDate } from '@/shared/utils/date'
+import { processNodesForDisplay, processAdjustHistory } from '@/features/works/application/work-display.utils'
 
 interface WorkAttachmentDto {
   id: number; fileName: string; fileSize: number | null; fileType: string | null
