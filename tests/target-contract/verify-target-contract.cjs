@@ -1904,6 +1904,207 @@ async function verifyStateFilters(baseUrl, loginByUsername, deptByCode, userByUs
   });
 }
 
+async function verifyMemberEndpoints(baseUrl, loginByUsername, deptByCode, _works) {
+  const adminCookies = loginByUsername.admin.cookies;
+  const deptAId = deptByCode.TDA.id;
+
+  // 1. GET /api/members?departmentId=xxx — list all active members
+  const listResponse = await request(baseUrl, 'GET', `/api/members?departmentId=${deptAId}`, null, adminCookies);
+  const memberList = Array.isArray(listResponse.body) ? listResponse.body : [];
+  record({
+    role: 'admin',
+    endpoint: 'GET /api/members?departmentId=TDA',
+    actual: {
+      statusCode: listResponse.statusCode,
+      count: memberList.length,
+      allActive: memberList.every((m) => m.isActive),
+      allDeptA: memberList.every((m) => m.departmentId === deptAId),
+    },
+    expected: { statusCode: 200, count: 3, allActive: true, allDeptA: true },
+    expectedFailure: false,
+    note: 'Issue #56: /api/members returns active members for department.',
+  });
+
+  // 2. GET /api/members?departmentId=xxx&isLeader=true
+  const leadersResponse = await request(baseUrl, 'GET', `/api/members?departmentId=${deptAId}&isLeader=true`, null, adminCookies);
+  const leaders = Array.isArray(leadersResponse.body) ? leadersResponse.body : [];
+  record({
+    role: 'admin',
+    endpoint: 'GET /api/members?departmentId=TDA&isLeader=true',
+    actual: {
+      statusCode: leadersResponse.statusCode,
+      count: leaders.length,
+      allLeaders: leaders.every((m) => m.isLeader === true),
+    },
+    expected: { statusCode: 200, count: 1, allLeaders: true },
+    expectedFailure: false,
+    note: 'Issue #56: isLeader=true filters to leaders only.',
+  });
+
+  // 3. GET /api/members?departmentId=xxx&isLeader=false
+  const nonLeadersResponse = await request(baseUrl, 'GET', `/api/members?departmentId=${deptAId}&isLeader=false`, null, adminCookies);
+  const nonLeaders = Array.isArray(nonLeadersResponse.body) ? nonLeadersResponse.body : [];
+  record({
+    role: 'admin',
+    endpoint: 'GET /api/members?departmentId=TDA&isLeader=false',
+    actual: {
+      statusCode: nonLeadersResponse.statusCode,
+      count: nonLeaders.length,
+      noneLeaders: nonLeaders.every((m) => m.isLeader === false),
+    },
+    expected: { statusCode: 200, count: 2, noneLeaders: true },
+    expectedFailure: false,
+    note: 'Issue #56: isLeader=false filters to non-leaders only.',
+  });
+
+  // 4. isLeader invalid value → 400
+  const invalidResponse = await request(baseUrl, 'GET', `/api/members?departmentId=${deptAId}&isLeader=yes`, null, adminCookies);
+  record({
+    role: 'admin',
+    endpoint: 'GET /api/members?isLeader=invalid',
+    actual: { statusCode: invalidResponse.statusCode },
+    expected: { statusCode: 400 },
+    expectedFailure: false,
+    note: 'Issue #56: invalid isLeader returns 400.',
+  });
+
+  // 5. POST /api/members — create member
+  const createResponse = await request(baseUrl, 'POST', '/api/members', {
+    name: 'TC-新成员', departmentId: deptAId, isLeader: false, sortOrder: 99,
+  }, adminCookies);
+  const createdMember = createResponse.body;
+  record({
+    role: 'admin',
+    endpoint: 'POST /api/members',
+    actual: {
+      statusCode: createResponse.statusCode,
+      name: createdMember?.name,
+      departmentId: createdMember?.departmentId,
+      isLeader: createdMember?.isLeader,
+      userId: createdMember?.userId,
+    },
+    expected: { statusCode: 201, name: 'TC-新成员', departmentId: deptAId, isLeader: false, userId: null },
+    expectedFailure: false,
+    note: 'Issue #56: POST creates member with optional userId.',
+  });
+
+  // 6. PATCH /api/members/[id] — update + bind userId
+  const memberId = createdMember?.id;
+  const bindResponse = await request(baseUrl, 'PATCH', `/api/members/${memberId}`, {
+    userId: loginByUsername.dept_manager_a1.user.id,
+  }, adminCookies);
+  const boundMember = bindResponse.body;
+  record({
+    role: 'admin',
+    endpoint: 'PATCH /api/members/[id] bind userId',
+    actual: {
+      statusCode: bindResponse.statusCode,
+      userId: boundMember?.userId,
+      user: boundMember?.user ? { id: boundMember.user.id } : null,
+    },
+    expected: {
+      statusCode: 200,
+      userId: loginByUsername.dept_manager_a1.user.id,
+      user: { id: loginByUsername.dept_manager_a1.user.id },
+    },
+    expectedFailure: false,
+    note: 'Issue #56: PATCH binds userId and returns user info.',
+  });
+
+  // 7. PATCH /api/members/[id] — unbind
+  const unbindResponse = await request(baseUrl, 'PATCH', `/api/members/${memberId}`, {
+    userId: null,
+  }, adminCookies);
+  record({
+    role: 'admin',
+    endpoint: 'PATCH /api/members/[id] unbind',
+    actual: { statusCode: unbindResponse.statusCode, userId: unbindResponse.body?.userId },
+    expected: { statusCode: 200, userId: null },
+    expectedFailure: false,
+    note: 'Issue #56: PATCH with userId=null unbinds.',
+  });
+
+  // 8. PATCH /api/members/[id] — deactivate
+  const deactivateResponse = await request(baseUrl, 'PATCH', `/api/members/${memberId}`, {
+    isActive: false,
+  }, adminCookies);
+  record({
+    role: 'admin',
+    endpoint: 'PATCH /api/members/[id] deactivate',
+    actual: { statusCode: deactivateResponse.statusCode, isActive: deactivateResponse.body?.isActive },
+    expected: { statusCode: 200, isActive: false },
+    expectedFailure: false,
+    note: 'Issue #56: deactivated members are excluded from GET.',
+  });
+
+  // 9. POST /api/members import from user
+  const importResponse = await request(baseUrl, 'POST', '/api/members', {
+    importFromUserId: loginByUsername.dept_manager_a2.user.id,
+    isLeader: false,
+    sortOrder: 10,
+  }, adminCookies);
+  const imported = importResponse.body;
+  record({
+    role: 'admin',
+    endpoint: 'POST /api/members import from user',
+    actual: {
+      statusCode: importResponse.statusCode,
+      name: imported?.name,
+      userId: imported?.userId,
+      user: imported?.user ? { id: imported.user.id } : null,
+    },
+    expected: {
+      statusCode: 201,
+      name: loginByUsername.dept_manager_a2.user.name,
+      userId: loginByUsername.dept_manager_a2.user.id,
+      user: { id: loginByUsername.dept_manager_a2.user.id },
+    },
+    expectedFailure: false,
+    note: 'Issue #56: importFromUserId auto-fills name and binds userId.',
+  });
+
+  // 10. Work item memberId persistence in GET /api/works
+  const worksResponse = await request(baseUrl, 'GET', '/api/works', null, adminCookies);
+  const worksBody = Array.isArray(worksResponse.body) ? worksResponse.body : [];
+  const workWithMember = worksBody.find((w) => w.responsibleLeaderMemberId != null || w.responsiblePersonMemberId != null);
+  record({
+    role: 'admin',
+    endpoint: 'GET /api/works memberId fields present',
+    actual: {
+      hasMemberIdWork: Boolean(workWithMember),
+      responsibleLeaderMemberId: workWithMember?.responsibleLeaderMemberId,
+      responsiblePersonMemberId: workWithMember?.responsiblePersonMemberId,
+    },
+    expected: {
+      hasMemberIdWork: true,
+      responsibleLeaderMemberId: workWithMember?.responsibleLeaderMemberId,
+      responsiblePersonMemberId: workWithMember?.responsiblePersonMemberId,
+    },
+    expectedFailure: false,
+    note: 'Issue #56 phase 3: new work items carry responsibleLeaderMemberId/responsiblePersonMemberId.',
+  });
+
+  // 11. Cooperator memberId persistence
+  const workWithCoopMembers = worksBody.find((w) =>
+    Array.isArray(w.cooperators) && w.cooperators.some((c) => c.leaderMemberId != null || c.personMemberId != null)
+  );
+  const coopSample = workWithCoopMembers?.cooperators?.find((c) => c.personMemberId != null);
+  record({
+    role: 'admin',
+    endpoint: 'GET /api/works cooperator memberId fields present',
+    actual: {
+      hasCoopWithMemberId: Boolean(workWithCoopMembers),
+      leaderMemberIdPresent: Boolean(coopSample),
+    },
+    expected: {
+      hasCoopWithMemberId: true,
+      leaderMemberIdPresent: true,
+    },
+    expectedFailure: false,
+    note: 'Issue #56 phase 3: cooperators carry leaderMemberId/personMemberId.',
+  });
+}
+
 async function main() {
   const { baseUrl } = parseArgs();
   printEnvironmentSummary('[target-contract-verify]');
@@ -1923,6 +2124,7 @@ async function main() {
   console.log('[target-contract-verify] comparing current APIs with target contract...');
   await verifyDashboardSummary(baseUrl, loginByUsername, userByUsername, works);
   await verifyDashboardUnified(baseUrl, loginByUsername, userByUsername, works);
+  await verifyMemberEndpoints(baseUrl, loginByUsername, deptByCode, works);
   await verifyWorksVisibility(baseUrl, loginByUsername, userByUsername, works);
   await verifyTargetPermissionFacts(baseUrl, loginByUsername, works);
   await verifyCompletionRate(baseUrl, loginByUsername, deptByCode, works);

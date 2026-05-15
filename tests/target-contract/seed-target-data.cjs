@@ -6,6 +6,7 @@ const {
   departments,
   users,
   buildWorkItems,
+  buildMembers,
 } = require('./target-contract-data.cjs');
 const {
   assertLocalOrTestEnvironment,
@@ -22,6 +23,7 @@ async function clearData() {
   await prisma.workflowRecord.deleteMany();
   await prisma.workItem.deleteMany();
   await prisma.operationLog.deleteMany();
+  await prisma.member.deleteMany();
   await prisma.user.deleteMany();
   await prisma.department.deleteMany();
 }
@@ -62,14 +64,54 @@ async function seedUsers(deptByKey) {
   return byKey;
 }
 
-async function seedWorks(deptByKey, userByKey) {
+async function seedMembers(deptByKey, userByKey) {
+  const memberDefs = buildMembers({ dept: deptByKey, user: userByKey });
+  const byKey = {};
+
+  for (const item of memberDefs) {
+    const member = await prisma.member.create({
+      data: {
+        name: item.name,
+        departmentId: deptByKey[item.departmentKey].id,
+        phone: item.phone,
+        isLeader: item.isLeader,
+        sortOrder: item.sortOrder,
+        isActive: true,
+      },
+    });
+    byKey[item.key] = member;
+  }
+
+  // Bind leaderA to dept_leader_a user
+  await prisma.member.update({
+    where: { id: byKey.leaderA.id },
+    data: { userId: userByKey.deptLeaderA.id },
+  });
+
+  return byKey;
+}
+
+async function seedWorks(deptByKey, userByKey, memberByKey) {
   const scenarios = buildWorkItems({ dept: deptByKey, user: userByKey });
   const created = [];
 
   for (const scenario of scenarios) {
-    const work = await prisma.workItem.create({
-      data: scenario.data,
-    });
+    const data = { ...scenario.data };
+
+    // Assign memberId to a few work items to verify memberId persistence.
+    if (scenario.key === 'priority_plain_in_progress_dept_a') {
+      data.responsibleLeaderMemberId = memberByKey.leaderA.id;
+      data.responsiblePersonMemberId = memberByKey.memberA1.id;
+    }
+    if (scenario.key === 'todo_main_a_coop_b') {
+      data.cooperators = (data.cooperators || []).map((c) => ({
+        ...c,
+        leaderMemberId: memberByKey.leaderB ? memberByKey.leaderB.id : undefined,
+        personMemberId: memberByKey.memberB1 ? memberByKey.memberB1.id : undefined,
+      }));
+    }
+
+    const work = await prisma.workItem.create({ data });
     created.push({ ...scenario, id: work.id, targetStatus: work.status });
   }
 
@@ -91,8 +133,11 @@ async function main() {
   console.log('[target-contract-seed] creating fixed role users...');
   const userByKey = await seedUsers(deptByKey);
 
+  console.log('[target-contract-seed] creating test members...');
+  const memberByKey = await seedMembers(deptByKey, userByKey);
+
   console.log('[target-contract-seed] creating target-contract work items...');
-  const works = await seedWorks(deptByKey, userByKey);
+  const works = await seedWorks(deptByKey, userByKey, memberByKey);
 
   console.log('[target-contract-seed] done');
   console.log(JSON.stringify({

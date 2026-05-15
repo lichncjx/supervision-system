@@ -29,6 +29,8 @@ export interface UpdateWorkBody {
   isInnovation?: boolean
   responsibleLeader?: string
   responsiblePerson?: string
+  responsibleLeaderMemberId?: number
+  responsiblePersonMemberId?: number
   proposedLeaderId?: number
   proposedScene?: string
   formedTime?: string
@@ -94,6 +96,10 @@ export async function updateWorkUseCase(
     updateData.formedTime = convertToDateTime(body.formedTime)
   if (body.responsiblePerson !== undefined)
     updateData.responsiblePerson = body.responsiblePerson
+  if (body.responsibleLeaderMemberId !== undefined)
+    updateData.responsibleLeaderMemberId = body.responsibleLeaderMemberId
+  if (body.responsiblePersonMemberId !== undefined)
+    updateData.responsiblePersonMemberId = body.responsiblePersonMemberId
   if (body.cooperators !== undefined)
     updateData.cooperators = body.cooperators
   if (body.workPlan !== undefined)

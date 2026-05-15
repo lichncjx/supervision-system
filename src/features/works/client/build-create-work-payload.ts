@@ -13,6 +13,8 @@ interface BuildCreateWorkPayloadParams {
     departmentId: string;
     responsibleLeader: string;
     responsiblePerson: string;
+    responsibleLeaderMemberId?: number;
+    responsiblePersonMemberId?: number;
   };
   todoForm: {
     proposedLeaderId: string;
@@ -22,7 +24,9 @@ interface BuildCreateWorkPayloadParams {
     departmentId: number;
     responsibleLeader: string;
     responsiblePerson: string;
-    cooperators: Array<{ departmentId: number; departmentName?: string; leader?: string; person?: string }>;
+    responsibleLeaderMemberId?: number;
+    responsiblePersonMemberId?: number;
+    cooperators: Array<{ departmentId: number; departmentName?: string; leaderMemberId?: number; leader?: string; personMemberId?: number; person?: string }>;
     workPlan: string;
     planCompleteTime: string;
     progress: string;
@@ -78,6 +82,8 @@ export function buildCreateWorkPayload({
       completeForm: priorityMainForm.completeForm,
       responsibleLeader: priorityMainForm.responsibleLeader,
       responsiblePerson: priorityMainForm.responsiblePerson,
+      responsibleLeaderMemberId: priorityMainForm.responsibleLeaderMemberId,
+      responsiblePersonMemberId: priorityMainForm.responsiblePersonMemberId,
     };
   }
 
@@ -100,6 +106,10 @@ export function buildCreateWorkPayload({
     proposedScene: todoForm.proposedScene,
     workItem: todoForm.workItem,
     formedTime: todoForm.formedTime,
+    responsibleLeader: todoForm.responsibleLeader,
+    responsiblePerson: todoForm.responsiblePerson,
+    responsibleLeaderMemberId: todoForm.responsibleLeaderMemberId,
+    responsiblePersonMemberId: todoForm.responsiblePersonMemberId,
     cooperators,
     workPlan: todoForm.workPlan,
     planCompleteTime: todoForm.planCompleteTime,

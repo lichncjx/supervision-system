@@ -18,6 +18,7 @@ interface WorkDetailDto {
   workItem: string | null; workNode: string | null; businessCategory: string | null
   completeTime: string | null; completeForm: string | null; isInnovation: boolean | null
   responsibleLeader: string | null; responsiblePerson: string | null
+  responsibleLeaderMemberId: number | null; responsiblePersonMemberId: number | null
   proposedLeader: string | null; proposedLeaderId: number | null; proposedScene: string | null
   formedTime: string | null; workPlan: string | null; planCompleteTime: string | null
   progress: string | null; approvalLeaderId: number | null
@@ -45,6 +46,8 @@ function toWorkDetailDto(work: WorkDetailRow): WorkDetailDto {
     isInnovation: work.isInnovation,
     responsibleLeader: work.responsibleLeader,
     responsiblePerson: work.responsiblePerson,
+    responsibleLeaderMemberId: work.responsibleLeaderMemberId,
+    responsiblePersonMemberId: work.responsiblePersonMemberId,
     proposedLeader: work.proposedLeader?.name || null,
     proposedLeaderId: work.proposedLeaderId,
     proposedScene: work.proposedScene,

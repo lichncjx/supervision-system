@@ -570,10 +570,23 @@ function expectedCompletionRate(departmentId, works) {
   };
 }
 
+function buildMembers(_ctx) {
+  return [
+    { key: 'leaderA',  departmentKey: 'deptA', name: '测试A部门领导',   phone: null, isLeader: true,  sortOrder: 1 },
+    { key: 'memberA1', departmentKey: 'deptA', name: '测试A部门责任人1', phone: null, isLeader: false, sortOrder: 2 },
+    { key: 'memberA2', departmentKey: 'deptA', name: '测试A部门责任人2', phone: null, isLeader: false, sortOrder: 3 },
+    { key: 'leaderB',  departmentKey: 'deptB', name: '测试B部门领导',   phone: null, isLeader: true,  sortOrder: 1 },
+    { key: 'memberB1', departmentKey: 'deptB', name: '测试B部门责任人1', phone: null, isLeader: false, sortOrder: 2 },
+    { key: 'leaderC',  departmentKey: 'deptC', name: '测试C部门领导',   phone: null, isLeader: true,  sortOrder: 1 },
+    { key: 'memberC1', departmentKey: 'deptC', name: '测试C部门责任人1', phone: null, isLeader: false, sortOrder: 2 },
+  ];
+}
+
 module.exports = {
   departments,
   users,
   buildWorkItems,
+  buildMembers,
   targetStateGroups,
   getTargetStatus,
   getResponsibleDepartmentIds,

@@ -94,6 +94,8 @@ export async function addWork(work: Omit<Work, 'createdAt' | 'updatedAt'>): Prom
     businessCategory: work.businessCategory,
     completeForm: work.completeForm, isInnovation: work.isInnovation,
     responsibleLeader: work.responsibleLeader, responsiblePerson: work.responsiblePerson,
+    responsibleLeaderMemberId: work.responsibleLeaderMemberId,
+    responsiblePersonMemberId: work.responsiblePersonMemberId,
     proposedLeader: work.proposedLeader, proposedLeaderId: work.proposedLeaderId,
     proposedScene: work.proposedScene, formedTime: work.formedTime,
     cooperators: work.cooperators, workPlan: work.workPlan,
@@ -123,6 +125,8 @@ export async function updateWork(id: number, patch: Partial<Work>): Promise<Work
   if (patch.isInnovation !== undefined) data.isInnovation = patch.isInnovation
   if (patch.responsibleLeader !== undefined) data.responsibleLeader = patch.responsibleLeader
   if (patch.responsiblePerson !== undefined) data.responsiblePerson = patch.responsiblePerson
+  if (patch.responsibleLeaderMemberId !== undefined) data.responsibleLeaderMemberId = patch.responsibleLeaderMemberId
+  if (patch.responsiblePersonMemberId !== undefined) data.responsiblePersonMemberId = patch.responsiblePersonMemberId
   if (patch.proposedLeader !== undefined) data.proposedLeader = patch.proposedLeader
   if (patch.proposedLeaderId !== undefined) data.proposedLeaderId = patch.proposedLeaderId
   if (patch.proposedScene !== undefined) data.proposedScene = patch.proposedScene

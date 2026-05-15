@@ -144,6 +144,11 @@ export function WorkActionDialogs({
                     onLeaderChange={(v) => setEditForm((prev: any) => ({ ...prev, responsibleLeader: v }))}
                     personValue={editForm.responsiblePerson || ''}
                     onPersonChange={(v) => setEditForm((prev: any) => ({ ...prev, responsiblePerson: v }))}
+                    departmentId={editForm.departmentId || undefined}
+                    leaderMemberId={editForm.responsibleLeaderMemberId}
+                    onLeaderMemberIdChange={(id) => setEditForm((prev: any) => ({ ...prev, responsibleLeaderMemberId: id }))}
+                    personMemberId={editForm.responsiblePersonMemberId}
+                    onPersonMemberIdChange={(id) => setEditForm((prev: any) => ({ ...prev, responsiblePersonMemberId: id }))}
                   />
                   <IsInnovationField
                     isInnovation={!!editForm.isInnovation}
@@ -209,6 +214,11 @@ export function WorkActionDialogs({
                     onLeaderChange={(v) => setEditForm((prev: any) => ({ ...prev, responsibleLeader: v }))}
                     personValue={editForm.responsiblePerson || ''}
                     onPersonChange={(v) => setEditForm((prev: any) => ({ ...prev, responsiblePerson: v }))}
+                    departmentId={editForm.departmentId || undefined}
+                    leaderMemberId={editForm.responsibleLeaderMemberId}
+                    onLeaderMemberIdChange={(id) => setEditForm((prev: any) => ({ ...prev, responsibleLeaderMemberId: id }))}
+                    personMemberId={editForm.responsiblePersonMemberId}
+                    onPersonMemberIdChange={(id) => setEditForm((prev: any) => ({ ...prev, responsiblePersonMemberId: id }))}
                   />
                   <WorkFormCooperators
                     cooperators={cooperators}

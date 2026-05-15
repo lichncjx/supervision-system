@@ -40,6 +40,7 @@ async function clearBusinessData() {
   await prisma.workflowRecord.deleteMany();
   await prisma.operationLog.deleteMany();
   await prisma.workItem.deleteMany();
+  await prisma.member.deleteMany();
   await prisma.user.deleteMany();
   await prisma.department.deleteMany();
 }
@@ -91,6 +92,37 @@ async function createUsers(departments, passwordHash) {
   return result;
 }
 
+async function createMembers(departments, users) {
+  const members = [
+    { departmentCode: 'JH', name: users.dept_leader_a.name, phone: null, isLeader: true, sortOrder: 1, userId: users.dept_leader_a.id },
+    { departmentCode: 'JH', name: users.dept_manager_a.name, phone: null, isLeader: false, sortOrder: 2, userId: users.dept_manager_a.id },
+    { departmentCode: 'JH', name: '张三', phone: null, isLeader: false, sortOrder: 3 },
+    { departmentCode: 'GY', name: users.dept_leader_b.name, phone: null, isLeader: true, sortOrder: 1, userId: users.dept_leader_b.id },
+    { departmentCode: 'GY', name: users.dept_manager_b.name, phone: null, isLeader: false, sortOrder: 2, userId: users.dept_manager_b.id },
+    { departmentCode: 'GY', name: '李四', phone: null, isLeader: false, sortOrder: 3 },
+    { departmentCode: 'ZL', name: '王五', phone: null, isLeader: false, sortOrder: 1 },
+  ];
+
+  const result = {};
+  for (const m of members) {
+    const department = departments[m.departmentCode];
+    const member = await prisma.member.create({
+      data: {
+        name: m.name,
+        departmentId: department.id,
+        phone: m.phone,
+        isLeader: m.isLeader,
+        sortOrder: m.sortOrder,
+        isActive: true,
+        userId: m.userId ?? null,
+      },
+    });
+    if (!result[m.departmentCode]) result[m.departmentCode] = [];
+    result[m.departmentCode].push(member);
+  }
+  return result;
+}
+
 function daysFromNow(days) {
   const date = new Date();
   date.setDate(date.getDate() + days);
@@ -98,7 +130,7 @@ function daysFromNow(days) {
   return date;
 }
 
-async function createPreviewWorks(departments, users) {
+async function createPreviewWorks(departments, users, members) {
   const planDept = departments.JH;
   const techDept = departments.GY;
   const qualityDept = departments.ZL;
@@ -110,6 +142,13 @@ async function createPreviewWorks(departments, users) {
   const vpA = users.vp_a;
   const vpB = users.vp_b;
 
+  const jhMembers = members.JH || [];
+  const gyMembers = members.GY || [];
+  const leaderAMember = jhMembers.find((m) => m.isLeader) || jhMembers[0];
+  const personAMember = jhMembers.find((m) => !m.isLeader) || jhMembers[0];
+  const leaderBMember = gyMembers.find((m) => m.isLeader) || gyMembers[0];
+  const personBMember = gyMembers.find((m) => !m.isLeader) || gyMembers[0];
+
   const commonPriority = {
     type: WorkItemType.PRIORITY,
     departmentId: planDept.id,
@@ -118,7 +157,9 @@ async function createPreviewWorks(departments, users) {
     approvalLeaderId: vpA.id,
     responsibleLeader: leaderA.name,
     responsiblePerson: managerA.name,
-    cooperators: [{ departmentId: techDept.id, departmentName: techDept.name, leader: leaderB.name, person: managerB.name }],
+    responsibleLeaderMemberId: leaderAMember?.id ?? null,
+    responsiblePersonMemberId: personAMember?.id ?? null,
+    cooperators: [{ departmentId: techDept.id, departmentName: techDept.name, leaderMemberId: leaderBMember?.id, leader: leaderB.name, personMemberId: personBMember?.id, person: managerB.name }],
     planCompleteTime: daysFromNow(30),
     completeForm: '演示验收材料',
   };
@@ -293,7 +334,8 @@ async function main() {
   const passwordHash = await bcrypt.hash(password, 10);
   const departments = await createDepartments();
   const users = await createUsers(departments, passwordHash);
-  const works = await createPreviewWorks(departments, users);
+  const members = await createMembers(departments, users);
+  const works = await createPreviewWorks(departments, users, members);
 
   console.log('[preview-seed] done');
   console.log(JSON.stringify({

@@ -32,6 +32,8 @@ export interface CreateWorkBody {
   isInnovation?: boolean
   responsibleLeader?: string
   responsiblePerson?: string
+  responsibleLeaderMemberId?: number
+  responsiblePersonMemberId?: number
   proposedLeaderId?: number
   proposedScene?: string
   formedTime?: string
@@ -138,6 +140,8 @@ export async function createWorkUseCase(
     isInnovation: rest.isInnovation || false,
     responsibleLeader: rest.responsibleLeader,
     responsiblePerson: rest.responsiblePerson,
+    responsibleLeaderMemberId: rest.responsibleLeaderMemberId,
+    responsiblePersonMemberId: rest.responsiblePersonMemberId,
     proposedLeaderId: rest.proposedLeaderId,
     approvalLeaderId: rest.approvalLeaderId || rest.proposedLeaderId,
     proposedScene: rest.proposedScene,
