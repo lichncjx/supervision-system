@@ -31,13 +31,15 @@ export async function GET(request: NextRequest) {
     const result = await queryMembersUseCase({
       departmentId,
       isLeader: isLeaderRaw === 'true' ? true : isLeaderRaw === 'false' ? false : undefined,
-      includeInactive: includeInactive === 'true' || isAdmin,
+      includeInactive: isAdmin && includeInactive === 'true',
     })
 
-    // Strip linked system-user info for non-admin callers.
+    // Non-admin callers only receive fields needed for form dropdowns.
     const sanitized = isAdmin
       ? result
-      : result.map(({ user: _user, ...rest }: any) => rest)
+      : result.map(({ id, name, departmentId, departmentName, isLeader }: any) => ({
+          id, name, departmentId, departmentName, isLeader,
+        }))
 
     return NextResponse.json(sanitized)
   } catch (error) {

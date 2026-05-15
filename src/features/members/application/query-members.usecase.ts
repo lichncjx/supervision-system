@@ -1,5 +1,5 @@
 import { prisma } from '@/shared/db/prisma'
-import { toMemberResponse } from '@/features/members/domain/member.types'
+import { toMemberResponse } from '@/features/members/application/member.dto'
 
 export interface QueryMembersInput {
   departmentId: number

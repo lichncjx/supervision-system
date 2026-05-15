@@ -1,5 +1,5 @@
 import { prisma } from '@/shared/db/prisma'
-import { toMemberResponse, type MemberResponse } from '@/features/members/domain/member.types'
+import { toMemberResponse, type MemberResponse } from '@/features/members/application/member.dto'
 
 export interface CreateMemberInput {
   name: string
