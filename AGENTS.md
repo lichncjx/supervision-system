@@ -75,6 +75,44 @@ Context7 请求需要在 Codex 默认沙箱外执行；如果遇到 DNS、ENOTFO
 1. 表单控件优先使用 shadcn/ui 组件（`Checkbox`、`Select`、`Dialog`、`Button`、`Input` 等），避免使用原生 HTML 控件。
 2. 图标统一使用 `lucide-react`。
 
+## 代码组织规范
+
+### 项目目录结构
+
+当前项目采用 `src/features/<领域>/` 按业务领域分层，`src/shared/` 放跨模块共享代码。详见 `docs/core/项目说明.md` 的目录结构章节。
+
+### features 分层约定
+
+每个 feature 模块按职责分 5 层，不是所有模块都需要所有层：
+
+| 层 | 目录 | 职责 | 是否必须 |
+|----|------|------|:---:|
+| application | `application/` | 业务用例（usecase），编排 domain + infrastructure | 有业务逻辑时必须 |
+| domain | `domain/` | 领域规则、权限判断、纯函数 | 有领域规则时必须 |
+| infrastructure | `infrastructure/` | 数据访问（repository）、外部服务 | 有数据访问时必须 |
+| client | `client/` | 前端组件、API 调用辅助、客户端类型 | 有前端组件时必须 |
+| ui | `ui/` | 可复用 UI 组件 | 有 UI 组件时必须 |
+
+### API 路由规范
+
+1. API 路由 (`src/app/api/`) 只做三件事：解析参数、调用 usecase、返回响应。
+2. **禁止在 API 路由中直接写业务逻辑或数据访问**——业务逻辑属于 `application/`，数据访问属于 `infrastructure/`。
+3. 参照 `src/app/api/works/route.ts` → `features/works/application/` 的模式。
+
+### 跨模块依赖原则
+
+1. 模块间通过 `infrastructure/`（数据访问）和 `domain/`（领域规则）互相引用。
+2. 不要将不属于该领域的数据访问或业务规则放在另一个领域的文件中（如 `works/infrastructure/work.repository.ts` 不应包含 `findMembersByIds`）。
+3. 新增领域时，必须先建立 `application/`、`domain/`、`infrastructure/` 目录结构，再编写代码。
+
+### 新增 Feature 检查清单
+
+新增业务模块时必须：
+- [ ] 建立标准的 feature 目录结构（按需包含 application/domain/infrastructure/client/ui）
+- [ ] API 路由只做参数解析和调用 usecase
+- [ ] 数据访问放在该 feature 的 `infrastructure/` 下
+- [ ] 跨模块引用遵循依赖原则
+
 ## 开发边界
 
 1. 不要擅自重构数据库结构。
