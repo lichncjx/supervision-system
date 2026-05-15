@@ -27,13 +27,19 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'isLeader 只能为 true 或 false' }, { status: 400 })
     }
 
+    const isAdmin = auth.user.role === Role.ADMIN
     const result = await queryMembersUseCase({
       departmentId,
       isLeader: isLeaderRaw === 'true' ? true : isLeaderRaw === 'false' ? false : undefined,
-      includeInactive: includeInactive === 'true',
+      includeInactive: includeInactive === 'true' || isAdmin,
     })
 
-    return NextResponse.json(result)
+    // Strip linked system-user info for non-admin callers.
+    const sanitized = isAdmin
+      ? result
+      : result.map(({ user: _user, ...rest }: any) => rest)
+
+    return NextResponse.json(sanitized)
   } catch (error) {
     console.error('Get members error:', error)
     return NextResponse.json({ error: '获取人员列表失败' }, { status: 500 })
