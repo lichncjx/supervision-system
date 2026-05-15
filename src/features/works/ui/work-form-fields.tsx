@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FIELD_LABEL, ERROR_TEXT } from './visual-tokens';
+import { MemberSelect } from '@/features/members/client/member-select';
 
 // WorkItemField
 export interface WorkItemFieldProps {
@@ -150,6 +151,12 @@ export interface ResponsibleFieldsProps {
   onLeaderChange: (value: string) => void;
   personValue: string;
   onPersonChange: (value: string) => void;
+  // Member selection — when departmentId is provided, dropdown selects replace text inputs.
+  departmentId?: number;
+  leaderMemberId?: number;
+  onLeaderMemberIdChange?: (id: number | undefined) => void;
+  personMemberId?: number;
+  onPersonMemberIdChange?: (id: number | undefined) => void;
 }
 
 export function ResponsibleFields({
@@ -157,31 +164,62 @@ export function ResponsibleFields({
   onLeaderChange,
   personValue,
   onPersonChange,
+  departmentId,
+  leaderMemberId,
+  onLeaderMemberIdChange,
+  personMemberId,
+  onPersonMemberIdChange,
 }: ResponsibleFieldsProps) {
+  const useMembers = Boolean(departmentId);
+
   return (
     <>
       <div>
         <label className={FIELD_LABEL + ' mb-1'}>
           责任领导
-          <span className="text-xs text-gray-400 ml-1">（用于业务留痕）</span>
         </label>
-        <Input
-          value={leaderValue}
-          onChange={(e) => onLeaderChange(e.target.value)}
-          placeholder="请输入责任领导姓名"
-        />
+        {useMembers ? (
+          <MemberSelect
+            departmentId={departmentId}
+            value={leaderMemberId}
+            onChange={(id, name) => {
+              onLeaderMemberIdChange?.(id);
+              onLeaderChange(name);
+            }}
+            filterLeaders
+            placeholder="请选择责任领导"
+          />
+        ) : (
+          <Input
+            value={leaderValue}
+            onChange={(e) => onLeaderChange(e.target.value)}
+            placeholder="请输入责任领导姓名"
+          />
+        )}
       </div>
 
       <div>
         <label className={FIELD_LABEL + ' mb-1'}>
           责任人
-          <span className="text-xs text-gray-400 ml-1">（用于业务留痕）</span>
         </label>
-        <Input
-          value={personValue}
-          onChange={(e) => onPersonChange(e.target.value)}
-          placeholder="请输入责任人姓名"
-        />
+        {useMembers ? (
+          <MemberSelect
+            departmentId={departmentId}
+            value={personMemberId}
+            onChange={(id, name) => {
+              onPersonMemberIdChange?.(id);
+              onPersonChange(name);
+            }}
+            excludeLeaders
+            placeholder="请选择责任人"
+          />
+        ) : (
+          <Input
+            value={personValue}
+            onChange={(e) => onPersonChange(e.target.value)}
+            placeholder="请输入责任人姓名"
+          />
+        )}
       </div>
     </>
   );

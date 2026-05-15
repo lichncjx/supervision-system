@@ -136,7 +136,14 @@ export function WorkActionDialogs({
                   <DepartmentField
                     label="责任部门"
                     value={editForm.departmentId ? String(editForm.departmentId) : ''}
-                    onChange={(v) => setEditForm((prev: any) => ({ ...prev, departmentId: Number(v) }))}
+                    onChange={(v) => setEditForm((prev: any) => ({
+                      ...prev,
+                      departmentId: Number(v),
+                      responsibleLeader: '',
+                      responsiblePerson: '',
+                      responsibleLeaderMemberId: undefined,
+                      responsiblePersonMemberId: undefined,
+                    }))}
                     departments={departments}
                   />
                   <ResponsibleFields
@@ -144,6 +151,11 @@ export function WorkActionDialogs({
                     onLeaderChange={(v) => setEditForm((prev: any) => ({ ...prev, responsibleLeader: v }))}
                     personValue={editForm.responsiblePerson || ''}
                     onPersonChange={(v) => setEditForm((prev: any) => ({ ...prev, responsiblePerson: v }))}
+                    departmentId={editForm.departmentId || undefined}
+                    leaderMemberId={editForm.responsibleLeaderMemberId}
+                    onLeaderMemberIdChange={(id) => setEditForm((prev: any) => ({ ...prev, responsibleLeaderMemberId: id }))}
+                    personMemberId={editForm.responsiblePersonMemberId}
+                    onPersonMemberIdChange={(id) => setEditForm((prev: any) => ({ ...prev, responsiblePersonMemberId: id }))}
                   />
                   <IsInnovationField
                     isInnovation={!!editForm.isInnovation}
@@ -200,7 +212,14 @@ export function WorkActionDialogs({
                   <DepartmentField
                     label="主责部门"
                     value={editForm.departmentId ? String(editForm.departmentId) : ''}
-                    onChange={(v) => setEditForm((prev: any) => ({ ...prev, departmentId: Number(v) }))}
+                    onChange={(v) => setEditForm((prev: any) => ({
+                      ...prev,
+                      departmentId: Number(v),
+                      responsibleLeader: '',
+                      responsiblePerson: '',
+                      responsibleLeaderMemberId: undefined,
+                      responsiblePersonMemberId: undefined,
+                    }))}
                     departments={businessDepts}
                     placeholder="请选择主责部门"
                   />
@@ -209,11 +228,16 @@ export function WorkActionDialogs({
                     onLeaderChange={(v) => setEditForm((prev: any) => ({ ...prev, responsibleLeader: v }))}
                     personValue={editForm.responsiblePerson || ''}
                     onPersonChange={(v) => setEditForm((prev: any) => ({ ...prev, responsiblePerson: v }))}
+                    departmentId={editForm.departmentId || undefined}
+                    leaderMemberId={editForm.responsibleLeaderMemberId}
+                    onLeaderMemberIdChange={(id) => setEditForm((prev: any) => ({ ...prev, responsibleLeaderMemberId: id }))}
+                    personMemberId={editForm.responsiblePersonMemberId}
+                    onPersonMemberIdChange={(id) => setEditForm((prev: any) => ({ ...prev, responsiblePersonMemberId: id }))}
                   />
                   <WorkFormCooperators
                     cooperators={cooperators}
                     onChange={(value) => setEditForm((prev: any) => ({ ...prev, cooperators: value }))}
-                    departments={businessDepts}
+                    departments={businessDepts.filter((d) => d.id !== editForm.departmentId)}
                   />
                 </div>
               )}

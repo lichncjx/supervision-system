@@ -1,11 +1,10 @@
 import { toPermissionUser, isApprovalStatus, rejectableBeforeStatus } from '@/features/workflow/domain/workflow.rules'
 import type { UserSession, WorkflowResult } from '@/features/workflow/domain/workflow.types'
 import { canApproveWorkItem } from '@/features/works/domain/work.permissions'
+import { findWorkForUpdateById, updateWorkItem } from '@/features/works/infrastructure/work.repository'
 import {
-  findWorkItemById,
   createWorkflowRecord,
   createOperationLog,
-  updateWorkItemForWorkflow,
 } from '@/features/workflow/infrastructure/workflow.repository'
 
 export async function rejectWorkflowAction(
@@ -13,7 +12,7 @@ export async function rejectWorkflowAction(
   user: UserSession,
   rejectReason: string,
 ): Promise<WorkflowResult> {
-  const workItem = await findWorkItemById(workItemId)
+  const workItem = await findWorkForUpdateById(workItemId)
   if (!workItem) {
     return { success: false, error: '事项不存在' }
   }
@@ -32,7 +31,7 @@ export async function rejectWorkflowAction(
   }
 
   const oldStatus = workItem.status
-  const updated = await updateWorkItemForWorkflow(workItemId, {
+  const updated = await updateWorkItem(workItemId, {
     status: targetStatus,
     beforeApprovalStatus: null,
     approvalType: null,

@@ -2,33 +2,11 @@ import { Role } from '@prisma/client'
 import { prisma } from '@/shared/db/prisma'
 
 export interface DepartmentInfo {
-  id: number
-  name: string
-  code: string | null
+  id: number; name: string; code: string | null
 }
 
 export interface CompanyLeaderInfo {
-  id: number
-  name: string
-}
-
-export async function findDepartmentsForImport(): Promise<DepartmentInfo[]> {
-  return prisma.department.findMany({
-    where: { isBusiness: true },
-    select: { id: true, name: true, code: true },
-  })
-}
-
-export async function findCompanyLeadersForImport(): Promise<
-  CompanyLeaderInfo[]
-> {
-  return prisma.user.findMany({
-    where: {
-      role: { in: [Role.PRESIDENT, Role.VICE_PRESIDENT] },
-      isActive: true,
-    },
-    select: { id: true, name: true },
-  })
+  id: number; name: string
 }
 
 export async function createImportedWorkItems(params: {

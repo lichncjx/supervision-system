@@ -92,6 +92,8 @@ export default function WorkDetailPage() {
         departmentId: work.departmentId,
         responsibleLeader: work.responsibleLeader || '',
         responsiblePerson: work.responsiblePerson || '',
+        responsibleLeaderMemberId: work.responsibleLeaderMemberId,
+        responsiblePersonMemberId: work.responsiblePersonMemberId,
         proposedLeader: work.proposedLeader || '',
         proposedLeaderId: work.proposedLeaderId ? String(work.proposedLeaderId) : '',
         proposedLeaderRole: work.proposedLeaderRole || '',
@@ -371,6 +373,10 @@ export default function WorkDetailPage() {
 
   const isPriorityOrMain = work.type === '重点' || work.type === '主要';
   const isTodo = work.type === '待办';
+  const isDepartmentUser = user?.role === 'DEPARTMENT_MANAGER' || user?.role === 'DEPARTMENT_LEADER';
+  const deptOptions = isDepartmentUser
+    ? departments.filter((d) => d.id === user?.departmentId)
+    : departments;
   const typeColorKey = work.type === '重点' ? 'priority' : work.type === '主要' ? 'main' : 'todo';
 
   const theme = TYPE_THEME[typeColorKey];
@@ -380,7 +386,10 @@ export default function WorkDetailPage() {
     businessCategory: work.businessCategory || '', isInnovation: !!work.isInnovation,
     completeForm: work.completeForm || '',
     departmentId: work.departmentId, responsibleLeader: work.responsibleLeader || '',
-    responsiblePerson: work.responsiblePerson || '', proposedLeader: work.proposedLeader || '',
+    responsiblePerson: work.responsiblePerson || '',
+    responsibleLeaderMemberId: work.responsibleLeaderMemberId,
+    responsiblePersonMemberId: work.responsiblePersonMemberId,
+    proposedLeader: work.proposedLeader || '',
     proposedLeaderId: work.proposedLeaderId ? String(work.proposedLeaderId) : '',
     proposedLeaderRole: work.proposedLeaderRole || '', proposedScene: work.proposedScene || '',
     formedTime: work.formedTime || '', cooperators: work.cooperators || [],
@@ -489,7 +498,7 @@ export default function WorkDetailPage() {
             setEditReason={setEditReason}
             isPriorityOrMain={isPriorityOrMain}
             isTodo={isTodo}
-            departments={departments}
+            departments={deptOptions}
             companyLeaders={companyLeaders}
             departmentLeaders={departmentLeaders}
             departmentManagers={departmentManagers}
@@ -586,7 +595,7 @@ export default function WorkDetailPage() {
         editForm={editForm}
         setEditForm={setEditForm}
         companyLeaders={companyLeaders}
-        departments={departments}
+        departments={deptOptions}
         isPriorityOrMain={isPriorityOrMain}
         isTodo={isTodo}
         onSubmitAdjust={handleAdjust}

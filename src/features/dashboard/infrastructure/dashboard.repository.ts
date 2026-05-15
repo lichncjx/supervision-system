@@ -62,21 +62,6 @@ export async function findWorksForDashboardCompletionRate(params: {
   })
 }
 
-export async function findBusinessDepartments() {
-  return prisma.department.findMany({
-    where: { isBusiness: true },
-    select: { id: true, name: true },
-    orderBy: { name: 'asc' },
-  })
-}
-
-export async function findDepartmentById(id: number) {
-  return prisma.department.findUnique({
-    where: { id },
-    select: { id: true, name: true },
-  })
-}
-
 export async function findDepartmentIdsFromVisibleWorks(
   visibilityWhere: any,
 ): Promise<number[]> {
@@ -92,12 +77,4 @@ export async function findDepartmentIdsFromVisibleWorks(
       ),
     ),
   )
-}
-
-export async function findDepartmentsByIds(ids: number[]) {
-  return prisma.department.findMany({
-    where: { id: { in: ids }, isBusiness: true },
-    select: { id: true, name: true },
-    orderBy: { name: 'asc' },
-  })
 }

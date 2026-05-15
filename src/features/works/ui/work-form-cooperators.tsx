@@ -2,9 +2,9 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FIELD_LABEL, MUTED_TEXT } from './visual-tokens';
+import { FIELD_LABEL, MUTED_TEXT, SELECT_CONTROL } from './visual-tokens';
+import { MemberSelect } from '@/features/members/client/member-select';
 import { Plus, Trash2 } from 'lucide-react';
 import type { Cooperator } from '@/features/works/domain/work-client.types';
 
@@ -30,13 +30,15 @@ export function WorkFormCooperators({
     }
     const dept = departments.find((d) => d.id === newId);
     const list = [...cooperators];
-    list[idx] = { ...list[idx], departmentId: newId, departmentName: dept?.name || '' };
-    onChange(list);
-  };
-
-  const handleFieldChange = (idx: number, field: 'leader' | 'person', value: string) => {
-    const list = [...cooperators];
-    list[idx] = { ...list[idx], [field]: value };
+    // Clear memberId and name snapshot when department switches.
+    list[idx] = {
+      departmentId: newId,
+      departmentName: dept?.name || '',
+      leaderMemberId: undefined,
+      leader: '',
+      personMemberId: undefined,
+      person: '',
+    };
     onChange(list);
   };
 
@@ -62,7 +64,7 @@ export function WorkFormCooperators({
               value={c.departmentId ? String(c.departmentId) : ''}
               onValueChange={(v) => handleDepartmentChange(idx, Number(v))}
             >
-              <SelectTrigger className="flex-1 min-w-0 rounded-lg">
+              <SelectTrigger className={`flex-1 min-w-0 ${SELECT_CONTROL}`}>
                 <SelectValue placeholder="选择配合部门" />
               </SelectTrigger>
               <SelectContent>
@@ -82,18 +84,32 @@ export function WorkFormCooperators({
             </Button>
           </div>
           <div className="flex gap-1.5">
-            <Input
-              value={c.leader || ''}
-              onChange={(e) => handleFieldChange(idx, 'leader', e.target.value)}
-              placeholder="领导"
-              className="flex-1"
-            />
-            <Input
-              value={c.person || ''}
-              onChange={(e) => handleFieldChange(idx, 'person', e.target.value)}
-              placeholder="责任人"
-              className="flex-1"
-            />
+            <div className="flex-1">
+              <MemberSelect
+                departmentId={c.departmentId || undefined}
+                value={c.leaderMemberId}
+                onChange={(id, name) => {
+                  const list = [...cooperators];
+                  list[idx] = { ...list[idx], leaderMemberId: id, leader: name };
+                  onChange(list);
+                }}
+                filterLeaders
+                placeholder="选择配合领导"
+              />
+            </div>
+            <div className="flex-1">
+              <MemberSelect
+                departmentId={c.departmentId || undefined}
+                value={c.personMemberId}
+                onChange={(id, name) => {
+                  const list = [...cooperators];
+                  list[idx] = { ...list[idx], personMemberId: id, person: name };
+                  onChange(list);
+                }}
+                excludeLeaders
+                placeholder="选择配合责任人"
+              />
+            </div>
           </div>
         </div>
       ))}

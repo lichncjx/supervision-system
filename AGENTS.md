@@ -26,6 +26,7 @@
 | 权限、审批流、状态机、统计口径 | `docs/core/业务规则.md` |
 | 业务人员字段、人员体系、附件权限 | `docs/rules/业务人员与附件权限规则.md` |
 | Git 分支、Issue、PR、CI | `docs/core/GitHub协作流程.md` |
+| 代码组织、分层、目录、API 路由、表归属 | `docs/design/后端模块化架构约定.md` |
 | 群晖部署、迁移、运维排查 | `docs/deploy/部署说明-群晖.md` |
 | 发布前验证 | `docs/release/测试发布检查清单.md` |
 | 正式发布记录 | `docs/release/发布记录.md` |
@@ -69,6 +70,27 @@ Context7 请求需要在 Codex 默认沙箱外执行；如果遇到 DNS、ENOTFO
 9. 待办理指不需要审批但需要当前用户处理的事项：草稿编辑/提交、待分解、各类审批退回后修改。普通 IN_PROGRESS 进行中事项不默认计入待办理。
 10. 退回后修改的处理人判定使用 `firstSubmitterId`（首次提交审批人），不是 `creatorId`；同部门其他主管/领导不应因部门关联而获得处理权限。
 11. 涉及权限、状态、审批、统计的修改必须说明影响范围。
+
+## UI 开发规范
+
+1. 表单控件优先使用 shadcn/ui 组件（`Checkbox`、`Select`、`Dialog`、`Button`、`Input` 等），避免使用原生 HTML 控件。
+2. 图标统一使用 `lucide-react`。
+
+## 代码组织规范
+
+项目采用 **Modular Monolith + Feature-based Layered Architecture**。
+
+每个业务模块放在 `src/features/<领域>/`，内部分 5 层：`domain/`、`application/`、`infrastructure/`、`client/`、`ui/`。
+
+完整的分层职责、依赖方向、命名约定、API 路由规范、跨模块表归属规则，见 **`docs/design/后端模块化架构约定.md`**（权威文档）。
+
+### 新增 Feature 检查清单
+
+新增业务模块时必须：
+- [ ] 建立标准的 feature 目录结构（按需包含 application/domain/infrastructure/client/ui）
+- [ ] API 路由只做参数解析和调用 usecase
+- [ ] 数据访问放在该 feature 的 `infrastructure/` 下
+- [ ] 跨模块引用遵循 `docs/design/后端模块化架构约定.md` 的依赖原则
 
 ## 开发边界
 

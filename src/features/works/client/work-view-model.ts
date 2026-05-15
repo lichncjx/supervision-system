@@ -17,7 +17,9 @@ function parseCooperators(value: unknown): import('@/features/works/domain/work-
     .map((item: any) => ({
       departmentId: Number(item?.departmentId) || 0,
       departmentName: item?.departmentName || undefined,
+      leaderMemberId: item?.leaderMemberId ?? undefined,
       leader: item?.leader || undefined,
+      personMemberId: item?.personMemberId ?? undefined,
       person: item?.person || undefined,
     }))
     .filter((c) => c.departmentId > 0)
@@ -50,6 +52,8 @@ export function transformWorkFromAPI(work: any): Work {
     currentApproverRole: work.currentApproverRole || work.current_approver_role,
     responsibleLeader: work.responsibleLeader || work.responsible_leader,
     responsiblePerson: work.responsiblePerson || work.responsible_person,
+    responsibleLeaderMemberId: work.responsibleLeaderMemberId ?? undefined,
+    responsiblePersonMemberId: work.responsiblePersonMemberId ?? undefined,
     status: normalizeWorkStatus(work.status) || 'draft',
     action: normalizeAction(work.action || work.action_type),
     needCeo: work.type === '重点',

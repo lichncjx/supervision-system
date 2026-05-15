@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Building2, Settings, ShieldCheck, Users, Plus, Trash2, Power, KeyRound, Eye, EyeOff, Pencil } from 'lucide-react';
+import Link from 'next/link';
+import { Building2, Settings, Users, UserCog, Plus, Trash2, Power, KeyRound, Eye, EyeOff, Pencil } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { getRoleName } from '@/features/users/domain/role.rules';
 import type { Role } from '@/features/users/domain/user.types';
@@ -41,6 +42,7 @@ export default function AdminPage() {
   const { user } = useAuth();
   const [userList, setUserList] = useState<User[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [memberCount, setMemberCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [deptFilter, setDeptFilter] = useState<number | '全部'>('全部');
   const [page, setPage] = useState(1);
@@ -71,6 +73,7 @@ export default function AdminPage() {
   useEffect(() => {
     fetchUsers();
     fetchDepartments();
+    fetchMemberCount();
   }, []);
 
   const fetchUsers = async () => {
@@ -102,6 +105,21 @@ export default function AdminPage() {
       console.error('Fetch departments error:', error);
     }
   };
+
+  const fetchMemberCount = async () => {
+    try {
+      const res = await fetch('/api/departments', { credentials: 'include' })
+      if (!res.ok) return
+      const depts: Department[] = await res.json()
+      let count = 0
+      for (const dept of depts) {
+        if (!dept.isBusiness) continue
+        const mRes = await fetch(`/api/members?departmentId=${dept.id}&includeInactive=true`, { credentials: 'include' })
+        if (mRes.ok) count += (await mRes.json()).length
+      }
+      setMemberCount(count)
+    } catch { /* ignore */ }
+  }
 
   if (!user || user.role !== 'ADMIN') {
     return <div className="p-8 text-center text-red-600">无权限访问系统管理</div>;
@@ -338,16 +356,16 @@ export default function AdminPage() {
             <p className="text-sm text-slate-500">用户数量</p>
             <p className="text-3xl font-bold">{userList.length}</p>
           </div>
-          <Users className="h-8 w-8 text-green-600" />
+          <UserCog className="h-8 w-8 text-teal-600" />
         </div>
 
-        <div className="bg-gradient-to-br from-white to-slate-50/50 rounded-xl p-6 flex items-center justify-between border border-slate-200/80 hover:shadow-md transition-shadow">
+        <Link href="/admin/members" className="bg-gradient-to-br from-white to-slate-50/50 rounded-xl p-6 flex items-center justify-between border border-slate-200/80 hover:shadow-md transition-shadow cursor-pointer">
           <div>
-            <p className="text-sm text-slate-500">角色数量</p>
-            <p className="text-3xl font-bold">6</p>
+            <p className="text-sm text-slate-500">部门人员</p>
+            <p className="text-3xl font-bold">{memberCount}</p>
           </div>
-          <ShieldCheck className="h-8 w-8 text-purple-600" />
-        </div>
+          <Users className="h-8 w-8 text-green-600" />
+        </Link>
       </div>
 
       <div className="rounded-xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50/50 overflow-hidden">

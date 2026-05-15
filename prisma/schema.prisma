@@ -60,8 +60,30 @@ model Department {
 
   users       User[]   @relation("UserDepartment")
   workItems   WorkItem[] @relation("DepartmentWorkItems")
+  members     Member[]
 
   @@map("departments")
+}
+
+model Member {
+  id            Int      @id @default(autoincrement())
+  name          String   @db.VarChar(50)
+  departmentId  Int
+  phone         String?  @db.VarChar(20)
+  isLeader      Boolean  @default(false)
+  sortOrder     Int      @default(0)
+  isActive      Boolean  @default(true)
+  userId        Int?     @unique
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  department    Department @relation(fields: [departmentId], references: [id])
+  user          User?      @relation(fields: [userId], references: [id])
+
+  responsibleLeaderWorkItems WorkItem[] @relation("ResponsibleLeaderMember")
+  responsiblePersonWorkItems WorkItem[] @relation("ResponsiblePersonMember")
+
+  @@map("members")
 }
 
 model User {
@@ -86,6 +108,7 @@ model User {
   approvedWorkflowRecords  WorkflowRecord[]    @relation("WorkflowApprover")
   operationLogs        OperationLog[]
   attachments          Attachment[]
+  member               Member?
 
   @@map("users")
 }
@@ -119,8 +142,13 @@ model WorkItem {
 
   // Name snapshots for display, Excel import/export and audit history only.
   // They do not participate in permission, approval or visibility decisions.
-  responsibleLeader     String?         @db.VarChar(50)
-  responsiblePerson     String?         @db.VarChar(50)
+  responsibleLeader           String?         @db.VarChar(50)
+  responsiblePerson           String?         @db.VarChar(50)
+
+  // Member references for structured personnel selection (Issue #56).
+  // Populated alongside name snapshots when users select from Member dropdowns.
+  responsibleLeaderMemberId   Int?
+  responsiblePersonMemberId   Int?
 
   proposedScene         String?         @db.VarChar(200)
   formedTime            DateTime?
@@ -148,6 +176,9 @@ model WorkItem {
 
   workflowRecords       WorkflowRecord[]
   attachments           Attachment[]
+
+  responsibleLeaderMember Member?  @relation("ResponsibleLeaderMember", fields: [responsibleLeaderMemberId], references: [id])
+  responsiblePersonMember Member?  @relation("ResponsiblePersonMember", fields: [responsiblePersonMemberId], references: [id])
 
   @@map("work_items")
 }

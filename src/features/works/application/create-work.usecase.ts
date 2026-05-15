@@ -2,9 +2,13 @@ import type { CurrentUser } from '@/shared/auth/current-user'
 import { Role, WorkItemType, WorkItemStatus } from '@prisma/client'
 import {
   createWorkItem,
-  findDepartmentById,
   createWorkOperationLog,
 } from '@/features/works/infrastructure/work.repository'
+import { findDepartmentById } from '@/features/departments/infrastructure/department.repository'
+import {
+  validateMemberAssignments,
+  type MemberAssignment,
+} from '@/features/members/domain/member.rules'
 interface CreateWorkResponseDto { id: number; title: string; type: string; departmentId: number | null; cooperators: unknown; departmentName: string; proposedLeader: string | null; proposedLeaderId: number | null; status: string; createdAt: string; updatedAt: string }
 
 function toCreateWorkResponse(work: any): CreateWorkResponseDto {
@@ -32,6 +36,8 @@ export interface CreateWorkBody {
   isInnovation?: boolean
   responsibleLeader?: string
   responsiblePerson?: string
+  responsibleLeaderMemberId?: number
+  responsiblePersonMemberId?: number
   proposedLeaderId?: number
   proposedScene?: string
   formedTime?: string
@@ -124,6 +130,39 @@ export async function createWorkUseCase(
     return { kind: 'error', status: 400, message: '责任部门不存在' }
   }
 
+  // Validate member IDs if provided
+  if (rest.responsibleLeaderMemberId != null || rest.responsiblePersonMemberId != null) {
+    const assignments: MemberAssignment[] = []
+    if (rest.responsibleLeaderMemberId != null) {
+      assignments.push({ memberId: rest.responsibleLeaderMemberId, role: 'leader', departmentId })
+    }
+    if (rest.responsiblePersonMemberId != null) {
+      assignments.push({ memberId: rest.responsiblePersonMemberId, role: 'person', departmentId })
+    }
+    const errors = await validateMemberAssignments(assignments)
+    if (errors.length > 0) {
+      return { kind: 'error', status: 400, message: errors[0].message }
+    }
+  }
+
+  // Validate cooperator member IDs
+  const cooperators = Array.isArray(rest.cooperators) ? rest.cooperators : []
+  if (cooperators.some((c: any) => c.leaderMemberId != null || c.personMemberId != null)) {
+    const coopAssignments: MemberAssignment[] = []
+    for (const c of cooperators) {
+      if (c.leaderMemberId != null) {
+        coopAssignments.push({ memberId: c.leaderMemberId, role: 'leader', departmentId: c.departmentId })
+      }
+      if (c.personMemberId != null) {
+        coopAssignments.push({ memberId: c.personMemberId, role: 'person', departmentId: c.departmentId })
+      }
+    }
+    const coopErrors = await validateMemberAssignments(coopAssignments)
+    if (coopErrors.length > 0) {
+      return { kind: 'error', status: 400, message: `配合方: ${coopErrors[0].message}` }
+    }
+  }
+
   const workData = {
     type: workType,
     title: rest.title || rest.workItem || '未命名事项',
@@ -138,6 +177,8 @@ export async function createWorkUseCase(
     isInnovation: rest.isInnovation || false,
     responsibleLeader: rest.responsibleLeader,
     responsiblePerson: rest.responsiblePerson,
+    responsibleLeaderMemberId: rest.responsibleLeaderMemberId,
+    responsiblePersonMemberId: rest.responsiblePersonMemberId,
     proposedLeaderId: rest.proposedLeaderId,
     approvalLeaderId: rest.approvalLeaderId || rest.proposedLeaderId,
     proposedScene: rest.proposedScene,

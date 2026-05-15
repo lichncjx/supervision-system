@@ -64,10 +64,6 @@ export async function createWorkItem(
   })
 }
 
-export async function findDepartmentById(id: number) {
-  return prisma.department.findUnique({ where: { id } })
-}
-
 export async function findWorkForUpdateById(id: number) {
   return prisma.workItem.findUnique({ where: { id } })
 }

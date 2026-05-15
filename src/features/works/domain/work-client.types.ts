@@ -57,6 +57,8 @@ export interface AdjustHistory {
 export interface Cooperator {
   departmentId: number
   departmentName?: string
+  leaderMemberId?: number
   leader?: string
+  personMemberId?: number
   person?: string
 }

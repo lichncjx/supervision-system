@@ -19,6 +19,7 @@ import {
   IsInnovationField,
   ProposedLeaderField,
   DepartmentField,
+  ResponsibleFields,
   PlanCompleteTimeField,
   TodoSpecificFields,
 } from '@/features/works/ui/work-form-fields';
@@ -73,6 +74,8 @@ export default function NewWorkPage() {
     departmentId: String(user?.departmentId || 2),
     responsibleLeader: '',
     responsiblePerson: '',
+    responsibleLeaderMemberId: undefined as number | undefined,
+    responsiblePersonMemberId: undefined as number | undefined,
   });
 
   // 待办事项表单
@@ -87,7 +90,9 @@ export default function NewWorkPage() {
     departmentId: user?.departmentId && user.departmentId !== 1 ? user.departmentId : 0,
     responsibleLeader: '',
     responsiblePerson: '',
-    cooperators: [] as Array<{ departmentId: number; departmentName?: string; leader?: string; person?: string }>,
+    responsibleLeaderMemberId: undefined as number | undefined,
+    responsiblePersonMemberId: undefined as number | undefined,
+    cooperators: [] as Array<{ departmentId: number; departmentName?: string; leaderMemberId?: number; leader?: string; personMemberId?: number; person?: string }>,
     workPlan: '',
     planCompleteTime: '',
     progress: '',
@@ -235,6 +240,9 @@ export default function NewWorkPage() {
 
   const businessDepts = departments.filter((d) => d.isBusiness !== false);
   const isDepartmentUser = user?.role === 'DEPARTMENT_MANAGER' || user?.role === 'DEPARTMENT_LEADER';
+  const deptOptions = isDepartmentUser
+    ? businessDepts.filter((d) => d.id === user?.departmentId)
+    : businessDepts;
   const showNodes = isPriorityOrMain || (isTodo && isDepartmentUser);
 
   const draftHint = (
@@ -281,7 +289,7 @@ export default function NewWorkPage() {
         <WorkFormCooperators
           cooperators={todoForm.cooperators}
           onChange={(cooperators) => setTodoForm({ ...todoForm, cooperators })}
-          departments={businessDepts}
+          departments={businessDepts.filter((d) => d.id !== todoForm.departmentId)}
         />
       )}
       {draftHint}
@@ -346,23 +354,30 @@ export default function NewWorkPage() {
               <DepartmentField
                 label="责任部门"
                 value={priorityMainForm.departmentId}
-                onChange={(v) => setPriorityMainForm({ ...priorityMainForm, departmentId: v })}
-                departments={departments}
+                onChange={(v) => setPriorityMainForm({
+                  ...priorityMainForm,
+                  departmentId: v,
+                  responsibleLeader: '',
+                  responsiblePerson: '',
+                  responsibleLeaderMemberId: undefined,
+                  responsiblePersonMemberId: undefined,
+                })}
+                departments={deptOptions}
+                placeholder="请选择责任部门"
                 error={fieldError('departmentId')}
                 onBlur={() => handleBlur('departmentId')}
                 fieldId="field-departmentId"
               />
-              <WorkItemField
-                label="责任领导"
-                value={priorityMainForm.responsibleLeader}
-                onChange={(v) => setPriorityMainForm({ ...priorityMainForm, responsibleLeader: v })}
-                placeholder="请输入责任领导姓名"
-              />
-              <WorkItemField
-                label="责任人"
-                value={priorityMainForm.responsiblePerson}
-                onChange={(v) => setPriorityMainForm({ ...priorityMainForm, responsiblePerson: v })}
-                placeholder="请输入责任人姓名"
+              <ResponsibleFields
+                leaderValue={priorityMainForm.responsibleLeader}
+                onLeaderChange={(v) => setPriorityMainForm((prev) => ({ ...prev, responsibleLeader: v }))}
+                personValue={priorityMainForm.responsiblePerson}
+                onPersonChange={(v) => setPriorityMainForm((prev) => ({ ...prev, responsiblePerson: v }))}
+                departmentId={Number(priorityMainForm.departmentId) || undefined}
+                leaderMemberId={priorityMainForm.responsibleLeaderMemberId}
+                onLeaderMemberIdChange={(id) => setPriorityMainForm((prev) => ({ ...prev, responsibleLeaderMemberId: id }))}
+                personMemberId={priorityMainForm.responsiblePersonMemberId}
+                onPersonMemberIdChange={(id) => setPriorityMainForm((prev) => ({ ...prev, responsiblePersonMemberId: id }))}
               />
             </div>
           </WorkFormSectionCard>
@@ -415,24 +430,34 @@ export default function NewWorkPage() {
               <DepartmentField
                 label="主责部门"
                 value={todoForm.departmentId ? String(todoForm.departmentId) : ''}
-                onChange={(v) => setTodoForm({ ...todoForm, departmentId: v ? Number(v) : 0 })}
-                departments={businessDepts}
+                onChange={(v) => {
+                  const newDeptId = v ? Number(v) : 0
+                  setTodoForm({
+                    ...todoForm,
+                    departmentId: newDeptId,
+                    // Clear memberId and name snapshots when department changes.
+                    responsibleLeader: '',
+                    responsiblePerson: '',
+                    responsibleLeaderMemberId: undefined,
+                    responsiblePersonMemberId: undefined,
+                  })
+                }}
+                departments={deptOptions}
                 placeholder="请选择主责部门"
                 error={fieldError('departmentId')}
                 onBlur={() => handleBlur('departmentId')}
                 fieldId="field-departmentId"
               />
-              <WorkItemField
-                label="责任领导"
-                value={todoForm.responsibleLeader}
-                onChange={(v) => setTodoForm({ ...todoForm, responsibleLeader: v })}
-                placeholder="请输入责任领导姓名"
-              />
-              <WorkItemField
-                label="责任人"
-                value={todoForm.responsiblePerson}
-                onChange={(v) => setTodoForm({ ...todoForm, responsiblePerson: v })}
-                placeholder="请输入责任人姓名"
+              <ResponsibleFields
+                leaderValue={todoForm.responsibleLeader}
+                onLeaderChange={(v) => setTodoForm((prev) => ({ ...prev, responsibleLeader: v }))}
+                personValue={todoForm.responsiblePerson}
+                onPersonChange={(v) => setTodoForm((prev) => ({ ...prev, responsiblePerson: v }))}
+                departmentId={todoForm.departmentId || undefined}
+                leaderMemberId={todoForm.responsibleLeaderMemberId}
+                onLeaderMemberIdChange={(id) => setTodoForm((prev) => ({ ...prev, responsibleLeaderMemberId: id }))}
+                personMemberId={todoForm.responsiblePersonMemberId}
+                onPersonMemberIdChange={(id) => setTodoForm((prev) => ({ ...prev, responsiblePersonMemberId: id }))}
               />
             </div>
           </WorkFormSectionCard>

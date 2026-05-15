@@ -3,11 +3,10 @@ import { toPermissionUser, isApprovalStatus } from '@/features/workflow/domain/w
 import type { UserSession, WorkflowResult } from '@/features/workflow/domain/workflow.types'
 import { canApproveWorkItem } from '@/features/works/domain/work.permissions'
 import { getNextApprovalAssignment } from './workflow-assignment.service'
+import { findWorkForUpdateById, updateWorkItem } from '@/features/works/infrastructure/work.repository'
 import {
-  findWorkItemById,
   createWorkflowRecord,
   createOperationLog,
-  updateWorkItemForWorkflow,
 } from '@/features/workflow/infrastructure/workflow.repository'
 
 export async function approveWorkflowAction(
@@ -15,7 +14,7 @@ export async function approveWorkflowAction(
   user: UserSession,
   comment?: string,
 ): Promise<WorkflowResult> {
-  const workItem = await findWorkItemById(workItemId)
+  const workItem = await findWorkForUpdateById(workItemId)
   if (!workItem) {
     return { success: false, error: '事项不存在' }
   }
@@ -39,7 +38,7 @@ export async function approveWorkflowAction(
   )
 
   if (nextApprover) {
-    const updated = await updateWorkItemForWorkflow(workItemId, {
+    const updated = await updateWorkItem(workItemId, {
       currentApproverId: nextApprover.currentApproverId,
       currentApproverRole: nextApprover.currentApproverRole,
     })
@@ -67,7 +66,7 @@ export async function approveWorkflowAction(
   }
 
   const targetStatus = APPROVAL_TARGET_STATUS[workItem.approvalType]
-  const updated = await updateWorkItemForWorkflow(workItemId, {
+  const updated = await updateWorkItem(workItemId, {
     status: targetStatus,
     beforeApprovalStatus: null,
     approvalType: null,

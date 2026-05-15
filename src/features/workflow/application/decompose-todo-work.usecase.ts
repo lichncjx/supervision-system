@@ -5,11 +5,10 @@ import {
   ensureMainResponsibleDepartment,
   getProposalFirstApprover,
 } from '@/features/workflow/domain/workflow.rules'
+import { findWorkForUpdateById, updateWorkItem } from '@/features/works/infrastructure/work.repository'
 import {
-  findWorkItemById,
   createWorkflowRecord,
   createOperationLog,
-  updateWorkItemForWorkflow,
 } from '@/features/workflow/infrastructure/workflow.repository'
 
 export async function decomposeTodoWork(
@@ -18,7 +17,7 @@ export async function decomposeTodoWork(
   nodes: any[],
   comment?: string,
 ): Promise<WorkflowResult> {
-  const workItem = await findWorkItemById(workItemId)
+  const workItem = await findWorkForUpdateById(workItemId)
   if (!workItem) {
     return { success: false, error: '事项不存在' }
   }
@@ -41,7 +40,7 @@ export async function decomposeTodoWork(
 
   const oldStatus = workItem.status
   const approver = getProposalFirstApprover(workItem, user)
-  const updated = await updateWorkItemForWorkflow(workItemId, {
+  const updated = await updateWorkItem(workItemId, {
     nodes,
     status: WorkItemStatus.PROPOSING,
     action: ActionType.TODO_DECOMPOSE,

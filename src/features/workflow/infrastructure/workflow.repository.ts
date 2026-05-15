@@ -3,12 +3,6 @@ import { prisma } from '@/shared/db/prisma'
 
 export type WorkflowWorkItem = Prisma.WorkItemGetPayload<object>
 
-export async function findWorkItemById(workItemId: number) {
-  return prisma.workItem.findUnique({
-    where: { id: workItemId },
-  })
-}
-
 export async function createWorkflowRecord(params: {
   workItemId: number
   actionType: string
@@ -54,17 +48,6 @@ export async function createOperationLog(params: {
   })
 }
 
-export async function findPresidentUser() {
-  return prisma.user.findFirst({
-    where: {
-      role: Role.PRESIDENT,
-      isActive: true,
-    },
-    orderBy: { id: 'asc' },
-    select: { id: true },
-  })
-}
-
 export async function findWorkflowRecordsByWorkItemId(
   workItemId: number,
 ) {
@@ -82,12 +65,3 @@ export async function findWorkflowRecordsByWorkItemId(
   })
 }
 
-export async function updateWorkItemForWorkflow(
-  workItemId: number,
-  data: Record<string, unknown>,
-) {
-  return prisma.workItem.update({
-    where: { id: workItemId },
-    data: data as Prisma.WorkItemUpdateInput,
-  })
-}
