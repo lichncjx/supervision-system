@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { Building2, Settings, ShieldCheck, Users, Plus, Trash2, Power, KeyRound, Eye, EyeOff, Pencil } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
-import { getRoleName, type Role } from '@/lib/auth';
+import { getRoleName } from '@/features/users/domain/role.rules';
+import type { Role } from '@/features/users/domain/user.types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';

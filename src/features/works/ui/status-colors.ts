@@ -1,4 +1,4 @@
-import { getWorkStatusMeta } from '@/lib/work-status'
+import { getWorkStatusMeta } from '@/features/works/domain/work-status.rules'
 
 export const statusColors = {
   approving: {

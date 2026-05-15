@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserFromToken } from '@/lib/server-auth';
+import { getUserFromToken } from '@/shared/auth/get-current-user';
 import type { ExcelRouteType } from '@/features/excel/domain/excel.types';
 import { getExcelTemplate } from '@/features/excel/infrastructure/excel-template-generator';
 

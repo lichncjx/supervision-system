@@ -6,7 +6,7 @@ import {
   canApproveWorkItem,
   shouldHandleWorkItem,
   type PermissionUser,
-} from '@/lib/server-permissions'
+} from '@/features/works/domain/work.permissions'
 import {
   normalizeLimit,
   toDashboardItem,

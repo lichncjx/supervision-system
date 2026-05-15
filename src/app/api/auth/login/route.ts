@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/shared/db/prisma';
-import { verifyPassword, generateToken } from '@/lib/server-auth';
+import { verifyPassword } from '@/shared/auth/password';
+import { generateToken } from '@/shared/auth/jwt';
 
 export async function POST(request: Request) {
   try {

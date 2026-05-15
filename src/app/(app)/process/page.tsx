@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { getWorkTypeAccent, getWorkTypeText } from '@/features/works/ui/status-colors';
 import { ClipboardCheck, Eye, CheckCircle, XCircle, Play } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
-import { getDepartments } from '@/lib/auth';
+import { getDepartments } from '@/features/departments/client/department-api';
 import {
   approveWork,
   canApproveWork,

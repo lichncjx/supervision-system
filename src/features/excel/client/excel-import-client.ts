@@ -1,6 +1,6 @@
 import * as XLSX from 'xlsx'
 import type { Work } from '@/lib/work-store'
-import type { User } from '@/lib/auth'
+import type { User } from '@/features/users/domain/user.types'
 import type { ExcelRouteType } from '@/features/excel/domain/excel.types'
 import { getDepartmentsForExcel, getCompanyLeadersForExcel } from './excel-api'
 

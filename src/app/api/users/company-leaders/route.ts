@@ -1,6 +1,6 @@
 import { NextResponse, NextRequest } from 'next/server';
 import prisma from '@/shared/db/prisma';
-import { verifyToken } from '@/lib/server-auth';
+import { verifyToken } from '@/shared/auth/jwt';
 import { Role } from '@prisma/client';
 
 export async function GET(request: NextRequest) {

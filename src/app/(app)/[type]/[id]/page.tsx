@@ -33,7 +33,7 @@ import {
   canDecomposeTodoWork,
   canApproveWork,
 } from '@/features/works/client/work-client-permissions';
-import { isWorkStatusTerminal, isReturnedDraftWork } from '@/lib/work-status';
+import { isWorkStatusTerminal, isReturnedDraftWork } from '@/features/works/domain/work-status.rules';
 import { isWorkRelatedToDepartment } from '@/features/works/client/work-filters';
 import {
   updateWork,

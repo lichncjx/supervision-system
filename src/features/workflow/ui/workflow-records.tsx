@@ -1,6 +1,6 @@
 'use client';
 
-import { getRoleName } from '@/lib/auth';
+import { getRoleName } from '@/features/users/domain/role.rules';
 import { getActionName, getStatusName, getWorkflowRecordDescription } from '@/lib/work-store';
 import { PANEL_PADDED } from '@/features/works/ui/visual-tokens';
 

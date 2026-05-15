@@ -11,13 +11,13 @@ export type {
 export type { Work, WorkEditablePatch, WorkFilter } from '@/features/works/client/work-view.types'
 export type { Attachment } from '@/features/attachments/domain/attachment-client.types'
 export type { WorkflowStep, WorkflowRecord } from '@/features/workflow/domain/workflow-client.types'
-export type { WorkStatus } from '@/lib/work-status'
+export type { WorkStatus } from '@/features/works/domain/work-status'
 
-export { getWorkStatusLabel as getStatusName } from '@/lib/work-status'
-export { getWorkDisplayStatusLabel as getWorkDisplayStatusName } from '@/lib/work-status'
-export { isWorkStatusInProgress as isInProgressStatus } from '@/lib/work-status'
-export { isReturnedDraftWork as isReturnedDraft } from '@/lib/work-status'
-export { isWorkStatusInPendingApprovalFilter as isPendingApprovalStatus } from '@/lib/work-status'
+export { getWorkStatusLabel as getStatusName } from '@/features/works/domain/work-status.rules'
+export { getWorkDisplayStatusLabel as getWorkDisplayStatusName } from '@/features/works/domain/work-status.rules'
+export { isWorkStatusInProgress as isInProgressStatus } from '@/features/works/domain/work-status.rules'
+export { isReturnedDraftWork as isReturnedDraft } from '@/features/works/domain/work-status.rules'
+export { isWorkStatusInPendingApprovalFilter as isPendingApprovalStatus } from '@/features/works/domain/work-status.rules'
 export {
   canHandleWork,
   canProcessWork,

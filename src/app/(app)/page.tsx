@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Plus, Bell, Search } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { StatusBadge } from '@/features/works/ui/badges';
-import { isSupervisionAdmin } from '@/lib/auth';
+import { isSupervisionAdmin } from '@/features/users/domain/role.rules';
 
 type DashboardWorkType = 'PRIORITY' | 'MAIN' | 'TODO';
 

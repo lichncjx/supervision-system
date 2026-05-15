@@ -14,7 +14,8 @@ import {
   type WorkType,
   type Work,
 } from '@/lib/work-store';
-import { getDepartments, isCompanyLevel, isSupervisionAdmin } from '@/lib/auth';
+import { getDepartments } from '@/features/departments/client/department-api';
+import { isCompanyLevel, isSupervisionAdmin } from '@/features/users/domain/role.rules';
 import { StatusBadge } from '@/features/works/ui/badges';
 import { WorkListToolbar } from '@/features/works/ui/work-list-toolbar';
 import { getWorkTypeAccent, getWorkTypeText } from '@/features/works/ui/status-colors';

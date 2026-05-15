@@ -19,7 +19,8 @@ import {
   FileText,
 } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
-import { getRoleName, changePassword } from '@/lib/auth';
+import { getRoleName } from '@/features/users/domain/role.rules';
+import { changePassword } from '@/features/users/client/auth-api';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';

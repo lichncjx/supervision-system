@@ -4,7 +4,7 @@ import {
   shouldHandleWorkItem,
   type PermissionUser,
 } from '@/features/works/domain/work.permissions'
-import { normalizeWorkStatus, getWorkStatusLabel } from '@/lib/work-status'
+import { normalizeWorkStatus, getWorkStatusLabel } from '@/features/works/domain/work-status.rules'
 import {
   DEFAULT_LIST_LIMIT,
   MAX_LIST_LIMIT,

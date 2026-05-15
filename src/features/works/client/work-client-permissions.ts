@@ -1,7 +1,7 @@
-import type { User } from '@/lib/auth'
+import type { User } from '@/features/users/domain/user.types'
 import type { Work } from '@/features/works/client/work-view.types'
-import type { WorkStatus } from '@/lib/work-status'
-import { isReturnedDraftWork, isReturnedInProgressWork } from '@/lib/work-status'
+import type { WorkStatus } from '@/features/works/domain/work-status'
+import { isReturnedDraftWork, isReturnedInProgressWork } from '@/features/works/domain/work-status.rules'
 import { isWorkRelatedToDepartment, isWorkMainResponsibleDepartment } from './work-filters'
 
 function isSelectedCompanyApprover(user: User, work: Work) {

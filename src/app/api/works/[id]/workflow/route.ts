@@ -1,6 +1,6 @@
 import { NextResponse, NextRequest } from 'next/server';
 import prisma from '@/shared/db/prisma';
-import { verifyToken } from '@/lib/server-auth';
+import { verifyToken } from '@/shared/auth/jwt';
 import { submitProposal } from '@/features/workflow/application/submit-proposal.usecase';
 import { approveWorkflowAction } from '@/features/workflow/application/approve-workflow-action.usecase';
 import { rejectWorkflowAction } from '@/features/workflow/application/reject-workflow-action.usecase';
@@ -10,7 +10,7 @@ import { submitCancellation } from '@/features/workflow/application/submit-cance
 import { decomposeTodoWork } from '@/features/workflow/application/decompose-todo-work.usecase';
 import { getWorkflowRecords } from '@/features/workflow/application/get-workflow-records.usecase';
 import type { UserSession } from '@/features/workflow/domain/workflow.types';
-import { canViewWorkItem } from '@/lib/server-permissions';
+import { canViewWorkItem } from '@/features/works/domain/work.permissions';
 
 export async function POST(
   request: NextRequest,

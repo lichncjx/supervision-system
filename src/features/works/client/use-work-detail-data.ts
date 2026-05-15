@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getCompanyLeaders, getDepartments, getDepartmentLeaders, getDepartmentManagers } from '@/lib/auth';
+import { getCompanyLeaders, getDepartmentLeaders, getDepartmentManagers } from '@/features/users/client/user-api';
+import { getDepartments } from '@/features/departments/client/department-api';
 import { getWorkById, getWorkflowRecords, type Work, type WorkflowRecord } from '@/lib/work-store';
 
 export function useWorkDetailData(id: string) {

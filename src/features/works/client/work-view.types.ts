@@ -6,7 +6,7 @@ import type {
   AdjustHistory,
   WorkStatusFilter,
 } from '@/features/works/domain/work-client.types'
-import type { WorkStatus } from '@/lib/work-status'
+import type { WorkStatus } from '@/features/works/domain/work-status'
 import type { Attachment } from '@/features/attachments/domain/attachment-client.types'
 
 export type WorkFilter = WorkStatusFilter

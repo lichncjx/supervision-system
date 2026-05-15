@@ -1,4 +1,5 @@
-import { isCompanyLevel, type User } from '@/lib/auth'
+import { isCompanyLevel } from '@/features/users/domain/role.rules'
+import type { User } from '@/features/users/domain/user.types'
 import type { WorkType, WorkQuery } from '@/features/works/domain/work-client.types'
 import type { Work, WorkEditablePatch } from './work-view.types'
 import { sortWorksByDueDate } from './work-sort'

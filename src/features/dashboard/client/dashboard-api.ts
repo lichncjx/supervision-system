@@ -1,8 +1,8 @@
-import type { User } from '@/lib/auth'
+import type { User } from '@/features/users/domain/user.types'
 import {
   isWorkStatusInProgress,
   isWorkStatusInPendingApprovalFilter,
-} from '@/lib/work-status'
+} from '@/features/works/domain/work-status.rules'
 import { getVisibleWorks } from '@/features/works/client/work-api'
 import { canHandleWork } from '@/features/works/client/work-client-permissions'
 import { isOverdueWork, isExpiringWork } from '@/features/works/client/work-date.utils'

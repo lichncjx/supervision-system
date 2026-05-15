@@ -1,6 +1,6 @@
 import { NextResponse, NextRequest } from 'next/server';
 import prisma from '@/shared/db/prisma';
-import { getUserFromToken } from '@/lib/server-auth';
+import { getUserFromToken } from '@/shared/auth/get-current-user';
 
 function isCompanyLevelRole(role: string): boolean {
   const companyRoles: string[] = ['ADMIN', 'SUPERVISOR', 'VICE_PRESIDENT', 'PRESIDENT'];

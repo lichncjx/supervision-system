@@ -1,5 +1,5 @@
 import type { CurrentUser } from '@/shared/auth/current-user'
-import { isSupervisionAdmin } from '@/lib/server-auth'
+import { isSupervisionAdmin } from '@/features/users/domain/role.rules'
 
 export interface ExportCompletionRateInput {
   currentUser: CurrentUser
@@ -10,7 +10,7 @@ export interface ExportCompletionRateInput {
 export type ExportCompletionRateResult =
   | { kind: 'ok'; buffer: Buffer; fileName: string }
   | { kind: 'error'; status: number; message: string }
-import { getResponsibleDepartmentIds } from '@/lib/server-permissions'
+import { getResponsibleDepartmentIds } from '@/features/works/domain/work.permissions'
 import {
   findWorksForCompletionRate,
   findBusinessDepartments,
