@@ -1,6 +1,7 @@
 import { NextResponse, NextRequest } from 'next/server';
-import prisma from '@/lib/prisma';
-import { verifyToken, hashPassword } from '@/lib/server-auth';
+import prisma from '@/shared/db/prisma';
+import { verifyToken } from '@/shared/auth/jwt';
+import { hashPassword } from '@/shared/auth/password';
 import { Role } from '@prisma/client';
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {

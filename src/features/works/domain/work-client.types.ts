@@ -1,4 +1,4 @@
-import type { WorkStatusValue } from '@/lib/work-status'
+
 
 export type WorkType = '重点' | '主要' | '待办'
 
@@ -22,7 +22,6 @@ export interface WorkQuery {
   keyword?: string
 }
 
-export type Status = WorkStatusValue
 
 export type ActionType =
   | 'create'

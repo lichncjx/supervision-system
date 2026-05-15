@@ -1,4 +1,4 @@
-import type { User } from '@/lib/auth'
+import type { User } from '@/features/users/domain/user.types'
 import { ROLES } from './user-permissions'
 
 export function getAvailableMenus(user: User | null) {

@@ -1,6 +1,6 @@
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/shared/db/prisma'
-import { getResponsibleDepartmentIds } from '@/lib/server-permissions'
+import { getResponsibleDepartmentIds } from '@/features/works/domain/work.permissions'
 
 export const dashboardWorkSelect = {
   id: true,

@@ -2,9 +2,8 @@ import type { BaseCurrentUser } from '@/shared/auth/current-user'
 import {
   buildWorkVisibilityWhere,
   getResponsibleDepartmentIds,
-  isDepartmentLevelRole,
-  isGlobalViewRole,
-} from '@/lib/server-permissions'
+} from '@/features/works/domain/work.permissions'
+import { isDepartmentLevelRole, isGlobalViewRole } from '@/features/users/domain/role.rules'
 import { calculateDepartmentStats, type CompletionRateStat } from '@/shared/completion-rate.rules'
 import {
   findWorksForDashboardCompletionRate,

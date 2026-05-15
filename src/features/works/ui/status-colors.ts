@@ -1,4 +1,4 @@
-import { getWorkStatusVisualGroup } from '@/lib/work-status'
+import { getWorkStatusMeta } from '@/features/works/domain/work-status.rules'
 
 export const statusColors = {
   approving: {
@@ -94,7 +94,7 @@ export function getWorkTypeText(type: string): string {
 }
 
 export function getStatusAccent(status: string): string {
-  return statusColors[getWorkStatusVisualGroup(status)].left
+  return getWorkStatusMeta(status)?.leftBorderClass ?? statusColors.cancelled.left
 }
 
 export type StatusColorKey = keyof typeof statusColors

@@ -7,7 +7,7 @@ import {
   getWorkStatusLabel,
   isWorkStatusTerminal,
   type ReturnedDraftLike,
-} from "@/lib/work-status";
+} from "@/features/works/domain/work-status.rules";
 
 export function getStatusColor(status: string): string {
   return getWorkStatusBadgeClass(status);

@@ -1,4 +1,4 @@
-import { isReturnedDraftWork } from '@/lib/work-status'
+import { isReturnedDraftWork } from '@/features/works/domain/work-status.rules'
 import type { Work } from '@/features/works/client/work-view.types'
 import type { WorkflowStep } from '@/features/workflow/domain/workflow-client.types'
 

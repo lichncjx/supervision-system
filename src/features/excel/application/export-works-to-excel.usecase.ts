@@ -23,7 +23,7 @@ import {
   shouldHandleWorkItem,
   getCooperatorDepartmentIds,
   getResponsibleDepartmentIds,
-} from '@/lib/server-permissions'
+} from '@/features/works/domain/work.permissions'
 import type { PermissionUser } from '@/features/works/domain/work.permissions'
 import {
   findWorksForExport,

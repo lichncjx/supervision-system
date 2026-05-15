@@ -1,4 +1,4 @@
-import { normalizeWorkStatus } from '@/lib/work-status'
+import { normalizeWorkStatus } from '@/features/works/domain/work-status.rules'
 import type { WorkType, ActionType } from '@/features/works/domain/work-client.types'
 import type { Work } from './work-view.types'
 

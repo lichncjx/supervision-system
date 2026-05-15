@@ -1,4 +1,4 @@
-import { getWorkStatusDescription } from '@/lib/work-status'
+import { getWorkStatusDescription } from '@/features/works/domain/work-status.rules'
 
 export function getActionName(action: string) {
   const map: Record<string, string> = {

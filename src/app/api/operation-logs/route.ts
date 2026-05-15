@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
-import { getUserFromToken } from '@/lib/server-auth';
+import prisma from '@/shared/db/prisma';
+import { getUserFromToken } from '@/shared/auth/get-current-user';
 
 const ACTION_MAP: Record<string, string> = {
   create: '新增',

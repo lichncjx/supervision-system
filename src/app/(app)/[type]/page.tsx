@@ -1,13 +1,16 @@
 'use client';
 
 import React, { useEffect, useState, useMemo, useRef } from 'react';
-import { useSearchAndPagination } from '@/hooks/use-search-pagination';
+import { useSearchAndPagination } from '@/features/works/client/use-search-pagination';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/components/providers/auth-provider';
-import { isCompanyLevel, getDepartments } from '@/lib/auth';
-import { getVisibleWorks, queryWorks, type Work, type WorkType, type WorkStatusFilter } from '@/lib/work-store';
-import { workTypeColors, getStatusAccent } from '@/lib/status-colors';
+import { isCompanyLevel } from '@/features/users/domain/role.rules';
+import { getDepartments } from '@/features/departments/client/department-api';
+import { getVisibleWorks, queryWorks } from '@/features/works/client/work-api';
+import type { Work } from '@/features/works/client/work-view.types';
+import type { WorkType, WorkStatusFilter } from '@/features/works/domain/work-client.types';
+import { workTypeColors, getStatusAccent } from '@/features/works/ui/status-colors';
 import { Plus, Download, Upload, FileSpreadsheet, Star, ListTodo, CheckSquare } from 'lucide-react';
 import { WorkListToolbar } from '@/features/works/ui/work-list-toolbar';
 import { PriorityMainWorkListItem } from '@/features/works/ui/priority-main-work-list-item';

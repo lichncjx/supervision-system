@@ -7,17 +7,19 @@ import { ArrowLeft, Eye } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import {
   getWorkDueDate,
+} from '@/features/works/client/work-date.utils';
+import {
   queryWorks,
-  sortWorksByDueDate,
   getVisibleWorks,
-  type WorkStatusFilter,
-  type WorkType,
-  type Work,
-} from '@/lib/work-store';
-import { getDepartments, isCompanyLevel, isSupervisionAdmin } from '@/lib/auth';
+} from '@/features/works/client/work-api';
+import { sortWorksByDueDate } from '@/features/works/client/work-sort';
+import type { WorkStatusFilter, WorkType } from '@/features/works/domain/work-client.types';
+import type { Work } from '@/features/works/client/work-view.types';
+import { getDepartments } from '@/features/departments/client/department-api';
+import { isCompanyLevel, isSupervisionAdmin } from '@/features/users/domain/role.rules';
 import { StatusBadge } from '@/features/works/ui/badges';
 import { WorkListToolbar } from '@/features/works/ui/work-list-toolbar';
-import { getWorkTypeAccent, getWorkTypeText } from '@/lib/status-colors';
+import { getWorkTypeAccent, getWorkTypeText } from '@/features/works/ui/status-colors';
 
 type StatusPageFilter =
   | 'all'

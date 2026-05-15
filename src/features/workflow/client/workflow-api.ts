@@ -1,4 +1,4 @@
-import type { User } from '@/lib/auth'
+import type { User } from '@/features/users/domain/user.types'
 import type { Work, WorkEditablePatch } from '@/features/works/client/work-view.types'
 import type { WorkflowRecord } from '@/features/workflow/domain/workflow-client.types'
 import { getWorkById } from '@/features/works/client/work-api'

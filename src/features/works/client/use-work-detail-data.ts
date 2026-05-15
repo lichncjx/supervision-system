@@ -1,8 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getCompanyLeaders, getDepartments, getDepartmentLeaders, getDepartmentManagers } from '@/lib/auth';
-import { getWorkById, getWorkflowRecords, type Work, type WorkflowRecord } from '@/lib/work-store';
+import { getCompanyLeaders, getDepartmentLeaders, getDepartmentManagers } from '@/features/users/client/user-api';
+import { getDepartments } from '@/features/departments/client/department-api';
+import { getWorkById } from '@/features/works/client/work-api';
+import { getWorkflowRecords } from '@/features/workflow/client/workflow-api';
+import type { Work } from '@/features/works/client/work-view.types';
+import type { WorkflowRecord } from '@/features/workflow/domain/workflow-client.types';
 
 export function useWorkDetailData(id: string) {
   const [refresh, setRefresh] = useState(0);

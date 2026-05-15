@@ -1,7 +1,9 @@
 'use client';
 
-import { getRoleName } from '@/lib/auth';
-import { getActionName, getStatusName, getWorkflowRecordDescription } from '@/lib/work-store';
+import { getRoleName } from '@/features/users/domain/role.rules';
+import { getActionName } from '@/features/works/client/work-display.utils';
+import { getWorkStatusLabel } from '@/features/works/domain/work-status.rules';
+import { getWorkflowRecordDescription } from '@/features/workflow/client/workflow-display.utils';
 import { PANEL_PADDED } from '@/features/works/ui/visual-tokens';
 
 interface WorkflowRecord {
@@ -60,7 +62,7 @@ export function WorkflowRecords({ records }: WorkflowRecordsProps) {
                   </div>
                 )}
                 <div className="mt-1 text-sm text-gray-600">
-                  状态变更：{getStatusName(record.previousStatus as any)} → {getStatusName(record.newStatus as any)}
+                  状态变更：{getWorkStatusLabel(record.previousStatus as any)} → {getWorkStatusLabel(record.newStatus as any)}
                 </div>
                 {record.comment && (
                   <div className="mt-2 text-sm bg-white p-2 rounded">

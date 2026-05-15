@@ -1,4 +1,4 @@
-import type { User } from '@/lib/auth'
+import type { User } from '@/features/users/domain/user.types'
 
 export const ROLES = {
   ADMIN: 'ADMIN',

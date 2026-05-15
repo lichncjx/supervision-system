@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { Eye } from 'lucide-react';
 import { StatusBadge } from '@/features/works/ui/badges';
 import { ExpandableText } from '@/components/common/expandable-text';
-import type { Work } from '@/lib/work-store';
+import type { Work } from '@/features/works/client/work-view.types';
 
 interface TodoWorkListItemProps {
   item: Work;

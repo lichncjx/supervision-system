@@ -2,7 +2,8 @@
 
 import React from 'react';
 import { CheckCircle2, Circle, RotateCcw, ArrowRight } from 'lucide-react';
-import { getWorkflowSteps, type Work } from '@/lib/work-store';
+import { getWorkflowSteps } from '@/features/workflow/client/workflow-display.utils';
+import type { Work } from '@/features/works/client/work-view.types';
 
 export function WorkflowProgress({ work }: { work: Work }) {
   const steps = getWorkflowSteps(work);

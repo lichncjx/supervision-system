@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useAuth } from '@/components/providers/auth-provider';
-import { getRoleName } from '@/lib/auth';
+import { getRoleName } from '@/features/users/domain/role.rules';
 import { Badge } from '@/components/ui/badge';
 
 export function usePermission() {

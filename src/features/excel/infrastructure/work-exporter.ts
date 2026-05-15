@@ -1,6 +1,6 @@
 import * as XLSX from 'xlsx'
 import { WorkItemType } from '@prisma/client'
-import { getWorkStatusLabel } from '@/lib/work-status'
+import { getWorkStatusLabel } from '@/features/works/domain/work-status.rules'
 import type { ExportWorkRow } from './excel-work.repository'
 
 function getTypeText(type: WorkItemType): string {

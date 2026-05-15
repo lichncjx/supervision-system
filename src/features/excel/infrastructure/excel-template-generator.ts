@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx'
-import type { ExcelRouteType } from '@/lib/excel-utils'
+import type { ExcelRouteType } from '@/features/excel/domain/excel.types'
 
 export function getExcelTemplate(
   type: ExcelRouteType,

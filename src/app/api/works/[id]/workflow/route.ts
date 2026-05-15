@@ -1,18 +1,16 @@
 import { NextResponse, NextRequest } from 'next/server';
-import prisma from '@/lib/prisma';
-import { verifyToken } from '@/lib/server-auth';
-import {
-  submitForApproval,
-  approveWorkItem,
-  rejectWorkItem,
-  submitEvidence,
-  submitAdjust,
-  submitCancel,
-  decomposeTodo,
-  getWorkflowRecords,
-} from '@/lib/workflow';
-import { UserSession } from '@/lib/workflow';
-import { canViewWorkItem } from '@/lib/server-permissions';
+import prisma from '@/shared/db/prisma';
+import { verifyToken } from '@/shared/auth/jwt';
+import { submitProposal } from '@/features/workflow/application/submit-proposal.usecase';
+import { approveWorkflowAction } from '@/features/workflow/application/approve-workflow-action.usecase';
+import { rejectWorkflowAction } from '@/features/workflow/application/reject-workflow-action.usecase';
+import { submitCompletion } from '@/features/workflow/application/submit-completion.usecase';
+import { submitAdjustment } from '@/features/workflow/application/submit-adjustment.usecase';
+import { submitCancellation } from '@/features/workflow/application/submit-cancellation.usecase';
+import { decomposeTodoWork } from '@/features/workflow/application/decompose-todo-work.usecase';
+import { getWorkflowRecords } from '@/features/workflow/application/get-workflow-records.usecase';
+import type { UserSession } from '@/features/workflow/domain/workflow.types';
+import { canViewWorkItem } from '@/features/works/domain/work.permissions';
 
 export async function POST(
   request: NextRequest,
@@ -58,41 +56,41 @@ export async function POST(
 
     switch (action) {
       case 'submit':
-        result = await submitForApproval(workItemId, user, comment);
+        result = await submitProposal(workItemId, user, comment);
         break;
       case 'approve':
-        result = await approveWorkItem(workItemId, user, comment);
+        result = await approveWorkflowAction(workItemId, user, comment);
         break;
       case 'reject':
         if (!rejectReason) {
           return NextResponse.json({ error: '请提供退回原因' }, { status: 400 });
         }
-        result = await rejectWorkItem(workItemId, user, rejectReason);
+        result = await rejectWorkflowAction(workItemId, user, rejectReason);
         break;
       case 'evidence':
       case 'complete':
         if (!proof) {
           return NextResponse.json({ error: '请提供见证材料说明' }, { status: 400 });
         }
-        result = await submitEvidence(workItemId, user, proof, comment);
+        result = await submitCompletion(workItemId, user, proof, comment);
         break;
       case 'adjust':
         if (!adjustReason) {
           return NextResponse.json({ error: '请提供调整原因' }, { status: 400 });
         }
-        result = await submitAdjust(workItemId, user, adjustReason, comment);
+        result = await submitAdjustment(workItemId, user, adjustReason, comment);
         break;
       case 'cancel':
         if (!cancelReason) {
           return NextResponse.json({ error: '请提供取消原因' }, { status: 400 });
         }
-        result = await submitCancel(workItemId, user, cancelReason, comment);
+        result = await submitCancellation(workItemId, user, cancelReason, comment);
         break;
       case 'decompose':
         if (!nodes || !Array.isArray(nodes)) {
           return NextResponse.json({ error: '请提供分解节点' }, { status: 400 });
         }
-        result = await decomposeTodo(workItemId, user, nodes, comment);
+        result = await decomposeTodoWork(workItemId, user, nodes, comment);
         break;
       default:
         return NextResponse.json({ error: '无效的操作' }, { status: 400 });

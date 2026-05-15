@@ -1,4 +1,4 @@
-import { shouldCountWorkStatusForDeadline } from '@/lib/work-status'
+import { shouldCountWorkStatusForDeadline } from '@/features/works/domain/work-status.rules'
 import type { Work } from '@/features/works/client/work-view.types'
 
 export function getWorkDueDate(work: Work) {
