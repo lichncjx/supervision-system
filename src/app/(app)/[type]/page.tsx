@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useMemo, useRef } from 'react';
-import { useSearchAndPagination } from '@/hooks/use-search-pagination';
+import { useSearchAndPagination } from '@/features/works/client/use-search-pagination';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/components/providers/auth-provider';

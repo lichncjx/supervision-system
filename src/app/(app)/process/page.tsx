@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { useSearchAndPagination } from '@/hooks/use-search-pagination';
+import { useSearchAndPagination } from '@/features/works/client/use-search-pagination';
 import Link from 'next/link';
 import { getWorkTypeAccent, getWorkTypeText } from '@/features/works/ui/status-colors';
 import { ClipboardCheck, Eye, CheckCircle, XCircle, Play } from 'lucide-react';
