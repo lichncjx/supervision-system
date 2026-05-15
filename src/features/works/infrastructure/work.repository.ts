@@ -68,12 +68,6 @@ export async function findDepartmentById(id: number) {
   return prisma.department.findUnique({ where: { id } })
 }
 
-export async function findMembersByIds(ids: number[]) {
-  return prisma.member.findMany({
-    where: { id: { in: ids } },
-  })
-}
-
 export async function findWorkForUpdateById(id: number) {
   return prisma.workItem.findUnique({ where: { id } })
 }

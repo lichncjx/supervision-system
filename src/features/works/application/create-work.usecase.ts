@@ -3,9 +3,12 @@ import { Role, WorkItemType, WorkItemStatus } from '@prisma/client'
 import {
   createWorkItem,
   findDepartmentById,
-  findMembersByIds,
   createWorkOperationLog,
 } from '@/features/works/infrastructure/work.repository'
+import {
+  validateMemberAssignments,
+  type MemberAssignment,
+} from '@/features/members/domain/member.rules'
 interface CreateWorkResponseDto { id: number; title: string; type: string; departmentId: number | null; cooperators: unknown; departmentName: string; proposedLeader: string | null; proposedLeaderId: number | null; status: string; createdAt: string; updatedAt: string }
 
 function toCreateWorkResponse(work: any): CreateWorkResponseDto {
@@ -129,28 +132,16 @@ export async function createWorkUseCase(
 
   // Validate member IDs if provided
   if (rest.responsibleLeaderMemberId != null || rest.responsiblePersonMemberId != null) {
-    const memberIds = [rest.responsibleLeaderMemberId, rest.responsiblePersonMemberId].filter((id): id is number => id != null)
-    const members = await findMembersByIds(memberIds)
-    const memberMap = new Map(members.map((m) => [m.id, m]))
-
-    for (const id of memberIds) {
-      const member = memberMap.get(id)
-      if (!member) {
-        return { kind: 'error', status: 400, message: `人员 ID ${id} 不存在` }
-      }
-      if (!member.isActive) {
-        return { kind: 'error', status: 400, message: `人员 "${member.name}" 已停用` }
-      }
-      if (member.departmentId !== departmentId) {
-        return { kind: 'error', status: 400, message: `人员 "${member.name}" 不属于所选部门` }
-      }
-    }
-
+    const assignments: MemberAssignment[] = []
     if (rest.responsibleLeaderMemberId != null) {
-      const leader = memberMap.get(rest.responsibleLeaderMemberId)!
-      if (!leader.isLeader) {
-        return { kind: 'error', status: 400, message: `"${leader.name}" 不是部门领导` }
-      }
+      assignments.push({ memberId: rest.responsibleLeaderMemberId, role: 'leader', departmentId })
+    }
+    if (rest.responsiblePersonMemberId != null) {
+      assignments.push({ memberId: rest.responsiblePersonMemberId, role: 'person', departmentId })
+    }
+    const errors = await validateMemberAssignments(assignments)
+    if (errors.length > 0) {
+      return { kind: 'error', status: 400, message: errors[0].message }
     }
   }
 

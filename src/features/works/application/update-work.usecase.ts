@@ -4,10 +4,13 @@ import { canEditWorkItem } from '@/features/works/domain/work.permissions'
 import type { PermissionUser } from '@/features/works/domain/work.permissions'
 import {
   findWorkForUpdateById,
-  findMembersByIds,
   updateWorkItem,
   createWorkUpdateOperationLog,
 } from '@/features/works/infrastructure/work.repository'
+import {
+  validateMemberAssignments,
+  type MemberAssignment,
+} from '@/features/members/domain/member.rules'
 interface UpdateWorkResponseDto { id: number; title: string; type: string; departmentId: number | null; departmentName: string; status: string; updatedAt: string }
 
 function toUpdateWorkResponse(work: any): UpdateWorkResponseDto {
@@ -79,30 +82,18 @@ export async function updateWorkUseCase(
   }
 
   // Validate member IDs if provided
-  const effectiveDeptId = body.departmentId ?? work.departmentId
+  const effectiveDeptId = (body.departmentId ?? work.departmentId)!
   if (body.responsibleLeaderMemberId != null || body.responsiblePersonMemberId != null) {
-    const memberIds = [body.responsibleLeaderMemberId, body.responsiblePersonMemberId].filter((id): id is number => id != null)
-    const members = await findMembersByIds(memberIds)
-    const memberMap = new Map(members.map((m) => [m.id, m]))
-
-    for (const id of memberIds) {
-      const member = memberMap.get(id)
-      if (!member) {
-        return { kind: 'error', status: 400, message: `人员 ID ${id} 不存在` }
-      }
-      if (!member.isActive) {
-        return { kind: 'error', status: 400, message: `人员 "${member.name}" 已停用` }
-      }
-      if (member.departmentId !== effectiveDeptId) {
-        return { kind: 'error', status: 400, message: `人员 "${member.name}" 不属于目标部门` }
-      }
-    }
-
+    const assignments: MemberAssignment[] = []
     if (body.responsibleLeaderMemberId != null) {
-      const leader = memberMap.get(body.responsibleLeaderMemberId)!
-      if (!leader.isLeader) {
-        return { kind: 'error', status: 400, message: `"${leader.name}" 不是部门领导` }
-      }
+      assignments.push({ memberId: body.responsibleLeaderMemberId, role: 'leader', departmentId: effectiveDeptId })
+    }
+    if (body.responsiblePersonMemberId != null) {
+      assignments.push({ memberId: body.responsiblePersonMemberId, role: 'person', departmentId: effectiveDeptId })
+    }
+    const errors = await validateMemberAssignments(assignments)
+    if (errors.length > 0) {
+      return { kind: 'error', status: 400, message: errors[0].message }
     }
   }
 
