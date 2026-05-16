@@ -1,5 +1,6 @@
 'use client';
 
+import { CheckCircle2, RotateCcw, Send, FileEdit, XCircle, Clock } from 'lucide-react';
 import { getRoleName } from '@/features/users/domain/role.rules';
 import { getActionName } from '@/features/works/client/work-display.utils';
 import { getWorkStatusLabel } from '@/features/works/domain/work-status.rules';
@@ -21,6 +22,24 @@ interface WorkflowRecordsProps {
   records: WorkflowRecord[];
 }
 
+function getActionIcon(action: string) {
+  switch (action) {
+    case 'submit':
+      return <Send className="h-3.5 w-3.5 text-slate-400" />;
+    case 'approve':
+      return <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />;
+    case 'reject':
+      return <RotateCcw className="h-3.5 w-3.5 text-rose-500" />;
+    case 'complete':
+      return <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />;
+    case 'adjust':
+    case 'cancel':
+      return <XCircle className="h-3.5 w-3.5 text-amber-500" />;
+    default:
+      return <Clock className="h-3.5 w-3.5 text-slate-300" />;
+  }
+}
+
 export function WorkflowRecords({ records }: WorkflowRecordsProps) {
   if (records.length === 0) {
     return null;
@@ -29,50 +48,46 @@ export function WorkflowRecords({ records }: WorkflowRecordsProps) {
   return (
     <div className={PANEL_PADDED}>
       <h3 className="font-semibold text-slate-800 mb-4">审批记录</h3>
-      <div>
-        <div className="space-y-3">
-          {records.map((record) => {
-            const recordDesc = getWorkflowRecordDescription(
-              record.action,
-              record.previousStatus,
-              record.newStatus
-            );
-            const isSameStatus = record.previousStatus.toLowerCase() === record.newStatus.toLowerCase();
+      <div className="space-y-0">
+        {records.map((record) => {
+          const recordDesc = getWorkflowRecordDescription(
+            record.action,
+            record.previousStatus,
+            record.newStatus
+          );
+          const isSameStatus = record.previousStatus.toLowerCase() === record.newStatus.toLowerCase();
+          const statusLabel = isSameStatus
+            ? ''
+            : `${getWorkStatusLabel(record.previousStatus as any)} → ${getWorkStatusLabel(record.newStatus as any)}`;
 
-            return (
-              <div key={record.id} className="rounded-lg bg-white/60 border border-slate-200 p-4">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <span className="font-medium">{record.initiatorName}</span>
-                    <span className="text-slate-500 text-sm ml-2">({getRoleName(record.initiatorRole)})</span>
+          return (
+            <div key={record.id} className="flex gap-3 py-3 border-b border-slate-100 last:border-b-0">
+              <div className="mt-0.5 shrink-0">
+                {getActionIcon(record.action)}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-baseline justify-between gap-2">
+                  <div className="text-sm">
+                    <span className="font-medium text-slate-800">{record.initiatorName}</span>
+                    <span className="text-slate-400 text-xs ml-1.5">{getRoleName(record.initiatorRole)}</span>
                   </div>
-                  <span className="text-sm text-slate-400">{new Date(record.createdAt).toLocaleString()}</span>
+                  <span className="text-xs text-slate-400 shrink-0">
+                    {new Date(record.createdAt).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  </span>
                 </div>
-                <div className="mt-1">
-                  <span className="text-blue-600">{getActionName(record.action as any)}</span>
-                </div>
-                {recordDesc && (
-                  <div className="mt-1 text-sm text-purple-700">
-                    说明：{recordDesc}
-                  </div>
-                )}
-                {isSameStatus && !recordDesc && (
-                  <div className="mt-1 text-sm text-slate-500">
-                    当前记录为流程节点流转，事项状态未最终变化
-                  </div>
-                )}
-                <div className="mt-1 text-sm text-gray-600">
-                  状态变更：{getWorkStatusLabel(record.previousStatus as any)} → {getWorkStatusLabel(record.newStatus as any)}
+                <div className="text-sm text-slate-600 mt-0.5">
+                  {getActionName(record.action as any)}
+                  {statusLabel && <span className="text-slate-400"> · {statusLabel}</span>}
                 </div>
                 {record.comment && (
-                  <div className="mt-2 text-sm bg-white p-2 rounded">
-                    意见：{record.comment}
+                  <div className="mt-1.5 text-xs text-slate-500 bg-slate-50 px-2.5 py-1.5 rounded">
+                    {record.comment}
                   </div>
                 )}
               </div>
-            );
-          })}
-        </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
