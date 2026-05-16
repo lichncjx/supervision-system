@@ -300,104 +300,85 @@ function PriorityMainWorkDisplayInfo({ work, departments, hideNodes }: WorkDispl
 }
 
 function TodoWorkDisplayInfo({ work, departments, hideNodes, hideCooperators }: WorkDisplayInfoProps) {
+  const theme = DETAIL_THEME.todo;
   const firstSubmitterName = work.firstSubmitterName || work.creatorName || '-';
 
   return (
-    <div className="space-y-2">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
-        <div>
-          <span className={DISPLAY_LABEL}>提出领导：</span>
-          <span>{work.proposedLeader || '-'}</span>
-        </div>
-        <div>
-          <span className={DISPLAY_LABEL}>提出场景：</span>
-          <span>{work.proposedScene || '-'}</span>
-        </div>
-      </div>
+    <div className="space-y-3">
+      <DetailHero
+        title={work.workItem || '-'}
+        statusBadge={<StatusBadge status={work.status} work={work} />}
+        process={getCurrentProcessDescription(
+          work.status,
+          work.currentApproverRole,
+          work.currentApproverId,
+        )}
+        meta={[
+          work.proposedLeader ? `提出领导 ${work.proposedLeader}` : '',
+          work.proposedScene ? `提出场景 ${work.proposedScene}` : '',
+          work.planCompleteTime ? `完成时间 ${work.planCompleteTime}` : '',
+        ].filter(Boolean)}
+        theme={theme}
+      />
 
-      <div>
-        <span className={DISPLAY_LABEL}>待办事项：</span>
-        <span>{work.workItem || '-'}</span>
-      </div>
+      <DetailSection title="主要内容" accentColor={theme.deep}>
+        <DetailLongText label="工作计划" value={work.workPlan || '-'} />
+        <DetailLongText label="进展情况" value={work.progress || '-'} />
+      </DetailSection>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
-        <div>
-          <span className={DISPLAY_LABEL}>形成时间：</span>
-          <span>{work.formedTime || '-'}</span>
-        </div>
-        <div>
-          <span className={DISPLAY_LABEL}>完成时间：</span>
-          <span>{work.planCompleteTime || '-'}</span>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
-        <div>
-          <span className={DISPLAY_LABEL}>主责部门：</span>
-          <span>{getDepartmentName(departments, work.departmentId ?? 0)}</span>
-        </div>
-        <div>
-          <span className={DISPLAY_LABEL}>责任领导：</span>
-          <span>{work.responsibleLeader || '-'}</span>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
-        <div>
-          <span className={DISPLAY_LABEL}>责任人员：</span>
-          <span>{work.responsiblePerson || '-'}</span>
-        </div>
-        <div>
-          <span className={DISPLAY_LABEL}>起草人员：</span>
-          <span>{firstSubmitterName}</span>
-        </div>
-      </div>
-
-      {!hideCooperators && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
+      <DetailSection title="责任详情" accentColor={theme.mid}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
           <div>
-            <span className={DISPLAY_LABEL}>配合部门：</span>
-            <span>
-              {work.cooperators && work.cooperators.length > 0
-                ? work.cooperators.map((c: any) => getDepartmentName(departments, c.departmentId) || c.departmentName).join('、')
-                : '-'}
+            <span className={DISPLAY_LABEL}>主责部门：</span>
+            <span className="text-sm font-medium text-slate-800">
+              {getDepartmentName(departments, work.departmentId ?? 0)}
             </span>
           </div>
           <div>
-            <span className={DISPLAY_LABEL}>配合责任人员：</span>
-            <span>
-              {work.cooperators && work.cooperators.length > 0
-                ? work.cooperators.map((c: any) => c.person).filter(Boolean).join('、')
-                : '-'}
+            <span className={DISPLAY_LABEL}>责任领导：</span>
+            <span className="text-sm font-medium text-slate-800">
+              {work.responsibleLeader || '-'}
+            </span>
+          </div>
+          <div>
+            <span className={DISPLAY_LABEL}>责任人员：</span>
+            <span className="text-sm font-medium text-slate-800">
+              {work.responsiblePerson || '-'}
+            </span>
+          </div>
+          <div>
+            <span className={DISPLAY_LABEL}>起草人员：</span>
+            <span className="text-sm font-medium text-slate-800">
+              {firstSubmitterName}
             </span>
           </div>
         </div>
-      )}
+        {!hideCooperators && work.cooperators && work.cooperators.length > 0 && (
+          <div className="mt-2 pt-2 border-t border-slate-200">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
+              <div>
+                <span className={DISPLAY_LABEL}>配合部门：</span>
+                <span className="text-sm font-medium text-slate-800">
+                  {work.cooperators.map((c: any) => getDepartmentName(departments, c.departmentId) || c.departmentName).join('、')}
+                </span>
+              </div>
+              <div>
+                <span className={DISPLAY_LABEL}>配合责任人员：</span>
+                <span className="text-sm font-medium text-slate-800">
+                  {work.cooperators.map((c: any) => c.person).filter(Boolean).join('、')}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+      </DetailSection>
 
-      <div>
-        <span className={DISPLAY_LABEL}>工作计划：</span>
-        <p className="mt-1 whitespace-pre-wrap break-words">{work.workPlan || '-'}</p>
-      </div>
-
-      <div>
-        <span className={DISPLAY_LABEL}>进展情况：</span>
-        <p className="mt-1 whitespace-pre-wrap break-words">{work.progress || '-'}</p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
-        <div>
-          <span className={DISPLAY_LABEL}>当前状态：</span>
-          <StatusBadge status={work.status} work={work} />
+      <DetailSection title="辅助信息" accentColor={theme.light} variant="muted">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 text-xs text-slate-500">
+          {work.formedTime && <div>形成时间：{work.formedTime}</div>}
+          {work.workNode && <div>工作节点：{work.workNode}</div>}
         </div>
-        <div>
-          <span className={DISPLAY_LABEL}>当前环节：</span>
-          <span className="text-blue-600">{getCurrentProcessDescription(
-            work.status,
-            work.currentApproverRole,
-            work.currentApproverId
-          )}</span>
-        </div>
-      </div>
+      </DetailSection>
 
       {!hideNodes && work.nodes && work.nodes.length > 0 && (
         <div>
@@ -469,6 +450,7 @@ function TodoWorkDisplayInfo({ work, departments, hideNodes, hideCooperators }: 
           </div>
         );
       })()}
+
       {work.adjustReason && (
         <div>
           <p className="break-words whitespace-pre-wrap overflow-hidden">
