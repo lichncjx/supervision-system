@@ -378,6 +378,7 @@ export default function WorkDetailPage() {
   const deptOptions = isDepartmentUser
     ? departments.filter((d) => d.id === user?.departmentId)
     : departments;
+  const cooperatorDepts = departments.filter((d: any) => d.isBusiness !== false);
   const typeColorKey = work.type === '重点' ? 'priority' : work.type === '主要' ? 'main' : 'todo';
 
   const theme = TYPE_THEME[typeColorKey];
@@ -545,6 +546,7 @@ export default function WorkDetailPage() {
             isPriorityOrMain={isPriorityOrMain}
             isTodo={isTodo}
             departments={deptOptions}
+            cooperatorDepts={cooperatorDepts}
             companyLeaders={companyLeaders}
             departmentLeaders={departmentLeaders}
             departmentManagers={departmentManagers}
@@ -628,6 +630,7 @@ export default function WorkDetailPage() {
         setEditForm={setEditForm}
         companyLeaders={companyLeaders}
         departments={deptOptions}
+        cooperatorDepts={cooperatorDepts}
         isPriorityOrMain={isPriorityOrMain}
         isTodo={isTodo}
         onSubmitAdjust={handleAdjust}

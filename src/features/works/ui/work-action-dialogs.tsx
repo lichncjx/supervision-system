@@ -34,6 +34,7 @@ interface WorkActionDialogsProps {
   setEditForm: (form: any) => void;
   companyLeaders: Array<{ id: number; name: string; role: string }>;
   departments: Array<{ id: number; name: string; code: string; isBusiness: boolean }>;
+  cooperatorDepts?: Array<{ id: number; name: string; code: string; isBusiness: boolean }>;
   isPriorityOrMain: boolean;
   isTodo: boolean;
   onSubmitAdjust: () => void;
@@ -55,6 +56,7 @@ export function WorkActionDialogs({
   setEditForm,
   companyLeaders,
   departments,
+  cooperatorDepts,
   isPriorityOrMain,
   isTodo,
   onSubmitAdjust,
@@ -63,6 +65,7 @@ export function WorkActionDialogs({
   const nodes: WorkNode[] = Array.isArray(editForm.nodes) ? editForm.nodes : [];
   const cooperators: Cooperator[] = Array.isArray(editForm.cooperators) ? editForm.cooperators : [];
   const businessDepts = departments.filter((d) => (d as any).isBusiness !== false);
+  const availableCooperatorDepts = cooperatorDepts ?? businessDepts;
 
   return (
     <>
@@ -237,7 +240,7 @@ export function WorkActionDialogs({
                   <WorkFormCooperators
                     cooperators={cooperators}
                     onChange={(value) => setEditForm((prev: any) => ({ ...prev, cooperators: value }))}
-                    departments={businessDepts.filter((d) => d.id !== editForm.departmentId)}
+                    departments={availableCooperatorDepts.filter((d) => d.id !== editForm.departmentId)}
                   />
                 </div>
               )}
