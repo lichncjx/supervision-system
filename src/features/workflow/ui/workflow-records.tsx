@@ -74,9 +74,8 @@ export function WorkflowRecords({ records }: WorkflowRecordsProps) {
 
               {/* 意见 */}
               {record.comment && (
-                <div className="mt-1.5 bg-white border border-slate-200 rounded-md px-2.5 py-2">
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.04em] text-slate-400 block mb-1">意见</span>
-                  <div className="text-xs text-slate-600">{record.comment}</div>
+                <div className="mt-1.5 bg-white border border-slate-200 rounded-md px-2.5 py-2 text-xs text-slate-600">
+                  {record.comment}
                 </div>
               )}
             </div>
