@@ -120,22 +120,35 @@ export const TYPE_THEME = {
   },
 } as const;
 
+// 详情面板三级色 — 从 TYPE_THEME.accentHex 派生
+// deep: 加深 40%（标题/内容区边线）
+// mid:  提亮 40%（分区标题/责任区边线）
+// light: 提亮 82%（背景点缀）
+function deriveDetailColors(accentHex: string) {
+  const r = parseInt(accentHex.slice(1, 3), 16);
+  const g = parseInt(accentHex.slice(3, 5), 16);
+  const b = parseInt(accentHex.slice(5, 7), 16);
+  const toHex = (v: number) => Math.max(0, Math.min(255, v)).toString(16).padStart(2, '0');
+  const hex = (cr: number, cg: number, cb: number) => `#${toHex(cr)}${toHex(cg)}${toHex(cb)}`;
+  return {
+    // deep: accent * 0.6 + black * 0.4（加深）
+    deep: hex(Math.round(r * 0.6), Math.round(g * 0.6), Math.round(b * 0.6)),
+    // mid: accent * 0.85 + white * 0.15（微提亮）
+    mid: hex(Math.round(r * 0.85 + 38), Math.round(g * 0.85 + 38), Math.round(b * 0.85 + 38)),
+    // light: accent * 0.15 + white * 0.85（浅底色）
+    light: hex(Math.round(r * 0.15 + 217), Math.round(g * 0.15 + 217), Math.round(b * 0.15 + 217)),
+  };
+}
+
+// 旧自定义配色（已改用 deriveDetailColors 派生）:
+// priority: deep '#4f4f4f' mid '#9a8c98' light '#f2e9e4'
+// main:     deep '#6b705c' mid '#a5a58d' light '#ddbea9'
+// todo:     deep '#52796f' mid '#84a98c' light '#cad2c5'
+
 export const DETAIL_THEME = {
-  priority: {
-    deep: '#4f4f4f',
-    mid: '#9a8c98',
-    light: '#f2e9e4',
-  },
-  main: {
-    deep: '#6b705c',
-    mid: '#a5a58d',
-    light: '#ddbea9',
-  },
-  todo: {
-    deep: '#52796f',
-    mid: '#84a98c',
-    light: '#cad2c5',
-  },
+  priority: deriveDetailColors(TYPE_THEME.priority.accentHex),
+  main: deriveDetailColors(TYPE_THEME.main.accentHex),
+  todo: deriveDetailColors(TYPE_THEME.todo.accentHex),
 } as const;
 
 export type DetailThemeKey = keyof typeof DETAIL_THEME;
