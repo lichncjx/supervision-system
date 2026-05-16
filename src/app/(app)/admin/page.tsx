@@ -72,9 +72,25 @@ export default function AdminPage() {
 
   useEffect(() => {
     fetchUsers();
-    fetchDepartments();
-    fetchMemberCount();
+    fetchDepartmentsAndCount();
   }, []);
+
+  const fetchDepartmentsAndCount = async () => {
+    try {
+      const response = await fetch('/api/departments', { credentials: 'include' });
+      if (!response.ok) return;
+      const data = await response.json();
+      setDepartments(data);
+
+      const businessDeptIds = new Set(data.filter((d: any) => d.isBusiness).map((d: any) => d.id));
+      const res = await fetch('/api/members?includeInactive=true', { credentials: 'include' });
+      if (!res.ok) return;
+      const members: any[] = await res.json();
+      setMemberCount(members.filter((m) => businessDeptIds.has(m.departmentId)).length);
+    } catch (error) {
+      console.error('Fetch departments error:', error);
+    }
+  };
 
   const fetchUsers = async () => {
     try {
@@ -91,30 +107,6 @@ export default function AdminPage() {
       setIsLoading(false);
     }
   };
-
-  const fetchDepartments = async () => {
-    try {
-      const response = await fetch('/api/departments', {
-        credentials: 'include',
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setDepartments(data);
-      }
-    } catch (error) {
-      console.error('Fetch departments error:', error);
-    }
-  };
-
-  const fetchMemberCount = async () => {
-    try {
-      const res = await fetch('/api/members?includeInactive=true', { credentials: 'include' })
-      if (!res.ok) return
-      const members: any[] = await res.json()
-      const businessDeptIds = new Set(departments.filter((d) => d.isBusiness).map((d) => d.id))
-      setMemberCount(members.filter((m) => businessDeptIds.has(m.departmentId)).length)
-    } catch { /* ignore */ }
-  }
 
   if (!user || user.role !== 'ADMIN') {
     return <div className="p-8 text-center text-red-600">无权限访问系统管理</div>;
