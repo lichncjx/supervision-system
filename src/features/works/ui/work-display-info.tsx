@@ -124,61 +124,73 @@ function DetailLongText({
   );
 }
 
-function PriorityMainWorkDisplayInfo({ work, departments, hideNodes, hideCooperators: _hideCooperators }: WorkDisplayInfoProps) {
+function PriorityMainWorkDisplayInfo({ work, departments, hideNodes }: WorkDisplayInfoProps) {
+  const themeKey = getDetailThemeKey(work.type);
+  const theme = DETAIL_THEME[themeKey];
+  const firstSubmitterName = work.firstSubmitterName || work.creatorName || '-';
+
   return (
-    <div className="space-y-2">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
-        <div>
-          <span className={DISPLAY_LABEL}>业务类别：</span>
-          <span>{work.businessCategory || '-'}</span>
-        </div>
-        <div>
-          <span className={DISPLAY_LABEL}>工作事项：</span>
-          <span>{work.workItem || '-'}</span>
-        </div>
-        <div>
-          <span className={DISPLAY_LABEL}>工作节点：</span>
-          <span>{work.workNode || '-'}</span>
-        </div>
-        <div>
-          <span className={DISPLAY_LABEL}>完成时间：</span>
-          <span>{work.planCompleteTime || '-'}</span>
-        </div>
-        <div>
-          <span className={DISPLAY_LABEL}>完成形式：</span>
-          <span>{work.completeForm || '-'}</span>
-        </div>
-        <div>
-          <span className={DISPLAY_LABEL}>主办部门：</span>
-          <span>{getDepartmentName(departments, work.departmentId ?? 0)}</span>
-        </div>
-        <div>
-          <span className={DISPLAY_LABEL}>责任领导：</span>
-          <span>{work.responsibleLeader || '-'}</span>
-        </div>
-        <div>
-          <span className={DISPLAY_LABEL}>责任人员：</span>
-          <span>{work.responsiblePerson || '-'}</span>
-        </div>
-        {work.type === '重点' && (
-          <div>
-            <span className={DISPLAY_LABEL}>是否为创新工作：</span>
-            <span>{work.isInnovation ? '是' : '否'}</span>
-          </div>
+    <div className="space-y-3">
+      <DetailHero
+        title={work.workItem || '-'}
+        statusBadge={<StatusBadge status={work.status} work={work} />}
+        process={getCurrentProcessDescription(
+          work.status,
+          work.currentApproverRole,
+          work.currentApproverId,
         )}
-        <div>
-          <span className={DISPLAY_LABEL}>当前状态：</span>
-          <StatusBadge status={work.status} work={work} />
+        meta={[
+          work.planCompleteTime ? `完成时间 ${work.planCompleteTime}` : '',
+          getDepartmentName(departments, work.departmentId ?? 0),
+          work.responsiblePerson || '-',
+        ].filter(Boolean)}
+        theme={theme}
+      />
+
+      <DetailSection title="主要内容" accentColor={theme.deep}>
+        <DetailLongText label="工作计划" value={work.workPlan || '-'} />
+        <DetailLongText label="进展情况" value={work.progress || '-'} />
+      </DetailSection>
+
+      <DetailSection title="责任详情" accentColor={theme.mid}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
+          <div>
+            <span className={DISPLAY_LABEL}>主责部门：</span>
+            <span className="text-sm font-medium text-slate-800">
+              {getDepartmentName(departments, work.departmentId ?? 0)}
+            </span>
+          </div>
+          <div>
+            <span className={DISPLAY_LABEL}>责任领导：</span>
+            <span className="text-sm font-medium text-slate-800">
+              {work.responsibleLeader || '-'}
+            </span>
+          </div>
+          <div>
+            <span className={DISPLAY_LABEL}>责任人员：</span>
+            <span className="text-sm font-medium text-slate-800">
+              {work.responsiblePerson || '-'}
+            </span>
+          </div>
+          <div>
+            <span className={DISPLAY_LABEL}>起草人员：</span>
+            <span className="text-sm font-medium text-slate-800">
+              {firstSubmitterName}
+            </span>
+          </div>
         </div>
-        <div>
-          <span className={DISPLAY_LABEL}>当前环节：</span>
-          <span className="text-blue-600">{getCurrentProcessDescription(
-            work.status,
-            work.currentApproverRole,
-            work.currentApproverId
-          )}</span>
+      </DetailSection>
+
+      <DetailSection title="辅助信息" accentColor={theme.light} variant="muted">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 text-xs text-slate-500">
+          <div>业务类别：{work.businessCategory || '-'}</div>
+          <div>工作节点：{work.workNode || '-'}</div>
+          <div>完成形式：{work.completeForm || '-'}</div>
+          {work.type === '重点' && (
+            <div>创新工作：{work.isInnovation ? '是' : '否'}</div>
+          )}
         </div>
-      </div>
+      </DetailSection>
 
       {work.rejectReason && (
         <div className="p-3 bg-rose-50 border border-red-200 rounded text-sm text-red-700 break-words whitespace-pre-wrap">
@@ -190,33 +202,29 @@ function PriorityMainWorkDisplayInfo({ work, departments, hideNodes, hideCoopera
         </div>
       )}
 
-      {!hideNodes && (
+      {!hideNodes && work.nodes && work.nodes.length > 0 && (
         <div>
           <p className="font-medium mb-2">工作节点：</p>
-          {work.nodes && work.nodes.length > 0 ? (
-            <div className="space-y-3">
-              {work.nodes.map((node: any, index: number) => (
-                <div key={node.id ?? index} className="border border-slate-200 bg-slate-50/70 rounded-lg p-3">
-                  <div className="font-medium break-words">
-                    {index + 1}. {node.title}
-                    {node.completeTime ? `（节点完成时间：${node.completeTime}）` : ''}
-                  </div>
-                  {node.children && node.children.length > 0 && (
-                    <div className="pl-5 mt-2 space-y-1 text-sm text-slate-500">
-                      {node.children.map((child: any, childIndex: number) => (
-                        <div key={child.id ?? `${index}-${childIndex}`} className="break-words">
-                          {index + 1}.{childIndex + 1} {child.title}
-                          {child.completeTime ? `（完成日期：${child.completeTime}）` : ''}
-                        </div>
-                      ))}
-                    </div>
-                  )}
+          <div className="space-y-3">
+            {work.nodes.map((node: any, index: number) => (
+              <div key={node.id ?? index} className="border border-slate-200 bg-slate-50/70 rounded-lg p-3">
+                <div className="font-medium break-words">
+                  {index + 1}. {node.title}
+                  {node.completeTime ? `（节点完成时间：${node.completeTime}）` : ''}
                 </div>
-              ))}
-            </div>
-          ) : (
-            <p className={DISPLAY_LABEL}>暂无工作节点</p>
-          )}
+                {node.children && node.children.length > 0 && (
+                  <div className="pl-5 mt-2 space-y-1 text-sm text-slate-500">
+                    {node.children.map((child: any, childIndex: number) => (
+                      <div key={child.id ?? `${index}-${childIndex}`} className="break-words">
+                        {index + 1}.{childIndex + 1} {child.title}
+                        {child.completeTime ? `（完成日期：${child.completeTime}）` : ''}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -489,5 +497,5 @@ export function WorkDisplayInfo({ work, departments, hideNodes, hideCooperators 
   if (isTodo) {
     return <TodoWorkDisplayInfo work={work} departments={departments} hideNodes={hideNodes} hideCooperators={hideCooperators} />;
   }
-  return <PriorityMainWorkDisplayInfo work={work} departments={departments} hideNodes={hideNodes} hideCooperators={hideCooperators} />;
+  return <PriorityMainWorkDisplayInfo work={work} departments={departments} hideNodes={hideNodes} />;
 }
