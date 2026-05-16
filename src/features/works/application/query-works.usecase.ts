@@ -1,6 +1,6 @@
 import type { BaseCurrentUser } from '@/shared/auth/current-user'
 import type { Prisma } from '@prisma/client'
-import { WorkItemType, WorkItemStatus } from '@prisma/client'
+import { WorkItemType, WorkItemStatus, Role } from '@prisma/client'
 
 export interface QueryWorksParams {
   type: string | null; status: string | null; departmentId: string | null; keyword: string | null
@@ -151,11 +151,14 @@ function applyPostFilter(
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
+  const isGlobalViewer =
+    currentUser.role === Role.ADMIN || currentUser.role === Role.SUPERVISOR
+
   return works.filter((work) => {
     if (statusFilter.postFilter === 'handling')
-      return shouldHandleWorkItem(currentUser, work)
+      return isGlobalViewer || shouldHandleWorkItem(currentUser, work)
     if (statusFilter.postFilter === 'approving')
-      return canApproveWorkItem(currentUser, work)
+      return isGlobalViewer || canApproveWorkItem(currentUser, work)
     if (statusFilter.postFilter === 'overdue')
       return isOverdueWork(work, today)
     if (statusFilter.postFilter === 'expiring')

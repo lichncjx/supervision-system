@@ -500,17 +500,61 @@ function canApprove(user, work) {
   return true;
 }
 
-function canHandle(user, work) {
+function hasValue(value) {
+  if (value == null) return false;
+  return String(value).trim().length > 0;
+}
+
+function isReturnedDraft(work) {
+  if (getTargetStatus(work) !== 'DRAFT') return false;
+  return hasValue(work.rejectReason) || hasValue(work.rejectedFromStatus);
+}
+
+function isReturnedInProgress(work) {
+  if (getTargetStatus(work) !== 'IN_PROGRESS') return false;
+  return hasValue(work.rejectReason) || hasValue(work.rejectedFromStatus);
+}
+
+function canOperate(user, work) {
   if (user.role === 'ADMIN' || user.role === 'SUPERVISOR') return false;
   const targetStatus = getTargetStatus(work);
+  if (targetStatus === 'COMPLETED' || targetStatus === 'CANCELLED') return false;
+
+  const ownerId = work.firstSubmitterId ?? work.creatorId;
 
   if (user.role === 'DEPARTMENT_MANAGER' || user.role === 'DEPARTMENT_LEADER') {
-    const mainDept = isMainResponsibleDept(work, user.departmentId);
-    if (!mainDept) return false;
-    return ['DRAFT', 'PENDING_DECOMPOSE', 'IN_PROGRESS'].includes(targetStatus);
+    if (isMainResponsibleDept(work, user.departmentId)) {
+      if (targetStatus === 'IN_PROGRESS' || targetStatus === 'PENDING_DECOMPOSE') return true;
+      if (targetStatus === 'DRAFT' && ownerId === user.id) return true;
+      return false;
+    }
+    if (ownerId !== user.id) return false;
+    return targetStatus !== 'COMPLETED' && targetStatus !== 'CANCELLED';
   }
 
-  return false;
+  if (ownerId !== user.id) return false;
+  return targetStatus !== 'COMPLETED' && targetStatus !== 'CANCELLED';
+}
+
+function canHandle(user, work) {
+  if (user.role === 'ADMIN' || user.role === 'SUPERVISOR') return false;
+  if (!canOperate(user, work)) return false;
+
+  const targetStatus = getTargetStatus(work);
+  const ownerId = work.firstSubmitterId ?? work.creatorId;
+
+  if (targetStatus === 'IN_PROGRESS')
+    return isReturnedInProgress(work) && ownerId === user.id;
+
+  if (
+    targetStatus === 'DRAFT' &&
+    !isReturnedDraft(work) &&
+    (user.role === 'DEPARTMENT_MANAGER' || user.role === 'DEPARTMENT_LEADER') &&
+    !isMainResponsibleDept(work, user.departmentId)
+  )
+    return false;
+
+  return true;
 }
 
 function isOverdue(work, now = new Date()) {
