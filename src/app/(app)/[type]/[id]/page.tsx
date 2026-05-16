@@ -409,25 +409,21 @@ export default function WorkDetailPage() {
 
         <div className="relative flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div className="space-y-4">
-            <Link href={`/${type}`}>
-              <Button variant="outline" size="sm" className="rounded-full">
-                <ArrowLeft className="h-4 w-4" />
-                返回列表
-              </Button>
+            <Link href={`/${type}`} className="inline-flex items-center gap-1 text-xs text-slate-400 hover:text-slate-600 transition-colors">
+              <ArrowLeft className="h-3.5 w-3.5" />
+              返回列表
             </Link>
 
             <h1 className="flex items-center gap-3 text-2xl font-bold leading-tight text-slate-900">
               <span className={`h-8 w-1 rounded-full ${theme.accent}`} />
               {work.title}
+              <StatusBadge status={work.status} work={work} />
             </h1>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <StatusBadge status={work.status} work={work} />
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200/80 bg-slate-50/80 px-3 py-1 text-xs font-medium text-slate-600">
-              {getCurrentProcessDescription(work.status, work.currentApproverRole, work.currentApproverId)}
-            </span>
-          </div>
+          <span className="inline-flex items-center gap-1.5 self-end rounded-full border border-slate-200/80 bg-slate-50/80 px-3 py-1 text-xs font-medium text-slate-600">
+            {getCurrentProcessDescription(work.status, work.currentApproverRole, work.currentApproverId)}
+          </span>
         </div>
         <div className="relative mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs" style={{ color: detailTheme.deep }}>
           {isTodo ? (

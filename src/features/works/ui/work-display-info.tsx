@@ -274,18 +274,18 @@ function TodoWorkDisplayInfo({ work, departments, hideNodes, hideCooperators }: 
         </div>
         {!hideCooperators && work.cooperators && work.cooperators.length > 0 && (
           <div className="mt-2 pt-2 border-t border-slate-200">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
               <div>
-                <span className={DISPLAY_LABEL}>配合部门：</span>
-                <span className="text-sm font-medium text-slate-800">
+                <span className={DISPLAY_LABEL}>配合部门</span>
+                <div className="mt-0.5 text-[13px] font-semibold text-slate-900">
                   {work.cooperators.map((c: any) => getDepartmentName(departments, c.departmentId) || c.departmentName).join('、')}
-                </span>
+                </div>
               </div>
               <div>
-                <span className={DISPLAY_LABEL}>配合责任人员：</span>
-                <span className="text-sm font-medium text-slate-800">
-                  {work.cooperators.map((c: any) => c.person).filter(Boolean).join('、')}
-                </span>
+                <span className={DISPLAY_LABEL}>配合人员</span>
+                <div className="mt-0.5 text-[13px] font-semibold text-slate-900">
+                  {work.cooperators.map((c: any) => [c.leader, c.person].filter(Boolean).join(' · ')).filter(Boolean).join('、')}
+                </div>
               </div>
             </div>
           </div>
