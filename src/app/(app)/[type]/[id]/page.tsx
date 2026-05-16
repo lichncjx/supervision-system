@@ -400,8 +400,6 @@ export default function WorkDetailPage() {
     progress: work.progress || '', nodes: work.nodes || [],
   });
 
-  const showSidebarCooperators = isTodo && !canEditDraft && !canHandleReturnedCreate;
-
   return (
     <div className="space-y-6">
       {/* Light Hero Header */}
@@ -453,7 +451,7 @@ export default function WorkDetailPage() {
         {/* Main Area */}
         <div className="lg:col-span-3 space-y-6">
           <div className={`${PANEL_PADDED}`}>
-            <WorkDisplayInfo work={work} departments={departments} hideNodes={true} hideCooperators={isTodo} />
+            <WorkDisplayInfo work={work} departments={departments} hideNodes={true} />
           </div>
 
           {work.nodes && work.nodes.length > 0 && (
@@ -564,29 +562,6 @@ export default function WorkDetailPage() {
             isReturned={!!(work.status === 'pending_decompose' && (work.rejectReason || work.rejectedFromStatus))}
             onSubmitDecomposition={handleDecompose}
           />
-
-          {/* Read-only cooperators */}
-          {showSidebarCooperators && work.cooperators && work.cooperators.length > 0 && (
-            <div className={PANEL_PADDED}>
-              <h3 className="text-sm font-semibold text-slate-500 tracking-wide mb-3">配合方</h3>
-              <div>
-                {work.cooperators.map((c: any, idx: number) => (
-                  <div key={idx} className="py-2.5 border-b border-slate-100 last:border-b-0">
-                    <div className="text-sm font-medium text-slate-700">
-                      {c.departmentName || departments.find(d => d.id === c.departmentId)?.name || String(c.departmentId)}
-                    </div>
-                    {(c.leader || c.person) && (
-                      <div className="text-xs text-slate-400 mt-0.5">
-                        {c.leader && <span>{c.leader}</span>}
-                        {c.leader && c.person && <span className="mx-1">·</span>}
-                        {c.person && <span>{c.person}</span>}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
 
           {isWorkStatusInProgress(work.status) && (
             <WorkCompletePanel
