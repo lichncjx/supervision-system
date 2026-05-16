@@ -2,14 +2,16 @@ import { prisma } from '@/shared/db/prisma'
 import { toMemberResponse } from '@/features/members/application/member.dto'
 
 export interface QueryMembersInput {
-  departmentId: number
+  departmentId?: number
   isLeader?: boolean
   includeInactive?: boolean
 }
 
 export async function queryMembersUseCase(input: QueryMembersInput) {
-  const where: Record<string, unknown> = {
-    departmentId: input.departmentId,
+  const where: Record<string, unknown> = {}
+
+  if (input.departmentId !== undefined) {
+    where.departmentId = input.departmentId
   }
 
   if (!input.includeInactive) {
