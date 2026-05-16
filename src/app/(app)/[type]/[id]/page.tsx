@@ -426,11 +426,9 @@ export default function WorkDetailPage() {
 
           <div className="flex flex-wrap items-center gap-2">
             <StatusBadge status={work.status} work={work} />
-            {work.currentApproverRole && (
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200/80 bg-slate-50/80 px-3 py-1 text-xs font-medium text-slate-600">
-                当前环节：{getCurrentProcessDescription(work.status, work.currentApproverRole, work.currentApproverId)}
-              </span>
-            )}
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200/80 bg-slate-50/80 px-3 py-1 text-xs font-medium text-slate-600">
+              {getCurrentProcessDescription(work.status, work.currentApproverRole, work.currentApproverId)}
+            </span>
           </div>
         </div>
         <div className="relative mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs" style={{ color: detailTheme.deep }}>
