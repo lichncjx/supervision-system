@@ -10,6 +10,7 @@ import { StatusBadge } from '@/features/works/ui/badges';
 import { getCurrentProcessDescription } from '@/features/works/client/work-display.utils';
 import {
   TYPE_THEME,
+  DETAIL_THEME,
   PANEL,
   PANEL_PADDED,
 } from '@/features/works/ui/visual-tokens';
@@ -380,6 +381,7 @@ export default function WorkDetailPage() {
   const typeColorKey = work.type === '重点' ? 'priority' : work.type === '主要' ? 'main' : 'todo';
 
   const theme = TYPE_THEME[typeColorKey];
+  const detailTheme = DETAIL_THEME[typeColorKey];
 
   const buildEditFormFromWork = () => ({
     title: work.title || '', workItem: work.workItem || work.title || '',
@@ -430,6 +432,21 @@ export default function WorkDetailPage() {
               </span>
             )}
           </div>
+        </div>
+        <div className="relative mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs" style={{ color: detailTheme.deep }}>
+          {isTodo ? (
+            <>
+              {work.proposedLeader && <span>提出领导 {work.proposedLeader}</span>}
+              {work.proposedScene && <span>提出场景 {work.proposedScene}</span>}
+              {work.planCompleteTime && <span>完成时间 {work.planCompleteTime}</span>}
+            </>
+          ) : (
+            <>
+              {work.planCompleteTime && <span>完成时间 {work.planCompleteTime}</span>}
+              <span>{departments.find(d => d.id === work.departmentId)?.name || '-'}</span>
+              {work.responsiblePerson && <span>{work.responsiblePerson}</span>}
+            </>
+          )}
         </div>
       </div>
 

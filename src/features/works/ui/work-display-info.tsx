@@ -3,8 +3,6 @@
 import React from 'react';
 import { Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { StatusBadge } from '@/features/works/ui/badges';
-import { getCurrentProcessDescription } from '@/features/works/client/work-display.utils';
 import type { Work } from '@/features/works/client/work-view.types';
 import { DISPLAY_LABEL, DETAIL_THEME, type DetailThemeKey } from './visual-tokens';
 
@@ -26,53 +24,6 @@ function getDetailThemeKey(type: Work['type']): DetailThemeKey {
   if (type === '重点') return 'priority';
   if (type === '主要') return 'main';
   return 'todo';
-}
-
-function DetailHero({
-  title,
-  statusBadge,
-  process,
-  meta,
-  theme,
-}: {
-  title: string;
-  statusBadge: React.ReactNode;
-  process: React.ReactNode;
-  meta: string[];
-  theme: { deep: string; mid: string; light: string };
-}) {
-  return (
-    <div
-      className="rounded-xl px-5 py-4 relative overflow-hidden"
-      style={{
-        background: `linear-gradient(135deg, ${theme.light}22, ${theme.light}11, #f8f8f8)`,
-        border: `1px solid ${theme.light}`,
-      }}
-    >
-      <div
-        className="pointer-events-none absolute -right-10 -top-10 h-24 w-24 rounded-full blur-3xl"
-        style={{ background: `${theme.mid}18` }}
-      />
-      <div className="relative">
-        <h2 className="text-lg font-bold mb-2" style={{ color: theme.deep }}>
-          {title}
-        </h2>
-        <div className="flex items-center gap-2 mb-2">
-          {statusBadge}
-          <span className="text-sm font-semibold" style={{ color: theme.mid }}>
-            {process}
-          </span>
-        </div>
-        {meta.length > 0 && (
-          <div className="flex gap-4 text-xs flex-wrap" style={{ color: theme.deep }}>
-            {meta.map((item, i) => (
-              <span key={i}>{item}</span>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
 }
 
 function DetailSection({
@@ -131,22 +82,6 @@ function PriorityMainWorkDisplayInfo({ work, departments, hideNodes }: WorkDispl
 
   return (
     <div className="space-y-3">
-      <DetailHero
-        title={work.workItem || '-'}
-        statusBadge={<StatusBadge status={work.status} work={work} />}
-        process={getCurrentProcessDescription(
-          work.status,
-          work.currentApproverRole,
-          work.currentApproverId,
-        )}
-        meta={[
-          work.planCompleteTime ? `完成时间 ${work.planCompleteTime}` : '',
-          getDepartmentName(departments, work.departmentId ?? 0),
-          work.responsiblePerson || '-',
-        ].filter(Boolean)}
-        theme={theme}
-      />
-
       <DetailSection title="主要内容" accentColor={theme.deep}>
         <DetailLongText label="工作计划" value={work.workPlan || '-'} />
         <DetailLongText label="进展情况" value={work.progress || '-'} />
@@ -305,22 +240,6 @@ function TodoWorkDisplayInfo({ work, departments, hideNodes, hideCooperators }: 
 
   return (
     <div className="space-y-3">
-      <DetailHero
-        title={work.workItem || '-'}
-        statusBadge={<StatusBadge status={work.status} work={work} />}
-        process={getCurrentProcessDescription(
-          work.status,
-          work.currentApproverRole,
-          work.currentApproverId,
-        )}
-        meta={[
-          work.proposedLeader ? `提出领导 ${work.proposedLeader}` : '',
-          work.proposedScene ? `提出场景 ${work.proposedScene}` : '',
-          work.planCompleteTime ? `完成时间 ${work.planCompleteTime}` : '',
-        ].filter(Boolean)}
-        theme={theme}
-      />
-
       <DetailSection title="主要内容" accentColor={theme.deep}>
         <DetailLongText label="工作计划" value={work.workPlan || '-'} />
         <DetailLongText label="进展情况" value={work.progress || '-'} />
@@ -375,6 +294,8 @@ function TodoWorkDisplayInfo({ work, departments, hideNodes, hideCooperators }: 
 
       <DetailSection title="辅助信息" accentColor={theme.light} variant="muted">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 text-xs text-slate-500">
+          {work.proposedLeader && <div>提出领导：{work.proposedLeader}</div>}
+          {work.proposedScene && <div>提出场景：{work.proposedScene}</div>}
           {work.formedTime && <div>形成时间：{work.formedTime}</div>}
           {work.workNode && <div>工作节点：{work.workNode}</div>}
         </div>
