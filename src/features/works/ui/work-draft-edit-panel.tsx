@@ -29,6 +29,7 @@ interface WorkDraftEditPanelProps {
   isPriorityOrMain: boolean;
   isTodo: boolean;
   departments: Array<{ id: number; name: string; code: string; isBusiness: boolean }>;
+  cooperatorDepts?: Array<{ id: number; name: string; code: string; isBusiness: boolean }>;
   companyLeaders: Array<{ id: number; name: string; role: string }>;
   departmentLeaders?: Array<{ id: number; name: string; role: string; departmentId: number }>;
   departmentManagers?: Array<{ id: number; name: string; role: string; departmentId: number }>;
@@ -50,6 +51,7 @@ export function WorkDraftEditPanel({
   isPriorityOrMain,
   isTodo,
   departments,
+  cooperatorDepts,
   companyLeaders,
   departmentLeaders: _departmentLeaders,
   departmentManagers: _departmentManagers,
@@ -61,6 +63,7 @@ export function WorkDraftEditPanel({
   const cooperators: Cooperator[] = Array.isArray(editForm.cooperators) ? editForm.cooperators : [];
   const nodes: WorkNode[] = Array.isArray(editForm.nodes) ? editForm.nodes : [];
   const businessDepts = departments.filter((d) => d.isBusiness !== false);
+  const availableCooperatorDepts = cooperatorDepts ?? businessDepts;
 
   if (!visible) {
     return null;
@@ -198,7 +201,7 @@ export function WorkDraftEditPanel({
                   <WorkFormCooperators
                     cooperators={cooperators}
                     onChange={(value) => setEditForm((prev: any) => ({ ...prev, cooperators: value }))}
-                    departments={businessDepts.filter((d) => d.id !== editForm.departmentId)}
+                    departments={availableCooperatorDepts.filter((d) => d.id !== editForm.departmentId)}
                   />
                 </WorkFormSectionCard>
               </>

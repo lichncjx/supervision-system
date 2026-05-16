@@ -136,7 +136,7 @@ export async function updateWorkUseCase(
   if (body.responsibleLeader !== undefined)
     updateData.responsibleLeader = body.responsibleLeader
   if (body.proposedLeaderId !== undefined)
-    updateData.proposedLeaderId = body.proposedLeaderId || null
+    updateData.proposedLeaderId = body.proposedLeaderId ? Number(body.proposedLeaderId) : null
   if (body.proposedScene !== undefined)
     updateData.proposedScene = body.proposedScene
   if (body.formedTime !== undefined)
@@ -156,7 +156,7 @@ export async function updateWorkUseCase(
   if (body.progress !== undefined)
     updateData.progress = body.progress
   if (body.approvalLeaderId !== undefined)
-    updateData.approvalLeaderId = body.approvalLeaderId || null
+    updateData.approvalLeaderId = body.approvalLeaderId ? Number(body.approvalLeaderId) : null
   if (body.nodes !== undefined)
     updateData.nodes = JSON.stringify(body.nodes)
 

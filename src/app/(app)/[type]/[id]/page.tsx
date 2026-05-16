@@ -10,6 +10,7 @@ import { StatusBadge } from '@/features/works/ui/badges';
 import { getCurrentProcessDescription } from '@/features/works/client/work-display.utils';
 import {
   TYPE_THEME,
+  DETAIL_THEME,
   PANEL,
   PANEL_PADDED,
 } from '@/features/works/ui/visual-tokens';
@@ -377,9 +378,11 @@ export default function WorkDetailPage() {
   const deptOptions = isDepartmentUser
     ? departments.filter((d) => d.id === user?.departmentId)
     : departments;
+  const cooperatorDepts = departments.filter((d: any) => d.isBusiness !== false);
   const typeColorKey = work.type === '重点' ? 'priority' : work.type === '主要' ? 'main' : 'todo';
 
   const theme = TYPE_THEME[typeColorKey];
+  const detailTheme = DETAIL_THEME[typeColorKey];
 
   const buildEditFormFromWork = () => ({
     title: work.title || '', workItem: work.workItem || work.title || '',
@@ -397,9 +400,6 @@ export default function WorkDetailPage() {
     progress: work.progress || '', nodes: work.nodes || [],
   });
 
-  const showSidebarNodes = !canEditDraft && !canHandleReturnedCreate && !canDecomposeTodo;
-  const showSidebarCooperators = isTodo && !canEditDraft && !canHandleReturnedCreate;
-
   return (
     <div className="space-y-6">
       {/* Light Hero Header */}
@@ -409,27 +409,36 @@ export default function WorkDetailPage() {
 
         <div className="relative flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div className="space-y-4">
-            <Link href={`/${type}`}>
-              <Button variant="outline" size="sm" className="rounded-full">
-                <ArrowLeft className="h-4 w-4" />
-                返回列表
-              </Button>
+            <Link href={`/${type}`} className="inline-flex items-center gap-1 text-xs text-slate-400 hover:text-slate-600 transition-colors">
+              <ArrowLeft className="h-3.5 w-3.5" />
+              返回列表
             </Link>
 
             <h1 className="flex items-center gap-3 text-2xl font-bold leading-tight text-slate-900">
               <span className={`h-8 w-1 rounded-full ${theme.accent}`} />
               {work.title}
+              <StatusBadge status={work.status} work={work} />
             </h1>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <StatusBadge status={work.status} work={work} />
-            {work.currentApproverRole && (
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200/80 bg-slate-50/80 px-3 py-1 text-xs font-medium text-slate-600">
-                当前环节：{getCurrentProcessDescription(work.status, work.currentApproverRole, work.currentApproverId)}
-              </span>
-            )}
-          </div>
+          <span className="inline-flex items-center gap-1.5 self-end rounded-full border border-slate-200/80 bg-slate-50/80 px-3 py-1 text-xs font-medium text-slate-600">
+            {getCurrentProcessDescription(work.status, work.currentApproverRole, work.currentApproverId)}
+          </span>
+        </div>
+        <div className="relative mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs" style={{ color: detailTheme.deep }}>
+          {isTodo ? (
+            <>
+              {work.proposedLeader && <span>提出领导 {work.proposedLeader}</span>}
+              {work.proposedScene && <span>提出场景 {work.proposedScene}</span>}
+              {work.planCompleteTime && <span>完成时间 {work.planCompleteTime}</span>}
+            </>
+          ) : (
+            <>
+              {work.planCompleteTime && <span>完成时间 {work.planCompleteTime}</span>}
+              <span>{departments.find(d => d.id === work.departmentId)?.name || '-'}</span>
+              {work.responsiblePerson && <span>{work.responsiblePerson}</span>}
+            </>
+          )}
         </div>
       </div>
 
@@ -438,8 +447,50 @@ export default function WorkDetailPage() {
         {/* Main Area */}
         <div className="lg:col-span-3 space-y-6">
           <div className={`${PANEL_PADDED}`}>
-            <WorkDisplayInfo work={work} departments={departments} hideNodes={true} hideCooperators={isTodo} />
+            <WorkDisplayInfo work={work} departments={departments} hideNodes={true} />
           </div>
+
+          {work.nodes && work.nodes.length > 0 && (
+            <div className={PANEL_PADDED}>
+              <h3 className="text-sm font-semibold text-slate-500 tracking-wide mb-4">
+                {isTodo ? '任务分解节点' : '工作节点'}
+              </h3>
+              <div className="relative pl-5">
+                <div className="absolute left-[7px] top-2 bottom-2 w-px bg-slate-200" />
+                {work.nodes.map((node: any, index: number) => {
+                  const isLast = index === work.nodes!.length - 1;
+                  return (
+                    <div key={node.id ?? index} className={`relative ${isLast ? '' : 'pb-5'}`}>
+                      <div className="absolute left-[-13px] top-[5px] h-[9px] w-[9px] rounded-full border-2 border-slate-300 bg-white" />
+                      <div className="flex items-baseline justify-between gap-2">
+                        <div className="text-sm font-medium text-slate-800 break-words">
+                          {node.title}
+                        </div>
+                        {node.completeTime && (
+                          <span className="text-xs text-slate-400 shrink-0">{node.completeTime}</span>
+                        )}
+                      </div>
+                      {node.children && node.children.length > 0 && (
+                        <div className="mt-1.5 space-y-1">
+                          {node.children.map((child: any, childIndex: number) => (
+                            <div key={child.id ?? `${index}-${childIndex}`} className="flex items-baseline justify-between gap-2 pl-3">
+                              <div className="text-xs text-slate-500 break-words">
+                                <span className="inline-block h-1.5 w-1.5 rounded-full mr-1.5 align-middle bg-slate-200" />
+                                {child.title}
+                              </div>
+                              {child.completeTime && (
+                                <span className="text-xs text-slate-400 shrink-0">{child.completeTime}</span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           <div className={`${PANEL_PADDED}`}>
             <WorkflowProgress work={work} />
@@ -460,18 +511,6 @@ export default function WorkDetailPage() {
                 </Button>
               </div>
             </div>
-          )}
-
-          {isWorkStatusInProgress(work.status) && (
-            <WorkCompletePanel
-              proof={proof}
-              onProofChange={setProof}
-              evidenceAttachments={(work.attachments || []).filter(a => a.category === 'evidence')}
-              onUploadEvidence={handleUploadEvidence}
-              onDeleteEvidence={handleDeleteEvidence}
-              uploading={uploading}
-              onComplete={handleComplete}
-            />
           )}
 
           <WorkflowApprovalPanel visible={canApprove} onApprove={handleApprove} onReject={handleReject} />
@@ -501,6 +540,7 @@ export default function WorkDetailPage() {
             isPriorityOrMain={isPriorityOrMain}
             isTodo={isTodo}
             departments={deptOptions}
+            cooperatorDepts={cooperatorDepts}
             companyLeaders={companyLeaders}
             departmentLeaders={departmentLeaders}
             departmentManagers={departmentManagers}
@@ -519,54 +559,16 @@ export default function WorkDetailPage() {
             onSubmitDecomposition={handleDecompose}
           />
 
-          {/* Read-only nodes */}
-          {showSidebarNodes && work.nodes && work.nodes.length > 0 && (
-            <div className={PANEL_PADDED}>
-              <h3 className="text-sm font-semibold text-slate-500 tracking-wide mb-3">
-                {isTodo ? '任务分解节点' : '工作节点'}
-              </h3>
-              <div className="space-y-2">
-                {work.nodes.map((node: any, index: number) => (
-                  <div key={node.id ?? index} className="border border-slate-200 bg-slate-50/70 rounded-lg p-3">
-                    <div className="text-sm font-medium break-words">
-                      {index + 1}. {node.title}
-                      {node.completeTime ? `（节点完成时间：${node.completeTime}）` : ''}
-                    </div>
-                    {node.children && node.children.length > 0 && (
-                      <div className="pl-4 mt-1.5 space-y-0.5 text-xs text-slate-500">
-                        {node.children.map((child: any, childIndex: number) => (
-                          <div key={child.id ?? `${index}-${childIndex}`} className="break-words">
-                            {index + 1}.{childIndex + 1} {child.title}
-                            {child.completeTime ? `（完成日期：${child.completeTime}）` : ''}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Read-only cooperators */}
-          {showSidebarCooperators && work.cooperators && work.cooperators.length > 0 && (
-            <div className={PANEL_PADDED}>
-              <h3 className="text-sm font-semibold text-slate-500 tracking-wide mb-3">配合方</h3>
-              <div className="space-y-2">
-                {work.cooperators.map((c: any, idx: number) => (
-                  <div key={idx} className="border border-slate-200 bg-slate-50/70 rounded-lg p-3 text-sm">
-                    <div className="font-medium">{c.departmentName || departments.find(d => d.id === c.departmentId)?.name || String(c.departmentId)}</div>
-                    {(c.leader || c.person) && (
-                      <div className="text-xs text-slate-500 mt-1">
-                        {c.leader && <span>领导：{c.leader}</span>}
-                        {c.leader && c.person && <span className="mx-2">|</span>}
-                        {c.person && <span>责任人：{c.person}</span>}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
+          {isWorkStatusInProgress(work.status) && (
+            <WorkCompletePanel
+              proof={proof}
+              onProofChange={setProof}
+              evidenceAttachments={(work.attachments || []).filter(a => a.category === 'evidence')}
+              onUploadEvidence={handleUploadEvidence}
+              onDeleteEvidence={handleDeleteEvidence}
+              uploading={uploading}
+              onComplete={handleComplete}
+            />
           )}
 
           <WorkSidebarActions
@@ -599,6 +601,7 @@ export default function WorkDetailPage() {
         setEditForm={setEditForm}
         companyLeaders={companyLeaders}
         departments={deptOptions}
+        cooperatorDepts={cooperatorDepts}
         isPriorityOrMain={isPriorityOrMain}
         isTodo={isTodo}
         onSubmitAdjust={handleAdjust}

@@ -3,7 +3,6 @@
 import { getRoleName } from '@/features/users/domain/role.rules';
 import { getActionName } from '@/features/works/client/work-display.utils';
 import { getWorkStatusLabel } from '@/features/works/domain/work-status.rules';
-import { getWorkflowRecordDescription } from '@/features/workflow/client/workflow-display.utils';
 import { PANEL_PADDED } from '@/features/works/ui/visual-tokens';
 
 interface WorkflowRecord {
@@ -21,6 +20,19 @@ interface WorkflowRecordsProps {
   records: WorkflowRecord[];
 }
 
+const ACTION_COLORS: Record<string, string> = {
+  submit: '#94a3b8',
+  approve: '#10b981',
+  reject: '#f43f5e',
+  complete: '#059669',
+  adjust: '#f59e0b',
+  cancel: '#f59e0b',
+};
+
+function getActionColor(action: string): string {
+  return ACTION_COLORS[action] ?? '#94a3b8';
+}
+
 export function WorkflowRecords({ records }: WorkflowRecordsProps) {
   if (records.length === 0) {
     return null;
@@ -28,51 +40,47 @@ export function WorkflowRecords({ records }: WorkflowRecordsProps) {
 
   return (
     <div className={PANEL_PADDED}>
-      <h3 className="font-semibold text-slate-800 mb-4">审批记录</h3>
-      <div>
-        <div className="space-y-3">
-          {records.map((record) => {
-            const recordDesc = getWorkflowRecordDescription(
-              record.action,
-              record.previousStatus,
-              record.newStatus
-            );
-            const isSameStatus = record.previousStatus.toLowerCase() === record.newStatus.toLowerCase();
+      <div className="font-semibold text-slate-800 mb-3 text-[13px]">审批记录</div>
 
-            return (
-              <div key={record.id} className="rounded-lg bg-white/60 border border-slate-200 p-4">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <span className="font-medium">{record.initiatorName}</span>
-                    <span className="text-slate-500 text-sm ml-2">({getRoleName(record.initiatorRole)})</span>
-                  </div>
-                  <span className="text-sm text-slate-400">{new Date(record.createdAt).toLocaleString()}</span>
+      <div>
+        {records.map((record) => {
+          const color = getActionColor(record.action);
+          const statusLabel = record.previousStatus.toLowerCase() === record.newStatus.toLowerCase()
+            ? ''
+            : `${getWorkStatusLabel(record.previousStatus as any)} → ${getWorkStatusLabel(record.newStatus as any)}`;
+
+          return (
+            <div
+              key={record.id}
+              className="py-2.5 px-3 mb-0.5 last:mb-0"
+              style={{ borderLeft: `3px solid ${color}` }}
+            >
+              {/* 名字 + 角色 + 时间 */}
+              <div className="flex items-baseline justify-between gap-2 mb-1">
+                <div className="text-[13px] font-semibold text-slate-900">
+                  {record.initiatorName}{' '}
+                  <span className="font-normal text-slate-400 text-[11px]">{getRoleName(record.initiatorRole)}</span>
                 </div>
-                <div className="mt-1">
-                  <span className="text-blue-600">{getActionName(record.action as any)}</span>
-                </div>
-                {recordDesc && (
-                  <div className="mt-1 text-sm text-purple-700">
-                    说明：{recordDesc}
-                  </div>
-                )}
-                {isSameStatus && !recordDesc && (
-                  <div className="mt-1 text-sm text-slate-500">
-                    当前记录为流程节点流转，事项状态未最终变化
-                  </div>
-                )}
-                <div className="mt-1 text-sm text-gray-600">
-                  状态变更：{getWorkStatusLabel(record.previousStatus as any)} → {getWorkStatusLabel(record.newStatus as any)}
-                </div>
-                {record.comment && (
-                  <div className="mt-2 text-sm bg-white p-2 rounded">
-                    意见：{record.comment}
-                  </div>
-                )}
+                <span className="text-[11px] text-slate-400 shrink-0">
+                  {new Date(record.createdAt).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                </span>
               </div>
-            );
-          })}
-        </div>
+
+              {/* 动作 + 状态变更 */}
+              <div className="text-xs font-semibold" style={{ color }}>
+                {getActionName(record.action as any)}
+                {statusLabel && <span className="font-normal text-slate-500"> · {statusLabel}</span>}
+              </div>
+
+              {/* 意见 */}
+              {record.comment && (
+                <div className="mt-1.5 bg-white border border-slate-200 rounded-md px-2.5 py-2 text-xs text-slate-600">
+                  {record.comment}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
