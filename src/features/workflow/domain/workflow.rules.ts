@@ -127,19 +127,6 @@ export function canUserOperate(
   return canOperateWorkItem(toPermissionUser(user), workItem)
 }
 
-export function canUserCancelDraft(
-  user: UserSession,
-  workItem: {
-    creatorId?: number | null
-    firstSubmitterId?: number | null
-  } & PermissionWorkItem,
-) {
-  if (workItem.creatorId === user.userId) return true
-  if ((workItem.firstSubmitterId ?? workItem.creatorId) === user.userId)
-    return true
-  return canUserHandle(user, workItem)
-}
-
 export function ensureMainResponsibleDepartment(
   user: UserSession,
   workItem: PermissionWorkItem,

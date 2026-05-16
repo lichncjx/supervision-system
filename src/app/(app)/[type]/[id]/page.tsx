@@ -33,7 +33,7 @@ import {
   canDecomposeTodoWork,
   canApproveWork,
 } from '@/features/works/client/work-client-permissions';
-import { isWorkStatusTerminal, isReturnedDraftWork } from '@/features/works/domain/work-status.rules';
+import { isWorkStatusTerminal, isReturnedDraftWork, isWorkStatusInProgress } from '@/features/works/domain/work-status.rules';
 import { isWorkRelatedToDepartment } from '@/features/works/client/work-filters';
 import { updateWork, deleteWork, resubmitRejectedWork } from '@/features/works/client/work-api';
 import {
@@ -462,15 +462,17 @@ export default function WorkDetailPage() {
             </div>
           )}
 
-          <WorkCompletePanel
-            proof={proof}
-            onProofChange={setProof}
-            evidenceAttachments={(work.attachments || []).filter(a => a.category === 'evidence')}
-            onUploadEvidence={handleUploadEvidence}
-            onDeleteEvidence={handleDeleteEvidence}
-            uploading={uploading}
-            onComplete={handleComplete}
-          />
+          {isWorkStatusInProgress(work.status) && (
+            <WorkCompletePanel
+              proof={proof}
+              onProofChange={setProof}
+              evidenceAttachments={(work.attachments || []).filter(a => a.category === 'evidence')}
+              onUploadEvidence={handleUploadEvidence}
+              onDeleteEvidence={handleDeleteEvidence}
+              uploading={uploading}
+              onComplete={handleComplete}
+            />
+          )}
 
           <WorkflowApprovalPanel visible={canApprove} onApprove={handleApprove} onReject={handleReject} />
           <WorkPendingAdjustmentPanel work={work} />
@@ -568,6 +570,7 @@ export default function WorkDetailPage() {
           )}
 
           <WorkSidebarActions
+            visible={isWorkStatusInProgress(work.status)}
             onAdjust={() => {
               setEditForm(buildEditFormFromWork());
               setAdjustReason('');

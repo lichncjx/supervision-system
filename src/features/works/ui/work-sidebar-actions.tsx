@@ -5,11 +5,13 @@ import { Button } from '@/components/ui/button';
 import { PANEL_PADDED } from './visual-tokens';
 
 interface WorkSidebarActionsProps {
+  visible?: boolean;
   onAdjust: () => void;
   onCancel: () => void;
 }
 
-export function WorkSidebarActions({ onAdjust, onCancel }: WorkSidebarActionsProps) {
+export function WorkSidebarActions({ visible = true, onAdjust, onCancel }: WorkSidebarActionsProps) {
+  if (!visible) return null;
   return (
     <div className={PANEL_PADDED}>
       <h3 className="text-sm font-semibold text-slate-500 tracking-wide mb-3">操作</h3>

@@ -1,6 +1,6 @@
 import { ActionType, ApprovalType, WorkItemStatus } from '@prisma/client'
 import type { UserSession, WorkflowResult } from '@/features/workflow/domain/workflow.types'
-import { canUserOperate, getProcessFirstApprover } from '@/features/workflow/domain/workflow.rules'
+import { canUserOperate, ensureMainResponsibleDepartment, getProcessFirstApprover } from '@/features/workflow/domain/workflow.rules'
 import { findWorkForUpdateById, updateWorkItem } from '@/features/works/infrastructure/work.repository'
 import {
   createWorkflowRecord,
@@ -24,6 +24,10 @@ export async function submitAdjustment(
 
   if (!canUserOperate(user, workItem)) {
     return { success: false, error: '无权申请调整' }
+  }
+
+  if (!ensureMainResponsibleDepartment(user, workItem)) {
+    return { success: false, error: '只有主责部门可以申请调整' }
   }
 
   const oldStatus = workItem.status

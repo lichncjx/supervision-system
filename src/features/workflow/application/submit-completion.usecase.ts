@@ -3,6 +3,7 @@ import type { UserSession, WorkflowResult } from '@/features/workflow/domain/wor
 import {
   canUserOperate,
   companyLeaderAssignment,
+  ensureMainResponsibleDepartment,
   getProcessFirstApprover,
 } from '@/features/workflow/domain/workflow.rules'
 import { findWorkForUpdateById, updateWorkItem } from '@/features/works/infrastructure/work.repository'
@@ -28,6 +29,10 @@ export async function submitCompletion(
 
   if (!canUserOperate(user, workItem)) {
     return { success: false, error: '无权提交完成申请' }
+  }
+
+  if (!ensureMainResponsibleDepartment(user, workItem)) {
+    return { success: false, error: '只有主责部门可以提交完成申请' }
   }
 
   const oldStatus = workItem.status
