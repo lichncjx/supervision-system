@@ -110,8 +110,9 @@ export default function AdminPage() {
     try {
       const res = await fetch('/api/members?includeInactive=true', { credentials: 'include' })
       if (!res.ok) return
-      const members = await res.json()
-      setMemberCount(members.length)
+      const members: any[] = await res.json()
+      const businessDeptIds = new Set(departments.filter((d) => d.isBusiness).map((d) => d.id))
+      setMemberCount(members.filter((m) => businessDeptIds.has(m.departmentId)).length)
     } catch { /* ignore */ }
   }
 
