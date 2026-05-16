@@ -72,24 +72,24 @@ export default function AdminPage() {
 
   useEffect(() => {
     fetchUsers();
-    fetchDepartmentsAndCount();
+    fetchDepartments();
+    fetchMemberCount();
   }, []);
 
-  const fetchDepartmentsAndCount = async () => {
+  const fetchDepartments = async () => {
     try {
       const response = await fetch('/api/departments', { credentials: 'include' });
-      if (!response.ok) return;
-      const data = await response.json();
-      setDepartments(data);
-
-      const businessDeptIds = new Set(data.filter((d: any) => d.isBusiness).map((d: any) => d.id));
-      const res = await fetch('/api/members?includeInactive=true', { credentials: 'include' });
-      if (!res.ok) return;
-      const members: any[] = await res.json();
-      setMemberCount(members.filter((m) => businessDeptIds.has(m.departmentId)).length);
+      if (response.ok) setDepartments(await response.json());
     } catch (error) {
       console.error('Fetch departments error:', error);
     }
+  };
+
+  const fetchMemberCount = async () => {
+    try {
+      const res = await fetch('/api/members?includeInactive=true', { credentials: 'include' });
+      if (res.ok) setMemberCount((await res.json()).length);
+    } catch { /* ignore */ }
   };
 
   const fetchUsers = async () => {
