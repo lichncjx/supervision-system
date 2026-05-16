@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/features/works/ui/badges';
 import { getCurrentProcessDescription } from '@/features/works/client/work-display.utils';
 import type { Work } from '@/features/works/client/work-view.types';
-import { DISPLAY_LABEL } from './visual-tokens';
+import { DISPLAY_LABEL, DETAIL_THEME, type DetailThemeKey } from './visual-tokens';
 
 interface WorkDisplayInfoProps {
   work: Work;
@@ -20,6 +20,108 @@ function getDepartmentName(
   id: number,
 ): string {
   return departments.find((d) => d.id === id)?.name || '-';
+}
+
+function getDetailThemeKey(type: Work['type']): DetailThemeKey {
+  if (type === '重点') return 'priority';
+  if (type === '主要') return 'main';
+  return 'todo';
+}
+
+function DetailHero({
+  title,
+  statusBadge,
+  process,
+  meta,
+  theme,
+}: {
+  title: string;
+  statusBadge: React.ReactNode;
+  process: React.ReactNode;
+  meta: string[];
+  theme: { deep: string; mid: string; light: string };
+}) {
+  return (
+    <div
+      className="rounded-xl px-5 py-4 relative overflow-hidden"
+      style={{
+        background: `linear-gradient(135deg, ${theme.light}22, ${theme.light}11, #f8f8f8)`,
+        border: `1px solid ${theme.light}`,
+      }}
+    >
+      <div
+        className="pointer-events-none absolute -right-10 -top-10 h-24 w-24 rounded-full blur-3xl"
+        style={{ background: `${theme.mid}18` }}
+      />
+      <div className="relative">
+        <h2 className="text-lg font-bold mb-2" style={{ color: theme.deep }}>
+          {title}
+        </h2>
+        <div className="flex items-center gap-2 mb-2">
+          {statusBadge}
+          <span className="text-sm font-semibold" style={{ color: theme.mid }}>
+            {process}
+          </span>
+        </div>
+        {meta.length > 0 && (
+          <div className="flex gap-4 text-xs flex-wrap" style={{ color: theme.deep }}>
+            {meta.map((item, i) => (
+              <span key={i}>{item}</span>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function DetailSection({
+  title,
+  accentColor,
+  variant = 'default',
+  children,
+}: {
+  title: string;
+  accentColor: string;
+  variant?: 'default' | 'muted';
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      className="rounded-lg px-4 py-3"
+      style={{
+        background: variant === 'muted' ? `${accentColor}15` : '#fafafa',
+        border: `1px solid ${accentColor}30`,
+        borderLeft: `3px solid ${accentColor}`,
+        ...(variant === 'muted' ? { opacity: 0.85 } : {}),
+      }}
+    >
+      <div
+        className="text-[11px] font-bold uppercase tracking-wider mb-2"
+        style={{ color: accentColor }}
+      >
+        {title}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function DetailLongText({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="mb-2 last:mb-0">
+      <span className={DISPLAY_LABEL}>{label}</span>
+      <p className="mt-1 text-sm text-slate-700 leading-relaxed bg-white px-3 py-2 rounded-md border border-slate-200 whitespace-pre-wrap break-words">
+        {value || '-'}
+      </p>
+    </div>
+  );
 }
 
 function PriorityMainWorkDisplayInfo({ work, departments, hideNodes, hideCooperators: _hideCooperators }: WorkDisplayInfoProps) {
