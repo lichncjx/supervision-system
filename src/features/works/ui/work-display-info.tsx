@@ -3,7 +3,6 @@
 import React from 'react';
 import { Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ExpandableText } from '@/components/common/expandable-text';
 import { StatusBadge } from '@/features/works/ui/badges';
 import { getCurrentProcessDescription } from '@/features/works/client/work-display.utils';
 import type { Work } from '@/features/works/client/work-view.types';
@@ -191,26 +190,38 @@ function PriorityMainWorkDisplayInfo({ work, departments, hideNodes, hideCoopera
 }
 
 function TodoWorkDisplayInfo({ work, departments, hideNodes, hideCooperators }: WorkDisplayInfoProps) {
+  const firstSubmitterName = work.firstSubmitterName || work.creatorName || '-';
+
   return (
     <div className="space-y-2">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
         <div>
-          <span className={DISPLAY_LABEL}>事项提出领导：</span>
+          <span className={DISPLAY_LABEL}>提出领导：</span>
           <span>{work.proposedLeader || '-'}</span>
-          <span className="text-xs text-slate-400 ml-2">（提出该待办事项，默认也是审批领导）</span>
         </div>
         <div>
-          <span className={DISPLAY_LABEL}>事项提出场景：</span>
+          <span className={DISPLAY_LABEL}>提出场景：</span>
           <span>{work.proposedScene || '-'}</span>
         </div>
-        <div>
-          <span className={DISPLAY_LABEL}>待办事项：</span>
-          <span>{work.workItem || '-'}</span>
-        </div>
+      </div>
+
+      <div>
+        <span className={DISPLAY_LABEL}>待办事项：</span>
+        <span>{work.workItem || '-'}</span>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
         <div>
           <span className={DISPLAY_LABEL}>形成时间：</span>
           <span>{work.formedTime || '-'}</span>
         </div>
+        <div>
+          <span className={DISPLAY_LABEL}>完成时间：</span>
+          <span>{work.planCompleteTime || '-'}</span>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
         <div>
           <span className={DISPLAY_LABEL}>主责部门：</span>
           <span>{getDepartmentName(departments, work.departmentId ?? 0)}</span>
@@ -219,42 +230,51 @@ function TodoWorkDisplayInfo({ work, departments, hideNodes, hideCooperators }: 
           <span className={DISPLAY_LABEL}>责任领导：</span>
           <span>{work.responsibleLeader || '-'}</span>
         </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
         <div>
           <span className={DISPLAY_LABEL}>责任人员：</span>
           <span>{work.responsiblePerson || '-'}</span>
         </div>
-        {!hideCooperators && (
-          <>
-            <div>
-              <span className={DISPLAY_LABEL}>配合部门：</span>
-              <span>
-                {work.cooperators && work.cooperators.length > 0
-                  ? work.cooperators.map((c: any) => getDepartmentName(departments, c.departmentId) || c.departmentName).join('、')
-                  : '-'}
-              </span>
-            </div>
-            <div>
-              <span className={DISPLAY_LABEL}>配合责任人员：</span>
-              <span>
-                {work.cooperators && work.cooperators.length > 0
-                  ? work.cooperators.map((c: any) => c.person).filter(Boolean).join('、')
-                  : '-'}
-              </span>
-            </div>
-          </>
-        )}
         <div>
-          <span className={DISPLAY_LABEL}>工作计划：</span>
-          <span>{work.workPlan || '-'}</span>
+          <span className={DISPLAY_LABEL}>起草人员：</span>
+          <span>{firstSubmitterName}</span>
         </div>
-        <div>
-          <span className={DISPLAY_LABEL}>完成时间：</span>
-          <span>{work.planCompleteTime || '-'}</span>
+      </div>
+
+      {!hideCooperators && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
+          <div>
+            <span className={DISPLAY_LABEL}>配合部门：</span>
+            <span>
+              {work.cooperators && work.cooperators.length > 0
+                ? work.cooperators.map((c: any) => getDepartmentName(departments, c.departmentId) || c.departmentName).join('、')
+                : '-'}
+            </span>
+          </div>
+          <div>
+            <span className={DISPLAY_LABEL}>配合责任人员：</span>
+            <span>
+              {work.cooperators && work.cooperators.length > 0
+                ? work.cooperators.map((c: any) => c.person).filter(Boolean).join('、')
+                : '-'}
+            </span>
+          </div>
         </div>
-        <div>
-          <span className={DISPLAY_LABEL}>进展情况：</span>
-          <ExpandableText text={work.progress} />
-        </div>
+      )}
+
+      <div>
+        <span className={DISPLAY_LABEL}>工作计划：</span>
+        <p className="mt-1 whitespace-pre-wrap break-words">{work.workPlan || '-'}</p>
+      </div>
+
+      <div>
+        <span className={DISPLAY_LABEL}>进展情况：</span>
+        <p className="mt-1 whitespace-pre-wrap break-words">{work.progress || '-'}</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
         <div>
           <span className={DISPLAY_LABEL}>当前状态：</span>
           <StatusBadge status={work.status} work={work} />

@@ -59,8 +59,8 @@ export function WorkCompletePanel({
 
           {evidenceAttachments.length > 0 && (
             <div className="mt-2 space-y-2">
-              {evidenceAttachments.map((att) => (
-                <div key={att.id} className="flex items-center justify-between rounded-lg border border-slate-200 p-2 text-sm">
+              {evidenceAttachments.map((att, i) => (
+                <div key={att.id ?? i} className="flex items-center justify-between rounded-lg border border-slate-200 p-2 text-sm">
                   <div className="min-w-0 flex-1">
                     <div className="font-medium break-words">{att.fileName}</div>
                     <div className="text-xs text-slate-500">

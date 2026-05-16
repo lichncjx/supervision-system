@@ -101,6 +101,7 @@ model User {
 
   department           Department              @relation("UserDepartment", fields: [departmentId], references: [id])
   createdWorkItems     WorkItem[]              @relation("CreatorWorkItems")
+  firstSubmitterWorkItems WorkItem[]           @relation("FirstSubmitterWorkItems")
   currentApprovalItems WorkItem[]              @relation("ApproverWorkItems")
   approvalLeaderItems  WorkItem[]              @relation("ApprovalLeaderWorkItems")
   proposedLeaderItems  WorkItem[]              @relation("ProposedLeaderWorkItems")
@@ -170,6 +171,7 @@ model WorkItem {
 
   department            Department?     @relation("DepartmentWorkItems", fields: [departmentId], references: [id])
   creator               User            @relation("CreatorWorkItems", fields: [creatorId], references: [id])
+  firstSubmitter        User?           @relation("FirstSubmitterWorkItems", fields: [firstSubmitterId], references: [id])
   currentApprover       User?           @relation("ApproverWorkItems", fields: [currentApproverId], references: [id])
   approvalLeader        User?           @relation("ApprovalLeaderWorkItems", fields: [approvalLeaderId], references: [id])
   proposedLeader        User?           @relation("ProposedLeaderWorkItems", fields: [proposedLeaderId], references: [id])

@@ -120,7 +120,7 @@ export function WorkFormNodes({
 
       <div className="space-y-2">
         {nodes.map((node, nodeIndex) => (
-          <div key={node.id} className="rounded-lg bg-slate-50 p-3 space-y-2">
+          <div key={node.id || `node-${nodeIndex}`} className="rounded-lg bg-slate-50 p-3 space-y-2">
             <div className="space-y-2">
               <Input
                 value={node.title}
@@ -149,7 +149,7 @@ export function WorkFormNodes({
 
             <div className="pl-4 space-y-1.5 border-l-2 border-slate-200">
               {node.children.map((child, childIndex) => (
-                <div key={child.id} className="flex gap-1.5 items-center">
+                <div key={child.id || `sub-${nodeIndex}-${childIndex}`} className="flex gap-1.5 items-center">
                   <Input
                     value={child.title}
                     onChange={(e) => {

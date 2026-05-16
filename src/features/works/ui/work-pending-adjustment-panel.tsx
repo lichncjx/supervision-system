@@ -42,14 +42,14 @@ export function WorkPendingAdjustmentPanel({ work }: WorkPendingAdjustmentPanelP
             <p className="font-medium mt-2">调整后节点：</p>
             <div className="space-y-2">
               {work.pendingAdjustment.nodes.map((node: any, index: number) => (
-                <div key={node.id} className="border border-slate-200 bg-slate-50/70 rounded-lg p-3">
+                <div key={node.id ?? index} className="border border-slate-200 bg-slate-50/70 rounded-lg p-3">
                   <div className="font-medium break-words">
                     {index + 1}. {node.title}
                   </div>
                   {node.children && node.children.length > 0 && (
                     <div className="pl-4 mt-1 space-y-1 text-sm text-slate-600">
                       {node.children.map((child: any, childIndex: number) => (
-                        <div key={child.id} className="break-words">
+                        <div key={child.id ?? `${index}-${childIndex}`} className="break-words">
                           {index + 1}.{childIndex + 1} {child.title}
                           {child.completeTime ? `（完成日期：${child.completeTime}）` : ''}
                         </div>

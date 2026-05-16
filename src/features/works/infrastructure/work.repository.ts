@@ -24,6 +24,7 @@ export async function findManyWorks(
 const WORK_DETAIL_INCLUDE = {
   department: true,
   creator: { select: { name: true, role: true } },
+  firstSubmitter: { select: { name: true } },
   proposedLeader: { select: { id: true, name: true } },
   attachments: {
     include: {

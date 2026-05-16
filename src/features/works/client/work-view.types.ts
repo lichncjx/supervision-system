@@ -26,11 +26,12 @@ export interface Work {
 
   // ---- 业务人员 ID 字段（xxxId = 真实关联字段，用于权限、流程、审批、待处理判断）----
   creatorRole: string
-  creatorId?: number
+  creatorId: number
   creatorName?: string
   // firstSubmitterId: 首次提交审批人，退回后处理权限判定依据
   // firstSubmitterId ?? creatorId 的 fallback 仅用于兼容历史数据
   firstSubmitterId?: number
+  firstSubmitterName?: string
   // proposedLeaderId: 待办事项的提出领导用户 ID（公司领导）
   proposedLeaderId?: number
   // approvalLeaderId: 待办事项的审批领导用户 ID，默认应等于 proposedLeaderId
