@@ -457,28 +457,46 @@ export default function WorkDetailPage() {
 
           {work.nodes && work.nodes.length > 0 && (
             <div className={PANEL_PADDED}>
-              <h3 className="text-sm font-semibold text-slate-500 tracking-wide mb-3">
+              <h3 className="text-sm font-semibold text-slate-500 tracking-wide mb-4">
                 {isTodo ? '任务分解节点' : '工作节点'}
               </h3>
-              <div className="space-y-2">
-                {work.nodes.map((node: any, index: number) => (
-                  <div key={node.id ?? index} className="border border-slate-200 bg-slate-50/70 rounded-lg p-3">
-                    <div className="text-sm font-medium break-words">
-                      {index + 1}. {node.title}
-                      {node.completeTime ? `（节点完成时间：${node.completeTime}）` : ''}
-                    </div>
-                    {node.children && node.children.length > 0 && (
-                      <div className="pl-4 mt-1.5 space-y-0.5 text-xs text-slate-500">
-                        {node.children.map((child: any, childIndex: number) => (
-                          <div key={child.id ?? `${index}-${childIndex}`} className="break-words">
-                            {index + 1}.{childIndex + 1} {child.title}
-                            {child.completeTime ? `（完成日期：${child.completeTime}）` : ''}
-                          </div>
-                        ))}
+              <div className="relative pl-5">
+                <div className="absolute left-[7px] top-2 bottom-2 w-px bg-slate-200" />
+                {work.nodes.map((node: any, index: number) => {
+                  const isLast = index === work.nodes!.length - 1;
+                  const done = !!node.completeTime;
+                  return (
+                    <div key={node.id ?? index} className={`relative ${isLast ? '' : 'pb-5'}`}>
+                      <div className={`absolute left-[-13px] top-[5px] h-[9px] w-[9px] rounded-full border-2 ${done ? 'border-emerald-400 bg-emerald-400' : 'border-slate-300 bg-white'}`} />
+                      <div className="flex items-baseline justify-between gap-2">
+                        <div className="text-sm font-medium text-slate-800 break-words">
+                          {node.title}
+                        </div>
+                        {node.completeTime && (
+                          <span className="text-xs text-slate-400 shrink-0">{node.completeTime}</span>
+                        )}
                       </div>
-                    )}
-                  </div>
-                ))}
+                      {node.children && node.children.length > 0 && (
+                        <div className="mt-1.5 space-y-1">
+                          {node.children.map((child: any, childIndex: number) => {
+                            const childDone = !!child.completeTime;
+                            return (
+                              <div key={child.id ?? `${index}-${childIndex}`} className="flex items-baseline justify-between gap-2 pl-3">
+                                <div className="text-xs text-slate-500 break-words">
+                                  <span className={`inline-block h-1.5 w-1.5 rounded-full mr-1.5 align-middle ${childDone ? 'bg-emerald-300' : 'bg-slate-200'}`} />
+                                  {child.title}
+                                </div>
+                                {child.completeTime && (
+                                  <span className="text-xs text-slate-400 shrink-0">{child.completeTime}</span>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
