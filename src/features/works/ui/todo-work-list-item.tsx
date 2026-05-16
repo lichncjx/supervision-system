@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { Eye } from 'lucide-react';
 import { StatusBadge } from '@/features/works/ui/badges';
-import { ExpandableText } from '@/components/common/expandable-text';
 import type { Work } from '@/features/works/client/work-view.types';
 
 interface TodoWorkListItemProps {
@@ -43,9 +42,9 @@ export function TodoWorkListItem({ item, routeType, getDepartmentName }: TodoWor
           <span className="text-slate-400">完成时间：</span>
           <span className="text-slate-600">{item.planCompleteTime || '-'}</span>
         </div>
-        <div className="break-words text-xs text-slate-600 max-w-full">
+        <div className="text-xs text-slate-600 max-w-full truncate">
           <span className="text-slate-400">进展情况：</span>
-          <ExpandableText text={item.progress} />
+          <span className="text-slate-600">{item.progress || '-'}</span>
         </div>
         <div>
           <span className="text-slate-400">状态：</span>

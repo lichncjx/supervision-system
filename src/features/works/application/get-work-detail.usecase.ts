@@ -23,7 +23,7 @@ interface WorkDetailDto {
   formedTime: string | null; workPlan: string | null; planCompleteTime: string | null
   progress: string | null; approvalLeaderId: number | null
   currentApproverId: number | null; currentApproverRole: string | null
-  firstSubmitterId: number | null; rejectReason: string | null
+  firstSubmitterId: number | null; firstSubmitterName: string | null; rejectReason: string | null
   rejectedFromStatus: string | null; beforeApprovalStatus: string | null
   approvalType: string | null; nodes: unknown; adjustHistory: unknown
   attachments: WorkAttachmentDto[]; createdAt: string; updatedAt: string
@@ -59,6 +59,7 @@ function toWorkDetailDto(work: WorkDetailRow): WorkDetailDto {
     currentApproverId: work.currentApproverId,
     currentApproverRole: work.currentApproverRole,
     firstSubmitterId: work.firstSubmitterId,
+    firstSubmitterName: work.firstSubmitter?.name || null,
     rejectReason: work.rejectReason,
     rejectedFromStatus: work.rejectedFromStatus,
     beforeApprovalStatus: work.beforeApprovalStatus,
