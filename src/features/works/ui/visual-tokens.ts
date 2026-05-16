@@ -135,8 +135,8 @@ function deriveDetailColors(accentHex: string) {
     deep: hex(Math.round(r * 0.6), Math.round(g * 0.6), Math.round(b * 0.6)),
     // mid: accent * 0.85 + white * 0.15（微提亮）
     mid: hex(Math.round(r * 0.85 + 38), Math.round(g * 0.85 + 38), Math.round(b * 0.85 + 38)),
-    // light: accent * 0.15 + white * 0.85（浅底色）
-    light: hex(Math.round(r * 0.15 + 217), Math.round(g * 0.15 + 217), Math.round(b * 0.15 + 217)),
+    // light: accent * 0.3 + white * 0.7（浅底色）
+    light: hex(Math.round(r * 0.3 + 178), Math.round(g * 0.3 + 178), Math.round(b * 0.3 + 178)),
   };
 }
 

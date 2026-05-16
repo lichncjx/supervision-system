@@ -567,15 +567,17 @@ export default function WorkDetailPage() {
           {showSidebarCooperators && work.cooperators && work.cooperators.length > 0 && (
             <div className={PANEL_PADDED}>
               <h3 className="text-sm font-semibold text-slate-500 tracking-wide mb-3">配合方</h3>
-              <div className="space-y-2">
+              <div>
                 {work.cooperators.map((c: any, idx: number) => (
-                  <div key={idx} className="border border-slate-200 bg-slate-50/70 rounded-lg p-3 text-sm">
-                    <div className="font-medium">{c.departmentName || departments.find(d => d.id === c.departmentId)?.name || String(c.departmentId)}</div>
+                  <div key={idx} className="py-2.5 border-b border-slate-100 last:border-b-0">
+                    <div className="text-sm font-medium text-slate-700">
+                      {c.departmentName || departments.find(d => d.id === c.departmentId)?.name || String(c.departmentId)}
+                    </div>
                     {(c.leader || c.person) && (
-                      <div className="text-xs text-slate-500 mt-1">
-                        {c.leader && <span>领导：{c.leader}</span>}
-                        {c.leader && c.person && <span className="mx-2">|</span>}
-                        {c.person && <span>责任人：{c.person}</span>}
+                      <div className="text-xs text-slate-400 mt-0.5">
+                        {c.leader && <span>{c.leader}</span>}
+                        {c.leader && c.person && <span className="mx-1">·</span>}
+                        {c.person && <span>{c.person}</span>}
                       </div>
                     )}
                   </div>
