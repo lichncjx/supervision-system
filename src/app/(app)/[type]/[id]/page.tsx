@@ -399,7 +399,6 @@ export default function WorkDetailPage() {
     progress: work.progress || '', nodes: work.nodes || [],
   });
 
-  const showSidebarNodes = !canEditDraft && !canHandleReturnedCreate && !canDecomposeTodo;
   const showSidebarCooperators = isTodo && !canEditDraft && !canHandleReturnedCreate;
 
   return (
@@ -453,7 +452,7 @@ export default function WorkDetailPage() {
         {/* Main Area */}
         <div className="lg:col-span-3 space-y-6">
           <div className={`${PANEL_PADDED}`}>
-            <WorkDisplayInfo work={work} departments={departments} hideNodes={true} hideCooperators={isTodo} />
+            <WorkDisplayInfo work={work} departments={departments} hideNodes={false} hideCooperators={isTodo} />
           </div>
 
           <div className={`${PANEL_PADDED}`}>
@@ -475,18 +474,6 @@ export default function WorkDetailPage() {
                 </Button>
               </div>
             </div>
-          )}
-
-          {isWorkStatusInProgress(work.status) && (
-            <WorkCompletePanel
-              proof={proof}
-              onProofChange={setProof}
-              evidenceAttachments={(work.attachments || []).filter(a => a.category === 'evidence')}
-              onUploadEvidence={handleUploadEvidence}
-              onDeleteEvidence={handleDeleteEvidence}
-              uploading={uploading}
-              onComplete={handleComplete}
-            />
           )}
 
           <WorkflowApprovalPanel visible={canApprove} onApprove={handleApprove} onReject={handleReject} />
@@ -534,35 +521,6 @@ export default function WorkDetailPage() {
             onSubmitDecomposition={handleDecompose}
           />
 
-          {/* Read-only nodes */}
-          {showSidebarNodes && work.nodes && work.nodes.length > 0 && (
-            <div className={PANEL_PADDED}>
-              <h3 className="text-sm font-semibold text-slate-500 tracking-wide mb-3">
-                {isTodo ? '任务分解节点' : '工作节点'}
-              </h3>
-              <div className="space-y-2">
-                {work.nodes.map((node: any, index: number) => (
-                  <div key={node.id ?? index} className="border border-slate-200 bg-slate-50/70 rounded-lg p-3">
-                    <div className="text-sm font-medium break-words">
-                      {index + 1}. {node.title}
-                      {node.completeTime ? `（节点完成时间：${node.completeTime}）` : ''}
-                    </div>
-                    {node.children && node.children.length > 0 && (
-                      <div className="pl-4 mt-1.5 space-y-0.5 text-xs text-slate-500">
-                        {node.children.map((child: any, childIndex: number) => (
-                          <div key={child.id ?? `${index}-${childIndex}`} className="break-words">
-                            {index + 1}.{childIndex + 1} {child.title}
-                            {child.completeTime ? `（完成日期：${child.completeTime}）` : ''}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* Read-only cooperators */}
           {showSidebarCooperators && work.cooperators && work.cooperators.length > 0 && (
             <div className={PANEL_PADDED}>
@@ -582,6 +540,18 @@ export default function WorkDetailPage() {
                 ))}
               </div>
             </div>
+          )}
+
+          {isWorkStatusInProgress(work.status) && (
+            <WorkCompletePanel
+              proof={proof}
+              onProofChange={setProof}
+              evidenceAttachments={(work.attachments || []).filter(a => a.category === 'evidence')}
+              onUploadEvidence={handleUploadEvidence}
+              onDeleteEvidence={handleDeleteEvidence}
+              uploading={uploading}
+              onComplete={handleComplete}
+            />
           )}
 
           <WorkSidebarActions
