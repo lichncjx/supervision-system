@@ -7,6 +7,7 @@ import {
   updateWorkItem,
   createWorkUpdateOperationLog,
 } from '@/features/works/infrastructure/work.repository'
+import { findDepartmentById } from '@/features/departments/infrastructure/department.repository'
 import {
   validateMemberAssignments,
   type MemberAssignment,
@@ -116,6 +117,13 @@ export async function updateWorkUseCase(
   }
 
   const updateData: Record<string, unknown> = {}
+  if (body.departmentId !== undefined) {
+    const dept = await findDepartmentById(body.departmentId)
+    if (!dept) {
+      return { kind: 'error', status: 400, message: '部门不存在' }
+    }
+    updateData.departmentId = body.departmentId
+  }
   if (body.title !== undefined) updateData.title = body.title
   if (body.workItem !== undefined) updateData.workItem = body.workItem
   if (body.workNode !== undefined) updateData.workNode = body.workNode
