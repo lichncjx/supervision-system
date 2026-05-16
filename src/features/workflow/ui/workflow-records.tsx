@@ -18,16 +18,25 @@ interface WorkflowRecord {
 
 interface WorkflowRecordsProps {
   records: WorkflowRecord[];
-  accentColor?: string;
 }
 
-export function WorkflowRecords({ records, accentColor }: WorkflowRecordsProps) {
+const ACTION_COLORS: Record<string, string> = {
+  submit: '#94a3b8',
+  approve: '#10b981',
+  reject: '#f43f5e',
+  complete: '#059669',
+  adjust: '#f59e0b',
+  cancel: '#f59e0b',
+};
+
+function getActionColor(action: string): string {
+  return ACTION_COLORS[action] ?? '#94a3b8';
+}
+
+export function WorkflowRecords({ records }: WorkflowRecordsProps) {
   if (records.length === 0) {
     return null;
   }
-
-  const borderColor = accentColor ?? '#cbd5e1';
-  const actionColor = accentColor ?? '#334155';
 
   return (
     <div className={PANEL_PADDED}>
@@ -35,6 +44,7 @@ export function WorkflowRecords({ records, accentColor }: WorkflowRecordsProps) 
 
       <div>
         {records.map((record) => {
+          const color = getActionColor(record.action);
           const statusLabel = record.previousStatus.toLowerCase() === record.newStatus.toLowerCase()
             ? ''
             : `${getWorkStatusLabel(record.previousStatus as any)} → ${getWorkStatusLabel(record.newStatus as any)}`;
@@ -42,8 +52,8 @@ export function WorkflowRecords({ records, accentColor }: WorkflowRecordsProps) 
           return (
             <div
               key={record.id}
-              className="border-l-[3px] py-2.5 px-3 mb-0.5 last:mb-0"
-              style={{ borderLeftColor: borderColor }}
+              className="py-2.5 px-3 mb-0.5 last:mb-0"
+              style={{ borderLeft: `3px solid ${color}` }}
             >
               {/* 名字 + 角色 + 时间 */}
               <div className="flex items-baseline justify-between gap-2 mb-1">
@@ -57,7 +67,7 @@ export function WorkflowRecords({ records, accentColor }: WorkflowRecordsProps) 
               </div>
 
               {/* 动作 + 状态变更 */}
-              <div className="text-xs font-semibold" style={{ color: actionColor }}>
+              <div className="text-xs font-semibold" style={{ color }}>
                 {getActionName(record.action as any)}
                 {statusLabel && <span className="font-normal text-slate-500"> · {statusLabel}</span>}
               </div>

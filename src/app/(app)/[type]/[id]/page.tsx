@@ -515,7 +515,7 @@ export default function WorkDetailPage() {
 
           <WorkflowApprovalPanel visible={canApprove} onApprove={handleApprove} onReject={handleReject} />
           <WorkPendingAdjustmentPanel work={work} />
-          <WorkflowRecords records={workflowRecords} accentColor={detailTheme.mid} />
+          <WorkflowRecords records={workflowRecords} />
         </div>
 
         {/* Sidebar */}
