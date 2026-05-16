@@ -278,7 +278,7 @@ function TodoWorkDisplayInfo({ work, departments, hideNodes, hideCooperators }: 
               <div>
                 <span className={DISPLAY_LABEL}>配合部门</span>
                 <div className="mt-0.5 text-[13px] font-semibold text-slate-900">
-                  {work.cooperators.map((c: any) => getDepartmentName(departments, c.departmentId) || c.departmentName).join('、')}
+                  {work.cooperators.map((c: any) => departments.find((d) => d.id === c.departmentId)?.name || c.departmentName || '-').join('、')}
                 </div>
               </div>
               <div>
