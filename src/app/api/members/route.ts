@@ -14,13 +14,12 @@ export async function GET(request: NextRequest) {
     const isLeaderRaw = searchParams.get('isLeader')
     const includeInactive = searchParams.get('includeInactive')
 
-    if (!departmentIdRaw) {
-      return NextResponse.json({ error: '缺少 departmentId 参数' }, { status: 400 })
-    }
-
-    const departmentId = parseInt(departmentIdRaw)
-    if (isNaN(departmentId)) {
-      return NextResponse.json({ error: 'departmentId 必须为整数' }, { status: 400 })
+    let departmentId: number | undefined
+    if (departmentIdRaw !== null) {
+      departmentId = parseInt(departmentIdRaw)
+      if (isNaN(departmentId)) {
+        return NextResponse.json({ error: 'departmentId 必须为整数' }, { status: 400 })
+      }
     }
 
     if (isLeaderRaw !== null && isLeaderRaw !== 'true' && isLeaderRaw !== 'false') {
