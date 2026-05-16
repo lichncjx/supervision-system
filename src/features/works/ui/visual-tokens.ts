@@ -120,4 +120,24 @@ export const TYPE_THEME = {
   },
 } as const;
 
+export const DETAIL_THEME = {
+  priority: {
+    deep: '#4f4f4f',
+    mid: '#9a8c98',
+    light: '#f2e9e4',
+  },
+  main: {
+    deep: '#6b705c',
+    mid: '#a5a58d',
+    light: '#ddbea9',
+  },
+  todo: {
+    deep: '#52796f',
+    mid: '#84a98c',
+    light: '#cad2c5',
+  },
+} as const;
+
+export type DetailThemeKey = keyof typeof DETAIL_THEME;
+
 export type WorkTypeThemeKey = keyof typeof TYPE_THEME;
