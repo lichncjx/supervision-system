@@ -34,17 +34,17 @@ jobs:
           echo "Force migrate input: '$FORCE_MIGRATE'"
 
           if [ "$FORCE_MIGRATE" == "true" ]; then
-            echo "result=true" >> $GITHUB_ENV
-            echo "reason=manual trigger" >> $GITHUB_ENV
+            result=true
+            reason="manual trigger"
           elif ! git rev-parse HEAD~1 > /dev/null 2>&1; then
-            echo "result=true" >> $GITHUB_ENV
-            echo "reason=first commit" >> $GITHUB_ENV
+            result=true
+            reason="first commit"
           elif git diff --name-only HEAD~1 HEAD | grep -qE "^(prisma/.*|package\.json|pnpm-lock\.yaml|Dockerfile|\.github/workflows/docker-publish\.yml)$"; then
-            echo "result=true" >> $GITHUB_ENV
-            echo "reason=infrastructure file changed" >> $GITHUB_ENV
+            result=true
+            reason="infrastructure file changed"
           else
-            echo "result=false" >> $GITHUB_ENV
-            echo "reason=no infrastructure change" >> $GITHUB_ENV
+            result=false
+            reason="no infrastructure change"
           fi
           echo "migrate_needed=$result" >> $GITHUB_ENV
           echo "migrate_reason=$reason" >> $GITHUB_ENV
