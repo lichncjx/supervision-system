@@ -25,6 +25,7 @@ services:
     restart: "no"
     environment:
       DATABASE_URL: postgresql://supervision:${POSTGRES_PASSWORD}@db:5432/supervision?schema=public
+      DIRECT_URL: postgresql://supervision:${POSTGRES_PASSWORD}@db:5432/supervision?schema=public
     depends_on:
       db:
         condition: service_healthy
