@@ -49,9 +49,12 @@ export function getWorkflowRecordDescription(
   return ''
 }
 
-function statusToStepIndex(status: string): number | undefined {
+function statusToStepIndex(work: Work): number | undefined {
+  const status = work.status as string
   if (status === 'pending_decompose') return 1
-  if (status === 'proposing') return 2
+  if (status === 'proposing') {
+    return work.currentApproverRole === 'DEPARTMENT_LEADER' ? 1 : 2
+  }
   if (status === 'in_progress' || status === 'adjusting' || status === 'cancelling') return 3
   if (status === 'completing') return 4
   if (status === 'completed' || status === 'cancelled') return undefined
@@ -105,14 +108,14 @@ export function getWorkflowSteps(work: Work): WorkflowStep[] {
   } else if (work.status === 'completed' || work.status === 'cancelled') {
     currentIndex = labels.length - 1
   } else {
-    currentIndex = statusToStepIndex(work.status as string) ?? 0
+    currentIndex = statusToStepIndex(work) ?? 0
   }
 
   return labels.map((label, index) => {
     let displayLabel = label
 
     // adjusting / cancelling override the "进行中" step label with parenthetical detail
-    if (!isReturned && index === currentIndex && index === statusToStepIndex('in_progress')) {
+    if (!isReturned && index === currentIndex && index === 3) {
       const roleLabel = approverRoleLabel(work)
       if (work.status === 'adjusting') {
         displayLabel = roleLabel ? `进行中（调整中：${roleLabel}）` : '进行中（调整中）'

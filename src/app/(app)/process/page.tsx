@@ -7,6 +7,7 @@ import { getWorkTypeAccent, getWorkTypeText } from '@/features/works/ui/status-c
 import { ClipboardCheck, Eye, CheckCircle, XCircle, Play } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { getDepartments } from '@/features/departments/client/department-api';
+import { getCompanyLeaders } from '@/features/users/client/user-api';
 import { canApproveWork, canHandleWork } from '@/features/works/client/work-client-permissions';
 import { getWorkDueDate } from '@/features/works/client/work-date.utils';
 import { queryWorks } from '@/features/works/client/work-api';
@@ -15,6 +16,7 @@ import type { Work } from '@/features/works/client/work-view.types';
 import { StatusBadge } from '@/features/works/ui/badges';
 import { WorkListPagination } from '@/features/works/ui/work-list-pagination';
 import { WorkSearchBar } from '@/features/works/ui/work-search-bar';
+import { ApproveDialog } from '@/features/workflow/ui/approve-dialog';
 
 export default function ApprovalPage() {
   const { user } = useAuth();
@@ -23,13 +25,20 @@ export default function ApprovalPage() {
   const [tab, setTab] = useState<'approving' | 'handling' | 'all'>('approving');
   const [keyword, setKeyword] = useState('');
   const [departments, setDepartments] = useState<Array<{ id: number; name: string; code: string; isBusiness: boolean }>>([]);
+  const [companyLeaders, setCompanyLeaders] = useState<Array<{ id: number; name: string; role: string }>>([]);
+  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
+  const [selectedWork, setSelectedWork] = useState<Work | null>(null);
 
   useEffect(() => {
-    const loadDepartments = async () => {
-      const depts = await getDepartments();
+    const loadData = async () => {
+      const [depts, leaders] = await Promise.all([
+        getDepartments(),
+        getCompanyLeaders(),
+      ]);
       setDepartments(depts);
+      setCompanyLeaders(leaders);
     };
-    loadDepartments();
+    loadData();
   }, []);
 
   const load = async () => {
@@ -65,10 +74,21 @@ export default function ApprovalPage() {
 
   if (!user) return null;
 
-  const handleApprove = async (work: Work) => {
-    if (!user) return;
-    await approveWork(user, work);
-    await load();
+  const handleApproveClick = (work: Work) => {
+    setSelectedWork(work);
+    setApproveDialogOpen(true);
+  };
+
+  const handleApproveConfirm = async (comment?: string, nextApproverId?: number | null) => {
+    if (!user || !selectedWork) return;
+    try {
+      await approveWork(user, selectedWork, comment, nextApproverId);
+      await load();
+      alert('审批已通过');
+    } catch (error) {
+      console.error(error);
+      alert('审批失败，请查看控制台错误');
+    }
   };
 
   const handleReject = async (work: Work) => {
@@ -184,7 +204,7 @@ export default function ApprovalPage() {
                     <div className="flex gap-2 p-4 shrink-0">
                       {canApproveWork(user!, work) && (
                         <>
-                          <button onClick={() => handleApprove(work)} className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1.5 text-sm font-medium text-emerald-600 hover:bg-emerald-100 hover:-translate-y-0.5 transition-all">
+                          <button onClick={() => handleApproveClick(work)} className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1.5 text-sm font-medium text-emerald-600 hover:bg-emerald-100 hover:-translate-y-0.5 transition-all">
                             <CheckCircle className="h-3.5 w-3.5" />
                             通过
                           </button>
@@ -226,6 +246,19 @@ export default function ApprovalPage() {
           </>
         )}
       </div>
+
+      {selectedWork && (
+        <ApproveDialog
+          open={approveDialogOpen}
+          onOpenChange={setApproveDialogOpen}
+          onConfirm={handleApproveConfirm}
+          companyLeaders={companyLeaders}
+          needsLeaderSelection={
+            (user.role === 'DEPARTMENT_LEADER' || user.role === 'DEPARTMENT_MANAGER') &&
+            !selectedWork.proposedLeaderId
+          }
+        />
+      )}
     </div>
   );
 }

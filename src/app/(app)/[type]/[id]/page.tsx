@@ -346,10 +346,10 @@ export default function WorkDetailPage() {
     }
   };
 
-  const handleApprove = async () => {
+  const handleApprove = async (comment?: string, nextApproverId?: number | null) => {
     if (!user) return;
     try {
-      await approveWork(user, work);
+      await approveWork(user, work, comment, nextApproverId);
       onRefresh();
       alert('审批已通过');
     } catch (error) {
@@ -513,7 +513,17 @@ export default function WorkDetailPage() {
             </div>
           )}
 
-          <WorkflowApprovalPanel visible={canApprove} onApprove={handleApprove} onReject={handleReject} />
+          <WorkflowApprovalPanel
+            visible={canApprove}
+            onApprove={handleApprove}
+            onReject={handleReject}
+            companyLeaders={companyLeaders}
+            needsLeaderSelection={
+              !!user &&
+              (user.role === 'DEPARTMENT_LEADER' || user.role === 'DEPARTMENT_MANAGER') &&
+              !work?.proposedLeaderId
+            }
+          />
           <WorkPendingAdjustmentPanel work={work} />
           <WorkflowRecords records={workflowRecords} />
         </div>

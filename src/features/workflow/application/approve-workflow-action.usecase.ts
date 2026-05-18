@@ -13,6 +13,7 @@ export async function approveWorkflowAction(
   workItemId: number,
   user: UserSession,
   comment?: string,
+  nextApproverId?: number | null,
 ): Promise<WorkflowResult> {
   const workItem = await findWorkForUpdateById(workItemId)
   if (!workItem) {
@@ -35,6 +36,7 @@ export async function approveWorkflowAction(
   const nextApprover = await getNextApprovalAssignment(
     workItem,
     workItem.approvalType,
+    nextApproverId,
   )
 
   if (nextApprover) {

@@ -35,6 +35,7 @@ export function companyLeaderAssignment(
     approvalLeaderId?: number | null
   },
   source: 'propose' | 'approval' = 'approval',
+  nextApproverId?: number | null,
 ): ApproverAssignment {
   const leaderId =
     source === 'propose'
@@ -42,7 +43,7 @@ export function companyLeaderAssignment(
       : workItem.approvalLeaderId ?? workItem.proposedLeaderId
 
   return {
-    currentApproverId: leaderId ?? null,
+    currentApproverId: leaderId ?? nextApproverId ?? null,
     currentApproverRole: Role.VICE_PRESIDENT,
   }
 }

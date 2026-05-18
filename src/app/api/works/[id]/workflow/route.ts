@@ -50,7 +50,7 @@ export async function POST(
     };
 
     const body = await request.json();
-    const { action, comment, proof, adjustReason, cancelReason, rejectReason, nodes } = body;
+    const { action, comment, proof, adjustReason, cancelReason, rejectReason, nodes, nextApproverId } = body;
 
     let result;
 
@@ -59,7 +59,7 @@ export async function POST(
         result = await submitProposal(workItemId, user, comment);
         break;
       case 'approve':
-        result = await approveWorkflowAction(workItemId, user, comment);
+        result = await approveWorkflowAction(workItemId, user, comment, nextApproverId);
         break;
       case 'reject':
         if (!rejectReason) {
