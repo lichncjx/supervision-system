@@ -94,13 +94,18 @@ export function isWorkMainResponsibleDepartment(
 
 export function buildWorkVisibilityWhere(
   user: PermissionUser,
+  cooperatorWorkIds?: number[],
 ): Prisma.WorkItemWhereInput {
   if (isGlobalView(user.role)) {
     return {}
   }
 
   if (isDepartmentLevel(user.role)) {
-    return {}
+    const base: Prisma.WorkItemWhereInput = { departmentId: user.departmentId }
+    if (cooperatorWorkIds && cooperatorWorkIds.length > 0) {
+      return { OR: [base, { id: { in: cooperatorWorkIds } }] }
+    }
+    return base
   }
 
   if (isVicePresident(user.role)) {

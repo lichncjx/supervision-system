@@ -1,15 +1,6 @@
 import type { BaseCurrentUser } from '@/shared/auth/current-user'
-import type { Prisma } from '@prisma/client'
 import { WorkItemType, WorkItemStatus, Role } from '@prisma/client'
-
-export interface QueryWorksParams {
-  type: string | null; status: string | null; departmentId: string | null; keyword: string | null
-}
-
-export type StatusFilter =
-  | { kind: 'where'; where: Prisma.WorkItemWhereInput }
-  | { kind: 'post'; where: Prisma.WorkItemWhereInput; postFilter: 'handling' | 'overdue' | 'expiring' | 'approving' }
-  | { kind: 'invalid' }
+import type { Prisma } from '@prisma/client'
 
 const APPROVING_STATUSES = [WorkItemStatus.PROPOSING, WorkItemStatus.ADJUSTING, WorkItemStatus.CANCELLING, WorkItemStatus.COMPLETING]
 const TERMINAL_STATUSES: WorkItemStatus[] = [WorkItemStatus.COMPLETED, WorkItemStatus.CANCELLED]
@@ -41,15 +32,24 @@ export function parseWorkStatusFilter(raw: string | null): StatusFilter {
   if (lower === 'overdue' || lower === 'expiring') return { kind: 'post', where: { status: { notIn: TERMINAL_STATUSES } }, postFilter: lower as 'overdue' | 'expiring' }
   return { kind: 'invalid' }
 }
-import { canViewWorkItem, shouldHandleWorkItem, canApproveWorkItem } from '@/features/works/domain/work.permissions'
+import { canViewWorkItem, shouldHandleWorkItem, canApproveWorkItem, buildWorkVisibilityWhere } from '@/features/works/domain/work.permissions'
 import type { PermissionUser } from '@/features/works/domain/work.permissions'
-import { buildWorksWhere } from '@/features/works/infrastructure/work.query-builder'
+import { isDepartmentLevel } from '@/features/users/domain/role.rules'
 import {
   findManyWorks,
+  findCooperatorWorkItemIds,
   type WorkListRow,
 } from '@/features/works/infrastructure/work.repository'
 import { formatDate } from '@/shared/utils/date'
 import { processNodesForDisplay, processAdjustHistory } from '@/features/works/application/work-display.utils'
+
+export interface QueryWorksParams {
+  type: string | null; status: string | null; departmentId: string | null; keyword: string | null;
+}
+
+export type StatusFilter = { kind: 'where'; where: Prisma.WorkItemWhereInput; } |
+{ kind: 'post'; where: Prisma.WorkItemWhereInput; postFilter: 'handling' | 'overdue' | 'expiring' | 'approving'; } |
+{ kind: 'invalid'; };
 
 interface WorkListItemDto { id: number; title: string; type: string; status: string; departmentId: number | null; cooperators: unknown; departmentName: string; creatorId: number | null; creatorName: string; creatorRole: string; workItem: string | null; workNode: string | null; businessCategory: string | null; completeTime: string | null; completeForm: string | null; isInnovation: boolean | null; responsibleLeader: string | null; responsiblePerson: string | null; responsibleLeaderMemberId: number | null; responsiblePersonMemberId: number | null; proposedLeader: string | null; proposedLeaderId: number | null; proposedScene: string | null; formedTime: string | null; workPlan: string | null; planCompleteTime: string | null; progress: string | null; action: string | null; approvalLeaderId: number | null; currentApproverId: number | null; currentApproverRole: string | null; firstSubmitterId: number | null; rejectReason: string | null; rejectedFromStatus: string | null; beforeApprovalStatus: string | null; approvalType: string | null; nodes: unknown; adjustHistory: unknown; createdAt: string; updatedAt: string }
 
@@ -167,17 +167,62 @@ function applyPostFilter(
   })
 }
 
+function buildWorksWhere(
+  currentUser: PermissionUser,
+  workType: WorkItemType | null,
+  statusFilter: StatusFilter,
+  params: QueryWorksParams,
+  cooperatorWorkIds?: number[],
+): Prisma.WorkItemWhereInput {
+  const filters: Prisma.WorkItemWhereInput[] = [
+    buildWorkVisibilityWhere(currentUser, cooperatorWorkIds),
+  ]
+
+  if (workType) {
+    filters.push({ type: workType })
+  }
+
+  if (statusFilter?.kind === 'where' || statusFilter?.kind === 'post') {
+    filters.push(statusFilter.where)
+  }
+
+  if (params.departmentId) {
+    filters.push({ OR: [{ departmentId: Number(params.departmentId) }] })
+  }
+
+  if (params.keyword) {
+    filters.push({
+      OR: [
+        { title: { contains: params.keyword, mode: 'insensitive' } },
+        { workItem: { contains: params.keyword, mode: 'insensitive' } },
+        { businessCategory: { contains: params.keyword, mode: 'insensitive' } },
+        { proposedScene: { contains: params.keyword, mode: 'insensitive' } },
+        { progress: { contains: params.keyword, mode: 'insensitive' } },
+        { workPlan: { contains: params.keyword, mode: 'insensitive' } },
+      ],
+    })
+  }
+
+  return filters.length > 1 ? { AND: filters } : (filters[0] ?? {})
+}
+
 export async function queryWorksUseCase(input: QueryWorksInput) {
   const { currentUser, params } = input
 
   const workType = parseWorkType(params.type)
   const statusFilter = parseWorkStatusFilter(params.status)
 
-  const { where } = buildWorksWhere(
+  let cooperatorWorkIds: number[] | undefined
+  if (isDepartmentLevel(currentUser.role) && currentUser.departmentId) {
+    cooperatorWorkIds = await findCooperatorWorkItemIds(currentUser.departmentId)
+  }
+
+  const where = buildWorksWhere(
     currentUser as PermissionUser,
     workType,
     statusFilter,
     params,
+    cooperatorWorkIds,
   )
 
   const works = await findManyWorks(where)
