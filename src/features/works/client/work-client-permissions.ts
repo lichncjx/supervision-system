@@ -93,13 +93,6 @@ export function canHandleWork(
   return false
 }
 
-export function canProcessWork(
-  user: User | null | undefined,
-  work: Work,
-) {
-  return canApproveWork(user, work) || canHandleWork(user, work)
-}
-
 export function canApproveWork(
   user: User | null | undefined,
   work: Work,

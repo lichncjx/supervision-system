@@ -7,7 +7,7 @@ import {
   ApprovalType,
 } from '@prisma/client'
 import { isReturnedDraftWork, isReturnedInProgressWork } from './work-status.rules'
-import { isGlobalView, isDepartmentLevel, isAdmin, isSupervisor, isPresident, isVicePresident } from '@/features/users/domain/role.rules'
+import { isGlobalView, isDepartmentLevel, isPresident, isVicePresident } from '@/features/users/domain/role.rules'
 
 const APPROVAL_STATUSES: WorkItemStatus[] = [
   WorkItemStatus.PROPOSING,
@@ -176,13 +176,6 @@ export function canViewWorkItem(
   return false
 }
 
-export function canAccessWorkItem(
-  user: PermissionUser,
-  workItem: PermissionWorkItem,
-): boolean {
-  return canViewWorkItem(user, workItem)
-}
-
 export function canApproveWorkItem(
   user: PermissionUser,
   workItem: PermissionWorkItem,
@@ -314,12 +307,4 @@ export function canEditWorkItem(
   }
 
   return false
-}
-
-export function canCreateWork(user: PermissionUser): boolean {
-  return isSupervisor(user.role) || isDepartmentLevel(user.role)
-}
-
-export function canDeleteWork(user: PermissionUser): boolean {
-  return isAdmin(user.role)
 }

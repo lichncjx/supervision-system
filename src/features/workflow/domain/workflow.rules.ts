@@ -1,6 +1,5 @@
 import { Role, WorkItemStatus, WorkItemType } from '@prisma/client'
 import {
-  canApproveWorkItem,
   shouldHandleWorkItem,
   canOperateWorkItem,
   isWorkMainResponsibleDepartment,
@@ -135,13 +134,6 @@ export function rejectableBeforeStatus(workItem: {
   beforeApprovalStatus?: WorkItemStatus | string | null
 }): WorkItemStatus | null {
   return (workItem.beforeApprovalStatus as WorkItemStatus) ?? null
-}
-
-export function canUserApprove(
-  workItem: PermissionWorkItem,
-  user: UserSession,
-): boolean {
-  return canApproveWorkItem(toPermissionUser(user), workItem)
 }
 
 export function canUserSubmit(
