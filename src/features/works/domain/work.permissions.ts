@@ -53,6 +53,10 @@ function normalizeStatus(status: PermissionWorkItem['status']): string {
   return String(status || '').toUpperCase()
 }
 
+function isInApprovalStatus(status: PermissionWorkItem['status']): boolean {
+  return APPROVAL_STATUSES.includes(normalizeStatus(status) as WorkItemStatus)
+}
+
 export function getResponsibleDepartmentIds(
   workItem: PermissionWorkItem,
 ): number[] {
@@ -105,6 +109,14 @@ export function buildWorkVisibilityWhere(
         { proposedLeaderId: user.id },
         { approvalLeaderId: user.id },
         { currentApproverId: user.id },
+        {
+          AND: [
+            { currentApproverId: null },
+            { proposedLeaderId: null },
+            { approvalLeaderId: null },
+            { currentApproverRole: Role.VICE_PRESIDENT },
+          ],
+        },
       ],
     }
   }
@@ -141,7 +153,13 @@ export function canViewWorkItem(
     return (
       workItem.proposedLeaderId === user.id ||
       workItem.approvalLeaderId === user.id ||
-      workItem.currentApproverId === user.id
+      workItem.currentApproverId === user.id ||
+      (
+        !workItem.currentApproverId &&
+        !workItem.proposedLeaderId &&
+        !workItem.approvalLeaderId &&
+        isVicePresident(workItem.currentApproverRole)
+      )
     )
   }
 
@@ -169,57 +187,34 @@ export function canApproveWorkItem(
   user: PermissionUser,
   workItem: PermissionWorkItem,
 ): boolean {
-  if (isGlobalView(user.role)) return false
-  if (
-    // todo: extract this status check to a separate function and reuse in related permission checks
-    !APPROVAL_STATUSES.includes(
-      normalizeStatus(workItem.status) as WorkItemStatus,
-    )
-  )
+  if (isGlobalView(user.role)) 
+    return false
+
+  if (!isInApprovalStatus(workItem.status))
     return false
 
   if (workItem.currentApproverId) {
     return workItem.currentApproverId === user.id
   }
 
-  const currentApproverRole = workItem.currentApproverRole as
-    | Role
-    | string
-    | null
-    | undefined
+  const currentApproverRole = workItem.currentApproverRole as Role | string | null | undefined
   if (currentApproverRole && currentApproverRole !== user.role) {
     return false
   }
 
-  if (
-    isDepartmentLevel(user.role)
-  ) {
-    return (
-      currentApproverRole === user.role &&
-      isWorkMainResponsibleDepartment(workItem, user.departmentId)
-    )
+  if (isDepartmentLevel(user.role)) {
+    return !!currentApproverRole && isWorkMainResponsibleDepartment(workItem, user.departmentId)
   }
 
   if (isPresident(user.role)) {
-    return (
-      isPresident(currentApproverRole) ||
-      (!currentApproverRole && workItem.needMainLeaderCancel === true)
-    )
+    return !!currentApproverRole || workItem.needMainLeaderCancel === true
   }
 
   if (isVicePresident(user.role)) {
-    if (isVicePresident(currentApproverRole)) {
-      return (
-        !workItem.proposedLeaderId ||
-        workItem.proposedLeaderId === user.id ||
-        workItem.approvalLeaderId === user.id
-      )
-    }
-
-    return (
-      !currentApproverRole &&
-      (workItem.approvalLeaderId === user.id ||
-        workItem.proposedLeaderId === user.id)
+    return !!currentApproverRole && (
+      !workItem.proposedLeaderId ||
+      workItem.proposedLeaderId === user.id ||
+      workItem.approvalLeaderId === user.id
     )
   }
 
@@ -261,9 +256,9 @@ export function canOperateWorkItem(
     return status !== 'COMPLETED' && status !== 'CANCELLED'
   }
 
-  // Non-department roles: operate on own non-terminal items
+  // Non-department roles: operate on own non-terminal items (PENDING_DECOMPOSE is department-only)
   if (ownerId !== user.id) return false
-  return status !== 'COMPLETED' && status !== 'CANCELLED'
+  return status !== 'COMPLETED' && status !== 'CANCELLED' && status !== WorkItemStatus.PENDING_DECOMPOSE
 }
 
 /**

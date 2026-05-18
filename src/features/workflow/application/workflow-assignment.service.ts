@@ -21,10 +21,11 @@ export async function presidentAssignment(): Promise<ApproverAssignment> {
 export async function getNextApprovalAssignment(
   workItem: WorkflowWorkItem,
   approvalType: ApprovalType,
+  nextApproverId?: number | null,
 ): Promise<ApproverAssignment | null> {
   if (approvalType === ApprovalType.PROPOSE) {
     if (isDepartmentApprovalNode(workItem)) {
-      return companyLeaderAssignment(workItem, 'propose')
+      return companyLeaderAssignment(workItem, 'propose', nextApproverId)
     }
     return null
   }
@@ -34,14 +35,14 @@ export async function getNextApprovalAssignment(
     approvalType === ApprovalType.COMPLETE
   ) {
     if (isDepartmentApprovalNode(workItem)) {
-      return companyLeaderAssignment(workItem, 'approval')
+      return companyLeaderAssignment(workItem, 'approval', nextApproverId)
     }
     return null
   }
 
   if (approvalType === ApprovalType.CANCEL) {
     if (isDepartmentApprovalNode(workItem)) {
-      return companyLeaderAssignment(workItem, 'approval')
+      return companyLeaderAssignment(workItem, 'approval', nextApproverId)
     }
 
     if (

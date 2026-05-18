@@ -3,13 +3,16 @@ import type { Work, WorkEditablePatch } from '@/features/works/client/work-view.
 import type { WorkflowRecord } from '@/features/workflow/domain/workflow-client.types'
 import { getWorkById } from '@/features/works/client/work-api'
 
-export async function approveWork(user: User, work: Work) {
+export async function approveWork(user: User, work: Work, comment?: string, nextApproverId?: number | null) {
   try {
+    const body: Record<string, unknown> = { action: 'approve' }
+    if (comment) body.comment = comment
+    if (nextApproverId) body.nextApproverId = nextApproverId
     const response = await fetch(`/api/works/${work.id}/workflow`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({ action: 'approve' }),
+      body: JSON.stringify(body),
     })
     const result = await response.json()
     if (!response.ok) throw new Error(result.error || '审批失败')
