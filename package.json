@@ -18,6 +18,8 @@
     "db:init": "pnpm prisma:generate && pnpm prisma:deploy && pnpm prisma:seed",
     "test:regression": "node tests/regression-baseline.cjs",
     "test:regression:prepare": "docker compose up -d db && pnpm prisma:deploy && pnpm prisma:seed && pnpm dev",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "check": "pnpm typecheck && pnpm lint && pnpm build"
   },
   "prisma": {
@@ -91,7 +93,9 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "15.5.15",
+    "eslint-config-prettier": "^10.1.8",
     "only-allow": "^1.2.2",
+    "prettier": "^3.8.3",
     "prisma": "^6.19.3",
     "react-dev-inspector": "^2.0.1",
     "shadcn": "latest",
