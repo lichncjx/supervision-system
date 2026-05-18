@@ -2,6 +2,7 @@ import { ActionType, ApprovalType, Role, WorkItemStatus, WorkItemType } from '@p
 import type { UserSession, WorkflowResult } from '@/features/workflow/domain/workflow.types'
 import { getProposalFirstApprover, canUserSubmit } from '@/features/workflow/domain/workflow.rules'
 import { findWorkForUpdateById, updateWorkItem } from '@/features/works/infrastructure/work.repository'
+import { isCompanyLevel } from '@/features/users/domain/role.rules'
 import {
   createWorkflowRecord,
   createOperationLog,
@@ -29,7 +30,7 @@ export async function submitProposal(
 
   if (
     workItem.type === WorkItemType.TODO &&
-    (user.role === Role.VICE_PRESIDENT || user.role === Role.PRESIDENT)
+    isCompanyLevel(user.role)
   ) {
     const updated = await updateWorkItem(workItemId, {
       status: WorkItemStatus.PENDING_DECOMPOSE,

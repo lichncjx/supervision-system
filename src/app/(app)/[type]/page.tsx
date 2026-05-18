@@ -5,7 +5,7 @@ import { useSearchAndPagination } from '@/features/works/client/use-search-pagin
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/components/providers/auth-provider';
-import { isCompanyLevel } from '@/features/users/domain/role.rules';
+import { isCompanyLevel, isGlobalView } from '@/features/users/domain/role.rules';
 import { getDepartments } from '@/features/departments/client/department-api';
 import { getVisibleWorks, queryWorks } from '@/features/works/client/work-api';
 import type { Work } from '@/features/works/client/work-view.types';
@@ -29,7 +29,7 @@ export default function ItemListPage() {
   const [statusFilter, setStatusFilter] = useState<WorkStatusFilter>('all');
   const [monthFilter, setMonthFilter] = useState('');
   const [departments, setDepartments] = useState<Array<{ id: number; name: string; code: string; isBusiness: boolean }>>([]);
-  const companyLevel = isCompanyLevel(user?.role, user?.departmentId);
+  const companyLevel = isGlobalView(user?.role) || isCompanyLevel(user?.role);
 
   useEffect(() => {
     const fetchDepartments = async () => {

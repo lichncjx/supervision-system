@@ -3,7 +3,7 @@ import {
   buildWorkVisibilityWhere,
   getResponsibleDepartmentIds,
 } from '@/features/works/domain/work.permissions'
-import { isDepartmentLevelRole, isGlobalViewRole } from '@/features/users/domain/role.rules'
+import { isDepartmentLevel, isGlobalView } from '@/features/users/domain/role.rules'
 import { calculateDepartmentStats, type CompletionRateStat } from '@/shared/completion-rate.rules'
 import {
   findWorksForDashboardCompletionRate,
@@ -75,9 +75,9 @@ export async function getCompletionRateUseCase(
   const eDate = endDate ? new Date(endDate) : undefined
 
   let departments
-  if (isGlobalViewRole(currentUser.role as any)) {
+  if (isGlobalView(currentUser.role as any)) {
     departments = await findBusinessDepartments()
-  } else if (isDepartmentLevelRole(currentUser.role as any)) {
+  } else if (isDepartmentLevel(currentUser.role as any)) {
     const dept = await findDepartmentById(currentUser.departmentId)
     departments = dept ? [dept] : []
   } else {

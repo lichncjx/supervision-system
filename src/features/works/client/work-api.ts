@@ -1,4 +1,4 @@
-import { isCompanyLevel } from '@/features/users/domain/role.rules'
+import { isCompanyLevel, isGlobalView } from '@/features/users/domain/role.rules'
 import type { User } from '@/features/users/domain/user.types'
 import type { WorkType, WorkQuery } from '@/features/works/domain/work-client.types'
 import type { Work, WorkEditablePatch } from './work-view.types'
@@ -35,7 +35,7 @@ export async function getVisibleWorks(
     return sortWorksByDueDate(list)
   }
 
-  if (isCompanyLevel(user.role, user.departmentId)) {
+  if (isGlobalView(user.role) || isCompanyLevel(user.role)) {
     return sortWorksByDueDate(list.filter((w) => isCompanyVisibleWork(w)))
   }
 

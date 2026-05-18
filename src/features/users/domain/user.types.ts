@@ -19,13 +19,6 @@ export interface User {
   phone?: string
 }
 
-export interface Department {
-  id: number
-  name: string
-  code: string
-  isBusiness: boolean
-}
-
 export interface LoginResult {
   success: boolean
   error?: string

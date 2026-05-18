@@ -7,9 +7,7 @@ import {
   ApprovalType,
 } from '@prisma/client'
 import { isReturnedDraftWork, isReturnedInProgressWork } from './work-status.rules'
-
-const GLOBAL_VIEW_ROLES: Role[] = [Role.ADMIN, Role.SUPERVISOR]
-const DEPARTMENT_ROLES: Role[] = [Role.DEPARTMENT_MANAGER, Role.DEPARTMENT_LEADER]
+import { isGlobalView, isDepartmentLevel, isAdmin, isSupervisor, isPresident, isVicePresident } from '@/features/users/domain/role.rules'
 
 const APPROVAL_STATUSES: WorkItemStatus[] = [
   WorkItemStatus.PROPOSING,
@@ -55,14 +53,6 @@ function normalizeStatus(status: PermissionWorkItem['status']): string {
   return String(status || '').toUpperCase()
 }
 
-function isGlobalViewRole(role: Role): boolean {
-  return GLOBAL_VIEW_ROLES.includes(role)
-}
-
-function isDepartmentLevelRole(role: Role): boolean {
-  return DEPARTMENT_ROLES.includes(role)
-}
-
 export function getResponsibleDepartmentIds(
   workItem: PermissionWorkItem,
 ): number[] {
@@ -79,13 +69,6 @@ export function getCooperatorDepartmentIds(
   )
 }
 
-/** @deprecated Use getCooperatorDepartmentIds instead */
-export function getCooperateDepartmentIds(
-  workItem: PermissionWorkItem,
-): number[] {
-  return getCooperatorDepartmentIds(workItem)
-}
-
 export function isWorkRelatedToDepartment(
   workItem: PermissionWorkItem,
   departmentId?: number | null,
@@ -93,7 +76,7 @@ export function isWorkRelatedToDepartment(
   if (!departmentId) return false
   return (
     getResponsibleDepartmentIds(workItem).includes(departmentId) ||
-    getCooperateDepartmentIds(workItem).includes(departmentId)
+    getCooperatorDepartmentIds(workItem).includes(departmentId)
   )
 }
 
@@ -108,15 +91,15 @@ export function isWorkMainResponsibleDepartment(
 export function buildWorkVisibilityWhere(
   user: PermissionUser,
 ): Prisma.WorkItemWhereInput {
-  if (isGlobalViewRole(user.role)) {
+  if (isGlobalView(user.role)) {
     return {}
   }
 
-  if (isDepartmentLevelRole(user.role)) {
+  if (isDepartmentLevel(user.role)) {
     return {}
   }
 
-  if (user.role === Role.VICE_PRESIDENT) {
+  if (isVicePresident(user.role)) {
     return {
       OR: [
         { proposedLeaderId: user.id },
@@ -126,7 +109,7 @@ export function buildWorkVisibilityWhere(
     }
   }
 
-  if (user.role === Role.PRESIDENT) {
+  if (isPresident(user.role)) {
     return {
       OR: [
         { proposedLeaderId: user.id },
@@ -145,16 +128,16 @@ export function canViewWorkItem(
   user: PermissionUser,
   workItem: PermissionWorkItem,
 ): boolean {
-  if (isGlobalViewRole(user.role)) return true
+  if (isGlobalView(user.role)) return true
 
-  if (isDepartmentLevelRole(user.role)) {
+  if (isDepartmentLevel(user.role)) {
     return (
       isWorkRelatedToDepartment(workItem, user.departmentId) ||
       workItem.currentApproverId === user.id
     )
   }
 
-  if (user.role === Role.VICE_PRESIDENT) {
+  if (isVicePresident(user.role)) {
     return (
       workItem.proposedLeaderId === user.id ||
       workItem.approvalLeaderId === user.id ||
@@ -162,12 +145,12 @@ export function canViewWorkItem(
     )
   }
 
-  if (user.role === Role.PRESIDENT) {
+  if (isPresident(user.role)) {
     return (
       workItem.proposedLeaderId === user.id ||
       workItem.approvalLeaderId === user.id ||
       workItem.currentApproverId === user.id ||
-      workItem.currentApproverRole === Role.PRESIDENT ||
+      isPresident(workItem.currentApproverRole) ||
       workItem.needMainLeaderCancel === true
     )
   }
@@ -186,8 +169,9 @@ export function canApproveWorkItem(
   user: PermissionUser,
   workItem: PermissionWorkItem,
 ): boolean {
-  if (user.role === Role.ADMIN || user.role === Role.SUPERVISOR) return false
+  if (isGlobalView(user.role)) return false
   if (
+    // todo: extract this status check to a separate function and reuse in related permission checks
     !APPROVAL_STATUSES.includes(
       normalizeStatus(workItem.status) as WorkItemStatus,
     )
@@ -208,8 +192,7 @@ export function canApproveWorkItem(
   }
 
   if (
-    user.role === Role.DEPARTMENT_LEADER ||
-    user.role === Role.DEPARTMENT_MANAGER
+    isDepartmentLevel(user.role)
   ) {
     return (
       currentApproverRole === user.role &&
@@ -217,15 +200,15 @@ export function canApproveWorkItem(
     )
   }
 
-  if (user.role === Role.PRESIDENT) {
+  if (isPresident(user.role)) {
     return (
-      currentApproverRole === Role.PRESIDENT ||
+      isPresident(currentApproverRole) ||
       (!currentApproverRole && workItem.needMainLeaderCancel === true)
     )
   }
 
-  if (user.role === Role.VICE_PRESIDENT) {
-    if (currentApproverRole === Role.VICE_PRESIDENT) {
+  if (isVicePresident(user.role)) {
+    if (isVicePresident(currentApproverRole)) {
       return (
         !workItem.proposedLeaderId ||
         workItem.proposedLeaderId === user.id ||
@@ -255,14 +238,14 @@ export function canOperateWorkItem(
 ): boolean {
   // ADMIN/SUPERVISOR do not initiate workflow state changes.
   // Attachment uploads are handled by canUploadAttachment's own bypass.
-  if (user.role === Role.ADMIN || user.role === Role.SUPERVISOR) return false
+  if (isGlobalView(user.role)) return false
 
   const status = normalizeStatus(workItem.status)
   if (status === 'COMPLETED' || status === 'CANCELLED') return false
 
   const ownerId = workItem.firstSubmitterId ?? workItem.creatorId
 
-  if (isDepartmentLevelRole(user.role)) {
+  if (isDepartmentLevel(user.role)) {
     if (isWorkMainResponsibleDepartment(workItem, user.departmentId)) {
       if (
         status === WorkItemStatus.IN_PROGRESS ||
@@ -295,7 +278,7 @@ export function shouldHandleWorkItem(
   user: PermissionUser,
   workItem: PermissionWorkItem,
 ): boolean {
-  if (user.role === Role.ADMIN || user.role === Role.SUPERVISOR) return false
+  if (isGlobalView(user.role)) return false
   if (!canOperateWorkItem(user, workItem)) return false
 
   const status = normalizeStatus(workItem.status)
@@ -307,7 +290,7 @@ export function shouldHandleWorkItem(
   if (
     status === WorkItemStatus.DRAFT &&
     !isReturnedDraftWork(workItem) &&
-    isDepartmentLevelRole(user.role) &&
+    isDepartmentLevel(user.role) &&
     !isWorkMainResponsibleDepartment(workItem, user.departmentId)
   )
     return false
@@ -326,7 +309,7 @@ export function canEditWorkItem(
 
   const returnedDraft = isReturnedDraftWork(workItem)
 
-  if (user.role === Role.ADMIN || user.role === Role.SUPERVISOR) return true
+  if (isGlobalView(user.role)) return true
   if (returnedDraft) {
     return (workItem.firstSubmitterId ?? workItem.creatorId) === user.id
   }
@@ -339,15 +322,9 @@ export function canEditWorkItem(
 }
 
 export function canCreateWork(user: PermissionUser): boolean {
-  const IMPORT_EXPORT_ROLES: Role[] = [
-    Role.ADMIN,
-    Role.SUPERVISOR,
-    Role.DEPARTMENT_MANAGER,
-    Role.DEPARTMENT_LEADER,
-  ]
-  return IMPORT_EXPORT_ROLES.includes(user.role) && user.role !== Role.ADMIN
+  return isSupervisor(user.role) || isDepartmentLevel(user.role)
 }
 
 export function canDeleteWork(user: PermissionUser): boolean {
-  return user.role === Role.ADMIN
+  return isAdmin(user.role)
 }

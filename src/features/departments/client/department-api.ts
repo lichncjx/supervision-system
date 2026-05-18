@@ -1,4 +1,9 @@
-import type { Department } from '@/features/users/domain/user.types'
+export interface Department {
+  id: number
+  name: string
+  code: string
+  isBusiness: boolean
+}
 
 let departmentsCache: Department[] | null = null
 

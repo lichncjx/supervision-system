@@ -1,5 +1,5 @@
 import type { CurrentUser } from '@/shared/auth/current-user'
-import { isSupervisionAdmin } from '@/features/users/domain/role.rules'
+import { isGlobalView } from '@/features/users/domain/role.rules'
 
 export interface ExportCompletionRateInput {
   currentUser: CurrentUser
@@ -53,7 +53,7 @@ export async function exportCompletionRateUseCase(
   const { currentUser, startDate, endDate } = input
 
   if (
-    !isSupervisionAdmin(
+    !isGlobalView(
       currentUser.role as import('@prisma/client').Role,
     )
   ) {

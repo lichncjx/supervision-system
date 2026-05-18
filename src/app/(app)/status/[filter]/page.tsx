@@ -16,7 +16,7 @@ import { sortWorksByDueDate } from '@/features/works/client/work-sort';
 import type { WorkStatusFilter, WorkType } from '@/features/works/domain/work-client.types';
 import type { Work } from '@/features/works/client/work-view.types';
 import { getDepartments } from '@/features/departments/client/department-api';
-import { isCompanyLevel, isSupervisionAdmin } from '@/features/users/domain/role.rules';
+import { isCompanyLevel, isGlobalView } from '@/features/users/domain/role.rules';
 import { StatusBadge } from '@/features/works/ui/badges';
 import { WorkListToolbar } from '@/features/works/ui/work-list-toolbar';
 import { getWorkTypeAccent, getWorkTypeText } from '@/features/works/ui/status-colors';
@@ -103,7 +103,7 @@ export default function StatusFilterPage() {
   const [monthOptions, setMonthOptions] = useState<string[]>([]);
   const [list, setList] = useState<Work[]>([]);
   const [departments, setDepartments] = useState<Array<{ id: number; name: string; code: string; isBusiness: boolean }>>([]);
-  const companyLevel = isCompanyLevel(user?.role, user?.departmentId);
+  const companyLevel = isGlobalView(user?.role) || isCompanyLevel(user?.role);
 
   const safeFilter: StatusPageFilter = allowedFilters.includes(filter as StatusPageFilter)
     ? (filter as StatusPageFilter)
@@ -160,7 +160,7 @@ export default function StatusFilterPage() {
 
   const finalList = list;
 
-  if (safeFilter === 'all' && user && !isSupervisionAdmin(user.role)) {
+  if (safeFilter === 'all' && user && !isGlobalView(user.role)) {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4">
