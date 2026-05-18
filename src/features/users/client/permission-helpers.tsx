@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useAuth } from '@/components/providers/auth-provider';
-import { getRoleName } from '@/features/users/domain/role.rules';
+import { getRoleName, isCompanyLevel, isGlobalView, isAdmin, isDepartmentLevel, isDeptLeader } from '@/features/users/domain/role.rules';
 import { Badge } from '@/components/ui/badge';
 
 export function usePermission() {
@@ -11,12 +11,12 @@ export function usePermission() {
   return {
     user,
     roleName: user ? getRoleName(user.role) : '',
-    canViewAll: user ? ['ADMIN', 'SUPERVISOR', 'VICE_PRESIDENT', 'PRESIDENT'].includes(user.role) : false,
-    canCreate: user ? ['ADMIN', 'SUPERVISOR', 'DEPARTMENT_MANAGER', 'DEPARTMENT_LEADER'].includes(user.role) : false,
-    canApprove: user ? ['ADMIN', 'DEPARTMENT_LEADER', 'VICE_PRESIDENT', 'PRESIDENT'].includes(user.role) : false,
-    isAdmin: user?.role === 'ADMIN',
-    isCompanyLeader: user ? ['VICE_PRESIDENT', 'PRESIDENT'].includes(user.role) : false,
-    isDepartmentLevel: user ? ['DEPARTMENT_MANAGER', 'DEPARTMENT_LEADER'].includes(user.role) : false,
+    canViewAll: user ? isGlobalView(user.role) || isCompanyLevel(user.role) : false,
+    canCreate: user ? isGlobalView(user.role) || isDepartmentLevel(user.role) : false,
+    canApprove: user ? isAdmin(user.role) || isDeptLeader(user.role) || isCompanyLevel(user.role) : false,
+    isAdmin: isAdmin(user?.role),
+    isCompanyLevel: user ? isCompanyLevel(user.role) : false,
+    isDepartmentLevel: user ? isDepartmentLevel(user.role) : false,
   };
 }
 
@@ -56,10 +56,10 @@ export function PermissionInfo() {
 }
 
 export function DataScopeInfo() {
-  const { user } = useAuth();
+  const { user, canViewAll } = usePermission();
   if (!user) return null;
 
-  const scope = ['admin', 'vice_president', 'president'].includes(user.role) ? '全公司' : '本部门';
+  const scope = canViewAll ? '全公司' : '本部门';
 
   return (
     <div className="text-sm text-gray-500">

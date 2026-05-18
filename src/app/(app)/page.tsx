@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Plus, Bell, Search } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { StatusBadge } from '@/features/works/ui/badges';
-import { isSupervisionAdmin } from '@/features/users/domain/role.rules';
+import { isGlobalView } from '@/features/users/domain/role.rules';
 
 type DashboardWorkType = 'PRIORITY' | 'MAIN' | 'TODO';
 
@@ -230,7 +230,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {isSupervisionAdmin(user?.role) && (
+      {isGlobalView(user?.role) && (
         <div className="stagger-2 overflow-hidden rounded-xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50/50">
           <div className="flex items-center gap-4 p-4">
             <div className="shrink-0 w-9 h-9 rounded-lg bg-indigo-100 flex items-center justify-center">

@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Star, ListTodo, CheckSquare } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
+import { isCompanyLevel } from '@/features/users/domain/role.rules';
 import { getCompanyLeaders } from '@/features/users/client/user-api';
 import { getDepartments } from '@/features/departments/client/department-api';
 import { addWork } from '@/features/works/client/work-api';
@@ -81,8 +82,8 @@ export default function NewWorkPage() {
   // 待办事项表单
   const [todoForm, setTodoForm] = useState({
     proposedLeaderId:
-      user?.role === 'VICE_PRESIDENT' || user?.role === 'PRESIDENT'
-        ? String(user.id)
+      isCompanyLevel(user?.role)
+        ? String(user?.id)
         : '',
     proposedScene: '',
     workItem: '',
@@ -411,7 +412,7 @@ export default function NewWorkPage() {
               value={todoForm.proposedLeaderId}
               onChange={(v) => setTodoForm({ ...todoForm, proposedLeaderId: v })}
               leaders={companyLeaders}
-              disabled={user?.role === 'VICE_PRESIDENT' || user?.role === 'PRESIDENT'}
+              disabled={isCompanyLevel(user?.role)}
               error={fieldError('proposedLeaderId')}
               onBlur={() => handleBlur('proposedLeaderId')}
               fieldId="field-proposedLeaderId"

@@ -8,6 +8,7 @@ import {
 } from '@/features/works/domain/work.permissions'
 import type { UserSession, ApproverAssignment } from './workflow.types'
 import { APPROVAL_STATUSES } from './workflow.constants'
+import { isCompanyLevel, isDepartmentLevel } from '@/features/users/domain/role.rules'
 
 export function toPermissionUser(user: UserSession) {
   return {
@@ -19,14 +20,6 @@ export function toPermissionUser(user: UserSession) {
 
 export function isApprovalStatus(status: WorkItemStatus) {
   return APPROVAL_STATUSES.includes(status)
-}
-
-export function isDepartmentRole(role: Role) {
-  return role === Role.DEPARTMENT_MANAGER || role === Role.DEPARTMENT_LEADER
-}
-
-export function isCompanyLeaderRole(role: Role) {
-  return role === Role.VICE_PRESIDENT || role === Role.PRESIDENT
 }
 
 export function departmentLeaderAssignment(): ApproverAssignment {
@@ -69,7 +62,7 @@ export function getProposalFirstApprover(
     return companyLeaderAssignment(workItem, 'propose')
   }
 
-  if (isCompanyLeaderRole(user.role)) {
+  if (isCompanyLevel(user.role)) {
     return companyLeaderAssignment(workItem, 'propose')
   }
 
@@ -132,7 +125,7 @@ export function ensureMainResponsibleDepartment(
   workItem: PermissionWorkItem,
 ) {
   return (
-    isDepartmentRole(user.role) &&
+    isDepartmentLevel(user.role) &&
     isWorkMainResponsibleDepartment(workItem, user.departmentId)
   )
 }

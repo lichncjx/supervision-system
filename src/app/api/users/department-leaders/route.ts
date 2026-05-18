@@ -2,11 +2,7 @@ import { NextResponse, NextRequest } from 'next/server';
 import prisma from '@/shared/db/prisma';
 import { getUserFromToken } from '@/shared/auth/get-current-user';
 import { Role } from '@prisma/client';
-
-function isCompanyLevelRole(role: string): boolean {
-  const companyRoles: string[] = ['ADMIN', 'SUPERVISOR', 'VICE_PRESIDENT', 'PRESIDENT'];
-  return companyRoles.includes(role);
-}
+import { isGlobalView, isCompanyLevel } from '@/features/users/domain/role.rules';
 
 export async function GET(request: NextRequest) {
   try {
@@ -31,7 +27,7 @@ export async function GET(request: NextRequest) {
 
     const targetDeptId = parseInt(departmentId);
 
-    if (!isCompanyLevelRole(currentUser.role)) {
+    if (!isGlobalView(currentUser.role) && !isCompanyLevel(currentUser.role)) {
       if (currentUser.departmentId !== targetDeptId) {
         return NextResponse.json({ error: '无权限查询其他部门领导' }, { status: 403 });
       }

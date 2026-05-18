@@ -1,6 +1,7 @@
 import { isReturnedDraftWork } from '@/features/works/domain/work-status.rules'
 import type { Work } from '@/features/works/client/work-view.types'
 import type { WorkflowStep } from '@/features/workflow/domain/workflow-client.types'
+import { isCompanyLevel } from '@/features/users/domain/role.rules'
 
 export function getWorkflowRecordDescription(
   action: string,
@@ -76,7 +77,7 @@ function approverRoleLabel(
 ): string {
   const role = work.currentApproverRole
   if (role === 'DEPARTMENT_LEADER') return '部门领导审批'
-  if (role === 'VICE_PRESIDENT' || role === 'PRESIDENT') {
+  if (isCompanyLevel(role)) {
     return work.type === '待办' ? '提出领导审批' : '公司主管领导审批'
   }
   return ''
