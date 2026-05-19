@@ -1,7 +1,7 @@
 import type { CurrentUser } from '@/shared/auth/current-user'
 import { Role } from '@prisma/client'
 
-export interface DeleteWorkResponseDto {
+interface DeleteWorkResultData {
   success: true
   message: string
 }
@@ -17,12 +17,10 @@ export interface DeleteWorkInput {
 }
 
 export type DeleteWorkResult =
-  | { kind: 'ok'; data: { success: true; message: string } }
+  | { kind: 'ok'; data: DeleteWorkResultData }
   | { kind: 'error'; status: number; message: string }
 
-export async function deleteWorkUseCase(
-  input: DeleteWorkInput,
-): Promise<DeleteWorkResult> {
+export async function deleteWorkUseCase(input: DeleteWorkInput): Promise<DeleteWorkResult> {
   const { currentUser, workId } = input
 
   if (currentUser.role !== Role.ADMIN) {

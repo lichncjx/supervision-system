@@ -1,12 +1,12 @@
 import { normalizeWorkStatus } from '@/features/works/domain/work-status.rules'
 import type { WorkType, ActionType, Cooperator } from '@/features/works/client/work-client.types'
 import type {
-  CreateWorkRequestDto,
-  UpdateWorkRequestDto,
+  CreateWorkRequest,
+  UpdateWorkRequest,
   WorkApiDto,
   WorkPersonApiDto,
-} from '@/features/works/shared/work-api.types'
-import type { AttachmentApiDto } from '@/features/attachments/shared/attachment-api.types'
+} from '@/features/works/contract/work-api.types'
+import type { AttachmentApiDto } from '@/features/attachments/contract/attachment-api.types'
 import type { Attachment } from '@/features/attachments/client/attachment-client.types'
 import type { Work, WorkEditablePatch } from './work-view.types'
 
@@ -117,7 +117,7 @@ export function transformWorkFromAPI(work: WorkApiDto): Work {
 
 export function buildCreateWorkRequest(
   work: Omit<Work, 'createdAt' | 'updatedAt'>,
-): CreateWorkRequestDto {
+): CreateWorkRequest {
   return {
     type: work.type,
     title: work.title,
@@ -144,8 +144,8 @@ export function buildCreateWorkRequest(
   }
 }
 
-export function buildUpdateWorkRequest(patch: WorkEditablePatch): UpdateWorkRequestDto {
-  const data: UpdateWorkRequestDto = {}
+export function buildUpdateWorkRequest(patch: WorkEditablePatch): UpdateWorkRequest {
+  const data: UpdateWorkRequest = {}
 
   if ('title' in patch) data.title = patch.title ?? null
   if ('departmentId' in patch && patch.departmentId != null) data.departmentId = patch.departmentId

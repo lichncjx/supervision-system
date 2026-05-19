@@ -2,12 +2,12 @@ import type { User } from '@/features/users/domain/user.types'
 import type { WorkType, WorkQuery } from '@/features/works/client/work-client.types'
 import type { Work, WorkEditablePatch } from './work-view.types'
 import type {
-  CreateWorkResponseDto,
-  UpdateWorkResponseDto,
+  CreateWorkResponse,
+  UpdateWorkResponse,
   WorkApiErrorDto,
-  WorkDetailResponseDto,
-  WorkListResponseDto,
-} from '@/features/works/shared/work-api.types'
+  WorkDetailResponse,
+  WorkListResponse,
+} from '@/features/works/contract/work-api.types'
 import { sortWorksByDueDate } from './work-sort'
 import {
   buildCreateWorkRequest,
@@ -19,7 +19,7 @@ export async function getWorks(): Promise<Work[]> {
   try {
     const response = await fetch('/api/works', { credentials: 'include' })
     if (!response.ok) return []
-    const data = (await response.json()) as WorkListResponseDto
+    const data = (await response.json()) as WorkListResponse
     return data.map(transformWorkFromAPI)
   } catch {
     return []
@@ -37,7 +37,7 @@ export async function getWorkById(id: number): Promise<Work | undefined> {
   try {
     const response = await fetch(`/api/works/${id}`, { credentials: 'include' })
     if (!response.ok) return undefined
-    const data = (await response.json()) as WorkDetailResponseDto
+    const data = (await response.json()) as WorkDetailResponse
     return transformWorkFromAPI(data)
   } catch {
     return undefined
@@ -64,7 +64,7 @@ export async function queryWorks(user: User | null | undefined, query: WorkQuery
   try {
     const response = await fetch(url, { credentials: 'include' })
     if (!response.ok) return []
-    const data = (await response.json()) as WorkListResponseDto
+    const data = (await response.json()) as WorkListResponse
     return data.map(transformWorkFromAPI)
   } catch {
     return []
@@ -83,7 +83,7 @@ export async function addWork(work: Omit<Work, 'createdAt' | 'updatedAt'>): Prom
     const error = (await response.json()) as WorkApiErrorDto
     throw new Error(error.error || '创建失败')
   }
-  return transformWorkFromAPI((await response.json()) as CreateWorkResponseDto)
+  return transformWorkFromAPI((await response.json()) as CreateWorkResponse)
 }
 
 export async function updateWork(id: number, patch: WorkEditablePatch): Promise<Work | undefined> {
@@ -98,7 +98,7 @@ export async function updateWork(id: number, patch: WorkEditablePatch): Promise<
     const error = (await response.json()) as WorkApiErrorDto
     throw new Error(error.error || '修改失败')
   }
-  return transformWorkFromAPI((await response.json()) as UpdateWorkResponseDto)
+  return transformWorkFromAPI((await response.json()) as UpdateWorkResponse)
 }
 
 export async function deleteWork(id: number): Promise<void> {

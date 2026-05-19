@@ -1,4 +1,4 @@
-import type { AttachmentApiDto } from '@/features/attachments/shared/attachment-api.types'
+import type { AttachmentApiDto } from '@/features/attachments/contract/attachment-api.types'
 
 export type WorkPersonApiDto = string | { name?: unknown } | null
 
@@ -52,12 +52,12 @@ export interface WorkApiDto {
   updatedAt: string
 }
 
-export type WorkListResponseDto = WorkApiDto[]
-export type WorkDetailResponseDto = WorkApiDto
-export type CreateWorkResponseDto = WorkApiDto
-export type UpdateWorkResponseDto = WorkApiDto
+export type WorkListResponse = WorkApiDto[]
+export type WorkDetailResponse = WorkApiDto
+export type CreateWorkResponse = WorkApiDto
+export type UpdateWorkResponse = WorkApiDto
 
-export interface CreateWorkRequestDto {
+export interface CreateWorkRequest {
   type: string
   departmentId: number | null
   title?: string | null
@@ -82,7 +82,7 @@ export interface CreateWorkRequestDto {
   nodes?: unknown
 }
 
-export interface UpdateWorkRequestDto {
+export interface UpdateWorkRequest {
   title?: string | null
   departmentId?: number
   workItem?: string | null

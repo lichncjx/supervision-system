@@ -9,12 +9,12 @@ export interface AttachmentApiDto {
   userName?: string
 }
 
-export interface UploadAttachmentResponseDto {
+export interface UploadAttachmentResponse {
   success: true
   attachment: AttachmentApiDto
 }
 
-export interface DeleteAttachmentResponseDto {
+export interface DeleteAttachmentResponse {
   success: true
 }
 

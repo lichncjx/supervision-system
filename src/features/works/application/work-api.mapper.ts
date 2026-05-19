@@ -3,8 +3,8 @@ import {
   processAdjustHistory,
   processNodesForDisplay,
 } from '@/features/works/application/work-display.utils'
-import type { AttachmentApiDto } from '@/features/attachments/shared/attachment-api.types'
-import type { WorkApiDto } from '@/features/works/shared/work-api.types'
+import type { AttachmentApiDto } from '@/features/attachments/contract/attachment-api.types'
+import type { WorkApiDto } from '@/features/works/contract/work-api.types'
 
 const TYPE_LABEL: Record<string, string> = {
   PRIORITY: '重点',

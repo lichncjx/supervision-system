@@ -12,7 +12,7 @@ import { isGlobalView } from '@/features/users/domain/role.rules'
 import { findManyWorks, type WorkListRow } from '@/features/works/infrastructure/work.repository'
 import { buildWorkVisibilityWhere } from '@/shared/db/work-visibility-builder'
 import { toWorkApiDto } from '@/features/works/application/work-api.mapper'
-import type { WorkApiDto } from '@/features/works/shared/work-api.types'
+import type { WorkApiDto } from '@/features/works/contract/work-api.types'
 
 // ── Types ──
 

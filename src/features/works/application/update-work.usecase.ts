@@ -13,9 +13,9 @@ import {
   type MemberAssignment,
 } from '@/features/members/domain/member.rules'
 import { toWorkApiDto } from '@/features/works/application/work-api.mapper'
-import type { UpdateWorkRequestDto, WorkApiDto } from '@/features/works/shared/work-api.types'
+import type { UpdateWorkRequest, WorkApiDto } from '@/features/works/contract/work-api.types'
 
-export type UpdateWorkBody = UpdateWorkRequestDto
+export type UpdateWorkBody = UpdateWorkRequest
 
 export interface UpdateWorkInput {
   currentUser: CurrentUser

@@ -1,5 +1,5 @@
 import type { CurrentUser } from '@/shared/auth/current-user'
-import type { AttachmentApiDto } from '@/features/attachments/shared/attachment-api.types'
+import type { AttachmentApiDto } from '@/features/attachments/contract/attachment-api.types'
 
 export interface UploadAttachmentInput {
   currentUser: CurrentUser
@@ -21,7 +21,6 @@ import {
   canViewAttachment,
   canUploadAttachment,
 } from '@/features/attachments/domain/attachment.permissions'
-import type { AttPermWorkItem } from '@/features/attachments/domain/attachment.types'
 import {
   findWorkItemForUpload,
   createAttachmentRecord,
@@ -41,25 +40,14 @@ export async function uploadAttachmentUseCase(
     return { kind: 'error', status: 404, message: '事项不存在' }
   }
 
-  const permWorkItem: AttPermWorkItem = {
-    departmentId: workItem.departmentId,
-    cooperators: workItem.cooperators,
-    status: workItem.status,
-    creatorId: workItem.creatorId,
-    proposedLeaderId: workItem.proposedLeaderId,
-    approvalLeaderId: workItem.approvalLeaderId,
-    currentApproverId: workItem.currentApproverId,
-    currentApproverRole: workItem.currentApproverRole,
-    type: workItem.type,
-  }
-
+  // The repository selects exactly the work fields required by permission rules.
   const permUser = toPermissionUser(currentUser)
 
-  if (!canViewAttachment(permUser, permWorkItem)) {
+  if (!canViewAttachment(permUser, workItem)) {
     return { kind: 'error', status: 403, message: '无权查看该事项' }
   }
 
-  if (!canUploadAttachment(permUser, permWorkItem)) {
+  if (!canUploadAttachment(permUser, workItem)) {
     return {
       kind: 'error',
       status: 403,
@@ -67,6 +55,7 @@ export async function uploadAttachmentUseCase(
     }
   }
 
+  // Permission checks must complete before writing the file to disk.
   const { relativePath } = await saveUploadedFile(fileBuffer, fileName)
 
   const now = new Date()

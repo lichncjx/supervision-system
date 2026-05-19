@@ -3,7 +3,7 @@ import { getCurrentUserOrAuthError } from '@/shared/auth/get-current-user-or-aut
 import { getWorkDetailUseCase } from '@/features/works/application/get-work-detail.usecase'
 import { updateWorkUseCase } from '@/features/works/application/update-work.usecase'
 import { deleteWorkUseCase } from '@/features/works/application/delete-work.usecase'
-import type { UpdateWorkRequestDto } from '@/features/works/shared/work-api.types'
+import type { UpdateWorkRequest } from '@/features/works/contract/work-api.types'
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -48,7 +48,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: '无效的事项ID' }, { status: 400 })
     }
 
-    const body = (await request.json()) as UpdateWorkRequestDto
+    const body = (await request.json()) as UpdateWorkRequest
 
     const result = await updateWorkUseCase({ currentUser, workId, body })
 

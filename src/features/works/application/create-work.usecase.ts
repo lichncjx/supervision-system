@@ -10,9 +10,9 @@ import {
   type MemberAssignment,
 } from '@/features/members/domain/member.rules'
 import { toWorkApiDto } from '@/features/works/application/work-api.mapper'
-import type { CreateWorkRequestDto, WorkApiDto } from '@/features/works/shared/work-api.types'
+import type { CreateWorkRequest, WorkApiDto } from '@/features/works/contract/work-api.types'
 
-export type CreateWorkBody = CreateWorkRequestDto
+export type CreateWorkBody = CreateWorkRequest
 
 export interface CreateWorkInput {
   currentUser: CurrentUser
