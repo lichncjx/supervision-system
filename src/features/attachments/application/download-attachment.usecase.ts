@@ -44,7 +44,6 @@ export async function downloadAttachmentUseCase(
       approvalLeaderId: attachment.workItem.approvalLeaderId,
       currentApproverId: attachment.workItem.currentApproverId,
       currentApproverRole: attachment.workItem.currentApproverRole,
-      needMainLeaderCancel: attachment.workItem.needMainLeaderCancel,
       type: attachment.workItem.type,
     }
 

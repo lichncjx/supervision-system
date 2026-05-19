@@ -1,8 +1,8 @@
-import { Role } from '@prisma/client'
 import {
   canViewWorkItem,
   canOperateWorkItem,
 } from '@/features/works/domain/work.permissions'
+import { isGlobalView } from '@/features/users/domain/role.rules'
 import type { AttPermUser, AttPermWorkItem, AttPermAttachment } from './attachment.types'
 
 export function canViewAttachment(
@@ -16,7 +16,7 @@ export function canUploadAttachment(
   user: AttPermUser,
   workItem: AttPermWorkItem,
 ): boolean {
-  if (user.role === Role.ADMIN || user.role === Role.SUPERVISOR) return true
+  if (isGlobalView(user.role)) return true
 
   const TERMINAL_STATUSES = ['COMPLETED', 'CANCELLED']
   if (
@@ -34,6 +34,6 @@ export function canDeleteAttachment(
   workItem: AttPermWorkItem,
   attachment: AttPermAttachment,
 ): boolean {
-  if (user.role === Role.ADMIN || user.role === Role.SUPERVISOR) return true
+  if (isGlobalView(user.role)) return true
   return attachment.userId === user.id
 }

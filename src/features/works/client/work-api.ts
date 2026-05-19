@@ -1,4 +1,4 @@
-import { isCompanyLevel, isGlobalView } from '@/features/users/domain/role.rules'
+import { isCompanyLevel, isDepartmentLevel } from '@/features/users/domain/role.rules'
 import type { User } from '@/features/users/domain/user.types'
 import type { WorkType, WorkQuery } from '@/features/works/domain/work-client.types'
 import type { Work, WorkEditablePatch } from './work-view.types'
@@ -25,23 +25,19 @@ export async function getVisibleWorks(
   user: User | null | undefined,
   type?: WorkType,
 ): Promise<Work[]> {
-  const works = await getWorks()
-  let list = works
-
-  if (type) list = list.filter((w) => w.type === type)
   if (!user) return []
 
-  if (user.role === 'ADMIN' || user.role === 'SUPERVISOR') {
-    return sortWorksByDueDate(list)
+  let list = await getWorks()
+  if (type)
+    list = list.filter((w) => w.type === type)
+
+  if (isCompanyLevel(user.role)) {
+    list = list.filter((w) => isCompanyVisibleWork(w))
+  } else if (isDepartmentLevel(user.role)) {
+    list = list.filter((w) => isWorkRelatedToDepartment(w, user.departmentId))
   }
 
-  if (isGlobalView(user.role) || isCompanyLevel(user.role)) {
-    return sortWorksByDueDate(list.filter((w) => isCompanyVisibleWork(w)))
-  }
-
-  return sortWorksByDueDate(
-    list.filter((w) => isWorkRelatedToDepartment(w, user.departmentId)),
-  )
+  return sortWorksByDueDate(list)
 }
 
 export async function getWorkById(id: number): Promise<Work | undefined> {

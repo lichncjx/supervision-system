@@ -20,7 +20,6 @@ export const dashboardWorkSelect = {
   approvalLeaderId: true,
   currentApproverId: true,
   currentApproverRole: true,
-  needMainLeaderCancel: true,
   department: { select: { id: true, name: true } },
   currentApprover: { select: { id: true, name: true } },
 } as const

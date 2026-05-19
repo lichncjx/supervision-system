@@ -1,7 +1,6 @@
 import {
   WORK_STATUS_META,
   PRISMA_WORK_STATUS_TO_VALUE,
-  PENDING_APPROVAL_FILTER_STATUS_VALUES,
 } from './work-status'
 import type { WorkStatus, WorkStatusVisualGroup } from './work-status'
 
@@ -145,14 +144,4 @@ export function isWorkStatusInProgress(status: unknown): boolean {
 
 export function shouldCountWorkStatusForDeadline(status: unknown): boolean {
   return Boolean(getWorkStatusMeta(status)?.countsForDeadline)
-}
-
-export function isWorkStatusInPendingApprovalFilter(status: unknown): boolean {
-  const normalized = normalizeWorkStatus(status)
-  return Boolean(
-    normalized &&
-      (PENDING_APPROVAL_FILTER_STATUS_VALUES as readonly WorkStatus[]).includes(
-        normalized,
-      ),
-  )
 }

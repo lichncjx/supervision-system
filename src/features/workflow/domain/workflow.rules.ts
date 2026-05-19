@@ -7,7 +7,7 @@ import {
 } from '@/features/works/domain/work.permissions'
 import type { UserSession, ApproverAssignment } from './workflow.types'
 import { APPROVAL_STATUSES } from './workflow.constants'
-import { isCompanyLevel, isDepartmentLevel } from '@/features/users/domain/role.rules'
+import { isCompanyLevel, isDepartmentLevel, isDeptManager, isDeptLeader, isPresident } from '@/features/users/domain/role.rules'
 
 export function toPermissionUser(user: UserSession) {
   return {
@@ -54,11 +54,11 @@ export function getProposalFirstApprover(
   },
   user: UserSession,
 ): ApproverAssignment {
-  if (user.role === Role.DEPARTMENT_MANAGER) {
+  if (isDeptManager(user.role)) {
     return departmentLeaderAssignment()
   }
 
-  if (user.role === Role.DEPARTMENT_LEADER) {
+  if (isDeptLeader(user.role)) {
     return companyLeaderAssignment(workItem, 'propose')
   }
 
@@ -76,34 +76,34 @@ export function getProcessFirstApprover(
   },
   user: UserSession,
 ): ApproverAssignment {
-  if (user.role === Role.DEPARTMENT_MANAGER) {
+  if (isDeptManager(user.role)) {
     return departmentLeaderAssignment()
   }
 
-  if (user.role === Role.DEPARTMENT_LEADER) {
+  if (isDeptLeader(user.role)) {
     return companyLeaderAssignment(workItem, 'approval')
   }
 
   return companyLeaderAssignment(workItem, 'approval')
 }
 
+/** 重点事项取消需主要领导审批 */
 export function shouldEscalateCancelToPresident(workItem: {
   type: WorkItemType
-  needMainLeaderCancel?: boolean | null
 }) {
-  return workItem.type === WorkItemType.PRIORITY && workItem.needMainLeaderCancel === true
+  return workItem.type === WorkItemType.PRIORITY
 }
 
 export function isDepartmentApprovalNode(workItem: {
   currentApproverRole?: Role | string | null
 }) {
-  return workItem.currentApproverRole === Role.DEPARTMENT_LEADER
+  return isDeptLeader(workItem.currentApproverRole)
 }
 
 export function isPresidentApprovalNode(workItem: {
   currentApproverRole?: Role | string | null
 }) {
-  return workItem.currentApproverRole === Role.PRESIDENT
+  return isPresident(workItem.currentApproverRole)
 }
 
 export function canUserHandle(

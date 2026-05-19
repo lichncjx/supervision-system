@@ -11,11 +11,11 @@ export interface ExportWorksToExcelInput {
 
 export type ExportWorksToExcelResult =
   | {
-      kind: 'ok'
-      buffer: Buffer
-      fileName: string
-      visibleItemCount: number
-    }
+    kind: 'ok'
+    buffer: Buffer
+    fileName: string
+    visibleItemCount: number
+  }
   | { kind: 'error'; status: number; message: string }
 import {
   buildWorkVisibilityWhere,

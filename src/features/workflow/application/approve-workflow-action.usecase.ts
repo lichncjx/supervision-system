@@ -2,6 +2,7 @@ import { APPROVAL_TARGET_STATUS } from '@/features/workflow/domain/workflow.cons
 import { toPermissionUser, isApprovalStatus } from '@/features/workflow/domain/workflow.rules'
 import type { UserSession, WorkflowResult } from '@/features/workflow/domain/workflow.types'
 import { canApproveWorkItem } from '@/features/works/domain/work.permissions'
+import { isCompanyLevel } from '@/features/users/domain/role.rules'
 import { getNextApprovalAssignment } from './workflow-assignment.service'
 import { findWorkForUpdateById, updateWorkItem } from '@/features/works/infrastructure/work.repository'
 import {
@@ -74,6 +75,7 @@ export async function approveWorkflowAction(
     approvalType: null,
     currentApproverId: null,
     currentApproverRole: null,
+    ...(isCompanyLevel(user.role) ? { approvalLeaderId: user.userId } : {}),
   })
 
   await createWorkflowRecord({

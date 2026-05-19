@@ -1,7 +1,7 @@
 import type { BaseCurrentUser } from '@/shared/auth/current-user'
 import * as XLSX from 'xlsx'
-import { Role, WorkItemStatus } from '@prisma/client'
-import { isGlobalView } from '@/features/users/domain/role.rules'
+import { WorkItemStatus } from '@prisma/client'
+import { isGlobalView, isDepartmentLevel, isCompanyLevel } from '@/features/users/domain/role.rules'
 
 export interface ImportRow {
   row: number
@@ -16,7 +16,7 @@ export interface ValidationError {
 }
 
 export function isDepartmentImportRole(role: string): boolean {
-  return role === Role.DEPARTMENT_LEADER || role === Role.DEPARTMENT_MANAGER
+  return isDepartmentLevel(role)
 }
 
 function getImportResponsibleDepartmentIds(data: any): number[] {
@@ -50,10 +50,7 @@ export function validateImportScope(
     return null
   }
 
-  if (
-    currentUser.role === Role.VICE_PRESIDENT ||
-    currentUser.role === Role.PRESIDENT
-  ) {
+  if (isCompanyLevel(currentUser.role)) {
     if (row.data.type !== 'TODO') {
       return {
         row: row.row,

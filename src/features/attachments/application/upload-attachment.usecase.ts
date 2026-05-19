@@ -56,7 +56,6 @@ export async function uploadAttachmentUseCase(
     approvalLeaderId: workItem.approvalLeaderId,
     currentApproverId: workItem.currentApproverId,
     currentApproverRole: workItem.currentApproverRole,
-    needMainLeaderCancel: workItem.needMainLeaderCancel,
     type: workItem.type,
   }
 

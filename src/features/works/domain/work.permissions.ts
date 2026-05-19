@@ -6,15 +6,8 @@ import {
   WorkItemType,
   ApprovalType,
 } from '@prisma/client'
-import { isReturnedDraftWork, isReturnedInProgressWork } from './work-status.rules'
-import { isGlobalView, isDepartmentLevel, isPresident, isVicePresident } from '@/features/users/domain/role.rules'
-
-const APPROVAL_STATUSES: WorkItemStatus[] = [
-  WorkItemStatus.PROPOSING,
-  WorkItemStatus.ADJUSTING,
-  WorkItemStatus.CANCELLING,
-  WorkItemStatus.COMPLETING,
-]
+import { isReturnedDraftWork, isReturnedInProgressWork, isWorkStatusApproving } from './work-status.rules'
+import { isGlobalView, isDepartmentLevel, isCompanyLevel, isPresident, isVicePresident } from '@/features/users/domain/role.rules'
 
 export type PermissionUser = Pick<User, 'id' | 'role' | 'departmentId'>
 
@@ -35,9 +28,9 @@ export interface PermissionWorkItem {
   rejectReason?: string | null
   rejectedFromStatus?: WorkItemStatus | string | null
   rejectedAt?: Date | string | null
-  needMainLeaderCancel?: boolean | null
 }
 
+/** 去重 + 过滤非正数 ID */
 function uniquePositiveIds(values: unknown[]): number[] {
   const ids = new Set<number>()
   for (const value of values) {
@@ -53,16 +46,14 @@ function normalizeStatus(status: PermissionWorkItem['status']): string {
   return String(status || '').toUpperCase()
 }
 
-function isInApprovalStatus(status: PermissionWorkItem['status']): boolean {
-  return APPROVAL_STATUSES.includes(normalizeStatus(status) as WorkItemStatus)
-}
-
+/** 主责部门 ID 列表（当前仅 departmentId 一个） */
 export function getResponsibleDepartmentIds(
   workItem: PermissionWorkItem,
 ): number[] {
   return uniquePositiveIds([workItem.departmentId])
 }
 
+/** 配合部门 ID 列表，从 JSONB cooperators 数组提取 */
 export function getCooperatorDepartmentIds(
   workItem: PermissionWorkItem,
 ): number[] {
@@ -73,6 +64,7 @@ export function getCooperatorDepartmentIds(
   )
 }
 
+/** 事项是否与指定部门有关联（主责 或 配合） */
 export function isWorkRelatedToDepartment(
   workItem: PermissionWorkItem,
   departmentId?: number | null,
@@ -84,6 +76,7 @@ export function isWorkRelatedToDepartment(
   )
 }
 
+/** 事项的主责部门是否为指定部门（仅 departmentId，不含配合） */
 export function isWorkMainResponsibleDepartment(
   workItem: PermissionWorkItem,
   departmentId?: number | null,
@@ -92,14 +85,22 @@ export function isWorkMainResponsibleDepartment(
   return getResponsibleDepartmentIds(workItem).includes(departmentId)
 }
 
+/**
+ * 构建事项可见性查询条件，根据用户角色和部门关联进行权限过滤。
+ *
+ * - Global view (ADMIN/SUPERVISOR) can see all items without restrictions.
+ */
 export function buildWorkVisibilityWhere(
   user: PermissionUser,
   cooperatorWorkIds?: number[],
 ): Prisma.WorkItemWhereInput {
+  // Global view (ADMIN/SUPERVISOR) can see all items without restrictions.
   if (isGlobalView(user.role)) {
     return {}
   }
 
+  // Department-level users can see items where their department is involved (main or cooperator).
+  // If cooperatorWorkIds are provided, include those as well.
   if (isDepartmentLevel(user.role)) {
     const base: Prisma.WorkItemWhereInput = { departmentId: user.departmentId }
     if (cooperatorWorkIds && cooperatorWorkIds.length > 0) {
@@ -108,7 +109,9 @@ export function buildWorkVisibilityWhere(
     return base
   }
 
-  if (isVicePresident(user.role)) {
+  // Company-level users can see items where they are proposed leader, approval leader, current approver,
+  // or items without specific approvers but with a currentApproverRole matching their role.
+  if (isCompanyLevel(user.role)) {
     return {
       OR: [
         { proposedLeaderId: user.id },
@@ -119,21 +122,9 @@ export function buildWorkVisibilityWhere(
             { currentApproverId: null },
             { proposedLeaderId: null },
             { approvalLeaderId: null },
-            { currentApproverRole: Role.VICE_PRESIDENT },
+            { currentApproverRole: user.role },
           ],
         },
-      ],
-    }
-  }
-
-  if (isPresident(user.role)) {
-    return {
-      OR: [
-        { proposedLeaderId: user.id },
-        { approvalLeaderId: user.id },
-        { currentApproverId: user.id },
-        { currentApproverRole: Role.PRESIDENT },
-        { needMainLeaderCancel: true },
       ],
     }
   }
@@ -141,20 +132,21 @@ export function buildWorkVisibilityWhere(
   return { id: -1 }
 }
 
+/**
+ * Broad view permission for listing and detail viewing. Does not guarantee actionable permissions.
+ *
+ * - Global view (ADMIN/SUPERVISOR) can see all items.
+ */
 export function canViewWorkItem(
   user: PermissionUser,
   workItem: PermissionWorkItem,
 ): boolean {
   if (isGlobalView(user.role)) return true
 
-  if (isDepartmentLevel(user.role)) {
-    return (
-      isWorkRelatedToDepartment(workItem, user.departmentId) ||
-      workItem.currentApproverId === user.id
-    )
-  }
+  if (isDepartmentLevel(user.role))
+    return isWorkRelatedToDepartment(workItem, user.departmentId)
 
-  if (isVicePresident(user.role)) {
+  if (isCompanyLevel(user.role)) {
     return (
       workItem.proposedLeaderId === user.id ||
       workItem.approvalLeaderId === user.id ||
@@ -163,18 +155,8 @@ export function canViewWorkItem(
         !workItem.currentApproverId &&
         !workItem.proposedLeaderId &&
         !workItem.approvalLeaderId &&
-        isVicePresident(workItem.currentApproverRole)
+        workItem.currentApproverRole === user.role
       )
-    )
-  }
-
-  if (isPresident(user.role)) {
-    return (
-      workItem.proposedLeaderId === user.id ||
-      workItem.approvalLeaderId === user.id ||
-      workItem.currentApproverId === user.id ||
-      isPresident(workItem.currentApproverRole) ||
-      workItem.needMainLeaderCancel === true
     )
   }
 
@@ -185,10 +167,10 @@ export function canApproveWorkItem(
   user: PermissionUser,
   workItem: PermissionWorkItem,
 ): boolean {
-  if (isGlobalView(user.role)) 
+  if (isGlobalView(user.role))
     return false
 
-  if (!isInApprovalStatus(workItem.status))
+  if (!isWorkStatusApproving(workItem.status))
     return false
 
   if (workItem.currentApproverId) {
@@ -205,7 +187,7 @@ export function canApproveWorkItem(
   }
 
   if (isPresident(user.role)) {
-    return !!currentApproverRole || workItem.needMainLeaderCancel === true
+    return !!currentApproverRole
   }
 
   if (isVicePresident(user.role)) {
