@@ -86,53 +86,6 @@ export function isWorkMainResponsibleDepartment(
 }
 
 /**
- * 构建事项可见性查询条件，根据用户角色和部门关联进行权限过滤。
- *
- * - Global view (ADMIN/SUPERVISOR) can see all items without restrictions.
- */
-export function buildWorkVisibilityWhere(
-  user: PermissionUser,
-  cooperatorWorkIds?: number[],
-): Prisma.WorkItemWhereInput {
-  // Global view (ADMIN/SUPERVISOR) can see all items without restrictions.
-  if (isGlobalView(user.role)) {
-    return {}
-  }
-
-  // Department-level users can see items where their department is involved (main or cooperator).
-  // If cooperatorWorkIds are provided, include those as well.
-  if (isDepartmentLevel(user.role)) {
-    const base: Prisma.WorkItemWhereInput = { departmentId: user.departmentId }
-    if (cooperatorWorkIds && cooperatorWorkIds.length > 0) {
-      return { OR: [base, { id: { in: cooperatorWorkIds } }] }
-    }
-    return base
-  }
-
-  // Company-level users can see items where they are proposed leader, approval leader, current approver,
-  // or items without specific approvers but with a currentApproverRole matching their role.
-  if (isCompanyLevel(user.role)) {
-    return {
-      OR: [
-        { proposedLeaderId: user.id },
-        { approvalLeaderId: user.id },
-        { currentApproverId: user.id },
-        {
-          AND: [
-            { currentApproverId: null },
-            { proposedLeaderId: null },
-            { approvalLeaderId: null },
-            { currentApproverRole: user.role },
-          ],
-        },
-      ],
-    }
-  }
-
-  return { id: -1 }
-}
-
-/**
  * Broad view permission for listing and detail viewing. Does not guarantee actionable permissions.
  *
  * - Global view (ADMIN/SUPERVISOR) can see all items.
@@ -150,13 +103,7 @@ export function canViewWorkItem(
     return (
       workItem.proposedLeaderId === user.id ||
       workItem.approvalLeaderId === user.id ||
-      workItem.currentApproverId === user.id ||
-      (
-        !workItem.currentApproverId &&
-        !workItem.proposedLeaderId &&
-        !workItem.approvalLeaderId &&
-        workItem.currentApproverRole === user.role
-      )
+      workItem.currentApproverId === user.id
     )
   }
 

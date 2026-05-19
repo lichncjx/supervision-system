@@ -1,14 +1,14 @@
 import type { BaseCurrentUser } from '@/shared/auth/current-user'
 import { WorkItemType, WorkItemStatus } from '@prisma/client'
 import type { Prisma } from '@prisma/client'
-import { canViewWorkItem, shouldHandleWorkItem, canApproveWorkItem, buildWorkVisibilityWhere } from '@/features/works/domain/work.permissions'
+import { canViewWorkItem, shouldHandleWorkItem, canApproveWorkItem } from '@/features/works/domain/work.permissions'
 import type { PermissionUser } from '@/features/works/domain/work.permissions'
-import { isDepartmentLevel, isGlobalView } from '@/features/users/domain/role.rules'
+import { isGlobalView } from '@/features/users/domain/role.rules'
 import {
   findManyWorks,
-  findCooperatorWorkItemIds,
   type WorkListRow,
 } from '@/features/works/infrastructure/work.repository'
+import { buildWorkVisibilityWhere } from '@/shared/db/work-visibility-builder'
 import { formatDate } from '@/shared/utils/date'
 import { processNodesForDisplay, processAdjustHistory } from '@/features/works/application/work-display.utils'
 
@@ -226,16 +226,15 @@ function applyPostFilter(
   })
 }
 
-function buildWorksWhere(
+async function buildWorksWhere(
   params: QueryWorksParams,
   currentUser: PermissionUser,
-  cooperatorWorkIds?: number[],
-): { where: Prisma.WorkItemWhereInput; statusFilter: StatusFilter | null } {
+): Promise<{ where: Prisma.WorkItemWhereInput; statusFilter: StatusFilter | null }> {
   const workType = parseWorkType(params.type)
   const statusFilter = parseWorkStatusFilter(params.status)
 
   const filters: Prisma.WorkItemWhereInput[] = [
-    buildWorkVisibilityWhere(currentUser, cooperatorWorkIds),
+    await buildWorkVisibilityWhere(currentUser),
   ]
 
   if (workType) {
@@ -272,33 +271,21 @@ function buildWorksWhere(
 /** 查询事项列表：SQL 粗筛 → 权限/状态后过滤 → 转 DTO */
 export async function queryWorksUseCase(input: QueryWorksInput) {
   const { currentUser, params } = input
-
-  // 部门级用户需额外查出作为配合部门的事项 ID
-  let cooperatorWorkIds: number[] | undefined
-  if (isDepartmentLevel(currentUser.role) && currentUser.departmentId) {
-    cooperatorWorkIds = await findCooperatorWorkItemIds(currentUser.departmentId)
-  }
+  const permUser = currentUser as PermissionUser
 
   // 构建 WHERE（可见性 + 类型/状态/部门/关键词），同时解析 statusFilter 供后过滤用
-  const { where, statusFilter } = buildWorksWhere(
-    params,
-    currentUser as PermissionUser,
-    cooperatorWorkIds,
-  )
+  const { where, statusFilter } = await buildWorksWhere(params, permUser)
 
+  // SQL 粗筛（包含权限相关的可见性过滤）
   const works = await findManyWorks(where)
 
   // 权限后过滤（兜底，与 WHERE 可见性逻辑一致）
   const viewableWorks = works.filter((work) =>
-    canViewWorkItem(currentUser as PermissionUser, work),
+    canViewWorkItem(permUser, work),
   )
 
   // 状态后过滤（handling/approving/overdue/expiring 需应用层判断）
-  const filteredWorks = applyPostFilter(
-    viewableWorks,
-    statusFilter,
-    currentUser as PermissionUser,
-  )
+  const filteredWorks = applyPostFilter(viewableWorks, statusFilter, permUser)
 
   return toWorkListItems(filteredWorks)
 }

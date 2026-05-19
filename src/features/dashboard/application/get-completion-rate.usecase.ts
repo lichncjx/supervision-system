@@ -1,8 +1,6 @@
 import type { BaseCurrentUser } from '@/shared/auth/current-user'
-import {
-  buildWorkVisibilityWhere,
-  getResponsibleDepartmentIds,
-} from '@/features/works/domain/work.permissions'
+import { getResponsibleDepartmentIds } from '@/features/works/domain/work.permissions'
+import { buildWorkVisibilityWhere } from '@/shared/db/work-visibility-builder'
 import { isDepartmentLevel, isGlobalView } from '@/features/users/domain/role.rules'
 import { calculateDepartmentStats, type CompletionRateStat } from '@/shared/completion-rate.rules'
 import {
@@ -67,9 +65,7 @@ export async function getCompletionRateUseCase(
 ): Promise<GetCompletionRateResult> {
   const { currentUser, type, startDate, endDate } = input
 
-  const visibilityWhere = buildWorkVisibilityWhere(
-    currentUser as unknown as Parameters<typeof buildWorkVisibilityWhere>[0],
-  )
+  const visibilityWhere = await buildWorkVisibilityWhere(currentUser, false)
 
   const sDate = startDate ? new Date(startDate) : undefined
   const eDate = endDate ? new Date(endDate) : undefined

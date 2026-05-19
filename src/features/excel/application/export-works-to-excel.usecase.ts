@@ -18,13 +18,13 @@ export type ExportWorksToExcelResult =
   }
   | { kind: 'error'; status: number; message: string }
 import {
-  buildWorkVisibilityWhere,
   canViewWorkItem,
   shouldHandleWorkItem,
   getCooperatorDepartmentIds,
   getResponsibleDepartmentIds,
 } from '@/features/works/domain/work.permissions'
 import type { PermissionUser } from '@/features/works/domain/work.permissions'
+import { buildWorkVisibilityWhere } from '@/shared/db/work-visibility-builder'
 import {
   findWorksForExport,
   createExportOperationLog,
@@ -159,7 +159,7 @@ export async function exportWorksToExcelUseCase(
   const permUser = currentUser as unknown as PermissionUser
 
   const workItems = await findWorksForExport(
-    buildWorkVisibilityWhere(permUser),
+    await buildWorkVisibilityWhere(currentUser),
   )
 
   const now = new Date()

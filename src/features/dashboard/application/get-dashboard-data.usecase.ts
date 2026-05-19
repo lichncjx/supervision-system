@@ -1,12 +1,12 @@
 import type { BaseCurrentUser } from '@/shared/auth/current-user'
 import type { DashboardData, DashboardDataOptions } from '@/features/dashboard/domain/dashboard.types'
 import {
-  buildWorkVisibilityWhere,
   canViewWorkItem,
   canApproveWorkItem,
   shouldHandleWorkItem,
   type PermissionUser,
 } from '@/features/works/domain/work.permissions'
+import { buildWorkVisibilityWhere } from '@/shared/db/work-visibility-builder'
 import {
   normalizeLimit,
   toDashboardItem,
@@ -32,7 +32,7 @@ export async function getDashboardDataUseCase(
   const limit = normalizeLimit(options.limit)
 
   const permUser = currentUser as unknown as PermissionUser
-  const whereClause = buildWorkVisibilityWhere(permUser)
+  const whereClause = await buildWorkVisibilityWhere(currentUser)
   const allRelevantWorks = await findDashboardWorks(whereClause)
 
   const visibleWorks = allRelevantWorks.filter((workItem) =>
