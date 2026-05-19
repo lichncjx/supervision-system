@@ -96,33 +96,62 @@ export interface Work {
   updatedAt: string
 }
 
-export type WorkEditablePatch = Partial<
-  Pick<
-    Work,
-    | 'title'
-    | 'description'
-    | 'businessCategory'
-    | 'workItem'
-    | 'workNode'
-    | 'nodes'
-    | 'isInnovation'
-    | 'completeForm'
-    | 'departmentId'
-    | 'cooperators'
-    | 'responsibleLeader'
-    | 'responsibleLeaderMemberId'
-    | 'proposedLeader'
-    | 'proposedLeaderId'
-    | 'proposedLeaderRole'
-    | 'proposedScene'
-    | 'formedTime'
-    | 'responsiblePerson'
-    | 'responsiblePersonMemberId'
-    | 'workPlan'
-    | 'planCompleteTime'
-    | 'progress'
-    | 'approvalLeader'
-    | 'approvalLeaderId'
-    | 'approvalLeaderRole'
-  >
+type WorkEditablePatchBase = Pick<
+  Work,
+  | 'title'
+  | 'description'
+  | 'businessCategory'
+  | 'workItem'
+  | 'workNode'
+  | 'nodes'
+  | 'isInnovation'
+  | 'completeForm'
+  | 'departmentId'
+  | 'cooperators'
+  | 'responsibleLeader'
+  | 'responsibleLeaderMemberId'
+  | 'proposedLeader'
+  | 'proposedLeaderId'
+  | 'proposedLeaderRole'
+  | 'proposedScene'
+  | 'formedTime'
+  | 'responsiblePerson'
+  | 'responsiblePersonMemberId'
+  | 'workPlan'
+  | 'planCompleteTime'
+  | 'progress'
+  | 'approvalLeader'
+  | 'approvalLeaderId'
+  | 'approvalLeaderRole'
 >
+
+type NullableWorkTextField =
+  | 'description'
+  | 'businessCategory'
+  | 'workItem'
+  | 'workNode'
+  | 'completeForm'
+  | 'responsibleLeader'
+  | 'proposedLeader'
+  | 'proposedLeaderRole'
+  | 'proposedScene'
+  | 'formedTime'
+  | 'responsiblePerson'
+  | 'workPlan'
+  | 'planCompleteTime'
+  | 'progress'
+  | 'approvalLeader'
+  | 'approvalLeaderRole'
+
+type NullableWorkNumberField =
+  | 'departmentId'
+  | 'responsibleLeaderMemberId'
+  | 'responsiblePersonMemberId'
+  | 'proposedLeaderId'
+  | 'approvalLeaderId'
+
+export type WorkEditablePatch = Partial<
+  Omit<WorkEditablePatchBase, NullableWorkTextField | NullableWorkNumberField>
+> &
+  Partial<Record<NullableWorkTextField, string | null>> &
+  Partial<Record<NullableWorkNumberField, number | null>>

@@ -2,6 +2,7 @@ import { NextResponse, NextRequest } from 'next/server'
 import { getCurrentUserOrAuthError } from '@/shared/auth/get-current-user-or-auth-error'
 import { queryWorksUseCase } from '@/features/works/application/query-works.usecase'
 import { createWorkUseCase } from '@/features/works/application/create-work.usecase'
+import type { CreateWorkRequestDto } from '@/features/works/shared/work-api.types'
 
 export async function GET(request: NextRequest) {
   try {
@@ -34,15 +35,12 @@ export async function POST(request: NextRequest) {
 
     const currentUser = auth.user
 
-    const body = await request.json()
+    const body = (await request.json()) as CreateWorkRequestDto
 
     const result = await createWorkUseCase({ currentUser, body })
 
     if (result.kind === 'error') {
-      return NextResponse.json(
-        { error: result.message },
-        { status: result.status },
-      )
+      return NextResponse.json({ error: result.message }, { status: result.status })
     }
 
     return NextResponse.json(result.data)

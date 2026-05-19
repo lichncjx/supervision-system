@@ -1,6 +1,8 @@
-import { ActionType, ApprovalType, Role, WorkItemStatus, WorkItemType } from '@prisma/client'
-import type { UserSession, WorkflowResult } from '@/features/workflow/domain/workflow.types'
+import { ActionType, ApprovalType, WorkItemStatus, WorkItemType } from '@prisma/client'
+import type { CurrentUser } from '@/shared/auth/current-user'
+import type { WorkflowResult } from '@/features/workflow/domain/workflow.types'
 import { getProposalFirstApprover, canUserSubmit } from '@/features/workflow/domain/workflow.rules'
+import { toPermissionUser } from '@/features/works/domain/work-permission-user.mapper'
 import { findWorkForUpdateById, updateWorkItem } from '@/features/works/infrastructure/work.repository'
 import { isCompanyLevel } from '@/features/users/domain/role.rules'
 import {
@@ -10,9 +12,10 @@ import {
 
 export async function submitProposal(
   workItemId: number,
-  user: UserSession,
+  user: CurrentUser,
   comment?: string,
 ): Promise<WorkflowResult> {
+  const permUser = toPermissionUser(user)
   const workItem = await findWorkForUpdateById(workItemId)
   if (!workItem) {
     return { success: false, error: '事项不存在' }
@@ -46,16 +49,16 @@ export async function submitProposal(
     await createWorkflowRecord({
       workItemId,
       actionType: 'submit',
-      operatorId: user.userId,
-      operatorRole: user.role,
+      operatorId: user.id,
+      operatorRole: permUser.role,
       statusBefore: oldStatus,
       statusAfter: updated.status,
       comment: comment || '提交待办分解',
     })
     await createOperationLog({
-      userId: user.userId,
-      userName: user.userName,
-      userRole: user.role,
+      userId: user.id,
+      userName: user.name,
+      userRole: permUser.role,
       operationType: 'submit',
       module: 'workflow',
       description: `提交事项: ${workItem.title}`,
@@ -73,7 +76,7 @@ export async function submitProposal(
     approvalType: ApprovalType.PROPOSE,
     currentApproverId: approver.currentApproverId,
     currentApproverRole: approver.currentApproverRole,
-    firstSubmitterId: workItem.firstSubmitterId ?? user.userId,
+    firstSubmitterId: workItem.firstSubmitterId ?? user.id,
     rejectReason: null,
     rejectedFromStatus: null,
   })
@@ -81,16 +84,16 @@ export async function submitProposal(
   await createWorkflowRecord({
     workItemId,
     actionType: 'submit',
-    operatorId: user.userId,
-    operatorRole: user.role,
+    operatorId: user.id,
+    operatorRole: permUser.role,
     statusBefore: oldStatus,
     statusAfter: updated.status,
     comment: comment || '提交审批',
   })
   await createOperationLog({
-    userId: user.userId,
-    userName: user.userName,
-    userRole: user.role,
+    userId: user.id,
+    userName: user.name,
+    userRole: permUser.role,
     operationType: 'submit',
     module: 'workflow',
     description: `提交事项: ${workItem.title}`,

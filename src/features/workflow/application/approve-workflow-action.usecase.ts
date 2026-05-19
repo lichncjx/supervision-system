@@ -1,6 +1,8 @@
 import { APPROVAL_TARGET_STATUS } from '@/features/workflow/domain/workflow.constants'
-import { toPermissionUser, isApprovalStatus } from '@/features/workflow/domain/workflow.rules'
-import type { UserSession, WorkflowResult } from '@/features/workflow/domain/workflow.types'
+import { isApprovalStatus } from '@/features/workflow/domain/workflow.rules'
+import { toPermissionUser } from '@/features/works/domain/work-permission-user.mapper'
+import type { CurrentUser } from '@/shared/auth/current-user'
+import type { WorkflowResult } from '@/features/workflow/domain/workflow.types'
 import { canApproveWorkItem } from '@/features/works/domain/work.permissions'
 import { isCompanyLevel } from '@/features/users/domain/role.rules'
 import { getNextApprovalAssignment } from './workflow-assignment.service'
@@ -12,10 +14,11 @@ import {
 
 export async function approveWorkflowAction(
   workItemId: number,
-  user: UserSession,
+  user: CurrentUser,
   comment?: string,
   nextApproverId?: number | null,
 ): Promise<WorkflowResult> {
+  const permUser = toPermissionUser(user)
   const workItem = await findWorkForUpdateById(workItemId)
   if (!workItem) {
     return { success: false, error: '事项不存在' }
@@ -25,7 +28,7 @@ export async function approveWorkflowAction(
     return { success: false, error: '当前状态不允许审批' }
   }
 
-  if (!canApproveWorkItem(toPermissionUser(user), workItem)) {
+  if (!canApproveWorkItem(permUser, workItem)) {
     return { success: false, error: '无权审批该事项' }
   }
 
@@ -49,16 +52,16 @@ export async function approveWorkflowAction(
     await createWorkflowRecord({
       workItemId,
       actionType: 'approve',
-      operatorId: user.userId,
-      operatorRole: user.role,
+      operatorId: user.id,
+      operatorRole: permUser.role,
       statusBefore: oldStatus,
       statusAfter: updated.status,
       comment: comment || '审批通过，流转至下一节点',
     })
     await createOperationLog({
-      userId: user.userId,
-      userName: user.userName,
-      userRole: user.role,
+      userId: user.id,
+      userName: user.name,
+      userRole: permUser.role,
       operationType: 'approve',
       module: 'workflow',
       description: `审批通过: ${workItem.title}`,
@@ -75,22 +78,22 @@ export async function approveWorkflowAction(
     approvalType: null,
     currentApproverId: null,
     currentApproverRole: null,
-    ...(isCompanyLevel(user.role) ? { approvalLeaderId: user.userId } : {}),
+    ...(isCompanyLevel(user.role) ? { approvalLeaderId: user.id } : {}),
   })
 
   await createWorkflowRecord({
     workItemId,
     actionType: 'approve',
-    operatorId: user.userId,
-    operatorRole: user.role,
+    operatorId: user.id,
+    operatorRole: permUser.role,
     statusBefore: oldStatus,
     statusAfter: updated.status,
     comment: comment || '审批通过',
   })
   await createOperationLog({
-    userId: user.userId,
-    userName: user.userName,
-    userRole: user.role,
+    userId: user.id,
+    userName: user.name,
+    userRole: permUser.role,
     operationType: 'approve',
     module: 'workflow',
     description: `审批通过: ${workItem.title}`,

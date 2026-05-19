@@ -4,8 +4,8 @@ import {
   canViewWorkItem,
   canApproveWorkItem,
   shouldHandleWorkItem,
-  type PermissionUser,
 } from '@/features/works/domain/work.permissions'
+import { toPermissionUser } from '@/features/works/domain/work-permission-user.mapper'
 import { buildWorkVisibilityWhere } from '@/shared/db/work-visibility-builder'
 import {
   normalizeLimit,
@@ -31,7 +31,7 @@ export async function getDashboardDataUseCase(
   const { currentUser, options = {} } = input
   const limit = normalizeLimit(options.limit)
 
-  const permUser = currentUser as unknown as PermissionUser
+  const permUser = toPermissionUser(currentUser)
   const whereClause = await buildWorkVisibilityWhere(currentUser)
   const allRelevantWorks = await findDashboardWorks(whereClause)
 

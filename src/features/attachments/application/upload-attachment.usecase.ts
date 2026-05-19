@@ -1,5 +1,5 @@
 import type { CurrentUser } from '@/shared/auth/current-user'
-import type { Role } from '@prisma/client'
+import type { AttachmentApiDto } from '@/features/attachments/shared/attachment-api.types'
 
 export interface UploadAttachmentInput {
   currentUser: CurrentUser
@@ -14,14 +14,7 @@ export interface UploadAttachmentInput {
 export type UploadAttachmentResult =
   | {
       kind: 'ok'
-      attachment: {
-        id: number
-        fileName: string
-        fileSize: number
-        fileType: string
-        category: string
-        uploadedAt: Date
-      }
+      attachment: AttachmentApiDto
     }
   | { kind: 'error'; status: number; message: string }
 import {
@@ -35,6 +28,7 @@ import {
   createAttachmentLog,
 } from '@/features/attachments/infrastructure/attachment.repository'
 import { saveUploadedFile } from '@/features/attachments/infrastructure/local-file-storage'
+import { toPermissionUser } from '@/features/works/domain/work-permission-user.mapper'
 
 export async function uploadAttachmentUseCase(
   input: UploadAttachmentInput,
@@ -59,7 +53,7 @@ export async function uploadAttachmentUseCase(
     type: workItem.type,
   }
 
-  const permUser = { ...currentUser, role: currentUser.role as Role }
+  const permUser = toPermissionUser(currentUser)
 
   if (!canViewAttachment(permUser, permWorkItem)) {
     return { kind: 'error', status: 403, message: '无权查看该事项' }
@@ -105,7 +99,9 @@ export async function uploadAttachmentUseCase(
       fileSize: attachment.fileSize,
       fileType: attachment.fileType,
       category: attachment.category,
-      uploadedAt: attachment.uploadedAt,
+      uploadedAt: attachment.uploadedAt.toISOString(),
+      userId: currentUser.id,
+      userName: currentUser.name,
     },
   }
 }

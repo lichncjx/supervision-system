@@ -1,19 +1,20 @@
 import {
   canViewWorkItem,
   canOperateWorkItem,
+  type PermissionUser,
 } from '@/features/works/domain/work.permissions'
 import { isGlobalView } from '@/features/users/domain/role.rules'
-import type { AttPermUser, AttPermWorkItem, AttPermAttachment } from './attachment.types'
+import type { AttPermWorkItem, AttPermAttachment } from './attachment.types'
 
 export function canViewAttachment(
-  user: AttPermUser,
+  user: PermissionUser,
   workItem: AttPermWorkItem,
 ): boolean {
   return canViewWorkItem(user, workItem)
 }
 
 export function canUploadAttachment(
-  user: AttPermUser,
+  user: PermissionUser,
   workItem: AttPermWorkItem,
 ): boolean {
   if (isGlobalView(user.role)) return true
@@ -30,7 +31,7 @@ export function canUploadAttachment(
 }
 
 export function canDeleteAttachment(
-  user: AttPermUser,
+  user: PermissionUser,
   workItem: AttPermWorkItem,
   attachment: AttPermAttachment,
 ): boolean {

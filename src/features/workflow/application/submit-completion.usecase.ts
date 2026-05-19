@@ -1,11 +1,13 @@
 import { ActionType, ApprovalType, WorkItemStatus, WorkItemType } from '@prisma/client'
-import type { UserSession, WorkflowResult } from '@/features/workflow/domain/workflow.types'
+import type { CurrentUser } from '@/shared/auth/current-user'
+import type { WorkflowResult } from '@/features/workflow/domain/workflow.types'
 import {
   canUserOperate,
   companyLeaderAssignment,
   ensureMainResponsibleDepartment,
   getProcessFirstApprover,
 } from '@/features/workflow/domain/workflow.rules'
+import { toPermissionUser } from '@/features/works/domain/work-permission-user.mapper'
 import { findWorkForUpdateById, updateWorkItem } from '@/features/works/infrastructure/work.repository'
 import {
   createWorkflowRecord,
@@ -14,10 +16,11 @@ import {
 
 export async function submitCompletion(
   workItemId: number,
-  user: UserSession,
+  user: CurrentUser,
   proof: string,
   comment?: string,
 ): Promise<WorkflowResult> {
+  const permUser = toPermissionUser(user)
   const workItem = await findWorkForUpdateById(workItemId)
   if (!workItem) {
     return { success: false, error: '事项不存在' }
@@ -56,16 +59,16 @@ export async function submitCompletion(
   await createWorkflowRecord({
     workItemId,
     actionType: 'evidence',
-    operatorId: user.userId,
-    operatorRole: user.role,
+    operatorId: user.id,
+    operatorRole: permUser.role,
     statusBefore: oldStatus,
     statusAfter: updated.status,
     comment: comment || '提交完成申请',
   })
   await createOperationLog({
-    userId: user.userId,
-    userName: user.userName,
-    userRole: user.role,
+    userId: user.id,
+    userName: user.name,
+    userRole: permUser.role,
     operationType: 'evidence',
     module: 'workflow',
     description: `提交完成申请: ${workItem.title}`,

@@ -1,5 +1,4 @@
 import type { CurrentUser } from '@/shared/auth/current-user'
-import type { Role } from '@prisma/client'
 import { canViewAttachment } from '@/features/attachments/domain/attachment.permissions'
 import type { AttPermWorkItem } from '@/features/attachments/domain/attachment.types'
 import { findAttachmentWithWorkItem } from '@/features/attachments/infrastructure/attachment.repository'
@@ -8,6 +7,7 @@ import {
   attachmentFilePathExists,
 } from '@/features/attachments/infrastructure/local-file-storage'
 import { getContentType } from '@/features/attachments/domain/attachment.rules'
+import { toPermissionUser } from '@/features/works/domain/work-permission-user.mapper'
 
 export interface DownloadAttachmentInput {
   currentUser: CurrentUser
@@ -47,7 +47,7 @@ export async function downloadAttachmentUseCase(
       type: attachment.workItem.type,
     }
 
-    const permUser = { ...currentUser, role: currentUser.role as Role }
+    const permUser = toPermissionUser(currentUser)
 
     if (!canViewAttachment(permUser, permWorkItem)) {
       return { kind: 'error', status: 403, message: '无权查看该附件' }

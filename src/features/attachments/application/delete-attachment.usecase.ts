@@ -1,5 +1,4 @@
 import type { CurrentUser } from '@/shared/auth/current-user'
-import type { Role } from '@prisma/client'
 import { canDeleteAttachment } from '@/features/attachments/domain/attachment.permissions'
 import type { AttPermWorkItem, AttPermAttachment } from '@/features/attachments/domain/attachment.types'
 import {
@@ -8,6 +7,7 @@ import {
   createAttachmentLog,
 } from '@/features/attachments/infrastructure/attachment.repository'
 import { deleteAttachmentFileIfExists } from '@/features/attachments/infrastructure/local-file-storage'
+import { toPermissionUser } from '@/features/works/domain/work-permission-user.mapper'
 
 export interface DeleteAttachmentInput {
   currentUser: CurrentUser
@@ -47,7 +47,7 @@ export async function deleteAttachmentUseCase(
       userId: attachment.userId,
     }
 
-    const permUser = { ...currentUser, role: currentUser.role as Role }
+    const permUser = toPermissionUser(currentUser)
     canDelete = canDeleteAttachment(
       permUser,
       permWorkItem,

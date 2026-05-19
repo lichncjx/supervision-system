@@ -1,84 +1,56 @@
 import type { BaseCurrentUser } from '@/shared/auth/current-user'
 import { WorkItemType, WorkItemStatus } from '@prisma/client'
 import type { Prisma } from '@prisma/client'
-import { canViewWorkItem, shouldHandleWorkItem, canApproveWorkItem } from '@/features/works/domain/work.permissions'
-import type { PermissionUser } from '@/features/works/domain/work.permissions'
-import { isGlobalView } from '@/features/users/domain/role.rules'
 import {
-  findManyWorks,
-  type WorkListRow,
-} from '@/features/works/infrastructure/work.repository'
+  canViewWorkItem,
+  shouldHandleWorkItem,
+  canApproveWorkItem,
+} from '@/features/works/domain/work.permissions'
+import type { PermissionUser } from '@/features/works/domain/work.permissions'
+import { toPermissionUser } from '@/features/works/domain/work-permission-user.mapper'
+import { isGlobalView } from '@/features/users/domain/role.rules'
+import { findManyWorks, type WorkListRow } from '@/features/works/infrastructure/work.repository'
 import { buildWorkVisibilityWhere } from '@/shared/db/work-visibility-builder'
-import { formatDate } from '@/shared/utils/date'
-import { processNodesForDisplay, processAdjustHistory } from '@/features/works/application/work-display.utils'
+import { toWorkApiDto } from '@/features/works/application/work-api.mapper'
+import type { WorkApiDto } from '@/features/works/shared/work-api.types'
 
 // ── Types ──
 
 export interface QueryWorksParams {
-  type: string | null;
-  status: string | null;
-  departmentId: string | null;
-  keyword: string | null;
+  type: string | null
+  status: string | null
+  departmentId: string | null
+  keyword: string | null
 }
 
-export type StatusFilter = { kind: 'where'; where: Prisma.WorkItemWhereInput; } |
-{ kind: 'post'; where: Prisma.WorkItemWhereInput; postFilter: 'handling' | 'overdue' | 'expiring' | 'approving'; };
+export type StatusFilter =
+  | { kind: 'where'; where: Prisma.WorkItemWhereInput }
+  | {
+      kind: 'post'
+      where: Prisma.WorkItemWhereInput
+      postFilter: 'handling' | 'overdue' | 'expiring' | 'approving'
+    }
 
 export interface QueryWorksInput {
   currentUser: BaseCurrentUser
   params: QueryWorksParams
 }
 
-interface WorkListItemDto {
-  id: number;
-  title: string;
-  type: string;
-  status: string;
-  departmentId: number | null
-  cooperators: unknown
-  departmentName: string
-  creatorId: number | null
-  creatorName: string
-  creatorRole: string
-  workItem: string | null
-  workNode: string | null
-  businessCategory: string | null
-  completeTime: string | null
-  completeForm: string | null
-  isInnovation: boolean | null
-  responsibleLeader: string | null
-  responsiblePerson: string | null
-  responsibleLeaderMemberId: number | null
-  responsiblePersonMemberId: number | null
-  proposedLeader: string | null
-  proposedLeaderId: number | null
-  proposedScene: string | null
-  formedTime: string | null
-  workPlan: string | null
-  planCompleteTime: string | null
-  progress: string | null
-  action: string | null
-  approvalLeaderId: number | null
-  currentApproverId: number | null
-  currentApproverRole: string | null
-  firstSubmitterId: number | null
-  rejectReason: string | null
-  rejectedFromStatus: string | null
-  beforeApprovalStatus: string | null
-  approvalType: string | null
-  nodes: unknown
-  adjustHistory: unknown
-  createdAt: string
-  updatedAt: string
-}
-
 // ── Constants ──
 
-const APPROVING_STATUSES = [WorkItemStatus.PROPOSING, WorkItemStatus.ADJUSTING, WorkItemStatus.CANCELLING, WorkItemStatus.COMPLETING]
-const ON_GOING_STATUSES = [WorkItemStatus.DRAFT, WorkItemStatus.PENDING_DECOMPOSE, WorkItemStatus.IN_PROGRESS]
+const APPROVING_STATUSES = [
+  WorkItemStatus.PROPOSING,
+  WorkItemStatus.ADJUSTING,
+  WorkItemStatus.CANCELLING,
+  WorkItemStatus.COMPLETING,
+]
+const ON_GOING_STATUSES = [
+  WorkItemStatus.DRAFT,
+  WorkItemStatus.PENDING_DECOMPOSE,
+  WorkItemStatus.IN_PROGRESS,
+]
 const TERMINAL_STATUSES: WorkItemStatus[] = [WorkItemStatus.COMPLETED, WorkItemStatus.CANCELLED]
 const EXPIRING_DAYS = 7
-const TYPE_LABEL: Record<string, string> = { PRIORITY: '重点', MAIN: '主要', TODO: '待办' }
 
 // ── Parsers ──
 
@@ -98,13 +70,31 @@ function parseWorkStatusFilter(raw: string | null): StatusFilter | null {
   const lower = normalized.toLowerCase()
 
   // 特殊 where 条件（比纯 status 复杂）
-  if (lower === 'draft') return { kind: 'where', where: { status: WorkItemStatus.DRAFT, rejectReason: null, rejectedFromStatus: null } }
-  if (lower === 'returneddraft' || lower === 'returned_draft') return { kind: 'where', where: { status: WorkItemStatus.DRAFT, OR: [{ rejectReason: { not: null } }, { rejectedFromStatus: { not: null } }] } }
+  if (lower === 'draft')
+    return {
+      kind: 'where',
+      where: { status: WorkItemStatus.DRAFT, rejectReason: null, rejectedFromStatus: null },
+    }
+  if (lower === 'returneddraft' || lower === 'returned_draft')
+    return {
+      kind: 'where',
+      where: {
+        status: WorkItemStatus.DRAFT,
+        OR: [{ rejectReason: { not: null } }, { rejectedFromStatus: { not: null } }],
+      },
+    }
 
   // Post 过滤
-  if (lower === 'handling') return { kind: 'post', where: { status: { in: ON_GOING_STATUSES } }, postFilter: 'handling' }
-  if (lower === 'approving') return { kind: 'post', where: { status: { in: APPROVING_STATUSES } }, postFilter: 'approving' }
-  if (lower === 'overdue' || lower === 'expiring') return { kind: 'post', where: { status: { notIn: TERMINAL_STATUSES } }, postFilter: lower as 'overdue' | 'expiring' }
+  if (lower === 'handling')
+    return { kind: 'post', where: { status: { in: ON_GOING_STATUSES } }, postFilter: 'handling' }
+  if (lower === 'approving')
+    return { kind: 'post', where: { status: { in: APPROVING_STATUSES } }, postFilter: 'approving' }
+  if (lower === 'overdue' || lower === 'expiring')
+    return {
+      kind: 'post',
+      where: { status: { notIn: TERMINAL_STATUSES } },
+      postFilter: lower as 'overdue' | 'expiring',
+    }
 
   // camelCase → UPPER_SNAKE_CASE（inProgress → IN_PROGRESS, pendingDecompose → PENDING_DECOMPOSE）
   const upper = normalized.replace(/([a-z])([A-Z])/g, '$1_$2').toUpperCase()
@@ -118,61 +108,11 @@ function parseWorkStatusFilter(raw: string | null): StatusFilter | null {
 
 // ── Private helpers ──
 
-function parseJsonField<T>(value: unknown, fallback: T): T {
-  if (!value) return fallback
-  if (typeof value !== 'string') return value as T
-  try { return JSON.parse(value) as T } catch { return fallback }
+function toWorkListItems(works: WorkListRow[]): WorkApiDto[] {
+  return works.map(toWorkApiDto)
 }
 
-function toWorkListItem(work: WorkListRow): WorkListItemDto {
-  return {
-    id: work.id, title: work.title,
-    type: TYPE_LABEL[work.type] || work.type,
-    status: work.status, departmentId: work.departmentId,
-    cooperators: work.cooperators,
-    departmentName: work.department?.name || '-',
-    creatorId: work.creatorId,
-    creatorName: work.creator?.name || '-',
-    creatorRole: work.creator?.role || '-',
-    workItem: work.workItem, workNode: work.workNode,
-    businessCategory: work.businessCategory,
-    completeTime: formatDate(work.completeTime),
-    completeForm: work.completeForm,
-    isInnovation: work.isInnovation,
-    responsibleLeader: work.responsibleLeader,
-    responsiblePerson: work.responsiblePerson,
-    responsibleLeaderMemberId: work.responsibleLeaderMemberId,
-    responsiblePersonMemberId: work.responsiblePersonMemberId,
-    proposedLeader: work.proposedLeader?.name || null,
-    proposedLeaderId: work.proposedLeaderId,
-    proposedScene: work.proposedScene,
-    formedTime: formatDate(work.formedTime),
-    workPlan: work.workPlan,
-    planCompleteTime: formatDate(work.planCompleteTime),
-    progress: work.progress, action: work.action,
-    approvalLeaderId: work.approvalLeaderId,
-    currentApproverId: work.currentApproverId,
-    currentApproverRole: work.currentApproverRole,
-    firstSubmitterId: work.firstSubmitterId,
-    rejectReason: work.rejectReason,
-    rejectedFromStatus: work.rejectedFromStatus,
-    beforeApprovalStatus: work.beforeApprovalStatus,
-    approvalType: work.approvalType,
-    nodes: processNodesForDisplay(parseJsonField(work.nodes, [])),
-    adjustHistory: processAdjustHistory(parseJsonField(work.adjustHistory, [])),
-    createdAt: work.createdAt.toISOString(),
-    updatedAt: work.updatedAt.toISOString(),
-  }
-}
-
-function toWorkListItems(works: WorkListRow[]): WorkListItemDto[] {
-  return works.map(toWorkListItem)
-}
-
-function getDueDate(work: {
-  type: WorkItemType
-  planCompleteTime: Date | null
-}) {
+function getDueDate(work: { type: WorkItemType; planCompleteTime: Date | null }) {
   return work.planCompleteTime
 }
 
@@ -218,10 +158,8 @@ function applyPostFilter(
       return isGlobalViewer || shouldHandleWorkItem(currentUser, work)
     if (statusFilter.postFilter === 'approving')
       return isGlobalViewer || canApproveWorkItem(currentUser, work)
-    if (statusFilter.postFilter === 'overdue')
-      return isOverdueWork(work, today)
-    if (statusFilter.postFilter === 'expiring')
-      return isExpiringWork(work, today)
+    if (statusFilter.postFilter === 'overdue') return isOverdueWork(work, today)
+    if (statusFilter.postFilter === 'expiring') return isExpiringWork(work, today)
     return true
   })
 }
@@ -233,9 +171,7 @@ async function buildWorksWhere(
   const workType = parseWorkType(params.type)
   const statusFilter = parseWorkStatusFilter(params.status)
 
-  const filters: Prisma.WorkItemWhereInput[] = [
-    await buildWorkVisibilityWhere(currentUser),
-  ]
+  const filters: Prisma.WorkItemWhereInput[] = [await buildWorkVisibilityWhere(currentUser)]
 
   if (workType) {
     filters.push({ type: workType })
@@ -271,7 +207,7 @@ async function buildWorksWhere(
 /** 查询事项列表：SQL 粗筛 → 权限/状态后过滤 → 转 DTO */
 export async function queryWorksUseCase(input: QueryWorksInput) {
   const { currentUser, params } = input
-  const permUser = currentUser as PermissionUser
+  const permUser = toPermissionUser(currentUser)
 
   // 构建 WHERE（可见性 + 类型/状态/部门/关键词），同时解析 statusFilter 供后过滤用
   const { where, statusFilter } = await buildWorksWhere(params, permUser)
@@ -280,9 +216,7 @@ export async function queryWorksUseCase(input: QueryWorksInput) {
   const works = await findManyWorks(where)
 
   // 权限后过滤（兜底，与 WHERE 可见性逻辑一致）
-  const viewableWorks = works.filter((work) =>
-    canViewWorkItem(permUser, work),
-  )
+  const viewableWorks = works.filter((work) => canViewWorkItem(permUser, work))
 
   // 状态后过滤（handling/approving/overdue/expiring 需应用层判断）
   const filteredWorks = applyPostFilter(viewableWorks, statusFilter, permUser)

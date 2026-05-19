@@ -1,11 +1,4 @@
-import type { Role } from '@prisma/client'
 import type { PermissionWorkItem } from '@/features/works/domain/work.permissions'
-
-export interface AttPermUser {
-  id: number
-  role: Role
-  departmentId: number
-}
 
 export interface AttPermWorkItem extends PermissionWorkItem {
   departmentId: number | null

@@ -1,5 +1,4 @@
 import {
-  Prisma,
   Role,
   type User,
   WorkItemStatus,

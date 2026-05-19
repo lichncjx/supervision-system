@@ -23,7 +23,7 @@ import {
   getCooperatorDepartmentIds,
   getResponsibleDepartmentIds,
 } from '@/features/works/domain/work.permissions'
-import type { PermissionUser } from '@/features/works/domain/work.permissions'
+import { toPermissionUser } from '@/features/works/domain/work-permission-user.mapper'
 import { buildWorkVisibilityWhere } from '@/shared/db/work-visibility-builder'
 import {
   findWorksForExport,
@@ -156,7 +156,7 @@ export async function exportWorksToExcelUseCase(
   const departmentIdFilter = departmentId ? Number(departmentId) : null
   const keywordFilter = keyword?.trim() || null
 
-  const permUser = currentUser as unknown as PermissionUser
+  const permUser = toPermissionUser(currentUser)
 
   const workItems = await findWorksForExport(
     await buildWorkVisibilityWhere(currentUser),

@@ -9,45 +9,10 @@ import {
   validateMemberAssignments,
   type MemberAssignment,
 } from '@/features/members/domain/member.rules'
-interface CreateWorkResponseDto { id: number; title: string; type: string; departmentId: number | null; cooperators: unknown; departmentName: string; proposedLeader: string | null; proposedLeaderId: number | null; status: string; createdAt: string; updatedAt: string }
+import { toWorkApiDto } from '@/features/works/application/work-api.mapper'
+import type { CreateWorkRequestDto, WorkApiDto } from '@/features/works/shared/work-api.types'
 
-function toCreateWorkResponse(work: any): CreateWorkResponseDto {
-  return {
-    id: work.id, title: work.title,
-    type: work.type === 'PRIORITY' ? '重点' : work.type === 'MAIN' ? '主要' : '待办',
-    departmentId: work.departmentId, cooperators: work.cooperators,
-    departmentName: work.department?.name || '-',
-    proposedLeader: work.proposedLeader?.name || null,
-    proposedLeaderId: work.proposedLeaderId,
-    status: work.status,
-    createdAt: work.createdAt.toISOString(),
-    updatedAt: work.updatedAt.toISOString(),
-  }
-}
-
-export interface CreateWorkBody {
-  type: string
-  departmentId: number
-  title?: string
-  workItem?: string
-  workNode?: string
-  businessCategory?: string
-  completeForm?: string
-  isInnovation?: boolean
-  responsibleLeader?: string
-  responsiblePerson?: string
-  responsibleLeaderMemberId?: number
-  responsiblePersonMemberId?: number
-  proposedLeaderId?: number
-  proposedScene?: string
-  formedTime?: string
-  cooperators?: unknown
-  workPlan?: string
-  planCompleteTime?: string
-  progress?: string
-  approvalLeaderId?: number
-  nodes?: unknown
-}
+export type CreateWorkBody = CreateWorkRequestDto
 
 export interface CreateWorkInput {
   currentUser: CurrentUser
@@ -56,10 +21,7 @@ export interface CreateWorkInput {
 
 const ROLES_CAN_CREATE_ALL: Role[] = [Role.ADMIN, Role.SUPERVISOR]
 const ROLES_CAN_CREATE_TODO_ONLY: Role[] = [Role.VICE_PRESIDENT, Role.PRESIDENT]
-const ROLES_CAN_CREATE_DEPT: Role[] = [
-  Role.DEPARTMENT_MANAGER,
-  Role.DEPARTMENT_LEADER,
-]
+const ROLES_CAN_CREATE_DEPT: Role[] = [Role.DEPARTMENT_MANAGER, Role.DEPARTMENT_LEADER]
 
 function convertToDateTime(dateStr: string | null | undefined): Date | null {
   if (!dateStr) return null
@@ -84,12 +46,10 @@ function processNodes(nodes: any[]) {
 }
 
 export type CreateWorkResult =
-  | { kind: 'ok'; data: ReturnType<typeof toCreateWorkResponse> }
+  | { kind: 'ok'; data: WorkApiDto }
   | { kind: 'error'; status: number; message: string }
 
-export async function createWorkUseCase(
-  input: CreateWorkInput,
-): Promise<CreateWorkResult> {
+export async function createWorkUseCase(input: CreateWorkInput): Promise<CreateWorkResult> {
   const { currentUser, body } = input
   const departmentId = body.departmentId
   const rest = body
@@ -151,10 +111,18 @@ export async function createWorkUseCase(
     const coopAssignments: MemberAssignment[] = []
     for (const c of cooperators) {
       if (c.leaderMemberId != null) {
-        coopAssignments.push({ memberId: c.leaderMemberId, role: 'leader', departmentId: c.departmentId })
+        coopAssignments.push({
+          memberId: c.leaderMemberId,
+          role: 'leader',
+          departmentId: c.departmentId,
+        })
       }
       if (c.personMemberId != null) {
-        coopAssignments.push({ memberId: c.personMemberId, role: 'person', departmentId: c.departmentId })
+        coopAssignments.push({
+          memberId: c.personMemberId,
+          role: 'person',
+          departmentId: c.departmentId,
+        })
       }
     }
     const coopErrors = await validateMemberAssignments(coopAssignments)
@@ -180,7 +148,11 @@ export async function createWorkUseCase(
     responsibleLeaderMemberId: rest.responsibleLeaderMemberId,
     responsiblePersonMemberId: rest.responsiblePersonMemberId,
     proposedLeaderId: rest.proposedLeaderId ? Number(rest.proposedLeaderId) : null,
-    approvalLeaderId: rest.approvalLeaderId ? Number(rest.approvalLeaderId) : rest.proposedLeaderId ? Number(rest.proposedLeaderId) : null,
+    approvalLeaderId: rest.approvalLeaderId
+      ? Number(rest.approvalLeaderId)
+      : rest.proposedLeaderId
+        ? Number(rest.proposedLeaderId)
+        : null,
     proposedScene: rest.proposedScene,
     formedTime: convertToDateTime(rest.formedTime),
     cooperators: rest.cooperators || undefined,
@@ -201,5 +173,5 @@ export async function createWorkUseCase(
     workTitle: work.title,
   })
 
-  return { kind: 'ok', data: toCreateWorkResponse(work) }
+  return { kind: 'ok', data: toWorkApiDto(work) }
 }
