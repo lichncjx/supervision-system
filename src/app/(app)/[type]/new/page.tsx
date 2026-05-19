@@ -9,7 +9,7 @@ import { isCompanyLevel } from '@/features/users/domain/role.rules';
 import { getCompanyLeaders } from '@/features/users/client/user-api';
 import { getDepartments } from '@/features/departments/client/department-api';
 import { addWork } from '@/features/works/client/work-api';
-import type { WorkType, WorkNode } from '@/features/works/domain/work-client.types';
+import type { WorkType, WorkNode } from '@/features/works/client/work-client.types';
 import { Button } from '@/components/ui/button';
 import { WorkFormShell } from '@/features/works/ui/work-form-shell';
 import { WorkFormSectionCard } from '@/features/works/ui/work-form-section-card';

@@ -2,7 +2,6 @@ import type { User } from '@/features/users/domain/user.types'
 import type { Work } from '@/features/works/client/work-view.types'
 import type { WorkStatus } from '@/features/works/domain/work-status'
 import { isReturnedDraftWork, isReturnedInProgressWork } from '@/features/works/domain/work-status.rules'
-import { isWorkRelatedToDepartment, isWorkMainResponsibleDepartment } from './work-filters'
 
 function isSelectedCompanyApprover(user: User, work: Work) {
   if (user.role === 'ADMIN' || user.role === 'SUPERVISOR') return false
@@ -75,7 +74,8 @@ export function canDecomposeTodoWork(
   if (work.type !== '待办') return false
   if (work.status !== 'pending_decompose') return false
   if (user.role !== 'DEPARTMENT_MANAGER' && user.role !== 'DEPARTMENT_LEADER') return false
-  return isWorkMainResponsibleDepartment(work, user.departmentId)
+  // 事项主责部门与用户部门匹配
+  return Number(work.departmentId) === Number(user.departmentId)
 }
 
 export function canHandleWork(
@@ -136,3 +136,13 @@ export function canApproveWork(
   }
   return false
 }
+
+/** 事项是否与指定部门有关联（主责 或 配合） */
+export function isWorkRelatedToDepartment(work: Work, departmentId: number) {
+  if (Number(work.departmentId) === departmentId) return true
+  if (Array.isArray(work.cooperators)) {
+    return work.cooperators.some((c) => Number(c.departmentId) === departmentId)
+  }
+  return false
+}
+

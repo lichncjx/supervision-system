@@ -13,7 +13,7 @@ import {
   getVisibleWorks,
 } from '@/features/works/client/work-api';
 import { sortWorksByDueDate } from '@/features/works/client/work-sort';
-import type { WorkStatusFilter, WorkType } from '@/features/works/domain/work-client.types';
+import type { WorkStatusFilter, WorkType } from '@/features/works/client/work-client.types';
 import type { Work } from '@/features/works/client/work-view.types';
 import { getDepartments } from '@/features/departments/client/department-api';
 import { isCompanyLevel, isGlobalView } from '@/features/users/domain/role.rules';
@@ -130,7 +130,7 @@ export default function StatusFilterPage() {
 
   React.useEffect(() => {
     const loadData = async () => {
-      const visibleForMonthOptions = await getVisibleWorks(user);
+      const visibleForMonthOptions = await getVisibleWorks();
       const newMonthOptions = Array.from(
         new Set(
           visibleForMonthOptions
@@ -203,7 +203,7 @@ export default function StatusFilterPage() {
           departments={departments}
           companyLevel={companyLevel}
           statusFilter={filter as WorkStatusFilter}
-          onStatusFilterChange={() => {}}
+          onStatusFilterChange={() => { }}
           typeFilter={typeFilter}
           onTypeFilterChange={(v) => setTypeFilter(v as WorkType | '全部')}
           hideStatusFilter

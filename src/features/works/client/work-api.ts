@@ -1,9 +1,7 @@
-import { isCompanyLevel, isDepartmentLevel } from '@/features/users/domain/role.rules'
 import type { User } from '@/features/users/domain/user.types'
-import type { WorkType, WorkQuery } from '@/features/works/domain/work-client.types'
+import type { WorkType, WorkQuery } from '@/features/works/client/work-client.types'
 import type { Work, WorkEditablePatch } from './work-view.types'
 import { sortWorksByDueDate } from './work-sort'
-import { isWorkRelatedToDepartment, isCompanyVisibleWork } from './work-filters'
 import { transformWorkFromAPI } from './work-view-model'
 
 export function transformWorkFromAPI_alias(work: any): Work {
@@ -21,21 +19,10 @@ export async function getWorks(): Promise<Work[]> {
   }
 }
 
-export async function getVisibleWorks(
-  user: User | null | undefined,
-  type?: WorkType,
-): Promise<Work[]> {
-  if (!user) return []
-
+export async function getVisibleWorks(type?: WorkType): Promise<Work[]> {
   let list = await getWorks()
   if (type)
     list = list.filter((w) => w.type === type)
-
-  if (isCompanyLevel(user.role)) {
-    list = list.filter((w) => isCompanyVisibleWork(w))
-  } else if (isDepartmentLevel(user.role)) {
-    list = list.filter((w) => isWorkRelatedToDepartment(w, user.departmentId))
-  }
 
   return sortWorksByDueDate(list)
 }

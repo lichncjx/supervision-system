@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { FIELD_LABEL, MUTED_TEXT, SELECT_CONTROL } from './visual-tokens';
 import { MemberSelect } from '@/features/members/client/member-select';
 import { Plus, Trash2 } from 'lucide-react';
-import type { Cooperator } from '@/features/works/domain/work-client.types';
+import type { Cooperator } from '@/features/works/client/work-client.types';
 
 export interface WorkFormCooperatorsProps {
   cooperators: Cooperator[];

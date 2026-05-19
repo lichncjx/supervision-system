@@ -1,4 +1,4 @@
-import type { WorkNode } from '@/features/works/domain/work-client.types';
+import type { WorkNode } from '@/features/works/client/work-client.types';
 
 export interface CreateWorkFormUser {
   role?: string;

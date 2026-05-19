@@ -1,5 +1,5 @@
 import { normalizeWorkStatus } from '@/features/works/domain/work-status.rules'
-import type { WorkType, ActionType } from '@/features/works/domain/work-client.types'
+import type { WorkType, ActionType } from '@/features/works/client/work-client.types'
 import type { Work } from './work-view.types'
 
 function normalizeAction(action: unknown): ActionType {
@@ -11,7 +11,7 @@ function normalizeAction(action: unknown): ActionType {
   return 'create'
 }
 
-function parseCooperators(value: unknown): import('@/features/works/domain/work-client.types').Cooperator[] {
+function parseCooperators(value: unknown): import('@/features/works/client/work-client.types').Cooperator[] {
   if (!Array.isArray(value)) return []
   return value
     .map((item: any) => ({
@@ -70,10 +70,10 @@ export function transformWorkFromAPI(work: any): Work {
     workPlan: work.workPlan,
     planCompleteTime: work.planCompleteTime,
     progress: work.progress,
-    rejectReason: work.rejectReason,
-    rejectedAt: work.rejectedAt,
+    rejectReason: work.rejectReason || undefined,
+    rejectedAt: work.rejectedAt || undefined,
     rejectedFrom: normalizeWorkStatus(work.rejectedFrom || work.rejectedFromStatus) || undefined,
-    rejectedFromStatus: normalizeWorkStatus(work.rejectedFromStatus) || null,
+    rejectedFromStatus: normalizeWorkStatus(work.rejectedFromStatus) || undefined,
     adjustReason: work.adjustReason,
     cancelReason: work.cancelReason,
     createdAt: work.createdAt,

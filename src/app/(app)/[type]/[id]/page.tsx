@@ -35,7 +35,7 @@ import {
   canApproveWork,
 } from '@/features/works/client/work-client-permissions';
 import { isWorkStatusTerminal, isReturnedDraftWork, isWorkStatusInProgress } from '@/features/works/domain/work-status.rules';
-import { isWorkRelatedToDepartment } from '@/features/works/client/work-filters';
+import { isWorkRelatedToDepartment } from '@/features/works/client/work-client-permissions';
 import { updateWork, deleteWork, resubmitRejectedWork } from '@/features/works/client/work-api';
 import {
   submitWork,
@@ -133,7 +133,7 @@ export default function WorkDetailPage() {
   const canDecomposeTodo = isAdmin || canDecomposeTodoWork(user, work);
   const canApprove = user ? canApproveWork(user, work) : false;
 
-  const isRelatedDept = isWorkRelatedToDepartment(work, user?.departmentId);
+  const isRelatedDept = user ? isWorkRelatedToDepartment(work, user.departmentId) : false;
   const canEdit = user && (
     isAdmin || isSupervisor ||
     ((user.role === 'DEPARTMENT_MANAGER' || user.role === 'DEPARTMENT_LEADER') &&
