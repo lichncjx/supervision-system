@@ -5,7 +5,7 @@ import {
   getWorkStatusBadgeClass,
   getWorkDisplayStatusLabel,
   getWorkStatusLabel,
-  isWorkStatusTerminal,
+  isTerminal,
   type ReturnedDraftLike,
 } from "@/features/works/domain/work-status.rules";
 
@@ -39,7 +39,7 @@ export function getTypeColor(type: string): string {
 
 // 时间颜色判断
 export function getDateColor(priorityDate: string | null, actualDate: string | null, status: string): string {
-  if (isWorkStatusTerminal(status)) {
+  if (isTerminal(status)) {
     return 'text-slate-500';
   }
 
@@ -88,9 +88,9 @@ interface DateBadgeProps {
 
 export function DateBadge({ date, status }: DateBadgeProps) {
   if (!date) return <span className="text-gray-400">-</span>;
-  
+
   const colorClass = getDateColor(date, null, status);
   const formattedDate = new Date(date).toLocaleDateString("zh-CN");
-  
+
   return <span className={colorClass}>{formattedDate}</span>;
 }

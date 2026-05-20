@@ -1,8 +1,8 @@
 import { NextResponse, NextRequest } from 'next/server'
 import { getCurrentUserOrAuthError } from '@/shared/auth/get-current-user-or-auth-error'
-import { Role } from '@prisma/client'
 import { queryMembersUseCase } from '@/features/members/application/query-members.usecase'
 import { createMemberUseCase } from '@/features/members/application/create-member.usecase'
+import { isAdmin } from '@/features/users/domain/role.rules'
 
 export async function GET(request: NextRequest) {
   try {
@@ -26,19 +26,19 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'isLeader 只能为 true 或 false' }, { status: 400 })
     }
 
-    const isAdmin = auth.user.role === Role.ADMIN
+    const isAdminUser = isAdmin(auth.user.role)
     const result = await queryMembersUseCase({
       departmentId,
       isLeader: isLeaderRaw === 'true' ? true : isLeaderRaw === 'false' ? false : undefined,
-      includeInactive: isAdmin && includeInactive === 'true',
+      includeInactive: isAdminUser && includeInactive === 'true',
     })
 
     // Non-admin callers only receive fields needed for form dropdowns.
-    const sanitized = isAdmin
+    const sanitized = isAdminUser
       ? result
       : result.map(({ id, name, departmentId, departmentName, isLeader }: any) => ({
-          id, name, departmentId, departmentName, isLeader,
-        }))
+        id, name, departmentId, departmentName, isLeader,
+      }))
 
     return NextResponse.json(sanitized)
   } catch (error) {
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
     const auth = await getCurrentUserOrAuthError(request)
     if (!auth.ok) return auth.response
 
-    if (auth.user.role !== Role.ADMIN) {
+    if (!isAdmin(auth.user.role)) {
       return NextResponse.json({ error: '权限不足' }, { status: 403 })
     }
 

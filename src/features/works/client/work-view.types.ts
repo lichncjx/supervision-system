@@ -5,9 +5,9 @@ import type {
   Cooperator,
   AdjustHistory,
   WorkStatusFilter,
-} from '@/features/works/domain/work-client.types'
+} from '@/features/works/client/work-client.types'
 import type { WorkStatus } from '@/features/works/domain/work-status'
-import type { Attachment } from '@/features/attachments/domain/attachment-client.types'
+import type { Attachment } from '@/features/attachments/client/attachment-client.types'
 
 export type WorkFilter = WorkStatusFilter
 
@@ -79,10 +79,10 @@ export interface Work {
   cancelReason?: string
   adjustNewTime?: string
   adjustTimeType?: 'planCompleteTime'
-  rejectReason?: string | null
+  rejectReason?: string
   rejectedAt?: string
   rejectedFrom?: WorkStatus
-  rejectedFromStatus?: WorkStatus | null
+  rejectedFromStatus?: WorkStatus
   rejectedBy?: string
   adjustHistory?: AdjustHistory[]
   pendingAdjustment?: WorkEditablePatch
@@ -96,33 +96,62 @@ export interface Work {
   updatedAt: string
 }
 
-export type WorkEditablePatch = Partial<
-  Pick<
-    Work,
-    | 'title'
-    | 'description'
-    | 'businessCategory'
-    | 'workItem'
-    | 'workNode'
-    | 'nodes'
-    | 'isInnovation'
-    | 'completeForm'
-    | 'departmentId'
-    | 'cooperators'
-    | 'responsibleLeader'
-    | 'responsibleLeaderMemberId'
-    | 'proposedLeader'
-    | 'proposedLeaderId'
-    | 'proposedLeaderRole'
-    | 'proposedScene'
-    | 'formedTime'
-    | 'responsiblePerson'
-    | 'responsiblePersonMemberId'
-    | 'workPlan'
-    | 'planCompleteTime'
-    | 'progress'
-    | 'approvalLeader'
-    | 'approvalLeaderId'
-    | 'approvalLeaderRole'
-  >
+type WorkEditablePatchBase = Pick<
+  Work,
+  | 'title'
+  | 'description'
+  | 'businessCategory'
+  | 'workItem'
+  | 'workNode'
+  | 'nodes'
+  | 'isInnovation'
+  | 'completeForm'
+  | 'departmentId'
+  | 'cooperators'
+  | 'responsibleLeader'
+  | 'responsibleLeaderMemberId'
+  | 'proposedLeader'
+  | 'proposedLeaderId'
+  | 'proposedLeaderRole'
+  | 'proposedScene'
+  | 'formedTime'
+  | 'responsiblePerson'
+  | 'responsiblePersonMemberId'
+  | 'workPlan'
+  | 'planCompleteTime'
+  | 'progress'
+  | 'approvalLeader'
+  | 'approvalLeaderId'
+  | 'approvalLeaderRole'
 >
+
+type NullableWorkTextField =
+  | 'description'
+  | 'businessCategory'
+  | 'workItem'
+  | 'workNode'
+  | 'completeForm'
+  | 'responsibleLeader'
+  | 'proposedLeader'
+  | 'proposedLeaderRole'
+  | 'proposedScene'
+  | 'formedTime'
+  | 'responsiblePerson'
+  | 'workPlan'
+  | 'planCompleteTime'
+  | 'progress'
+  | 'approvalLeader'
+  | 'approvalLeaderRole'
+
+type NullableWorkNumberField =
+  | 'departmentId'
+  | 'responsibleLeaderMemberId'
+  | 'responsiblePersonMemberId'
+  | 'proposedLeaderId'
+  | 'approvalLeaderId'
+
+export type WorkEditablePatch = Partial<
+  Omit<WorkEditablePatchBase, NullableWorkTextField | NullableWorkNumberField>
+> &
+  Partial<Record<NullableWorkTextField, string | null>> &
+  Partial<Record<NullableWorkNumberField, number | null>>

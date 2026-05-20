@@ -1,6 +1,8 @@
 import { ActionType, ApprovalType, WorkItemStatus } from '@prisma/client'
-import type { UserSession, WorkflowResult } from '@/features/workflow/domain/workflow.types'
-import { canUserOperate, ensureMainResponsibleDepartment, getProcessFirstApprover } from '@/features/workflow/domain/workflow.rules'
+import type { CurrentUser } from '@/shared/auth/current-user'
+import type { WorkflowResult } from '@/features/workflow/domain/workflow.types'
+import { canUserOperate, getProcessFirstApprover } from '@/features/workflow/domain/workflow.rules'
+import { toPermissionUser } from '@/features/works/domain/work-permission-user.mapper'
 import { findWorkForUpdateById, updateWorkItem } from '@/features/works/infrastructure/work.repository'
 import {
   createWorkflowRecord,
@@ -9,10 +11,11 @@ import {
 
 export async function submitAdjustment(
   workItemId: number,
-  user: UserSession,
+  user: CurrentUser,
   adjustReason: string,
   comment?: string,
 ): Promise<WorkflowResult> {
+  const permUser = toPermissionUser(user)
   const workItem = await findWorkForUpdateById(workItemId)
   if (!workItem) {
     return { success: false, error: '事项不存在' }
@@ -26,12 +29,12 @@ export async function submitAdjustment(
     return { success: false, error: '无权申请调整' }
   }
 
-  if (!ensureMainResponsibleDepartment(user, workItem)) {
-    return { success: false, error: '只有主责部门可以申请调整' }
-  }
-
   const oldStatus = workItem.status
   const approver = getProcessFirstApprover(workItem, user)
+  if (!approver) {
+    return { success: false, error: '请先指定公司领导后再提交审批' }
+  }
+
   const updated = await updateWorkItem(workItemId, {
     status: WorkItemStatus.ADJUSTING,
     action: ActionType.ADJUST,
@@ -47,16 +50,16 @@ export async function submitAdjustment(
   await createWorkflowRecord({
     workItemId,
     actionType: 'adjust',
-    operatorId: user.userId,
-    operatorRole: user.role,
+    operatorId: user.id,
+    operatorRole: permUser.role,
     statusBefore: oldStatus,
     statusAfter: updated.status,
     comment: comment || '申请调整',
   })
   await createOperationLog({
-    userId: user.userId,
-    userName: user.userName,
-    userRole: user.role,
+    userId: user.id,
+    userName: user.name,
+    userRole: permUser.role,
     operationType: 'adjust',
     module: 'workflow',
     description: `申请调整: ${workItem.title}`,

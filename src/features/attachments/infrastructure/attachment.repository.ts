@@ -11,7 +11,6 @@ const WORK_ITEM_FOR_UPLOAD_SELECT = {
   approvalLeaderId: true,
   currentApproverId: true,
   currentApproverRole: true,
-  needMainLeaderCancel: true,
   type: true,
 } as const
 
@@ -37,7 +36,6 @@ const ATTACHMENT_WITH_WORK_ITEM_INCLUDE = {
       approvalLeaderId: true,
       currentApproverId: true,
       currentApproverRole: true,
-      needMainLeaderCancel: true,
       type: true,
     },
   },

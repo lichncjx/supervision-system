@@ -3,11 +3,9 @@ import { getCurrentUserOrAuthError } from '@/shared/auth/get-current-user-or-aut
 import { getWorkDetailUseCase } from '@/features/works/application/get-work-detail.usecase'
 import { updateWorkUseCase } from '@/features/works/application/update-work.usecase'
 import { deleteWorkUseCase } from '@/features/works/application/delete-work.usecase'
+import type { UpdateWorkRequest } from '@/features/works/contract/work-api.types'
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const auth = await getCurrentUserOrAuthError(request)
     if (!auth.ok) return auth.response
@@ -37,10 +35,7 @@ export async function GET(
   }
 }
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const auth = await getCurrentUserOrAuthError(request)
     if (!auth.ok) return auth.response
@@ -53,15 +48,12 @@ export async function PUT(
       return NextResponse.json({ error: '无效的事项ID' }, { status: 400 })
     }
 
-    const body = await request.json()
+    const body = (await request.json()) as UpdateWorkRequest
 
     const result = await updateWorkUseCase({ currentUser, workId, body })
 
     if (result.kind === 'error') {
-      return NextResponse.json(
-        { error: result.message },
-        { status: result.status },
-      )
+      return NextResponse.json({ error: result.message }, { status: result.status })
     }
 
     return NextResponse.json(result.data)
@@ -90,10 +82,7 @@ export async function DELETE(
     const result = await deleteWorkUseCase({ currentUser, workId })
 
     if (result.kind === 'error') {
-      return NextResponse.json(
-        { error: result.message },
-        { status: result.status },
-      )
+      return NextResponse.json({ error: result.message }, { status: result.status })
     }
 
     return NextResponse.json(result.data)

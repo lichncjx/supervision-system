@@ -1,5 +1,5 @@
 import type { User } from '@/features/users/domain/user.types';
-import type { WorkNode, WorkType } from '@/features/works/domain/work-client.types';
+import type { WorkNode, WorkType } from '@/features/works/client/work-client.types';
 
 interface BuildCreateWorkPayloadParams {
   type: string;

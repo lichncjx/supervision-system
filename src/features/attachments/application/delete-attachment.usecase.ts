@@ -1,13 +1,12 @@
 import type { CurrentUser } from '@/shared/auth/current-user'
-import type { Role } from '@prisma/client'
 import { canDeleteAttachment } from '@/features/attachments/domain/attachment.permissions'
-import type { AttPermWorkItem, AttPermAttachment } from '@/features/attachments/domain/attachment.types'
 import {
   findAttachmentWithWorkItem,
   deleteAttachmentRecord,
   createAttachmentLog,
 } from '@/features/attachments/infrastructure/attachment.repository'
 import { deleteAttachmentFileIfExists } from '@/features/attachments/infrastructure/local-file-storage'
+import { toPermissionUser } from '@/features/works/domain/work-permission-user.mapper'
 
 export interface DeleteAttachmentInput {
   currentUser: CurrentUser
@@ -32,29 +31,11 @@ export async function deleteAttachmentUseCase(
   let canDelete = false
 
   if (attachment.workItem) {
-    const permWorkItem: AttPermWorkItem = {
-      departmentId: attachment.workItem.departmentId,
-      cooperators: attachment.workItem.cooperators,
-      status: attachment.workItem.status,
-      creatorId: attachment.workItem.creatorId,
-      proposedLeaderId: attachment.workItem.proposedLeaderId,
-      approvalLeaderId: attachment.workItem.approvalLeaderId,
-      currentApproverId: attachment.workItem.currentApproverId,
-      currentApproverRole: attachment.workItem.currentApproverRole,
-      needMainLeaderCancel: attachment.workItem.needMainLeaderCancel,
-      type: attachment.workItem.type,
-    }
-    const permAttachment: AttPermAttachment = {
-      userId: attachment.userId,
-    }
-
-    const permUser = { ...currentUser, role: currentUser.role as Role }
-    canDelete = canDeleteAttachment(
-      permUser,
-      permWorkItem,
-      permAttachment,
-    )
+    // Work-linked attachment deletion is limited to global roles or the uploader.
+    const permUser = toPermissionUser(currentUser)
+    canDelete = canDeleteAttachment(permUser, attachment.userId)
   } else {
+    // Orphan attachment records are legacy/unexpected data; keep deletion admin-only.
     canDelete = currentUser.role === 'ADMIN'
   }
 

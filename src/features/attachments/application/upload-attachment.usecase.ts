@@ -1,5 +1,5 @@
 import type { CurrentUser } from '@/shared/auth/current-user'
-import type { Role } from '@prisma/client'
+import type { AttachmentApiDto } from '@/features/attachments/contract/attachment-api.types'
 
 export interface UploadAttachmentInput {
   currentUser: CurrentUser
@@ -13,28 +13,21 @@ export interface UploadAttachmentInput {
 
 export type UploadAttachmentResult =
   | {
-      kind: 'ok'
-      attachment: {
-        id: number
-        fileName: string
-        fileSize: number
-        fileType: string
-        category: string
-        uploadedAt: Date
-      }
-    }
+    kind: 'ok'
+    attachment: AttachmentApiDto
+  }
   | { kind: 'error'; status: number; message: string }
 import {
   canViewAttachment,
   canUploadAttachment,
 } from '@/features/attachments/domain/attachment.permissions'
-import type { AttPermWorkItem } from '@/features/attachments/domain/attachment.types'
 import {
   findWorkItemForUpload,
   createAttachmentRecord,
   createAttachmentLog,
 } from '@/features/attachments/infrastructure/attachment.repository'
 import { saveUploadedFile } from '@/features/attachments/infrastructure/local-file-storage'
+import { toPermissionUser } from '@/features/works/domain/work-permission-user.mapper'
 
 export async function uploadAttachmentUseCase(
   input: UploadAttachmentInput,
@@ -47,33 +40,18 @@ export async function uploadAttachmentUseCase(
     return { kind: 'error', status: 404, message: '事项不存在' }
   }
 
-  const permWorkItem: AttPermWorkItem = {
-    departmentId: workItem.departmentId,
-    cooperators: workItem.cooperators,
-    status: workItem.status,
-    creatorId: workItem.creatorId,
-    proposedLeaderId: workItem.proposedLeaderId,
-    approvalLeaderId: workItem.approvalLeaderId,
-    currentApproverId: workItem.currentApproverId,
-    currentApproverRole: workItem.currentApproverRole,
-    needMainLeaderCancel: workItem.needMainLeaderCancel,
-    type: workItem.type,
-  }
+  // The repository selects exactly the work fields required by permission rules.
+  const permUser = toPermissionUser(currentUser)
 
-  const permUser = { ...currentUser, role: currentUser.role as Role }
-
-  if (!canViewAttachment(permUser, permWorkItem)) {
+  if (!canViewAttachment(permUser, workItem)) {
     return { kind: 'error', status: 403, message: '无权查看该事项' }
   }
 
-  if (!canUploadAttachment(permUser, permWorkItem)) {
-    return {
-      kind: 'error',
-      status: 403,
-      message: '无权上传该事项的附件',
-    }
+  if (!canUploadAttachment(permUser, workItem)) {
+    return { kind: 'error', status: 403, message: '无权上传该事项的附件' }
   }
 
+  // Permission checks must complete before writing the file to disk.
   const { relativePath } = await saveUploadedFile(fileBuffer, fileName)
 
   const now = new Date()
@@ -106,7 +84,9 @@ export async function uploadAttachmentUseCase(
       fileSize: attachment.fileSize,
       fileType: attachment.fileType,
       category: attachment.category,
-      uploadedAt: attachment.uploadedAt,
+      uploadedAt: attachment.uploadedAt.toISOString(),
+      userId: currentUser.id,
+      userName: currentUser.name,
     },
   }
 }

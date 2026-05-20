@@ -12,6 +12,10 @@ interface ApproveDialogProps {
   onConfirm: (comment?: string, nextApproverId?: number | null) => void;
   companyLeaders: Array<{ id: number; name: string; role: string }>;
   needsLeaderSelection: boolean;
+  leaderName?: string | null;
+  title?: string;
+  commentLabel?: string;
+  confirmLabel?: string;
 }
 
 export function ApproveDialog({
@@ -20,6 +24,10 @@ export function ApproveDialog({
   onConfirm,
   companyLeaders,
   needsLeaderSelection,
+  leaderName,
+  title = '审批通过',
+  commentLabel = '审批意见（可选）',
+  confirmLabel = '确认通过',
 }: ApproveDialogProps) {
   const [comment, setComment] = useState('');
   const [selectedLeaderId, setSelectedLeaderId] = useState('');
@@ -43,7 +51,7 @@ export function ApproveDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="rounded-xl border-slate-200/80">
         <DialogHeader>
-          <DialogTitle>审批通过</DialogTitle>
+          <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           {needsLeaderSelection && companyLeaders.length > 0 && (
@@ -63,9 +71,17 @@ export function ApproveDialog({
               </Select>
             </div>
           )}
+          {!needsLeaderSelection && leaderName && (
+            <div>
+              <label className="text-sm font-medium text-slate-700 mb-1 block">
+                公司主管领导
+              </label>
+              <p className="text-sm text-slate-900 py-2">{leaderName}</p>
+            </div>
+          )}
           <div>
             <label className="text-sm font-medium text-slate-700 mb-1 block">
-              审批意见（可选）
+              {commentLabel}
             </label>
             <Textarea
               value={comment}
@@ -84,7 +100,7 @@ export function ApproveDialog({
             onClick={handleConfirm}
             disabled={needsLeaderSelection && !selectedLeaderId}
           >
-            确认通过
+            {confirmLabel}
           </Button>
         </DialogFooter>
       </DialogContent>

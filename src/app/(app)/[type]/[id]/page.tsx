@@ -18,6 +18,7 @@ import { WorkAttachmentPanel } from '@/features/attachments/ui/work-attachment-p
 import { WorkCompletePanel } from '@/features/works/ui/work-complete-panel';
 import { WorkflowRecords } from '@/features/workflow/ui/workflow-records';
 import { WorkflowApprovalPanel } from '@/features/workflow/ui/workflow-approval-panel';
+import { ApproveDialog } from '@/features/workflow/ui/approve-dialog';
 import { WorkDraftEditPanel } from '@/features/works/ui/work-draft-edit-panel';
 import { WorkDisplayInfo } from '@/features/works/ui/work-display-info';
 import { WorkDecomposePanel } from '@/features/works/ui/work-decompose-panel';
@@ -34,8 +35,8 @@ import {
   canDecomposeTodoWork,
   canApproveWork,
 } from '@/features/works/client/work-client-permissions';
-import { isWorkStatusTerminal, isReturnedDraftWork, isWorkStatusInProgress } from '@/features/works/domain/work-status.rules';
-import { isWorkRelatedToDepartment } from '@/features/works/client/work-filters';
+import { isTerminal, isReturnedDraftWork, isInProgress } from '@/features/works/domain/work-status.rules';
+import { isWorkRelatedToDepartment } from '@/features/works/client/work-client-permissions';
 import { updateWork, deleteWork, resubmitRejectedWork } from '@/features/works/client/work-api';
 import {
   submitWork,
@@ -58,6 +59,7 @@ export default function WorkDetailPage() {
   const [adjustReason, setAdjustReason] = useState('');
   const [cancelReason, setCancelReason] = useState('');
   const [approvalLeaderId, setApprovalLeaderId] = useState('');
+  const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [isAdjustDialogOpen, setIsAdjustDialogOpen] = useState(false);
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
@@ -133,12 +135,12 @@ export default function WorkDetailPage() {
   const canDecomposeTodo = isAdmin || canDecomposeTodoWork(user, work);
   const canApprove = user ? canApproveWork(user, work) : false;
 
-  const isRelatedDept = isWorkRelatedToDepartment(work, user?.departmentId);
+  const isRelatedDept = user ? isWorkRelatedToDepartment(work, user.departmentId) : false;
   const canEdit = user && (
     isAdmin || isSupervisor ||
     ((user.role === 'DEPARTMENT_MANAGER' || user.role === 'DEPARTMENT_LEADER') &&
-      isRelatedDept && !isWorkStatusTerminal(work.status) && !isReturnedDraftWork(work)) ||
-    ((work.type === '重点' || work.type === '主要') && isRelatedDept && !isWorkStatusTerminal(work.status))
+      isRelatedDept && !isTerminal(work.status) && !isReturnedDraftWork(work)) ||
+    ((work.type === '重点' || work.type === '主要') && isRelatedDept && !isTerminal(work.status))
   );
   const canDeleteAttachment = (att: { userId: number }) =>
     isAdmin || isSupervisor || user?.id === att.userId;
@@ -211,8 +213,22 @@ export default function WorkDetailPage() {
 
   const handlePropose = async () => {
     if (!user) return;
+    if (
+      user.role === 'DEPARTMENT_LEADER' &&
+      !work.proposedLeaderId &&
+      !work.approvalLeaderId
+    ) {
+      setIsSubmitDialogOpen(true);
+      return;
+    }
+
+    await handleSubmitConfirm();
+  };
+
+  const handleSubmitConfirm = async (comment?: string, nextApproverId?: number | null) => {
+    if (!user) return;
     try {
-      await submitWork(work, user);
+      await submitWork(work, user, nextApproverId, comment);
       onRefresh();
       alert('已提交审批');
     } catch (error) {
@@ -504,7 +520,6 @@ export default function WorkDetailPage() {
                 </div>
                 <div className="flex-1">
                   <span className="text-sm font-semibold text-slate-800">当前为草稿状态，请提交审批</span>
-                  <p className="text-xs text-slate-500 mt-0.5">提交后将由系统按工作流规则自动分配审批节点；责任领导、责任人仅用于业务留痕。</p>
                 </div>
                 <Button onClick={handlePropose} className={`rounded-full ${theme.button} border-0`}>
                   提交审批
@@ -520,9 +535,21 @@ export default function WorkDetailPage() {
             companyLeaders={companyLeaders}
             needsLeaderSelection={
               !!user &&
-              (user.role === 'DEPARTMENT_LEADER' || user.role === 'DEPARTMENT_MANAGER') &&
-              !work?.proposedLeaderId
+              user.role === 'DEPARTMENT_LEADER' &&
+              !work?.proposedLeaderId &&
+              !work?.approvalLeaderId
             }
+            leaderName={work?.approvalLeader || work?.proposedLeader}
+          />
+          <ApproveDialog
+            open={isSubmitDialogOpen}
+            onOpenChange={setIsSubmitDialogOpen}
+            onConfirm={handleSubmitConfirm}
+            companyLeaders={companyLeaders}
+            needsLeaderSelection
+            title="提交审批"
+            commentLabel="提交说明（可选）"
+            confirmLabel="提交审批"
           />
           <WorkPendingAdjustmentPanel work={work} />
           <WorkflowRecords records={workflowRecords} />
@@ -569,7 +596,7 @@ export default function WorkDetailPage() {
             onSubmitDecomposition={handleDecompose}
           />
 
-          {isWorkStatusInProgress(work.status) && (
+          {isInProgress(work.status) && (
             <WorkCompletePanel
               proof={proof}
               onProofChange={setProof}
@@ -582,7 +609,7 @@ export default function WorkDetailPage() {
           )}
 
           <WorkSidebarActions
-            visible={isWorkStatusInProgress(work.status)}
+            visible={isInProgress(work.status)}
             onAdjust={() => {
               setEditForm(buildEditFormFromWork());
               setAdjustReason('');

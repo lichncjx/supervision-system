@@ -18,3 +18,14 @@ export async function findPresident() {
     select: { id: true },
   })
 }
+
+export async function findActiveCompanyLeaderById(userId: number) {
+  return prisma.user.findFirst({
+    where: {
+      id: userId,
+      role: { in: [Role.PRESIDENT, Role.VICE_PRESIDENT] },
+      isActive: true,
+    },
+    select: { id: true, role: true },
+  })
+}

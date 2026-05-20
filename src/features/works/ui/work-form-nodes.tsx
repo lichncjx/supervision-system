@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { FIELD_LABEL, ERROR_TEXT } from './visual-tokens';
 import { Plus, Trash2 } from 'lucide-react';
-import type { WorkNode } from '@/features/works/domain/work-client.types';
+import type { WorkNode } from '@/features/works/client/work-client.types';
 
 export interface WorkFormNodesProps {
   nodes: WorkNode[];
@@ -58,16 +58,16 @@ export function WorkFormNodes({
     onChange(nodes.map((node) =>
       node.id === nodeId
         ? {
-            ...node,
-            children: [
-              ...node.children,
-              {
-                id: Date.now(),
-                title: '',
-                completeTime: '',
-              },
-            ],
-          }
+          ...node,
+          children: [
+            ...node.children,
+            {
+              id: Date.now(),
+              title: '',
+              completeTime: '',
+            },
+          ],
+        }
         : node
     ));
   };
@@ -76,11 +76,11 @@ export function WorkFormNodes({
     onChange(nodes.map((node) =>
       node.id === nodeId
         ? {
-            ...node,
-            children: node.children.map((child) =>
-              child.id === subNodeId ? { ...child, title } : child
-            ),
-          }
+          ...node,
+          children: node.children.map((child) =>
+            child.id === subNodeId ? { ...child, title } : child
+          ),
+        }
         : node
     ));
   };
@@ -89,11 +89,11 @@ export function WorkFormNodes({
     onChange(nodes.map((node) =>
       node.id === nodeId
         ? {
-            ...node,
-            children: node.children.map((child) =>
-              child.id === subNodeId ? { ...child, completeTime } : child
-            ),
-          }
+          ...node,
+          children: node.children.map((child) =>
+            child.id === subNodeId ? { ...child, completeTime } : child
+          ),
+        }
         : node
     ));
   };
@@ -102,9 +102,9 @@ export function WorkFormNodes({
     onChange(nodes.map((node) =>
       node.id === nodeId
         ? {
-            ...node,
-            children: node.children.filter((child) => child.id !== subNodeId),
-          }
+          ...node,
+          children: node.children.filter((child) => child.id !== subNodeId),
+        }
         : node
     ));
   };

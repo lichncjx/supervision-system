@@ -1,5 +1,7 @@
-import { toPermissionUser, isApprovalStatus, rejectableBeforeStatus } from '@/features/workflow/domain/workflow.rules'
-import type { UserSession, WorkflowResult } from '@/features/workflow/domain/workflow.types'
+import { isApprovalStatus, rejectableBeforeStatus } from '@/features/workflow/domain/workflow.rules'
+import { toPermissionUser } from '@/features/works/domain/work-permission-user.mapper'
+import type { CurrentUser } from '@/shared/auth/current-user'
+import type { WorkflowResult } from '@/features/workflow/domain/workflow.types'
 import { canApproveWorkItem } from '@/features/works/domain/work.permissions'
 import { findWorkForUpdateById, updateWorkItem } from '@/features/works/infrastructure/work.repository'
 import {
@@ -9,9 +11,10 @@ import {
 
 export async function rejectWorkflowAction(
   workItemId: number,
-  user: UserSession,
+  user: CurrentUser,
   rejectReason: string,
 ): Promise<WorkflowResult> {
+  const permUser = toPermissionUser(user)
   const workItem = await findWorkForUpdateById(workItemId)
   if (!workItem) {
     return { success: false, error: '事项不存在' }
@@ -21,7 +24,7 @@ export async function rejectWorkflowAction(
     return { success: false, error: '当前状态不允许退回' }
   }
 
-  if (!canApproveWorkItem(toPermissionUser(user), workItem)) {
+  if (!canApproveWorkItem(permUser, workItem)) {
     return { success: false, error: '无权退回该事项' }
   }
 
@@ -44,16 +47,16 @@ export async function rejectWorkflowAction(
   await createWorkflowRecord({
     workItemId,
     actionType: 'reject',
-    operatorId: user.userId,
-    operatorRole: user.role,
+    operatorId: user.id,
+    operatorRole: permUser.role,
     statusBefore: oldStatus,
     statusAfter: updated.status,
     comment: rejectReason,
   })
   await createOperationLog({
-    userId: user.userId,
-    userName: user.userName,
-    userRole: user.role,
+    userId: user.id,
+    userName: user.name,
+    userRole: permUser.role,
     operationType: 'reject',
     module: 'workflow',
     description: `退回事项: ${workItem.title}`,

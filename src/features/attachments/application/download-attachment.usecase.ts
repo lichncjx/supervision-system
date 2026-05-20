@@ -1,13 +1,12 @@
 import type { CurrentUser } from '@/shared/auth/current-user'
-import type { Role } from '@prisma/client'
 import { canViewAttachment } from '@/features/attachments/domain/attachment.permissions'
-import type { AttPermWorkItem } from '@/features/attachments/domain/attachment.types'
 import { findAttachmentWithWorkItem } from '@/features/attachments/infrastructure/attachment.repository'
 import {
   readAttachmentFile,
   attachmentFilePathExists,
 } from '@/features/attachments/infrastructure/local-file-storage'
 import { getContentType } from '@/features/attachments/domain/attachment.rules'
+import { toPermissionUser } from '@/features/works/domain/work-permission-user.mapper'
 
 export interface DownloadAttachmentInput {
   currentUser: CurrentUser
@@ -35,22 +34,10 @@ export async function downloadAttachmentUseCase(
   }
 
   if (attachment.workItem) {
-    const permWorkItem: AttPermWorkItem = {
-      departmentId: attachment.workItem.departmentId,
-      cooperators: attachment.workItem.cooperators,
-      status: '',
-      creatorId: attachment.workItem.creatorId,
-      proposedLeaderId: attachment.workItem.proposedLeaderId,
-      approvalLeaderId: attachment.workItem.approvalLeaderId,
-      currentApproverId: attachment.workItem.currentApproverId,
-      currentApproverRole: attachment.workItem.currentApproverRole,
-      needMainLeaderCancel: attachment.workItem.needMainLeaderCancel,
-      type: attachment.workItem.type,
-    }
+    // Work-linked attachments inherit the parent work item's visibility rules.
+    const permUser = toPermissionUser(currentUser)
 
-    const permUser = { ...currentUser, role: currentUser.role as Role }
-
-    if (!canViewAttachment(permUser, permWorkItem)) {
+    if (!canViewAttachment(permUser, attachment.workItem)) {
       return { kind: 'error', status: 403, message: '无权查看该附件' }
     }
   }

@@ -1,54 +1,43 @@
-import { isCompanyLevel, isGlobalView } from '@/features/users/domain/role.rules'
 import type { User } from '@/features/users/domain/user.types'
-import type { WorkType, WorkQuery } from '@/features/works/domain/work-client.types'
+import type { WorkType, WorkQuery } from '@/features/works/client/work-client.types'
 import type { Work, WorkEditablePatch } from './work-view.types'
+import type {
+  CreateWorkResponse,
+  UpdateWorkResponse,
+  WorkApiErrorDto,
+  WorkDetailResponse,
+  WorkListResponse,
+} from '@/features/works/contract/work-api.types'
 import { sortWorksByDueDate } from './work-sort'
-import { isWorkRelatedToDepartment, isCompanyVisibleWork } from './work-filters'
-import { transformWorkFromAPI } from './work-view-model'
-
-export function transformWorkFromAPI_alias(work: any): Work {
-  return transformWorkFromAPI(work)
-}
+import {
+  buildCreateWorkRequest,
+  buildUpdateWorkRequest,
+  transformWorkFromAPI,
+} from './work-view-model'
 
 export async function getWorks(): Promise<Work[]> {
   try {
     const response = await fetch('/api/works', { credentials: 'include' })
     if (!response.ok) return []
-    const data = await response.json()
+    const data = (await response.json()) as WorkListResponse
     return data.map(transformWorkFromAPI)
   } catch {
     return []
   }
 }
 
-export async function getVisibleWorks(
-  user: User | null | undefined,
-  type?: WorkType,
-): Promise<Work[]> {
-  const works = await getWorks()
-  let list = works
-
+export async function getVisibleWorks(type?: WorkType): Promise<Work[]> {
+  let list = await getWorks()
   if (type) list = list.filter((w) => w.type === type)
-  if (!user) return []
 
-  if (user.role === 'ADMIN' || user.role === 'SUPERVISOR') {
-    return sortWorksByDueDate(list)
-  }
-
-  if (isGlobalView(user.role) || isCompanyLevel(user.role)) {
-    return sortWorksByDueDate(list.filter((w) => isCompanyVisibleWork(w)))
-  }
-
-  return sortWorksByDueDate(
-    list.filter((w) => isWorkRelatedToDepartment(w, user.departmentId)),
-  )
+  return sortWorksByDueDate(list)
 }
 
 export async function getWorkById(id: number): Promise<Work | undefined> {
   try {
     const response = await fetch(`/api/works/${id}`, { credentials: 'include' })
     if (!response.ok) return undefined
-    const data = await response.json()
+    const data = (await response.json()) as WorkDetailResponse
     return transformWorkFromAPI(data)
   } catch {
     return undefined
@@ -56,31 +45,26 @@ export async function getWorkById(id: number): Promise<Work | undefined> {
 }
 
 const CLIENT_TYPE_TO_SERVER: Record<string, string> = {
-  '重点': 'priority',
-  '主要': 'main',
-  '待办': 'todo',
+  重点: 'priority',
+  主要: 'main',
+  待办: 'todo',
 }
 
-export async function queryWorks(
-  user: User | null | undefined,
-  query: WorkQuery,
-): Promise<Work[]> {
+export async function queryWorks(user: User | null | undefined, query: WorkQuery): Promise<Work[]> {
   const params = new URLSearchParams()
   if (query.type && query.type !== '全部')
     params.set('type', CLIENT_TYPE_TO_SERVER[query.type] || query.type)
-  if (query.status && query.status !== 'all')
-    params.set('status', query.status)
+  if (query.status && query.status !== 'all') params.set('status', query.status)
   if (query.departmentId && query.departmentId !== '全部')
     params.set('departmentId', String(query.departmentId))
-  if (query.keyword && query.keyword.trim())
-    params.set('keyword', query.keyword.trim())
+  if (query.keyword && query.keyword.trim()) params.set('keyword', query.keyword.trim())
 
   const url = `/api/works${params.toString() ? '?' + params.toString() : ''}`
 
   try {
     const response = await fetch(url, { credentials: 'include' })
     if (!response.ok) return []
-    const data = await response.json()
+    const data = (await response.json()) as WorkListResponse
     return data.map(transformWorkFromAPI)
   } catch {
     return []
@@ -88,20 +72,7 @@ export async function queryWorks(
 }
 
 export async function addWork(work: Omit<Work, 'createdAt' | 'updatedAt'>): Promise<Work> {
-  const data: any = {
-    type: work.type, title: work.title, departmentId: work.departmentId,
-    workItem: work.workItem, workNode: work.workNode,
-    businessCategory: work.businessCategory,
-    completeForm: work.completeForm, isInnovation: work.isInnovation,
-    responsibleLeader: work.responsibleLeader, responsiblePerson: work.responsiblePerson,
-    responsibleLeaderMemberId: work.responsibleLeaderMemberId,
-    responsiblePersonMemberId: work.responsiblePersonMemberId,
-    proposedLeader: work.proposedLeader, proposedLeaderId: work.proposedLeaderId,
-    proposedScene: work.proposedScene, formedTime: work.formedTime,
-    cooperators: work.cooperators, workPlan: work.workPlan,
-    planCompleteTime: work.planCompleteTime, progress: work.progress,
-    approvalLeaderId: work.approvalLeaderId, nodes: work.nodes,
-  }
+  const data = buildCreateWorkRequest(work)
   const response = await fetch('/api/works', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -109,34 +80,14 @@ export async function addWork(work: Omit<Work, 'createdAt' | 'updatedAt'>): Prom
     credentials: 'include',
   })
   if (!response.ok) {
-    const error = await response.json()
+    const error = (await response.json()) as WorkApiErrorDto
     throw new Error(error.error || '创建失败')
   }
-  return transformWorkFromAPI(await response.json())
+  return transformWorkFromAPI((await response.json()) as CreateWorkResponse)
 }
 
-export async function updateWork(id: number, patch: Partial<Work>): Promise<Work | undefined> {
-  const data: any = {}
-  if (patch.title !== undefined) data.title = patch.title
-  if (patch.workItem !== undefined) data.workItem = patch.workItem
-  if (patch.workNode !== undefined) data.workNode = patch.workNode
-  if (patch.businessCategory !== undefined) data.businessCategory = patch.businessCategory
-  if (patch.completeForm !== undefined) data.completeForm = patch.completeForm
-  if (patch.isInnovation !== undefined) data.isInnovation = patch.isInnovation
-  if (patch.responsibleLeader !== undefined) data.responsibleLeader = patch.responsibleLeader
-  if (patch.responsiblePerson !== undefined) data.responsiblePerson = patch.responsiblePerson
-  if ('responsibleLeaderMemberId' in patch) data.responsibleLeaderMemberId = patch.responsibleLeaderMemberId ?? null
-  if ('responsiblePersonMemberId' in patch) data.responsiblePersonMemberId = patch.responsiblePersonMemberId ?? null
-  if (patch.proposedLeader !== undefined) data.proposedLeader = patch.proposedLeader
-  if (patch.proposedLeaderId !== undefined) data.proposedLeaderId = patch.proposedLeaderId
-  if (patch.proposedScene !== undefined) data.proposedScene = patch.proposedScene
-  if (patch.formedTime !== undefined) data.formedTime = patch.formedTime
-  if (patch.cooperators !== undefined) data.cooperators = patch.cooperators
-  if (patch.workPlan !== undefined) data.workPlan = patch.workPlan
-  if (patch.planCompleteTime !== undefined) data.planCompleteTime = patch.planCompleteTime
-  if (patch.progress !== undefined) data.progress = patch.progress
-  if (patch.approvalLeaderId !== undefined) data.approvalLeaderId = patch.approvalLeaderId
-  if (patch.nodes !== undefined) data.nodes = patch.nodes
+export async function updateWork(id: number, patch: WorkEditablePatch): Promise<Work | undefined> {
+  const data = buildUpdateWorkRequest(patch)
   const response = await fetch(`/api/works/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -144,10 +95,10 @@ export async function updateWork(id: number, patch: Partial<Work>): Promise<Work
     credentials: 'include',
   })
   if (!response.ok) {
-    const error = await response.json()
+    const error = (await response.json()) as WorkApiErrorDto
     throw new Error(error.error || '修改失败')
   }
-  return transformWorkFromAPI(await response.json())
+  return transformWorkFromAPI((await response.json()) as UpdateWorkResponse)
 }
 
 export async function deleteWork(id: number): Promise<void> {
@@ -156,7 +107,7 @@ export async function deleteWork(id: number): Promise<void> {
     credentials: 'include',
   })
   if (!response.ok) {
-    const error = await response.json()
+    const error = (await response.json()) as WorkApiErrorDto
     throw new Error(error.error || '删除失败')
   }
 }
@@ -170,9 +121,8 @@ export async function resubmitRejectedWork(work: Work, user: User, patch: WorkEd
     body: JSON.stringify({ action: 'submit', comment: '修改后重新提交审批' }),
   })
   if (!response.ok) {
-    const error = await response.json()
+    const error = (await response.json()) as WorkApiErrorDto
     throw new Error(error.error || '重新提交失败')
   }
   return await getWorkById(work.id)
 }
-

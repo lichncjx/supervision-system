@@ -14,7 +14,7 @@ import {
   PlanCompleteTimeField,
   TodoSpecificFields,
 } from '@/features/works/ui/work-form-fields';
-import type { Cooperator, WorkNode } from '@/features/works/domain/work-client.types';
+import type { Cooperator, WorkNode } from '@/features/works/client/work-client.types';
 import { FIELD_LABEL, PANEL_PADDED } from './visual-tokens';
 
 interface WorkDraftEditPanelProps {

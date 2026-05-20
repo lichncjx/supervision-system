@@ -9,7 +9,6 @@ import { submitAdjustment } from '@/features/workflow/application/submit-adjustm
 import { submitCancellation } from '@/features/workflow/application/submit-cancellation.usecase';
 import { decomposeTodoWork } from '@/features/workflow/application/decompose-todo-work.usecase';
 import { getWorkflowRecords } from '@/features/workflow/application/get-workflow-records.usecase';
-import type { UserSession } from '@/features/workflow/domain/workflow.types';
 import { canViewWorkItem } from '@/features/works/domain/work.permissions';
 
 export async function POST(
@@ -42,55 +41,55 @@ export async function POST(
       return NextResponse.json({ error: '用户不存在' }, { status: 401 });
     }
 
-    const user: UserSession = {
-      userId: currentUser.id,
-      userName: currentUser.name,
-      role: currentUser.role,
-      departmentId: currentUser.departmentId,
-    };
-
     const body = await request.json();
     const { action, comment, proof, adjustReason, cancelReason, rejectReason, nodes, nextApproverId } = body;
+
+    if (
+      nextApproverId != null &&
+      (!Number.isInteger(nextApproverId) || nextApproverId <= 0)
+    ) {
+      return NextResponse.json({ error: '无效的下一审批人' }, { status: 400 });
+    }
 
     let result;
 
     switch (action) {
       case 'submit':
-        result = await submitProposal(workItemId, user, comment);
+        result = await submitProposal(workItemId, currentUser, comment);
         break;
       case 'approve':
-        result = await approveWorkflowAction(workItemId, user, comment, nextApproverId);
+        result = await approveWorkflowAction(workItemId, currentUser, comment, nextApproverId);
         break;
       case 'reject':
         if (!rejectReason) {
           return NextResponse.json({ error: '请提供退回原因' }, { status: 400 });
         }
-        result = await rejectWorkflowAction(workItemId, user, rejectReason);
+        result = await rejectWorkflowAction(workItemId, currentUser, rejectReason);
         break;
       case 'evidence':
       case 'complete':
         if (!proof) {
           return NextResponse.json({ error: '请提供见证材料说明' }, { status: 400 });
         }
-        result = await submitCompletion(workItemId, user, proof, comment);
+        result = await submitCompletion(workItemId, currentUser, proof, comment);
         break;
       case 'adjust':
         if (!adjustReason) {
           return NextResponse.json({ error: '请提供调整原因' }, { status: 400 });
         }
-        result = await submitAdjustment(workItemId, user, adjustReason, comment);
+        result = await submitAdjustment(workItemId, currentUser, adjustReason, comment);
         break;
       case 'cancel':
         if (!cancelReason) {
           return NextResponse.json({ error: '请提供取消原因' }, { status: 400 });
         }
-        result = await submitCancellation(workItemId, user, cancelReason, comment);
+        result = await submitCancellation(workItemId, currentUser, cancelReason, comment);
         break;
       case 'decompose':
         if (!nodes || !Array.isArray(nodes)) {
           return NextResponse.json({ error: '请提供分解节点' }, { status: 400 });
         }
-        result = await decomposeTodoWork(workItemId, user, nodes, comment);
+        result = await decomposeTodoWork(workItemId, currentUser, nodes, comment);
         break;
       default:
         return NextResponse.json({ error: '无效的操作' }, { status: 400 });

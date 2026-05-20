@@ -16,7 +16,7 @@ import {
   IsInnovationField,
   TodoSpecificFields,
 } from '@/features/works/ui/work-form-fields';
-import type { WorkNode, Cooperator } from '@/features/works/domain/work-client.types';
+import type { WorkNode, Cooperator } from '@/features/works/client/work-client.types';
 import { FIELD_LABEL } from './visual-tokens';
 
 interface WorkActionDialogsProps {
@@ -109,7 +109,7 @@ export function WorkActionDialogs({
             {/* 拟调整内容 */}
             <div className="border-t pt-4">
               <h5 className={FIELD_LABEL + ' mb-3 block'}>拟调整内容</h5>
-              
+
               {/* 重点工作/主要工作调整表单 */}
               {isPriorityOrMain && (
                 <div className="space-y-4">

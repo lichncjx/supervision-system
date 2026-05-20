@@ -1,20 +1,12 @@
 import {
-  Prisma,
   Role,
   type User,
   WorkItemStatus,
   WorkItemType,
   ApprovalType,
 } from '@prisma/client'
-import { isReturnedDraftWork, isReturnedInProgressWork } from './work-status.rules'
-import { isGlobalView, isDepartmentLevel, isAdmin, isSupervisor, isPresident, isVicePresident } from '@/features/users/domain/role.rules'
-
-const APPROVAL_STATUSES: WorkItemStatus[] = [
-  WorkItemStatus.PROPOSING,
-  WorkItemStatus.ADJUSTING,
-  WorkItemStatus.CANCELLING,
-  WorkItemStatus.COMPLETING,
-]
+import { isReturnedDraftWork, isReturnedInProgressWork, isApproving, isTerminal, isHandling } from './work-status.rules'
+import { isGlobalView, isDepartmentLevel, isCompanyLevel, isPresident, isVicePresident, isDeptLeader } from '@/features/users/domain/role.rules'
 
 export type PermissionUser = Pick<User, 'id' | 'role' | 'departmentId'>
 
@@ -35,9 +27,9 @@ export interface PermissionWorkItem {
   rejectReason?: string | null
   rejectedFromStatus?: WorkItemStatus | string | null
   rejectedAt?: Date | string | null
-  needMainLeaderCancel?: boolean | null
 }
 
+/** 去重 + 过滤非正数 ID */
 function uniquePositiveIds(values: unknown[]): number[] {
   const ids = new Set<number>()
   for (const value of values) {
@@ -53,16 +45,14 @@ function normalizeStatus(status: PermissionWorkItem['status']): string {
   return String(status || '').toUpperCase()
 }
 
-function isInApprovalStatus(status: PermissionWorkItem['status']): boolean {
-  return APPROVAL_STATUSES.includes(normalizeStatus(status) as WorkItemStatus)
-}
-
+/** 主责部门 ID 列表（当前仅 departmentId 一个） */
 export function getResponsibleDepartmentIds(
   workItem: PermissionWorkItem,
 ): number[] {
   return uniquePositiveIds([workItem.departmentId])
 }
 
+/** 配合部门 ID 列表，从 JSONB cooperators 数组提取 */
 export function getCooperatorDepartmentIds(
   workItem: PermissionWorkItem,
 ): number[] {
@@ -73,6 +63,7 @@ export function getCooperatorDepartmentIds(
   )
 }
 
+/** 事项是否与指定部门有关联（主责 或 配合） */
 export function isWorkRelatedToDepartment(
   workItem: PermissionWorkItem,
   departmentId?: number | null,
@@ -84,6 +75,7 @@ export function isWorkRelatedToDepartment(
   )
 }
 
+/** 事项的主责部门是否为指定部门（仅 departmentId，不含配合） */
 export function isWorkMainResponsibleDepartment(
   workItem: PermissionWorkItem,
   departmentId?: number | null,
@@ -92,133 +84,50 @@ export function isWorkMainResponsibleDepartment(
   return getResponsibleDepartmentIds(workItem).includes(departmentId)
 }
 
-export function buildWorkVisibilityWhere(
-  user: PermissionUser,
-): Prisma.WorkItemWhereInput {
-  if (isGlobalView(user.role)) {
-    return {}
-  }
-
-  if (isDepartmentLevel(user.role)) {
-    return {}
-  }
-
-  if (isVicePresident(user.role)) {
-    return {
-      OR: [
-        { proposedLeaderId: user.id },
-        { approvalLeaderId: user.id },
-        { currentApproverId: user.id },
-        {
-          AND: [
-            { currentApproverId: null },
-            { proposedLeaderId: null },
-            { approvalLeaderId: null },
-            { currentApproverRole: Role.VICE_PRESIDENT },
-          ],
-        },
-      ],
-    }
-  }
-
-  if (isPresident(user.role)) {
-    return {
-      OR: [
-        { proposedLeaderId: user.id },
-        { approvalLeaderId: user.id },
-        { currentApproverId: user.id },
-        { currentApproverRole: Role.PRESIDENT },
-        { needMainLeaderCancel: true },
-      ],
-    }
-  }
-
-  return { id: -1 }
-}
-
+/**
+ * Broad view permission for listing and detail viewing. Does not guarantee actionable permissions.
+ *
+ * - Global view (ADMIN/SUPERVISOR) can see all items.
+ */
 export function canViewWorkItem(
   user: PermissionUser,
   workItem: PermissionWorkItem,
 ): boolean {
   if (isGlobalView(user.role)) return true
 
-  if (isDepartmentLevel(user.role)) {
+  if (isDepartmentLevel(user.role))
+    return isWorkRelatedToDepartment(workItem, user.departmentId)
+
+  if (isCompanyLevel(user.role)) {
     return (
-      isWorkRelatedToDepartment(workItem, user.departmentId) ||
+      workItem.proposedLeaderId === user.id ||
+      workItem.approvalLeaderId === user.id ||
       workItem.currentApproverId === user.id
     )
   }
 
-  if (isVicePresident(user.role)) {
-    return (
-      workItem.proposedLeaderId === user.id ||
-      workItem.approvalLeaderId === user.id ||
-      workItem.currentApproverId === user.id ||
-      (
-        !workItem.currentApproverId &&
-        !workItem.proposedLeaderId &&
-        !workItem.approvalLeaderId &&
-        isVicePresident(workItem.currentApproverRole)
-      )
-    )
-  }
-
-  if (isPresident(user.role)) {
-    return (
-      workItem.proposedLeaderId === user.id ||
-      workItem.approvalLeaderId === user.id ||
-      workItem.currentApproverId === user.id ||
-      isPresident(workItem.currentApproverRole) ||
-      workItem.needMainLeaderCancel === true
-    )
-  }
-
   return false
-}
-
-export function canAccessWorkItem(
-  user: PermissionUser,
-  workItem: PermissionWorkItem,
-): boolean {
-  return canViewWorkItem(user, workItem)
 }
 
 export function canApproveWorkItem(
   user: PermissionUser,
   workItem: PermissionWorkItem,
 ): boolean {
-  if (isGlobalView(user.role)) 
-    return false
+  if (isGlobalView(user.role)) return false
 
-  if (!isInApprovalStatus(workItem.status))
-    return false
+  if (!isApproving(workItem.status)) return false
 
-  if (workItem.currentApproverId) {
+  if (workItem.currentApproverId)
     return workItem.currentApproverId === user.id
-  }
 
   const currentApproverRole = workItem.currentApproverRole as Role | string | null | undefined
-  if (currentApproverRole && currentApproverRole !== user.role) {
+  if (!currentApproverRole || currentApproverRole !== user.role)
     return false
-  }
 
-  if (isDepartmentLevel(user.role)) {
-    return !!currentApproverRole && isWorkMainResponsibleDepartment(workItem, user.departmentId)
-  }
+  if (isCompanyLevel(user.role))
+    return workItem.proposedLeaderId === user.id || workItem.approvalLeaderId === user.id
 
-  if (isPresident(user.role)) {
-    return !!currentApproverRole || workItem.needMainLeaderCancel === true
-  }
-
-  if (isVicePresident(user.role)) {
-    return !!currentApproverRole && (
-      !workItem.proposedLeaderId ||
-      workItem.proposedLeaderId === user.id ||
-      workItem.approvalLeaderId === user.id
-    )
-  }
-
-  return false
+  return isDeptLeader(user.role) && isWorkMainResponsibleDepartment(workItem, user.departmentId)
 }
 
 /**
@@ -236,59 +145,36 @@ export function canOperateWorkItem(
   if (isGlobalView(user.role)) return false
 
   const status = normalizeStatus(workItem.status)
-  if (status === 'COMPLETED' || status === 'CANCELLED') return false
-
   const ownerId = workItem.firstSubmitterId ?? workItem.creatorId
+  const isOwner = ownerId === user.id
 
-  if (isDepartmentLevel(user.role)) {
-    if (isWorkMainResponsibleDepartment(workItem, user.departmentId)) {
-      if (
-        status === WorkItemStatus.IN_PROGRESS ||
-        status === WorkItemStatus.PENDING_DECOMPOSE
-      )
-        return true
-      if (status === WorkItemStatus.DRAFT && ownerId === user.id)
-        return true
-      return false
-    }
-    // Not main dept, but owner can still operate on own non-terminal items
-    if (ownerId !== user.id) return false
-    return status !== 'COMPLETED' && status !== 'CANCELLED'
-  }
+  // Only allows DRAFT/IN_PROGRESS/PENDING_DECOMPOSE, excluding terminal states and approving states.
+  if (!isHandling(status)) return false
 
-  // Non-department roles: operate on own non-terminal items (PENDING_DECOMPOSE is department-only)
-  if (ownerId !== user.id) return false
-  return status !== 'COMPLETED' && status !== 'CANCELLED' && status !== WorkItemStatus.PENDING_DECOMPOSE
+  if (isCompanyLevel(user.role))
+    return isOwner && status === WorkItemStatus.DRAFT
+
+  const pendingMainDepartmentDecompose =
+    status === WorkItemStatus.PENDING_DECOMPOSE &&
+    isWorkMainResponsibleDepartment(workItem, user.departmentId)
+  return isOwner || pendingMainDepartmentDecompose
 }
 
 /**
  * Narrow handling check — only items that require immediate user action (待办理).
  *
  * Builds on canOperateWorkItem and further narrows:
- * - ADMIN/SUPERVISOR never have 待办理.
  * - IN_PROGRESS only counts when returned from approval (rejected adjust/cancel/complete).
- * - DRAFT (non-returned) for department roles outside their main department is excluded.
  */
 export function shouldHandleWorkItem(
   user: PermissionUser,
   workItem: PermissionWorkItem,
 ): boolean {
-  if (isGlobalView(user.role)) return false
   if (!canOperateWorkItem(user, workItem)) return false
 
   const status = normalizeStatus(workItem.status)
-  const ownerId = workItem.firstSubmitterId ?? workItem.creatorId
-
   if (status === WorkItemStatus.IN_PROGRESS)
-    return isReturnedInProgressWork(workItem) && ownerId === user.id
-
-  if (
-    status === WorkItemStatus.DRAFT &&
-    !isReturnedDraftWork(workItem) &&
-    isDepartmentLevel(user.role) &&
-    !isWorkMainResponsibleDepartment(workItem, user.departmentId)
-  )
-    return false
+    return isReturnedInProgressWork(workItem)
 
   return true
 }
@@ -298,28 +184,10 @@ export function canEditWorkItem(
   workItem: PermissionWorkItem,
 ): boolean {
   const status = normalizeStatus(workItem.status)
-  if (status !== WorkItemStatus.DRAFT) {
-    return false
-  }
-
-  const returnedDraft = isReturnedDraftWork(workItem)
+  if (status !== WorkItemStatus.DRAFT) return false
 
   if (isGlobalView(user.role)) return true
-  if (returnedDraft) {
-    return (workItem.firstSubmitterId ?? workItem.creatorId) === user.id
-  }
-  if (workItem.creatorId === user.id) return true
-  if ((workItem.firstSubmitterId ?? workItem.creatorId) === user.id) {
-    return true
-  }
 
-  return false
-}
-
-export function canCreateWork(user: PermissionUser): boolean {
-  return isSupervisor(user.role) || isDepartmentLevel(user.role)
-}
-
-export function canDeleteWork(user: PermissionUser): boolean {
-  return isAdmin(user.role)
+  const ownerId = workItem.firstSubmitterId ?? workItem.creatorId
+  return ownerId === user.id
 }

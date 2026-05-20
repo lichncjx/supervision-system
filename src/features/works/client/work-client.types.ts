@@ -1,5 +1,3 @@
-
-
 export type WorkType = '重点' | '主要' | '待办'
 
 export type WorkStatusFilter =
@@ -21,7 +19,6 @@ export interface WorkQuery {
   status?: WorkStatusFilter
   keyword?: string
 }
-
 
 export type ActionType =
   | 'create'

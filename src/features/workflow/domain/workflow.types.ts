@@ -1,12 +1,5 @@
 import type { Role } from '@prisma/client'
 
-export interface UserSession {
-  userId: number
-  userName: string
-  role: Role
-  departmentId: number
-}
-
 export interface WorkflowResult {
   success: boolean
   workItem?: any

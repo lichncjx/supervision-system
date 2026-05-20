@@ -1,22 +1,15 @@
 import { Role, WorkItemStatus, WorkItemType } from '@prisma/client'
 import {
-  canApproveWorkItem,
   shouldHandleWorkItem,
   canOperateWorkItem,
   isWorkMainResponsibleDepartment,
   type PermissionWorkItem,
 } from '@/features/works/domain/work.permissions'
-import type { UserSession, ApproverAssignment } from './workflow.types'
+import { toPermissionUser } from '@/features/works/domain/work-permission-user.mapper'
+import type { BaseCurrentUser } from '@/shared/auth/current-user'
+import type { ApproverAssignment } from './workflow.types'
 import { APPROVAL_STATUSES } from './workflow.constants'
-import { isCompanyLevel, isDepartmentLevel } from '@/features/users/domain/role.rules'
-
-export function toPermissionUser(user: UserSession) {
-  return {
-    id: user.userId,
-    role: user.role,
-    departmentId: user.departmentId,
-  }
-}
+import { isCompanyLevel, isDepartmentLevel, isDeptManager, isDeptLeader, isPresident } from '@/features/users/domain/role.rules'
 
 export function isApprovalStatus(status: WorkItemStatus) {
   return APPROVAL_STATUSES.includes(status)
@@ -36,14 +29,17 @@ export function companyLeaderAssignment(
   },
   source: 'propose' | 'approval' = 'approval',
   nextApproverId?: number | null,
-): ApproverAssignment {
+): ApproverAssignment | null {
   const leaderId =
     source === 'propose'
       ? workItem.proposedLeaderId ?? workItem.approvalLeaderId
       : workItem.approvalLeaderId ?? workItem.proposedLeaderId
 
+  const currentApproverId = leaderId ?? nextApproverId
+  if (!currentApproverId) return null
+
   return {
-    currentApproverId: leaderId ?? nextApproverId ?? null,
+    currentApproverId,
     currentApproverRole: Role.VICE_PRESIDENT,
   }
 }
@@ -53,13 +49,13 @@ export function getProposalFirstApprover(
     proposedLeaderId?: number | null
     approvalLeaderId?: number | null
   },
-  user: UserSession,
-): ApproverAssignment {
-  if (user.role === Role.DEPARTMENT_MANAGER) {
+  user: BaseCurrentUser,
+): ApproverAssignment | null {
+  if (isDeptManager(user.role)) {
     return departmentLeaderAssignment()
   }
 
-  if (user.role === Role.DEPARTMENT_LEADER) {
+  if (isDeptLeader(user.role)) {
     return companyLeaderAssignment(workItem, 'propose')
   }
 
@@ -75,54 +71,54 @@ export function getProcessFirstApprover(
     proposedLeaderId?: number | null
     approvalLeaderId?: number | null
   },
-  user: UserSession,
-): ApproverAssignment {
-  if (user.role === Role.DEPARTMENT_MANAGER) {
+  user: BaseCurrentUser,
+): ApproverAssignment | null {
+  if (isDeptManager(user.role)) {
     return departmentLeaderAssignment()
   }
 
-  if (user.role === Role.DEPARTMENT_LEADER) {
+  if (isDeptLeader(user.role)) {
     return companyLeaderAssignment(workItem, 'approval')
   }
 
   return companyLeaderAssignment(workItem, 'approval')
 }
 
+/** 当前业务规则：重点工作取消均需主要领导审批；needMainLeaderCancel 为历史兼容字段，不参与当前判断。 */
 export function shouldEscalateCancelToPresident(workItem: {
   type: WorkItemType
-  needMainLeaderCancel?: boolean | null
 }) {
-  return workItem.type === WorkItemType.PRIORITY && workItem.needMainLeaderCancel === true
+  return workItem.type === WorkItemType.PRIORITY
 }
 
 export function isDepartmentApprovalNode(workItem: {
   currentApproverRole?: Role | string | null
 }) {
-  return workItem.currentApproverRole === Role.DEPARTMENT_LEADER
+  return isDeptLeader(workItem.currentApproverRole)
 }
 
 export function isPresidentApprovalNode(workItem: {
   currentApproverRole?: Role | string | null
 }) {
-  return workItem.currentApproverRole === Role.PRESIDENT
+  return isPresident(workItem.currentApproverRole)
 }
 
 export function canUserHandle(
-  user: UserSession,
+  user: BaseCurrentUser,
   workItem: PermissionWorkItem,
 ) {
   return shouldHandleWorkItem(toPermissionUser(user), workItem)
 }
 
 export function canUserOperate(
-  user: UserSession,
+  user: BaseCurrentUser,
   workItem: PermissionWorkItem,
 ) {
   return canOperateWorkItem(toPermissionUser(user), workItem)
 }
 
 export function ensureMainResponsibleDepartment(
-  user: UserSession,
+  user: BaseCurrentUser,
   workItem: PermissionWorkItem,
 ) {
   return (
@@ -137,23 +133,16 @@ export function rejectableBeforeStatus(workItem: {
   return (workItem.beforeApprovalStatus as WorkItemStatus) ?? null
 }
 
-export function canUserApprove(
-  workItem: PermissionWorkItem,
-  user: UserSession,
-): boolean {
-  return canApproveWorkItem(toPermissionUser(user), workItem)
-}
-
 export function canUserSubmit(
   workItem: PermissionWorkItem,
-  user: UserSession,
+  user: BaseCurrentUser,
 ): boolean {
   if (String(workItem.status).toUpperCase() !== WorkItemStatus.DRAFT) {
     return false
   }
 
-  if (workItem.creatorId === user.userId) return true
-  if ((workItem.firstSubmitterId ?? workItem.creatorId) === user.userId)
+  if (workItem.creatorId === user.id) return true
+  if ((workItem.firstSubmitterId ?? workItem.creatorId) === user.id)
     return true
   return shouldHandleWorkItem(toPermissionUser(user), workItem)
 }

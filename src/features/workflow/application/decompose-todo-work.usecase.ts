@@ -1,10 +1,12 @@
 import { ActionType, ApprovalType, WorkItemStatus, WorkItemType } from '@prisma/client'
-import type { UserSession, WorkflowResult } from '@/features/workflow/domain/workflow.types'
+import type { CurrentUser } from '@/shared/auth/current-user'
+import type { WorkflowResult } from '@/features/workflow/domain/workflow.types'
 import {
   canUserHandle,
   ensureMainResponsibleDepartment,
   getProposalFirstApprover,
 } from '@/features/workflow/domain/workflow.rules'
+import { toPermissionUser } from '@/features/works/domain/work-permission-user.mapper'
 import { findWorkForUpdateById, updateWorkItem } from '@/features/works/infrastructure/work.repository'
 import {
   createWorkflowRecord,
@@ -13,10 +15,11 @@ import {
 
 export async function decomposeTodoWork(
   workItemId: number,
-  user: UserSession,
+  user: CurrentUser,
   nodes: any[],
   comment?: string,
 ): Promise<WorkflowResult> {
+  const permUser = toPermissionUser(user)
   const workItem = await findWorkForUpdateById(workItemId)
   if (!workItem) {
     return { success: false, error: '事项不存在' }
@@ -40,6 +43,10 @@ export async function decomposeTodoWork(
 
   const oldStatus = workItem.status
   const approver = getProposalFirstApprover(workItem, user)
+  if (!approver) {
+    return { success: false, error: '请先指定公司领导后再提交审批' }
+  }
+
   const updated = await updateWorkItem(workItemId, {
     nodes,
     status: WorkItemStatus.PROPOSING,
@@ -48,7 +55,7 @@ export async function decomposeTodoWork(
     approvalType: ApprovalType.PROPOSE,
     currentApproverId: approver.currentApproverId,
     currentApproverRole: approver.currentApproverRole,
-    firstSubmitterId: workItem.firstSubmitterId ?? user.userId,
+    firstSubmitterId: workItem.firstSubmitterId ?? user.id,
     rejectReason: null,
     rejectedFromStatus: null,
   })
@@ -56,16 +63,16 @@ export async function decomposeTodoWork(
   await createWorkflowRecord({
     workItemId,
     actionType: 'decompose',
-    operatorId: user.userId,
-    operatorRole: user.role,
+    operatorId: user.id,
+    operatorRole: permUser.role,
     statusBefore: oldStatus,
     statusAfter: updated.status,
     comment: comment || '提交待办分解方案',
   })
   await createOperationLog({
-    userId: user.userId,
-    userName: user.userName,
-    userRole: user.role,
+    userId: user.id,
+    userName: user.name,
+    userRole: permUser.role,
     operationType: 'decompose',
     module: 'workflow',
     description: `分解待办: ${workItem.title}`,

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { WorkFormNodes } from '@/features/works/ui/work-form-nodes';
-import type { WorkNode } from '@/features/works/domain/work-client.types';
+import type { WorkNode } from '@/features/works/client/work-client.types';
 import { FIELD_LABEL, PANEL_PADDED } from '@/features/works/ui/visual-tokens';
 
 interface WorkDecomposePanelProps {

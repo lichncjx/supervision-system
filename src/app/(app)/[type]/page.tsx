@@ -9,7 +9,7 @@ import { isCompanyLevel, isGlobalView } from '@/features/users/domain/role.rules
 import { getDepartments } from '@/features/departments/client/department-api';
 import { getVisibleWorks, queryWorks } from '@/features/works/client/work-api';
 import type { Work } from '@/features/works/client/work-view.types';
-import type { WorkType, WorkStatusFilter } from '@/features/works/domain/work-client.types';
+import type { WorkType, WorkStatusFilter } from '@/features/works/client/work-client.types';
 import { workTypeColors, getStatusAccent } from '@/features/works/ui/status-colors';
 import { Plus, Download, Upload, FileSpreadsheet, Star, ListTodo, CheckSquare } from 'lucide-react';
 import { WorkListToolbar } from '@/features/works/ui/work-list-toolbar';
@@ -43,7 +43,7 @@ export default function ItemListPage() {
   const isPriorityOrMain = type === '重点' || type === '主要';
 
   const load = async () => {
-    const data = await getVisibleWorks(user, type);
+    const data = await getVisibleWorks(type);
     setItems(data);
   };
 
@@ -67,19 +67,19 @@ export default function ItemListPage() {
   const canCreate =
     type === '待办'
       ? (
-          user?.role === 'ADMIN' ||
-          user?.role === 'DEPARTMENT_MANAGER' ||
-          user?.role === 'DEPARTMENT_LEADER' ||
-          user?.role === 'VICE_PRESIDENT' ||
-          user?.role === 'PRESIDENT' ||
-          user?.role === 'SUPERVISOR'
-        )
+        user?.role === 'ADMIN' ||
+        user?.role === 'DEPARTMENT_MANAGER' ||
+        user?.role === 'DEPARTMENT_LEADER' ||
+        user?.role === 'VICE_PRESIDENT' ||
+        user?.role === 'PRESIDENT' ||
+        user?.role === 'SUPERVISOR'
+      )
       : (
-          user?.role === 'ADMIN' ||
-          user?.role === 'DEPARTMENT_MANAGER' ||
-          user?.role === 'DEPARTMENT_LEADER' ||
-          user?.role === 'SUPERVISOR'
-        );
+        user?.role === 'ADMIN' ||
+        user?.role === 'DEPARTMENT_MANAGER' ||
+        user?.role === 'DEPARTMENT_LEADER' ||
+        user?.role === 'SUPERVISOR'
+      );
 
   const getWorkMonth = (work: Work) => {
     const date = work.planCompleteTime || '';

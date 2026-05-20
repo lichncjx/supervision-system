@@ -182,10 +182,3 @@ export const PRISMA_WORK_STATUS_TO_VALUE = Object.fromEntries(
     status,
   ]),
 ) as Record<string, WorkStatus>
-
-export const PENDING_APPROVAL_FILTER_STATUS_VALUES = [
-  'proposing',
-  'adjusting',
-  'cancelling',
-  'completing',
-] as const satisfies readonly WorkStatus[]

@@ -1,39 +1,32 @@
-import { Role } from '@prisma/client'
 import {
   canViewWorkItem,
   canOperateWorkItem,
+  type PermissionUser,
+  type PermissionWorkItem,
 } from '@/features/works/domain/work.permissions'
-import type { AttPermUser, AttPermWorkItem, AttPermAttachment } from './attachment.types'
+import { isGlobalView } from '@/features/users/domain/role.rules'
+import { isTerminal } from '@/features/works/domain/work-status.rules'
 
 export function canViewAttachment(
-  user: AttPermUser,
-  workItem: AttPermWorkItem,
+  user: PermissionUser,
+  workItem: PermissionWorkItem,
 ): boolean {
   return canViewWorkItem(user, workItem)
 }
 
 export function canUploadAttachment(
-  user: AttPermUser,
-  workItem: AttPermWorkItem,
+  user: PermissionUser,
+  workItem: PermissionWorkItem,
 ): boolean {
-  if (user.role === Role.ADMIN || user.role === Role.SUPERVISOR) return true
-
-  const TERMINAL_STATUSES = ['COMPLETED', 'CANCELLED']
-  if (
-    TERMINAL_STATUSES.includes(
-      String(workItem.status || '').toUpperCase(),
-    )
-  )
-    return false
-
+  if (isGlobalView(user.role)) return true
+  if (isTerminal(workItem.status)) return false
   return canOperateWorkItem(user, workItem)
 }
 
 export function canDeleteAttachment(
-  user: AttPermUser,
-  workItem: AttPermWorkItem,
-  attachment: AttPermAttachment,
+  user: PermissionUser,
+  attachmentUserId: number,
 ): boolean {
-  if (user.role === Role.ADMIN || user.role === Role.SUPERVISOR) return true
-  return attachment.userId === user.id
+  if (isGlobalView(user.role)) return true
+  return attachmentUserId === user.id
 }

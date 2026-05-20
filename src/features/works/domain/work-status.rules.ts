@@ -1,7 +1,6 @@
 import {
   WORK_STATUS_META,
   PRISMA_WORK_STATUS_TO_VALUE,
-  PENDING_APPROVAL_FILTER_STATUS_VALUES,
 } from './work-status'
 import type { WorkStatus, WorkStatusVisualGroup } from './work-status'
 
@@ -16,9 +15,46 @@ export interface ReturnedDraftLike {
   }>
 }
 
+export const WORK_EXPIRING_DAYS = 7
+
+export interface DeadlineWorkLike {
+  status?: unknown
+  planCompleteTime?: Date | string | null
+}
+
 function hasValue(value: unknown): boolean {
   if (value == null) return false
   return String(value).trim().length > 0
+}
+
+export function getWorkDueDate(workItem: DeadlineWorkLike): Date | null {
+  const value = workItem.planCompleteTime
+  if (!value) return null
+  return value instanceof Date ? value : new Date(value)
+}
+
+export function isOverdueWorkItem(
+  workItem: DeadlineWorkLike,
+  now: Date,
+): boolean {
+  if (isTerminal(workItem.status)) return false
+
+  const dueDate = getWorkDueDate(workItem)
+  return dueDate ? dueDate < now : false
+}
+
+export function isExpiringWorkItem(
+  workItem: DeadlineWorkLike,
+  now: Date,
+): boolean {
+  if (isTerminal(workItem.status)) return false
+
+  const dueDate = getWorkDueDate(workItem)
+  if (!dueDate) return false
+
+  const deadline = new Date(now)
+  deadline.setDate(deadline.getDate() + WORK_EXPIRING_DAYS)
+  return dueDate >= now && dueDate <= deadline
 }
 
 export function normalizeWorkStatus(status: unknown): WorkStatus | undefined {
@@ -117,42 +153,22 @@ export function getWorkStatusVisualGroup(
   )
 }
 
-export function isCurrentWorkStatus(
-  status: unknown,
-): status is WorkStatus {
-  return Boolean(normalizeWorkStatus(status))
-}
-
-export function isLegacyWorkStatus(_status: unknown): _status is never {
-  return false
-}
-
-export function isWorkStatusTerminal(status: unknown): boolean {
+export function isTerminal(status: unknown): boolean {
   return Boolean(getWorkStatusMeta(status)?.isTerminal)
 }
 
-export function isWorkStatusApproving(status: unknown): boolean {
+export function isApproving(status: unknown): boolean {
   return Boolean(getWorkStatusMeta(status)?.isApproving)
 }
 
-export function isWorkStatusHandling(status: unknown): boolean {
+export function isHandling(status: unknown): boolean {
   return Boolean(getWorkStatusMeta(status)?.isHandling)
 }
 
-export function isWorkStatusInProgress(status: unknown): boolean {
+export function isInProgress(status: unknown): boolean {
   return Boolean(getWorkStatusMeta(status)?.isInProgress)
 }
 
-export function shouldCountWorkStatusForDeadline(status: unknown): boolean {
+export function shouldCountForDeadline(status: unknown): boolean {
   return Boolean(getWorkStatusMeta(status)?.countsForDeadline)
-}
-
-export function isWorkStatusInPendingApprovalFilter(status: unknown): boolean {
-  const normalized = normalizeWorkStatus(status)
-  return Boolean(
-    normalized &&
-      (PENDING_APPROVAL_FILTER_STATUS_VALUES as readonly WorkStatus[]).includes(
-        normalized,
-      ),
-  )
 }

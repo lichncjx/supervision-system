@@ -96,13 +96,21 @@ export async function submitCancel(work: Work, user: User, reason: string) {
   }
 }
 
-export async function submitWork(work: Work, _user: User) {
+export async function submitWork(
+  work: Work,
+  _user: User,
+  nextApproverId?: number | null,
+  comment = '提交审批',
+) {
   try {
+    const body: Record<string, unknown> = { action: 'submit', comment }
+    if (nextApproverId) body.nextApproverId = nextApproverId
+
     const response = await fetch(`/api/works/${work.id}/workflow`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({ action: 'submit', comment: '提交审批' }),
+      body: JSON.stringify(body),
     })
     const result = await response.json()
     if (!response.ok) throw new Error(result.error || '提交审批失败')
