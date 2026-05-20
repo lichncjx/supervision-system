@@ -5,7 +5,7 @@ import {
   WorkItemType,
   ApprovalType,
 } from '@prisma/client'
-import { isReturnedDraftWork, isReturnedInProgressWork, isWorkStatusApproving } from './work-status.rules'
+import { isReturnedDraftWork, isReturnedInProgressWork, isApproving, isTerminal, isHandling } from './work-status.rules'
 import { isGlobalView, isDepartmentLevel, isCompanyLevel, isPresident, isVicePresident } from '@/features/users/domain/role.rules'
 
 export type PermissionUser = Pick<User, 'id' | 'role' | 'departmentId'>
@@ -113,11 +113,9 @@ export function canApproveWorkItem(
   user: PermissionUser,
   workItem: PermissionWorkItem,
 ): boolean {
-  if (isGlobalView(user.role))
-    return false
+  if (isGlobalView(user.role)) return false
 
-  if (!isWorkStatusApproving(workItem.status))
-    return false
+  if (!isApproving(workItem.status)) return false
 
   if (workItem.currentApproverId) {
     return workItem.currentApproverId === user.id
@@ -162,59 +160,36 @@ export function canOperateWorkItem(
   if (isGlobalView(user.role)) return false
 
   const status = normalizeStatus(workItem.status)
-  if (status === 'COMPLETED' || status === 'CANCELLED') return false
-
   const ownerId = workItem.firstSubmitterId ?? workItem.creatorId
+  const isOwner = ownerId === user.id
 
-  if (isDepartmentLevel(user.role)) {
-    if (isWorkMainResponsibleDepartment(workItem, user.departmentId)) {
-      if (
-        status === WorkItemStatus.IN_PROGRESS ||
-        status === WorkItemStatus.PENDING_DECOMPOSE
-      )
-        return true
-      if (status === WorkItemStatus.DRAFT && ownerId === user.id)
-        return true
-      return false
-    }
-    // Not main dept, but owner can still operate on own non-terminal items
-    if (ownerId !== user.id) return false
-    return status !== 'COMPLETED' && status !== 'CANCELLED'
-  }
+  // Only allows DRAFT/IN_PROGRESS/PENDING_DECOMPOSE, excluding terminal states and approving states.
+  if (!isHandling(status)) return false
 
-  // Non-department roles: operate on own non-terminal items (PENDING_DECOMPOSE is department-only)
-  if (ownerId !== user.id) return false
-  return status !== 'COMPLETED' && status !== 'CANCELLED' && status !== WorkItemStatus.PENDING_DECOMPOSE
+  if (isCompanyLevel(user.role))
+    return isOwner && status === WorkItemStatus.DRAFT
+
+  const pendingMainDepartmentDecompose =
+    status === WorkItemStatus.PENDING_DECOMPOSE &&
+    isWorkMainResponsibleDepartment(workItem, user.departmentId)
+  return isOwner || pendingMainDepartmentDecompose
 }
 
 /**
  * Narrow handling check — only items that require immediate user action (待办理).
  *
  * Builds on canOperateWorkItem and further narrows:
- * - ADMIN/SUPERVISOR never have 待办理.
  * - IN_PROGRESS only counts when returned from approval (rejected adjust/cancel/complete).
- * - DRAFT (non-returned) for department roles outside their main department is excluded.
  */
 export function shouldHandleWorkItem(
   user: PermissionUser,
   workItem: PermissionWorkItem,
 ): boolean {
-  if (isGlobalView(user.role)) return false
   if (!canOperateWorkItem(user, workItem)) return false
 
   const status = normalizeStatus(workItem.status)
-  const ownerId = workItem.firstSubmitterId ?? workItem.creatorId
-
   if (status === WorkItemStatus.IN_PROGRESS)
-    return isReturnedInProgressWork(workItem) && ownerId === user.id
-
-  if (
-    status === WorkItemStatus.DRAFT &&
-    !isReturnedDraftWork(workItem) &&
-    isDepartmentLevel(user.role) &&
-    !isWorkMainResponsibleDepartment(workItem, user.departmentId)
-  )
-    return false
+    return isReturnedInProgressWork(workItem)
 
   return true
 }

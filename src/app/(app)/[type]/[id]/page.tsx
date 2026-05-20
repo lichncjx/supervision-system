@@ -34,7 +34,7 @@ import {
   canDecomposeTodoWork,
   canApproveWork,
 } from '@/features/works/client/work-client-permissions';
-import { isWorkStatusTerminal, isReturnedDraftWork, isWorkStatusInProgress } from '@/features/works/domain/work-status.rules';
+import { isTerminal, isReturnedDraftWork, isInProgress } from '@/features/works/domain/work-status.rules';
 import { isWorkRelatedToDepartment } from '@/features/works/client/work-client-permissions';
 import { updateWork, deleteWork, resubmitRejectedWork } from '@/features/works/client/work-api';
 import {
@@ -137,8 +137,8 @@ export default function WorkDetailPage() {
   const canEdit = user && (
     isAdmin || isSupervisor ||
     ((user.role === 'DEPARTMENT_MANAGER' || user.role === 'DEPARTMENT_LEADER') &&
-      isRelatedDept && !isWorkStatusTerminal(work.status) && !isReturnedDraftWork(work)) ||
-    ((work.type === '重点' || work.type === '主要') && isRelatedDept && !isWorkStatusTerminal(work.status))
+      isRelatedDept && !isTerminal(work.status) && !isReturnedDraftWork(work)) ||
+    ((work.type === '重点' || work.type === '主要') && isRelatedDept && !isTerminal(work.status))
   );
   const canDeleteAttachment = (att: { userId: number }) =>
     isAdmin || isSupervisor || user?.id === att.userId;
@@ -569,7 +569,7 @@ export default function WorkDetailPage() {
             onSubmitDecomposition={handleDecompose}
           />
 
-          {isWorkStatusInProgress(work.status) && (
+          {isInProgress(work.status) && (
             <WorkCompletePanel
               proof={proof}
               onProofChange={setProof}
@@ -582,7 +582,7 @@ export default function WorkDetailPage() {
           )}
 
           <WorkSidebarActions
-            visible={isWorkStatusInProgress(work.status)}
+            visible={isInProgress(work.status)}
             onAdjust={() => {
               setEditForm(buildEditFormFromWork());
               setAdjustReason('');

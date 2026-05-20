@@ -116,32 +116,22 @@ export function getWorkStatusVisualGroup(
   )
 }
 
-export function isCurrentWorkStatus(
-  status: unknown,
-): status is WorkStatus {
-  return Boolean(normalizeWorkStatus(status))
-}
-
-export function isLegacyWorkStatus(_status: unknown): _status is never {
-  return false
-}
-
-export function isWorkStatusTerminal(status: unknown): boolean {
+export function isTerminal(status: unknown): boolean {
   return Boolean(getWorkStatusMeta(status)?.isTerminal)
 }
 
-export function isWorkStatusApproving(status: unknown): boolean {
+export function isApproving(status: unknown): boolean {
   return Boolean(getWorkStatusMeta(status)?.isApproving)
 }
 
-export function isWorkStatusHandling(status: unknown): boolean {
+export function isHandling(status: unknown): boolean {
   return Boolean(getWorkStatusMeta(status)?.isHandling)
 }
 
-export function isWorkStatusInProgress(status: unknown): boolean {
+export function isInProgress(status: unknown): boolean {
   return Boolean(getWorkStatusMeta(status)?.isInProgress)
 }
 
-export function shouldCountWorkStatusForDeadline(status: unknown): boolean {
+export function shouldCountForDeadline(status: unknown): boolean {
   return Boolean(getWorkStatusMeta(status)?.countsForDeadline)
 }

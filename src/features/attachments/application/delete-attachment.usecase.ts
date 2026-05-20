@@ -1,6 +1,5 @@
 import type { CurrentUser } from '@/shared/auth/current-user'
 import { canDeleteAttachment } from '@/features/attachments/domain/attachment.permissions'
-import type { AttPermWorkItem, AttPermAttachment } from '@/features/attachments/domain/attachment.types'
 import {
   findAttachmentWithWorkItem,
   deleteAttachmentRecord,
@@ -32,28 +31,11 @@ export async function deleteAttachmentUseCase(
   let canDelete = false
 
   if (attachment.workItem) {
-    const permWorkItem: AttPermWorkItem = {
-      departmentId: attachment.workItem.departmentId,
-      cooperators: attachment.workItem.cooperators,
-      status: attachment.workItem.status,
-      creatorId: attachment.workItem.creatorId,
-      proposedLeaderId: attachment.workItem.proposedLeaderId,
-      approvalLeaderId: attachment.workItem.approvalLeaderId,
-      currentApproverId: attachment.workItem.currentApproverId,
-      currentApproverRole: attachment.workItem.currentApproverRole,
-      type: attachment.workItem.type,
-    }
-    const permAttachment: AttPermAttachment = {
-      userId: attachment.userId,
-    }
-
+    // Work-linked attachment deletion is limited to global roles or the uploader.
     const permUser = toPermissionUser(currentUser)
-    canDelete = canDeleteAttachment(
-      permUser,
-      permWorkItem,
-      permAttachment,
-    )
+    canDelete = canDeleteAttachment(permUser, attachment.userId)
   } else {
+    // Orphan attachment records are legacy/unexpected data; keep deletion admin-only.
     canDelete = currentUser.role === 'ADMIN'
   }
 
