@@ -6,7 +6,7 @@ import {
   ApprovalType,
 } from '@prisma/client'
 import { isReturnedDraftWork, isReturnedInProgressWork, isApproving, isTerminal, isHandling } from './work-status.rules'
-import { isGlobalView, isDepartmentLevel, isCompanyLevel, isPresident, isVicePresident } from '@/features/users/domain/role.rules'
+import { isGlobalView, isDepartmentLevel, isCompanyLevel, isPresident, isVicePresident, isDeptLeader } from '@/features/users/domain/role.rules'
 
 export type PermissionUser = Pick<User, 'id' | 'role' | 'departmentId'>
 
@@ -117,32 +117,17 @@ export function canApproveWorkItem(
 
   if (!isApproving(workItem.status)) return false
 
-  if (workItem.currentApproverId) {
+  if (workItem.currentApproverId)
     return workItem.currentApproverId === user.id
-  }
 
   const currentApproverRole = workItem.currentApproverRole as Role | string | null | undefined
-  if (currentApproverRole && currentApproverRole !== user.role) {
+  if (!currentApproverRole || currentApproverRole !== user.role)
     return false
-  }
 
-  if (isDepartmentLevel(user.role)) {
-    return !!currentApproverRole && isWorkMainResponsibleDepartment(workItem, user.departmentId)
-  }
+  if (isCompanyLevel(user.role))
+    return workItem.proposedLeaderId === user.id || workItem.approvalLeaderId === user.id
 
-  if (isPresident(user.role)) {
-    return !!currentApproverRole
-  }
-
-  if (isVicePresident(user.role)) {
-    return !!currentApproverRole && (
-      !workItem.proposedLeaderId ||
-      workItem.proposedLeaderId === user.id ||
-      workItem.approvalLeaderId === user.id
-    )
-  }
-
-  return false
+  return isDeptLeader(user.role) && isWorkMainResponsibleDepartment(workItem, user.departmentId)
 }
 
 /**
@@ -199,20 +184,10 @@ export function canEditWorkItem(
   workItem: PermissionWorkItem,
 ): boolean {
   const status = normalizeStatus(workItem.status)
-  if (status !== WorkItemStatus.DRAFT) {
-    return false
-  }
-
-  const returnedDraft = isReturnedDraftWork(workItem)
+  if (status !== WorkItemStatus.DRAFT) return false
 
   if (isGlobalView(user.role)) return true
-  if (returnedDraft) {
-    return (workItem.firstSubmitterId ?? workItem.creatorId) === user.id
-  }
-  if (workItem.creatorId === user.id) return true
-  if ((workItem.firstSubmitterId ?? workItem.creatorId) === user.id) {
-    return true
-  }
 
-  return false
+  const ownerId = workItem.firstSubmitterId ?? workItem.creatorId
+  return ownerId === user.id
 }

@@ -13,9 +13,9 @@ export interface UploadAttachmentInput {
 
 export type UploadAttachmentResult =
   | {
-      kind: 'ok'
-      attachment: AttachmentApiDto
-    }
+    kind: 'ok'
+    attachment: AttachmentApiDto
+  }
   | { kind: 'error'; status: number; message: string }
 import {
   canViewAttachment,
@@ -48,11 +48,7 @@ export async function uploadAttachmentUseCase(
   }
 
   if (!canUploadAttachment(permUser, workItem)) {
-    return {
-      kind: 'error',
-      status: 403,
-      message: '无权上传该事项的附件',
-    }
+    return { kind: 'error', status: 403, message: '无权上传该事项的附件' }
   }
 
   // Permission checks must complete before writing the file to disk.
