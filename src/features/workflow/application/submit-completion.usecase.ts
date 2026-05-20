@@ -4,7 +4,6 @@ import type { WorkflowResult } from '@/features/workflow/domain/workflow.types'
 import {
   canUserOperate,
   companyLeaderAssignment,
-  ensureMainResponsibleDepartment,
   getProcessFirstApprover,
 } from '@/features/workflow/domain/workflow.rules'
 import { toPermissionUser } from '@/features/works/domain/work-permission-user.mapper'
@@ -32,10 +31,6 @@ export async function submitCompletion(
 
   if (!canUserOperate(user, workItem)) {
     return { success: false, error: '无权提交完成申请' }
-  }
-
-  if (!ensureMainResponsibleDepartment(user, workItem)) {
-    return { success: false, error: '只有主责部门可以提交完成申请' }
   }
 
   const oldStatus = workItem.status

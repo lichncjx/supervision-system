@@ -3,7 +3,6 @@ import type { CurrentUser } from '@/shared/auth/current-user'
 import type { WorkflowResult } from '@/features/workflow/domain/workflow.types'
 import {
   canUserOperate,
-  ensureMainResponsibleDepartment,
   getProcessFirstApprover,
 } from '@/features/workflow/domain/workflow.rules'
 import { toPermissionUser } from '@/features/works/domain/work-permission-user.mapper'
@@ -31,10 +30,6 @@ export async function submitCancellation(
 
   if (!canUserOperate(user, workItem)) {
     return { success: false, error: '无权申请取消' }
-  }
-
-  if (!ensureMainResponsibleDepartment(user, workItem)) {
-    return { success: false, error: '只有主责部门可以申请取消' }
   }
 
   const oldStatus = workItem.status
