@@ -520,9 +520,11 @@ export default function WorkDetailPage() {
             companyLeaders={companyLeaders}
             needsLeaderSelection={
               !!user &&
-              (user.role === 'DEPARTMENT_LEADER' || user.role === 'DEPARTMENT_MANAGER') &&
-              !work?.proposedLeaderId
+              user.role === 'DEPARTMENT_LEADER' &&
+              !work?.proposedLeaderId &&
+              !work?.approvalLeaderId
             }
+            leaderName={work?.approvalLeader || work?.proposedLeader}
           />
           <WorkPendingAdjustmentPanel work={work} />
           <WorkflowRecords records={workflowRecords} />

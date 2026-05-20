@@ -78,7 +78,7 @@ export async function approveWorkflowAction(
     approvalType: null,
     currentApproverId: null,
     currentApproverRole: null,
-    ...(isCompanyLevel(user.role) ? { approvalLeaderId: user.id } : {}),
+    ...(isCompanyLevel(user.role) && workItem.approvalType === 'PROPOSE' ? { approvalLeaderId: user.id } : {}),
   })
 
   await createWorkflowRecord({

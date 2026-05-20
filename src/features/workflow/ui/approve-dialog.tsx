@@ -12,6 +12,7 @@ interface ApproveDialogProps {
   onConfirm: (comment?: string, nextApproverId?: number | null) => void;
   companyLeaders: Array<{ id: number; name: string; role: string }>;
   needsLeaderSelection: boolean;
+  leaderName?: string | null;
 }
 
 export function ApproveDialog({
@@ -20,6 +21,7 @@ export function ApproveDialog({
   onConfirm,
   companyLeaders,
   needsLeaderSelection,
+  leaderName,
 }: ApproveDialogProps) {
   const [comment, setComment] = useState('');
   const [selectedLeaderId, setSelectedLeaderId] = useState('');
@@ -61,6 +63,14 @@ export function ApproveDialog({
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+          )}
+          {!needsLeaderSelection && leaderName && (
+            <div>
+              <label className="text-sm font-medium text-slate-700 mb-1 block">
+                公司主管领导
+              </label>
+              <p className="text-sm text-slate-900 py-2">{leaderName}</p>
             </div>
           )}
           <div>

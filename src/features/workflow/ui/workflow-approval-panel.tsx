@@ -11,6 +11,7 @@ interface WorkflowApprovalPanelProps {
   onReject: () => void;
   companyLeaders?: Array<{ id: number; name: string; role: string }>;
   needsLeaderSelection?: boolean;
+  leaderName?: string | null;
 }
 
 export function WorkflowApprovalPanel({
@@ -19,6 +20,7 @@ export function WorkflowApprovalPanel({
   onReject,
   companyLeaders = [],
   needsLeaderSelection = false,
+  leaderName,
 }: WorkflowApprovalPanelProps) {
   const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
 
@@ -44,6 +46,7 @@ export function WorkflowApprovalPanel({
         onConfirm={onApprove}
         companyLeaders={companyLeaders}
         needsLeaderSelection={needsLeaderSelection}
+        leaderName={leaderName}
       />
     </>
   );

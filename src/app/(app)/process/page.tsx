@@ -254,9 +254,11 @@ export default function ApprovalPage() {
           onConfirm={handleApproveConfirm}
           companyLeaders={companyLeaders}
           needsLeaderSelection={
-            (user.role === 'DEPARTMENT_LEADER' || user.role === 'DEPARTMENT_MANAGER') &&
-            !selectedWork.proposedLeaderId
+            user.role === 'DEPARTMENT_LEADER' &&
+            !selectedWork.proposedLeaderId &&
+            !selectedWork.approvalLeaderId
           }
+          leaderName={selectedWork.approvalLeader || selectedWork.proposedLeader}
         />
       )}
     </div>
