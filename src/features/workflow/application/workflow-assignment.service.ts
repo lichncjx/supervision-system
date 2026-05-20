@@ -59,7 +59,11 @@ export async function getNextApprovalAssignment(
       !isPresidentApprovalNode(workItem)
     ) {
       const approver = await presidentAssignment()
-      return approver ? { kind: 'next', approver } : { kind: 'missingCompanyLeader' }
+      if (!approver) return { kind: 'missingCompanyLeader' }
+      if (workItem.currentApproverId === approver.currentApproverId) {
+        return { kind: 'complete' }
+      }
+      return { kind: 'next', approver }
     }
 
     return { kind: 'complete' }

@@ -84,7 +84,7 @@ export function getProcessFirstApprover(
   return companyLeaderAssignment(workItem, 'approval')
 }
 
-/** 重点事项取消需主要领导审批 */
+/** 当前业务规则：重点工作取消均需主要领导审批；needMainLeaderCancel 为历史兼容字段，不参与当前判断。 */
 export function shouldEscalateCancelToPresident(workItem: {
   type: WorkItemType
 }) {
