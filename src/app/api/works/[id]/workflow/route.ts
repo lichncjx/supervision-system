@@ -44,6 +44,13 @@ export async function POST(
     const body = await request.json();
     const { action, comment, proof, adjustReason, cancelReason, rejectReason, nodes, nextApproverId } = body;
 
+    if (
+      nextApproverId != null &&
+      (!Number.isInteger(nextApproverId) || nextApproverId <= 0)
+    ) {
+      return NextResponse.json({ error: '无效的下一审批人' }, { status: 400 });
+    }
+
     let result;
 
     switch (action) {

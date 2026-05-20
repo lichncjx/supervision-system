@@ -7,6 +7,7 @@ import { canApproveWorkItem } from '@/features/works/domain/work.permissions'
 import { isCompanyLevel } from '@/features/users/domain/role.rules'
 import { getNextApprovalAssignment } from './workflow-assignment.service'
 import { findWorkForUpdateById, updateWorkItem } from '@/features/works/infrastructure/work.repository'
+import { findActiveCompanyLeaderById } from '@/features/users/infrastructure/user.repository'
 import {
   createWorkflowRecord,
   createOperationLog,
@@ -34,6 +35,13 @@ export async function approveWorkflowAction(
 
   if (!workItem.approvalType) {
     return { success: false, error: '审批类型缺失，无法继续流转' }
+  }
+
+  if (nextApproverId != null) {
+    const nextApproverUser = await findActiveCompanyLeaderById(nextApproverId)
+    if (!nextApproverUser) {
+      return { success: false, error: '下一审批人必须是在用的公司领导' }
+    }
   }
 
   const oldStatus = workItem.status
