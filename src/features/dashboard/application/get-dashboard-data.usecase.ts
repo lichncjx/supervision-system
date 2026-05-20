@@ -13,9 +13,11 @@ import {
   sortExpiringAndOverdue,
   sortMyActionRequired,
   buildSummary,
-  isOverdueWorkItem,
-  isExpiringWorkItem,
 } from '@/features/dashboard/domain/dashboard.rules'
+import {
+  isExpiringWorkItem,
+  isOverdueWorkItem,
+} from '@/features/works/domain/work-status.rules'
 import { findDashboardWorks } from '@/features/dashboard/infrastructure/dashboard.repository'
 
 export type GetDashboardDataInput = {

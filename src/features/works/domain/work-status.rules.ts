@@ -15,9 +15,46 @@ export interface ReturnedDraftLike {
   }>
 }
 
+export const WORK_EXPIRING_DAYS = 7
+
+export interface DeadlineWorkLike {
+  status?: unknown
+  planCompleteTime?: Date | string | null
+}
+
 function hasValue(value: unknown): boolean {
   if (value == null) return false
   return String(value).trim().length > 0
+}
+
+export function getWorkDueDate(workItem: DeadlineWorkLike): Date | null {
+  const value = workItem.planCompleteTime
+  if (!value) return null
+  return value instanceof Date ? value : new Date(value)
+}
+
+export function isOverdueWorkItem(
+  workItem: DeadlineWorkLike,
+  now: Date,
+): boolean {
+  if (isTerminal(workItem.status)) return false
+
+  const dueDate = getWorkDueDate(workItem)
+  return dueDate ? dueDate < now : false
+}
+
+export function isExpiringWorkItem(
+  workItem: DeadlineWorkLike,
+  now: Date,
+): boolean {
+  if (isTerminal(workItem.status)) return false
+
+  const dueDate = getWorkDueDate(workItem)
+  if (!dueDate) return false
+
+  const deadline = new Date(now)
+  deadline.setDate(deadline.getDate() + WORK_EXPIRING_DAYS)
+  return dueDate >= now && dueDate <= deadline
 }
 
 export function normalizeWorkStatus(status: unknown): WorkStatus | undefined {

@@ -4,12 +4,16 @@ import {
   shouldHandleWorkItem,
   type PermissionUser,
 } from '@/features/works/domain/work.permissions'
-import { normalizeWorkStatus, getWorkStatusLabel } from '@/features/works/domain/work-status.rules'
+import {
+  getWorkDueDate,
+  getWorkStatusLabel,
+  isExpiringWorkItem,
+  isOverdueWorkItem,
+  normalizeWorkStatus,
+} from '@/features/works/domain/work-status.rules'
 import {
   DEFAULT_LIST_LIMIT,
   MAX_LIST_LIMIT,
-  TERMINAL_STATUSES,
-  EXPIRING_DAYS,
   IN_PROGRESS_STATUSES,
   COMPLETING_STATUSES,
   COMPLETED_STATUSES,
@@ -24,34 +28,6 @@ export function normalizeLimit(limit?: number): number {
 
 export function serializeDate(date: Date | null): string | null {
   return date ? date.toISOString() : null
-}
-
-export function getWorkDueDate(workItem: {
-  type: WorkItemType
-  planCompleteTime: Date | null
-}): Date | null {
-  return workItem.planCompleteTime
-}
-
-export function isOverdueWorkItem(
-  workItem: { status: any; planCompleteTime: Date | null; type: WorkItemType },
-  now: Date,
-): boolean {
-  if (TERMINAL_STATUSES.includes(workItem.status as any)) return false
-  const dueDate = getWorkDueDate(workItem)
-  return dueDate ? dueDate < now : false
-}
-
-export function isExpiringWorkItem(
-  workItem: { status: any; planCompleteTime: Date | null; type: WorkItemType },
-  now: Date,
-): boolean {
-  if (TERMINAL_STATUSES.includes(workItem.status as any)) return false
-  const dueDate = getWorkDueDate(workItem)
-  if (!dueDate) return false
-  const deadline = new Date(now)
-  deadline.setDate(deadline.getDate() + EXPIRING_DAYS)
-  return dueDate >= now && dueDate <= deadline
 }
 
 export function getTypeLabel(type: WorkItemType): string {

@@ -21,7 +21,11 @@ export async function GET(request: NextRequest) {
 
     const result = await queryWorksUseCase({ currentUser, params })
 
-    return NextResponse.json(result)
+    if (result.kind === 'error') {
+      return NextResponse.json({ error: result.message }, { status: result.status })
+    }
+
+    return NextResponse.json(result.data)
   } catch (error) {
     console.error('Get works error:', error)
     return NextResponse.json({ error: '获取事项列表失败' }, { status: 500 })
