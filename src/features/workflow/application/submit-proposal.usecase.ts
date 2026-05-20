@@ -69,6 +69,10 @@ export async function submitProposal(
   }
 
   const approver = getProposalFirstApprover(workItem, user)
+  if (!approver) {
+    return { success: false, error: '请先指定公司领导后再提交审批' }
+  }
+
   const updated = await updateWorkItem(workItemId, {
     status: WorkItemStatus.PROPOSING,
     action: ActionType.CREATE,

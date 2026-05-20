@@ -43,6 +43,9 @@ export async function submitCompletion(
     workItem.type === WorkItemType.TODO
       ? companyLeaderAssignment(workItem, 'approval')
       : getProcessFirstApprover(workItem, user)
+  if (!approver) {
+    return { success: false, error: '请先指定公司领导后再提交审批' }
+  }
 
   const updated = await updateWorkItem(workItemId, {
     status: WorkItemStatus.COMPLETING,

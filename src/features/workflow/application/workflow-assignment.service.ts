@@ -9,11 +9,17 @@ import {
 import { type WorkflowWorkItem } from '@/features/workflow/infrastructure/workflow.repository'
 import { findPresident } from '@/features/users/infrastructure/user.repository'
 
-export async function presidentAssignment(): Promise<ApproverAssignment> {
+export type NextApprovalAssignmentResult =
+  | { kind: 'next'; approver: ApproverAssignment }
+  | { kind: 'complete' }
+  | { kind: 'missingCompanyLeader' }
+
+export async function presidentAssignment(): Promise<ApproverAssignment | null> {
   const president = await findPresident()
+  if (!president) return null
 
   return {
-    currentApproverId: president?.id ?? null,
+    currentApproverId: president.id,
     currentApproverRole: Role.PRESIDENT,
   }
 }
@@ -22,12 +28,13 @@ export async function getNextApprovalAssignment(
   workItem: WorkflowWorkItem,
   approvalType: ApprovalType,
   nextApproverId?: number | null,
-): Promise<ApproverAssignment | null> {
+): Promise<NextApprovalAssignmentResult> {
   if (approvalType === ApprovalType.PROPOSE) {
     if (isDepartmentApprovalNode(workItem)) {
-      return companyLeaderAssignment(workItem, 'propose', nextApproverId)
+      const approver = companyLeaderAssignment(workItem, 'propose', nextApproverId)
+      return approver ? { kind: 'next', approver } : { kind: 'missingCompanyLeader' }
     }
-    return null
+    return { kind: 'complete' }
   }
 
   if (
@@ -35,25 +42,28 @@ export async function getNextApprovalAssignment(
     approvalType === ApprovalType.COMPLETE
   ) {
     if (isDepartmentApprovalNode(workItem)) {
-      return companyLeaderAssignment(workItem, 'approval', nextApproverId)
+      const approver = companyLeaderAssignment(workItem, 'approval', nextApproverId)
+      return approver ? { kind: 'next', approver } : { kind: 'missingCompanyLeader' }
     }
-    return null
+    return { kind: 'complete' }
   }
 
   if (approvalType === ApprovalType.CANCEL) {
     if (isDepartmentApprovalNode(workItem)) {
-      return companyLeaderAssignment(workItem, 'approval', nextApproverId)
+      const approver = companyLeaderAssignment(workItem, 'approval', nextApproverId)
+      return approver ? { kind: 'next', approver } : { kind: 'missingCompanyLeader' }
     }
 
     if (
       shouldEscalateCancelToPresident(workItem) &&
       !isPresidentApprovalNode(workItem)
     ) {
-      return presidentAssignment()
+      const approver = await presidentAssignment()
+      return approver ? { kind: 'next', approver } : { kind: 'missingCompanyLeader' }
     }
 
-    return null
+    return { kind: 'complete' }
   }
 
-  return null
+  return { kind: 'complete' }
 }

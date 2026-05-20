@@ -45,13 +45,19 @@ export async function approveWorkflowAction(
   }
 
   const oldStatus = workItem.status
-  const nextApprover = await getNextApprovalAssignment(
+  const nextAssignment = await getNextApprovalAssignment(
     workItem,
     workItem.approvalType,
     nextApproverId,
   )
 
-  if (nextApprover) {
+  if (nextAssignment.kind === 'missingCompanyLeader') {
+    return { success: false, error: '请先指定公司领导后再提交审批' }
+  }
+
+  if (nextAssignment.kind === 'next') {
+    const nextApprover = nextAssignment.approver
+
     const updated = await updateWorkItem(workItemId, {
       currentApproverId: nextApprover.currentApproverId,
       currentApproverRole: nextApprover.currentApproverRole,

@@ -29,14 +29,17 @@ export function companyLeaderAssignment(
   },
   source: 'propose' | 'approval' = 'approval',
   nextApproverId?: number | null,
-): ApproverAssignment {
+): ApproverAssignment | null {
   const leaderId =
     source === 'propose'
       ? workItem.proposedLeaderId ?? workItem.approvalLeaderId
       : workItem.approvalLeaderId ?? workItem.proposedLeaderId
 
+  const currentApproverId = leaderId ?? nextApproverId
+  if (!currentApproverId) return null
+
   return {
-    currentApproverId: leaderId ?? nextApproverId ?? null,
+    currentApproverId,
     currentApproverRole: Role.VICE_PRESIDENT,
   }
 }
@@ -47,7 +50,7 @@ export function getProposalFirstApprover(
     approvalLeaderId?: number | null
   },
   user: BaseCurrentUser,
-): ApproverAssignment {
+): ApproverAssignment | null {
   if (isDeptManager(user.role)) {
     return departmentLeaderAssignment()
   }
@@ -69,7 +72,7 @@ export function getProcessFirstApprover(
     approvalLeaderId?: number | null
   },
   user: BaseCurrentUser,
-): ApproverAssignment {
+): ApproverAssignment | null {
   if (isDeptManager(user.role)) {
     return departmentLeaderAssignment()
   }
