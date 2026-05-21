@@ -3,12 +3,8 @@
 import React, { useEffect, useState } from 'react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { SELECT_CONTROL } from '@/features/works/ui/visual-tokens'
-
-interface Member {
-  id: number
-  name: string
-  isLeader: boolean
-}
+import type { MemberOption } from '@/features/members/client/member-client.types'
+import type { MemberOptionListResponse } from '@/features/members/contract/member-api.types'
 
 export interface MemberSelectProps {
   departmentId: number | undefined
@@ -29,7 +25,7 @@ export function MemberSelect({
   placeholder,
   disabled,
 }: MemberSelectProps) {
-  const [members, setMembers] = useState<Member[]>([])
+  const [members, setMembers] = useState<MemberOption[]>([])
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
@@ -52,9 +48,9 @@ export function MemberSelect({
     fetch(url.toString(), { credentials: 'include' })
       .then((res) => {
         if (!res.ok) throw new Error('Failed to fetch members')
-        return res.json()
+        return res.json() as Promise<MemberOptionListResponse>
       })
-      .then((data: Member[]) => {
+      .then((data) => {
         if (!cancelled) setMembers(data)
       })
       .catch(() => {

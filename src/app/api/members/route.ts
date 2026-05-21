@@ -3,6 +3,10 @@ import { getCurrentUserOrAuthError } from '@/shared/auth/get-current-user-or-aut
 import { queryMembersUseCase } from '@/features/members/application/query-members.usecase'
 import { createMemberUseCase } from '@/features/members/application/create-member.usecase'
 import { isAdmin } from '@/features/users/domain/role.rules'
+import type {
+  CreateMemberRequest,
+  MemberOptionApiDto,
+} from '@/features/members/contract/member-api.types'
 
 export async function GET(request: NextRequest) {
   try {
@@ -36,7 +40,7 @@ export async function GET(request: NextRequest) {
     // Non-admin callers only receive fields needed for form dropdowns.
     const sanitized = isAdminUser
       ? result
-      : result.map(({ id, name, departmentId, departmentName, isLeader }: any) => ({
+      : result.map(({ id, name, departmentId, departmentName, isLeader }): MemberOptionApiDto => ({
         id, name, departmentId, departmentName, isLeader,
       }))
 
@@ -56,7 +60,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '权限不足' }, { status: 403 })
     }
 
-    const body = await request.json()
+    const body = (await request.json()) as CreateMemberRequest
     const result = await createMemberUseCase({
       name: body.name,
       departmentId: body.departmentId,

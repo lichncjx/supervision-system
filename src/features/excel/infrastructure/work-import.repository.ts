@@ -1,4 +1,4 @@
-import { Role } from '@prisma/client'
+import { Prisma, Role } from '@prisma/client'
 import { prisma } from '@/shared/db/prisma'
 
 export async function findCompanyLeaders() {
@@ -12,7 +12,7 @@ export async function findCompanyLeaders() {
 }
 
 export async function createImportedWorkItems(params: {
-  workItems: any[]
+  workItems: Prisma.WorkItemCreateManyInput[]
   logUserId: number
   logUserName: string
   logUserRole: string

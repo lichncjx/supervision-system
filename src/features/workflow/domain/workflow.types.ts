@@ -2,7 +2,7 @@ import type { Role } from '@prisma/client'
 
 export interface WorkflowResult {
   success: boolean
-  workItem?: any
+  workItem?: unknown
   error?: string
 }
 

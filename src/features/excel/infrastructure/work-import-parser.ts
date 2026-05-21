@@ -3,6 +3,7 @@ import {
   parseExcelDate,
   isAllowedImportedStatus,
   type ImportRow,
+  type ImportCooperator,
 } from '@/features/excel/domain/excel-import.rules'
 import type { ValidationError as ImportValidationError } from '@/features/excel/domain/excel-import.rules'
 
@@ -25,7 +26,7 @@ export async function validateAndParseExcel(
 
   const workbook = XLSX.read(fileBuffer, { type: 'buffer' })
   const worksheet = workbook.Sheets[workbook.SheetNames[0]]
-  const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: '' })
+  const jsonData = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet, { defval: '' })
 
   if (!jsonData || jsonData.length === 0) {
     errors.push({
@@ -37,7 +38,7 @@ export async function validateAndParseExcel(
     return { rows, errors }
   }
 
-  const headerRow = jsonData[0] as any
+  const headerRow = jsonData[0]
   const headerMap: Record<string, string> = {}
 
   for (const key of Object.keys(headerRow)) {
@@ -62,7 +63,7 @@ export async function validateAndParseExcel(
   )
 
   for (let i = 0; i < jsonData.length; i++) {
-    const row = jsonData[i] as any
+    const row = jsonData[i]
     const rowNum = i + 2
 
     const getCell = (field: string): string => {
@@ -155,12 +156,7 @@ export async function validateAndParseExcel(
         })
       }
 
-      const cooperators: Array<{
-        departmentId: number
-        departmentName?: string
-        leader?: string
-        person?: string
-      }> = []
+      const cooperators: ImportCooperator[] = []
       if (cooperatorsStr) {
         const segments = cooperatorsStr
           .split(/[；;]/)
@@ -266,12 +262,7 @@ export async function validateAndParseExcel(
         })
       }
 
-      const cooperators: Array<{
-        departmentId: number
-        departmentName?: string
-        leader?: string
-        person?: string
-      }> = []
+      const cooperators: ImportCooperator[] = []
       if (cooperatorsStr) {
         const segments = cooperatorsStr
           .split(/[；;]/)
@@ -398,12 +389,7 @@ export async function validateAndParseExcel(
         })
       }
 
-      const cooperators: Array<{
-        departmentId: number
-        departmentName?: string
-        leader?: string
-        person?: string
-      }> = []
+      const cooperators: ImportCooperator[] = []
       if (cooperatorsStr) {
         const segments = cooperatorsStr
           .split(/[；;]/)

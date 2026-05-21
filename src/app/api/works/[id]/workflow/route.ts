@@ -10,6 +10,8 @@ import { submitCancellation } from '@/features/workflow/application/submit-cance
 import { decomposeTodoWork } from '@/features/workflow/application/decompose-todo-work.usecase';
 import { getWorkflowRecords } from '@/features/workflow/application/get-workflow-records.usecase';
 import { canViewWorkItem } from '@/features/works/domain/work.permissions';
+import type { WorkflowActionRequest } from '@/features/workflow/contract/workflow-api.types';
+import type { WorkflowResult } from '@/features/workflow/domain/workflow.types';
 
 export async function POST(
   request: NextRequest,
@@ -41,7 +43,7 @@ export async function POST(
       return NextResponse.json({ error: '用户不存在' }, { status: 401 });
     }
 
-    const body = await request.json();
+    const body = (await request.json()) as WorkflowActionRequest;
     const { action, comment, proof, adjustReason, cancelReason, rejectReason, nodes, nextApproverId } = body;
 
     if (
@@ -51,7 +53,7 @@ export async function POST(
       return NextResponse.json({ error: '无效的下一审批人' }, { status: 400 });
     }
 
-    let result;
+    let result: WorkflowResult;
 
     switch (action) {
       case 'submit':

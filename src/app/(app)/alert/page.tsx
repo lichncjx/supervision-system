@@ -7,6 +7,7 @@ import { getWorkTypeAccent, getWorkTypeText } from '@/features/works/ui/status-c
 import { AlertTriangle, Eye } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { getDepartments } from '@/features/departments/client/department-api';
+import type { Department } from '@/features/departments/client/department-client.types';
 import { queryWorks } from '@/features/works/client/work-api';
 import type { Work } from '@/features/works/client/work-view.types';
 import { StatusBadge } from '@/features/works/ui/badges';
@@ -19,7 +20,7 @@ export default function AlertPage() {
   const [overdueWorks, setOverdueWorks] = useState<Work[]>([]);
   const [tab, setTab] = useState<'expiring' | 'overdue' | 'all'>('expiring');
   const [keyword, setKeyword] = useState('');
-  const [departments, setDepartments] = useState<Array<{ id: number; name: string; code: string; isBusiness: boolean }>>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
 
   useEffect(() => {
     const loadDepartments = async () => {

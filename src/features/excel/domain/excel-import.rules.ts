@@ -3,9 +3,41 @@ import * as XLSX from 'xlsx'
 import { WorkItemStatus } from '@prisma/client'
 import { isGlobalView, isDepartmentLevel, isCompanyLevel } from '@/features/users/domain/role.rules'
 
+export interface ImportCooperator {
+  departmentId: number
+  departmentName?: string
+  leader?: string
+  person?: string
+}
+
+export interface ImportWorkRowData {
+  type: 'PRIORITY' | 'MAIN' | 'TODO'
+  businessCategory?: string
+  workItem: string
+  isInnovation?: boolean
+  workNode?: string
+  planCompleteTime: string | null
+  completeForm?: string
+  departmentName?: string
+  departmentNames?: string[]
+  departmentId: number | null
+  departmentCode?: string
+  responsibleLeader?: string | null
+  responsiblePerson?: string | null
+  cooperators: ImportCooperator[]
+  proposedLeaderId?: number | null
+  proposedLeaderName?: string
+  approvalLeaderId?: number | null
+  approvalLeaderName?: string
+  proposedScene?: string
+  formedTime?: string | null
+  workPlan?: string
+  progress?: string
+}
+
 export interface ImportRow {
   row: number
-  data: any
+  data: ImportWorkRowData
 }
 
 export interface ValidationError {
@@ -19,7 +51,7 @@ export function isDepartmentImportRole(role: string): boolean {
   return isDepartmentLevel(role)
 }
 
-function getImportResponsibleDepartmentIds(data: any): number[] {
+function getImportResponsibleDepartmentIds(data: ImportWorkRowData): number[] {
   return data.departmentId ? [data.departmentId] : []
 }
 
@@ -83,7 +115,7 @@ export function validateImportScope(
   }
 }
 
-export function parseExcelDate(value: any): string | null {
+export function parseExcelDate(value: unknown): string | null {
   if (!value) return null
 
   if (typeof value === 'number' && value > 25000 && value < 60000) {

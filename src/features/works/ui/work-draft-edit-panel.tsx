@@ -15,6 +15,8 @@ import {
   TodoSpecificFields,
 } from '@/features/works/ui/work-form-fields';
 import type { Cooperator, WorkNode } from '@/features/works/client/work-client.types';
+import type { User } from '@/features/users/client/user-client.types';
+import type { Department } from '@/features/departments/client/department-client.types';
 import { FIELD_LABEL, PANEL_PADDED } from './visual-tokens';
 
 interface WorkDraftEditPanelProps {
@@ -28,11 +30,11 @@ interface WorkDraftEditPanelProps {
   setEditReason: (reason: string) => void;
   isPriorityOrMain: boolean;
   isTodo: boolean;
-  departments: Array<{ id: number; name: string; code: string; isBusiness: boolean }>;
-  cooperatorDepts?: Array<{ id: number; name: string; code: string; isBusiness: boolean }>;
-  companyLeaders: Array<{ id: number; name: string; role: string }>;
-  departmentLeaders?: Array<{ id: number; name: string; role: string; departmentId: number }>;
-  departmentManagers?: Array<{ id: number; name: string; role: string; departmentId: number }>;
+  departments: Department[];
+  cooperatorDepts?: Department[];
+  companyLeaders: User[];
+  departmentLeaders?: User[];
+  departmentManagers?: User[];
   onResubmit: () => void;
   onDelete: () => void;
   isRegularDraft?: boolean;

@@ -26,6 +26,8 @@ import {
 } from '@/features/works/ui/work-form-fields';
 import { validateCreateWorkFormFields, type CreateWorkFormField } from '@/features/works/ui/work-form-validations';
 import { buildCreateWorkPayload } from '@/features/works/client/build-create-work-payload';
+import type { User } from '@/features/users/client/user-client.types';
+import type { Department } from '@/features/departments/client/department-client.types';
 import { ERROR_BOX, HINT_BOX, STICKY_ACTION_BAR } from '@/features/works/ui/visual-tokens';
 
 export default function NewWorkPage() {
@@ -44,8 +46,8 @@ export default function NewWorkPage() {
   const isPriorityOrMain = type === '重点' || type === '主要';
   const isTodo = type === '待办';
 
-  const [companyLeaders, setCompanyLeaders] = useState<Array<{ id: number; name: string; role: string }>>([]);
-  const [departments, setDepartments] = useState<Array<{ id: number; name: string; code: string; isBusiness: boolean }>>([]);
+  const [companyLeaders, setCompanyLeaders] = useState<User[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
 
   const canCreateTodo =
     user?.role === 'ADMIN' ||

@@ -16,6 +16,7 @@ import { sortWorksByDueDate } from '@/features/works/client/work-sort';
 import type { WorkStatusFilter, WorkType } from '@/features/works/client/work-client.types';
 import type { Work } from '@/features/works/client/work-view.types';
 import { getDepartments } from '@/features/departments/client/department-api';
+import type { Department } from '@/features/departments/client/department-client.types';
 import { isCompanyLevel, isGlobalView } from '@/features/users/domain/role.rules';
 import { StatusBadge } from '@/features/works/ui/badges';
 import { WorkListToolbar } from '@/features/works/ui/work-list-toolbar';
@@ -102,7 +103,7 @@ export default function StatusFilterPage() {
   const [monthFilter, setMonthFilter] = useState('');
   const [monthOptions, setMonthOptions] = useState<string[]>([]);
   const [list, setList] = useState<Work[]>([]);
-  const [departments, setDepartments] = useState<Array<{ id: number; name: string; code: string; isBusiness: boolean }>>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const companyLevel = isGlobalView(user?.role) || isCompanyLevel(user?.role);
 
   const safeFilter: StatusPageFilter = allowedFilters.includes(filter as StatusPageFilter)
@@ -142,7 +143,7 @@ export default function StatusFilterPage() {
 
       const newList = await queryWorks(user, {
         type: typeFilter,
-        departmentId: companyLevel ? departmentFilter : user?.departmentId,
+        departmentId: companyLevel ? departmentFilter : (user?.departmentId ?? undefined),
         status: queryStatus,
         keyword,
       });

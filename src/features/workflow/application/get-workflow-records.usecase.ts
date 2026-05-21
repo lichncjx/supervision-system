@@ -1,6 +1,7 @@
 import { findWorkflowRecordsByWorkItemId } from '@/features/workflow/infrastructure/workflow.repository'
+import type { WorkflowRecordsResponse } from '@/features/workflow/contract/workflow-api.types'
 
-export async function getWorkflowRecords(workItemId: number) {
+export async function getWorkflowRecords(workItemId: number): Promise<WorkflowRecordsResponse> {
   const records = await findWorkflowRecordsByWorkItemId(workItemId)
 
   return records.map((record) => ({
@@ -12,6 +13,6 @@ export async function getWorkflowRecords(workItemId: number) {
     previousStatus: record.statusBefore,
     newStatus: record.statusAfter,
     comment: record.comment,
-    createdAt: record.createdAt,
+    createdAt: record.createdAt.toISOString(),
   }))
 }

@@ -2,6 +2,7 @@ import { NextResponse, NextRequest } from 'next/server'
 import { getCurrentUserOrAuthError } from '@/shared/auth/get-current-user-or-auth-error'
 import { Role } from '@prisma/client'
 import { updateMemberUseCase } from '@/features/members/application/update-member.usecase'
+import type { UpdateMemberRequest } from '@/features/members/contract/member-api.types'
 
 export async function PATCH(
   request: NextRequest,
@@ -21,7 +22,7 @@ export async function PATCH(
       return NextResponse.json({ error: '无效的人员ID' }, { status: 400 })
     }
 
-    const body = await request.json()
+    const body = (await request.json()) as UpdateMemberRequest
     const result = await updateMemberUseCase({
       memberId,
       name: body.name,

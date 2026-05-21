@@ -1,4 +1,20 @@
-import type { WorkItemType } from '@prisma/client'
+import type { Role, WorkItemStatus, WorkItemType } from '@prisma/client'
+import type { PermissionWorkItem } from '@/features/works/domain/work.permissions'
+
+export interface DashboardWorkLike extends PermissionWorkItem {
+  id: number
+  title: string
+  type: WorkItemType
+  status: WorkItemStatus
+  departmentId: number | null
+  completeTime: Date | null
+  planCompleteTime: Date | null
+  department: { id: number; name: string } | null
+  currentApprover: { id: number; name: string } | null
+  responsibleLeader: string | null
+  responsiblePerson: string | null
+  currentApproverRole: Role | null
+}
 
 export interface DashboardSummary {
   total: number

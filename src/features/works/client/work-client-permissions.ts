@@ -1,4 +1,4 @@
-import type { User } from '@/features/users/domain/user.types'
+import type { User } from '@/features/users/client/user-client.types'
 import type { Work } from '@/features/works/client/work-view.types'
 import type { WorkStatus } from '@/features/works/domain/work-status'
 import { isReturnedDraftWork, isReturnedInProgressWork } from '@/features/works/domain/work-status.rules'
@@ -103,7 +103,8 @@ function isWorkMainResponsibleDepartment(work: Work, departmentId?: number | nul
 }
 
 /** 事项是否与指定部门有关联（主责 或 配合） */
-export function isWorkRelatedToDepartment(work: Work, departmentId: number) {
+export function isWorkRelatedToDepartment(work: Work, departmentId: number | null) {
+  if (!departmentId) return false
   if (Number(work.departmentId) === departmentId) return true
   if (Array.isArray(work.cooperators)) {
     return work.cooperators.some((c) => Number(c.departmentId) === departmentId)

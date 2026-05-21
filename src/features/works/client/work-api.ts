@@ -1,4 +1,4 @@
-import type { User } from '@/features/users/domain/user.types'
+import type { User } from '@/features/users/client/user-client.types'
 import type { WorkType, WorkQuery } from '@/features/works/client/work-client.types'
 import type { Work, WorkEditablePatch } from './work-view.types'
 import type {

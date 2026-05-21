@@ -1,6 +1,7 @@
 import type { CurrentUser } from '@/shared/auth/current-user'
+import { Prisma, WorkItemStatus, WorkItemType } from '@prisma/client'
 import { validateAndParseExcel } from '@/features/excel/infrastructure/work-import-parser'
-import { findDepartmentsForImport } from '@/features/users/infrastructure/department.repository'
+import { findDepartmentsForImport } from '@/features/departments/infrastructure/department.repository'
 import { findCompanyLeaders } from '@/features/excel/infrastructure/work-import.repository'
 import {
   createImportedWorkItems,
@@ -27,6 +28,10 @@ export type ImportWorksFromExcelResult =
       details: ImportValidationError[]
     }
   | { kind: 'error'; status: number; message: string }
+
+function toInputJsonValue(value: unknown): Prisma.InputJsonValue {
+  return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue
+}
 
 export async function importWorksFromExcelUseCase(
   input: ImportWorksFromExcelInput,
@@ -79,13 +84,13 @@ export async function importWorksFromExcelUseCase(
   }
 
   const now = new Date()
-  const workItems = rows.map((row): any => {
+  const workItems: Prisma.WorkItemCreateManyInput[] = rows.map((row) => {
     const data = row.data
     if (data.type === 'PRIORITY' || data.type === 'MAIN') {
       return {
-        type: data.type as any,
+        type: data.type === 'PRIORITY' ? WorkItemType.PRIORITY : WorkItemType.MAIN,
         title: data.workItem,
-        status: 'DRAFT' as any,
+        status: WorkItemStatus.DRAFT,
         creatorId: currentUser.id,
         departmentId: data.departmentId,
         businessCategory: data.businessCategory || null,
@@ -99,8 +104,8 @@ export async function importWorksFromExcelUseCase(
         completeForm: data.completeForm || null,
         responsibleLeader: data.responsibleLeader || null,
         responsiblePerson: data.responsiblePerson || null,
-        cooperators: data.cooperators?.length
-          ? data.cooperators
+        cooperators: data.cooperators.length
+          ? toInputJsonValue(data.cooperators)
           : undefined,
         createdAt: now,
         updatedAt: now,
@@ -112,9 +117,9 @@ export async function importWorksFromExcelUseCase(
         data.approvalLeaderId || finalProposedLeaderId
 
       return {
-        type: 'TODO' as any,
+        type: WorkItemType.TODO,
         title: data.workItem,
-        status: 'DRAFT' as any,
+        status: WorkItemStatus.DRAFT,
         creatorId: currentUser.id,
         departmentId: data.departmentId || currentUser.departmentId,
         proposedLeaderId: finalProposedLeaderId,
@@ -126,8 +131,8 @@ export async function importWorksFromExcelUseCase(
           : null,
         responsibleLeader: data.responsibleLeader || null,
         responsiblePerson: data.responsiblePerson || null,
-        cooperators: data.cooperators?.length
-          ? data.cooperators
+        cooperators: data.cooperators.length
+          ? toInputJsonValue(data.cooperators)
           : undefined,
         workPlan: data.workPlan,
         planCompleteTime: data.planCompleteTime

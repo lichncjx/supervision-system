@@ -17,6 +17,8 @@ import { StatusBadge } from '@/features/works/ui/badges';
 import { WorkListPagination } from '@/features/works/ui/work-list-pagination';
 import { WorkSearchBar } from '@/features/works/ui/work-search-bar';
 import { ApproveDialog } from '@/features/workflow/ui/approve-dialog';
+import type { User } from '@/features/users/client/user-client.types';
+import type { Department } from '@/features/departments/client/department-client.types';
 
 export default function ApprovalPage() {
   const { user } = useAuth();
@@ -24,8 +26,8 @@ export default function ApprovalPage() {
   const [handlingWorks, setHandlingWorks] = useState<Work[]>([]);
   const [tab, setTab] = useState<'approving' | 'handling' | 'all'>('approving');
   const [keyword, setKeyword] = useState('');
-  const [departments, setDepartments] = useState<Array<{ id: number; name: string; code: string; isBusiness: boolean }>>([]);
-  const [companyLeaders, setCompanyLeaders] = useState<Array<{ id: number; name: string; role: string }>>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [companyLeaders, setCompanyLeaders] = useState<User[]>([]);
   const [approveDialogOpen, setApproveDialogOpen] = useState(false);
   const [selectedWork, setSelectedWork] = useState<Work | null>(null);
 

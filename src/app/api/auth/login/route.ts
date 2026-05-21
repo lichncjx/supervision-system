@@ -2,10 +2,11 @@ import { NextResponse } from 'next/server';
 import prisma from '@/shared/db/prisma';
 import { verifyPassword } from '@/shared/auth/password';
 import { generateToken } from '@/shared/auth/jwt';
+import type { LoginRequest } from '@/features/users/contract/user-api.types';
 
 export async function POST(request: Request) {
   try {
-    const { username, password } = await request.json();
+    const { username, password } = (await request.json()) as LoginRequest;
 
     if (!username || !password) {
       return NextResponse.json({ error: '用户名和密码不能为空' }, { status: 400 });

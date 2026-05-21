@@ -1,11 +1,11 @@
 import { Role } from '@prisma/client'
 import { isGlobalView, isCompanyLevel } from '@/features/users/domain/role.rules'
 import { findUsersByDepartment } from '@/features/users/infrastructure/user.repository'
-import { toLeaderItem } from '@/features/users/application/user-api.mapper'
-import type { LeaderItem } from '@/features/users/application/user-api.types'
+import { toUserApiDto } from '@/features/users/application/user-api.mapper'
+import type { UserApiDto } from '@/features/users/contract/user-api.types'
 
 export type ListDepartmentUsersResult =
-  | { kind: 'ok'; data: LeaderItem[] }
+  | { kind: 'ok'; data: UserApiDto[] }
   | { kind: 'error'; status: number; message: string }
 
 export async function listDepartmentLeadersUseCase(
@@ -25,7 +25,7 @@ export async function listDepartmentLeadersUseCase(
   }
 
   const leaders = await findUsersByDepartment(departmentId, Role.DEPARTMENT_LEADER)
-  return { kind: 'ok', data: leaders.map(toLeaderItem) }
+  return { kind: 'ok', data: leaders.map(toUserApiDto) }
 }
 
 export async function listDepartmentManagersUseCase(
@@ -45,5 +45,5 @@ export async function listDepartmentManagersUseCase(
   }
 
   const managers = await findUsersByDepartment(departmentId, Role.DEPARTMENT_MANAGER)
-  return { kind: 'ok', data: managers.map(toLeaderItem) }
+  return { kind: 'ok', data: managers.map(toUserApiDto) }
 }

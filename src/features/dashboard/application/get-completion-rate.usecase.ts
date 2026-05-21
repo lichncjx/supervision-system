@@ -1,4 +1,5 @@
 import type { BaseCurrentUser } from '@/shared/auth/current-user'
+import { WorkItemType, type Prisma } from '@prisma/client'
 import { getResponsibleDepartmentIds } from '@/features/works/domain/work.permissions'
 import { buildWorkVisibilityWhere } from '@/shared/db/work-visibility-builder'
 import { isDepartmentLevel, isGlobalView } from '@/features/users/domain/role.rules'
@@ -11,7 +12,8 @@ import {
   findBusinessDepartments,
   findDepartmentById,
   findDepartmentsByIds,
-} from '@/features/users/infrastructure/department.repository'
+  type Department,
+} from '@/features/departments/infrastructure/department.repository'
 
 export interface GetCompletionRateInput {
   currentUser: BaseCurrentUser
@@ -31,8 +33,8 @@ export type GetCompletionRateResult =
 async function getDepartmentStats(
   departmentId: number,
   departmentName: string,
-  visibilityWhere: any,
-  typeFilter?: string,
+  visibilityWhere: Prisma.WorkItemWhereInput,
+  typeFilter?: WorkItemType,
   startDate?: Date,
   endDate?: Date,
 ): Promise<CompletionRateStat> {
@@ -69,11 +71,14 @@ export async function getCompletionRateUseCase(
 
   const sDate = startDate ? new Date(startDate) : undefined
   const eDate = endDate ? new Date(endDate) : undefined
+  const typeFilter = type && Object.values(WorkItemType).includes(type.toUpperCase() as WorkItemType)
+    ? type.toUpperCase() as WorkItemType
+    : undefined
 
-  let departments
-  if (isGlobalView(currentUser.role as any)) {
+  let departments: Department[]
+  if (isGlobalView(currentUser.role)) {
     departments = await findBusinessDepartments()
-  } else if (isDepartmentLevel(currentUser.role as any)) {
+  } else if (isDepartmentLevel(currentUser.role)) {
     const dept = await findDepartmentById(currentUser.departmentId)
     departments = dept ? [dept] : []
   } else {
@@ -82,12 +87,12 @@ export async function getCompletionRateUseCase(
   }
 
   const stats = await Promise.all(
-    departments.map((dept: any) =>
+    departments.map((dept) =>
       getDepartmentStats(
         dept.id,
         dept.name,
         visibilityWhere,
-        type || undefined,
+        typeFilter,
         sDate,
         eDate,
       ),
