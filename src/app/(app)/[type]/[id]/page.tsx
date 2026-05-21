@@ -130,9 +130,9 @@ export default function WorkDetailPage() {
   const isAdmin = user?.role === 'ADMIN';
   const isSupervisor = user?.role === 'SUPERVISOR';
   const canEditDraft = isAdmin || canEditRegularDraftWork(user, work);
-  const canSubmitDraft = isAdmin || canSubmitDraftWork(user, work);
+  const canSubmitDraft = canSubmitDraftWork(user, work);
   const canHandleReturnedCreate = isAdmin || canHandleReturnedDraftWork(user, work);
-  const canDecomposeTodo = isAdmin || canDecomposeTodoWork(user, work);
+  const canDecomposeTodo = canDecomposeTodoWork(user, work);
   const canApprove = user ? canApproveWork(user, work) : false;
 
   const isRelatedDept = user ? isWorkRelatedToDepartment(work, user.departmentId) : false;

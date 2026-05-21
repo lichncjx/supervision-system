@@ -82,10 +82,11 @@ function PriorityMainWorkDisplayInfo({ work, departments, hideNodes }: WorkDispl
 
   return (
     <div className="space-y-3">
-      <DetailSection title="主要内容" accentColor={theme.deep}>
-        <DetailLongText label="工作计划" value={work.workPlan || '-'} />
-        <DetailLongText label="进展情况" value={work.progress || '-'} />
-      </DetailSection>
+      {work.description && (
+        <DetailSection title="主要内容" accentColor={theme.deep}>
+          <DetailLongText label="事项说明" value={work.description} />
+        </DetailSection>
+      )}
 
       <DetailSection title="责任详情" accentColor={theme.mid}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
