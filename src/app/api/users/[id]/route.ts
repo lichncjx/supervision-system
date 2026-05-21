@@ -14,6 +14,10 @@ export async function PUT(
 
     const { id } = await params
     const userId = parseInt(id)
+    if (isNaN(userId)) {
+      return NextResponse.json({ error: '无效的用户ID' }, { status: 400 })
+    }
+
     const body = (await request.json()) as UpdateUserRequest
 
     const result = await updateUserUseCase(auth.user, userId, body)
