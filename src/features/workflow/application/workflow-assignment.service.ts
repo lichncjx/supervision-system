@@ -7,7 +7,7 @@ import {
   shouldEscalateCancelToPresident,
 } from '@/features/workflow/domain/workflow.rules'
 import { type WorkflowWorkItem } from '@/features/workflow/infrastructure/workflow.repository'
-import { findPresident } from '@/features/users/infrastructure/user.repository'
+import { findPresident } from '@/features/workflow/infrastructure/workflow.repository'
 
 export type NextApprovalAssignmentResult =
   | { kind: 'next'; approver: ApproverAssignment }

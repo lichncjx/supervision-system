@@ -1,6 +1,25 @@
 import { Prisma, Role, WorkItemStatus } from '@prisma/client'
 import { prisma } from '@/shared/db/prisma'
 
+export async function findPresident() {
+  return prisma.user.findFirst({
+    where: { role: Role.PRESIDENT, isActive: true },
+    orderBy: { id: 'asc' },
+    select: { id: true },
+  })
+}
+
+export async function findCompanyLeaderById(userId: number) {
+  return prisma.user.findFirst({
+    where: {
+      id: userId,
+      role: { in: [Role.PRESIDENT, Role.VICE_PRESIDENT] },
+      isActive: true,
+    },
+    select: { id: true, role: true },
+  })
+}
+
 export type WorkflowWorkItem = Prisma.WorkItemGetPayload<object>
 
 export async function createWorkflowRecord(params: {
