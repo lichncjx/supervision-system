@@ -1,15 +1,4 @@
 import { prisma } from '@/shared/db/prisma'
-import { isGlobalView } from '@/features/users/domain/role.rules'
-
-export async function getDepartmentIdsForUser(
-  user: { id: number; role: string; departmentId: number },
-): Promise<number[]> {
-  if (isGlobalView(user.role)) {
-    const departments = await findBusinessDepartments()
-    return departments.map((d) => d.id)
-  }
-  return [user.departmentId]
-}
 
 export async function findDepartmentById(id: number) {
   return prisma.department.findUnique({ where: { id } })

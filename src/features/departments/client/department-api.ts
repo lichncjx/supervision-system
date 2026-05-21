@@ -25,13 +25,3 @@ export async function getDepartments(): Promise<Department[]> {
   }
 }
 
-export async function getDepartmentName(
-  departmentId: number,
-): Promise<string> {
-  const depts = await getDepartments()
-  return depts.find((d) => d.id === departmentId)?.name || '-'
-}
-
-export function clearDepartmentsCache() {
-  departmentsCache = null
-}

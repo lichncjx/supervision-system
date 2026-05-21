@@ -97,6 +97,3 @@ export function getStatusAccent(status: string): string {
   return getWorkStatusMeta(status)?.leftBorderClass ?? statusColors.cancelled.left
 }
 
-export type StatusColorKey = keyof typeof statusColors
-export type ExpiryColorKey = keyof typeof expiryColors
-export type WorkTypeColorKey = keyof typeof workTypeColors

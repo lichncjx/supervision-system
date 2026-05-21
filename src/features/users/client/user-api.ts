@@ -11,22 +11,6 @@ export async function getCompanyLeaders() {
   }
 }
 
-export async function getUsersByDepartment(departmentId: number) {
-  try {
-    const response = await fetch(
-      `/api/users/by-department?departmentId=${departmentId}`,
-      {
-        method: 'GET',
-        credentials: 'include',
-      },
-    )
-    if (!response.ok) return []
-    return await response.json()
-  } catch {
-    return []
-  }
-}
-
 export async function getDepartmentLeaders(departmentId: number) {
   try {
     const response = await fetch(

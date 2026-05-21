@@ -17,64 +17,6 @@ export interface CreateWorkFormInput {
   nodes: WorkNode[];
 }
 
-export type ValidationResult =
-  | { valid: true }
-  | { valid: false; message: string };
-
-export function validateCreateWorkForm(input: CreateWorkFormInput): ValidationResult {
-  const { user, isPriorityOrMain, isTodo } = input;
-
-  if (!user) {
-    return { valid: false, message: '请先登录' };
-  }
-
-  if (isPriorityOrMain) {
-    if (!input.priorityMainWorkItem.trim()) {
-      return { valid: false, message: '请输入工作事项' };
-    }
-    if (!input.priorityMainDepartmentId) {
-      return { valid: false, message: '请选择责任部门' };
-    }
-  } else if (isTodo) {
-    if (!input.todoWorkItem.trim()) {
-      return { valid: false, message: '请输入待办事项' };
-    }
-    if (!input.todoDepartmentId) {
-      return { valid: false, message: '请选择主责部门' };
-    }
-    if (!input.todoProposedLeaderId) {
-      return { valid: false, message: '请选择事项提出领导' };
-    }
-  }
-
-  const selectedProposedLeader = isTodo
-    ? input.companyLeaders.find((leader) => leader.id === Number(input.todoProposedLeaderId))
-    : null;
-
-  if (isTodo && !selectedProposedLeader) {
-    return { valid: false, message: '请选择事项提出领导' };
-  }
-
-  // 待办事项由部门发起时，已填写标题的节点需要完成时间
-  const validNodes = input.nodes
-    .filter((node) => node.title.trim())
-    .map((node) => ({
-      ...node,
-      children: node.children.filter((child) => child.title.trim()),
-    }));
-
-  if (
-    isTodo &&
-    validNodes.length > 0 &&
-    (user.role === 'DEPARTMENT_MANAGER' || user.role === 'DEPARTMENT_LEADER') &&
-    validNodes.some((node) => !node.completeTime)
-  ) {
-    return { valid: false, message: '请填写每个任务节点的完成时间' };
-  }
-
-  return { valid: true };
-}
-
 export type CreateWorkFormField = 'workItem' | 'departmentId' | 'proposedLeaderId' | 'nodes';
 
 export type CreateWorkFormErrors = Partial<Record<CreateWorkFormField, string>>;

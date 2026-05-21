@@ -2,7 +2,7 @@ import {
   WORK_STATUS_META,
   PRISMA_WORK_STATUS_TO_VALUE,
 } from './work-status'
-import type { WorkStatus, WorkStatusVisualGroup } from './work-status'
+import type { WorkStatus } from './work-status'
 
 export interface ReturnedDraftLike {
   status?: unknown
@@ -141,15 +141,6 @@ export function getWorkStatusDescription(status: unknown): string {
 export function getWorkStatusBadgeClass(status: unknown): string {
   return (
     getWorkStatusMeta(status)?.badgeClass || WORK_STATUS_META.draft.badgeClass
-  )
-}
-
-export function getWorkStatusVisualGroup(
-  status: unknown,
-): WorkStatusVisualGroup {
-  return (
-    getWorkStatusMeta(status)?.visualGroup ||
-    WORK_STATUS_META.cancelled.visualGroup
   )
 }
 
