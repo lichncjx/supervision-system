@@ -29,11 +29,12 @@ services:
   seed-admin:
     image: supervision-system-seed:20260521
     container_name: supervision-seed-admin
+    profiles:
+      - init
     env_file:
       - .env.production
     depends_on:
       - db
-    command: ["sh", "-c", "node ./scripts/wait-for-db.mjs && pnpm seed:admin"]
     networks:
       - supervision-net
 
@@ -44,7 +45,8 @@ services:
     env_file:
       - .env.production
     depends_on:
-      - db
+      migrate:
+        condition: service_completed_successfully
     ports:
       - "5000:5000"
     volumes:

@@ -14,6 +14,12 @@ pnpm-debug.log
 .env.local
 .env.development.local
 .env.production.local
+offline-release
+deploy/offline/.env.production
+deploy/offline/data
+deploy/offline/uploads
+deploy/offline/backup
+uploads
 *.zip
 *.rar
 *.7z

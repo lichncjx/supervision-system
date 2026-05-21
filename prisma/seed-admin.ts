@@ -40,15 +40,19 @@ const users = [
   },
 ] as const
 
-function getInitialPassword(envName: string) {
-  const password = process.env[envName]
+function isPlaceholderSecret(value: string) {
+  return value.includes('请填写') || value.includes('请修改') || value.includes('change-me')
+}
 
-  if (password) {
+function getInitialPassword(envName: string) {
+  const password = process.env[envName]?.trim()
+
+  if (password && !isPlaceholderSecret(password)) {
     return password
   }
 
   if (process.env.NODE_ENV === 'production') {
-    throw new Error(`生产环境必须设置 ${envName}`)
+    throw new Error(`生产环境必须设置有效的 ${envName}，不能留空或使用模板占位符`)
   }
 
   console.warn(`非生产环境未设置 ${envName}，将使用开发默认密码 123456。正式部署禁止使用该默认密码。`)

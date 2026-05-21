@@ -341,9 +341,11 @@ docker logs supervision-migrate
 生产环境必须设置：
 
 ```env
-INITIAL_ADMIN_PASSWORD=请填写正式管理员初始密码
-INITIAL_SUPERVISOR_PASSWORD=请填写正式督办管理员初始密码
+INITIAL_ADMIN_PASSWORD=<正式管理员初始密码>
+INITIAL_SUPERVISOR_PASSWORD=<正式督办管理员初始密码>
 ```
+
+`.env.production.template` 中这些值默认为空，留空或使用模板占位符时 `seed-admin` 会直接失败，避免正式环境误用默认密码。
 
 ### 页面无法访问
 
