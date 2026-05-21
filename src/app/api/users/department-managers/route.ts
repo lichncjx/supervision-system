@@ -1,69 +1,33 @@
-import { NextResponse, NextRequest } from 'next/server';
-import prisma from '@/shared/db/prisma';
-import { getUserFromToken } from '@/shared/auth/get-current-user';
-import { Role } from '@prisma/client';
-import { isGlobalView, isCompanyLevel } from '@/features/users/domain/role.rules';
+import { NextResponse, NextRequest } from 'next/server'
+import { getUserFromToken } from '@/shared/auth/get-current-user'
+import { listDepartmentManagersUseCase } from '@/features/users/application/list-department-users.usecase'
 
 export async function GET(request: NextRequest) {
   try {
-    const token = request.cookies.get('token')?.value;
-
+    const token = request.cookies.get('token')?.value
     if (!token) {
-      return NextResponse.json({ error: '未登录' }, { status: 401 });
+      return NextResponse.json({ error: '未登录' }, { status: 401 })
     }
 
-    const currentUser = await getUserFromToken(token);
-
+    const currentUser = await getUserFromToken(token)
     if (!currentUser) {
-      return NextResponse.json({ error: '登录已过期' }, { status: 401 });
+      return NextResponse.json({ error: '登录已过期' }, { status: 401 })
     }
 
-    const { searchParams } = new URL(request.url);
-    const departmentId = searchParams.get('departmentId');
-
+    const { searchParams } = new URL(request.url)
+    const departmentId = searchParams.get('departmentId')
     if (!departmentId) {
-      return NextResponse.json({ error: '请提供部门ID' }, { status: 400 });
+      return NextResponse.json({ error: '请提供部门ID' }, { status: 400 })
     }
 
-    const targetDeptId = parseInt(departmentId);
+    const targetDeptId = parseInt(departmentId)
+    const result = await listDepartmentManagersUseCase(currentUser, targetDeptId)
+    if (result.kind === 'error')
+      return NextResponse.json({ error: result.message }, { status: result.status })
 
-    if (!isGlobalView(currentUser.role) && !isCompanyLevel(currentUser.role)) {
-      if (currentUser.departmentId !== targetDeptId) {
-        return NextResponse.json({ error: '无权限查询其他部门主管' }, { status: 403 });
-      }
-    }
-
-    const managers = await prisma.user.findMany({
-      where: {
-        departmentId: targetDeptId,
-        role: Role.DEPARTMENT_MANAGER,
-        isActive: true,
-      },
-      select: {
-        id: true,
-        name: true,
-        role: true,
-        departmentId: true,
-        department: {
-          select: {
-            name: true,
-          },
-        },
-      },
-      orderBy: { name: 'asc' },
-    });
-
-    const result = managers.map((manager) => ({
-      id: manager.id,
-      name: manager.name,
-      role: manager.role,
-      departmentId: manager.departmentId,
-      departmentName: manager.department?.name || '',
-    }));
-
-    return NextResponse.json(result);
+    return NextResponse.json(result.data)
   } catch (error) {
-    console.error('Get department managers error:', error);
-    return NextResponse.json({ error: '获取部门主管失败' }, { status: 500 });
+    console.error('Get department managers error:', error)
+    return NextResponse.json({ error: '获取部门主管失败' }, { status: 500 })
   }
 }
