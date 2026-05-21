@@ -5,6 +5,7 @@ import { getProposalFirstApprover, canUserSubmit } from '@/features/workflow/dom
 import { toPermissionUser } from '@/features/works/domain/work-permission-user.mapper'
 import { findWorkForUpdateById, updateWorkItem } from '@/features/works/infrastructure/work.repository'
 import { isCompanyLevel } from '@/features/users/domain/role.rules'
+import { findActiveCompanyLeaderById } from '@/features/users/infrastructure/user.repository'
 import {
   createWorkflowRecord,
   createOperationLog,
@@ -28,6 +29,13 @@ export async function submitProposal(
 
   if (!canUserSubmit(workItem, user)) {
     return { success: false, error: '无权提交该事项' }
+  }
+
+  if (nextApproverId != null) {
+    const nextApproverUser = await findActiveCompanyLeaderById(nextApproverId)
+    if (!nextApproverUser) {
+      return { success: false, error: '下一审批人必须是在用的公司领导' }
+    }
   }
 
   const oldStatus = workItem.status
