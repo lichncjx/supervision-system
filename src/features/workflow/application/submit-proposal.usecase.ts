@@ -14,6 +14,7 @@ export async function submitProposal(
   workItemId: number,
   user: CurrentUser,
   comment?: string,
+  nextApproverId?: number | null,
 ): Promise<WorkflowResult> {
   const permUser = toPermissionUser(user)
   const workItem = await findWorkForUpdateById(workItemId)
@@ -68,7 +69,7 @@ export async function submitProposal(
     return { success: true, workItem: updated }
   }
 
-  const approver = getProposalFirstApprover(workItem, user)
+  const approver = getProposalFirstApprover(workItem, user, nextApproverId)
   if (!approver) {
     return { success: false, error: '请先指定公司领导后再提交审批' }
   }

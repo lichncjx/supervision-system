@@ -55,7 +55,7 @@ export async function POST(
 
     switch (action) {
       case 'submit':
-        result = await submitProposal(workItemId, currentUser, comment);
+        result = await submitProposal(workItemId, currentUser, comment, nextApproverId);
         break;
       case 'approve':
         result = await approveWorkflowAction(workItemId, currentUser, comment, nextApproverId);
