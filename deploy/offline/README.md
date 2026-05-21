@@ -57,7 +57,7 @@ sh deploy/offline/scripts/export-images.sh 20260601 offline-release/images
 
 ## 5. 外网导出镜像
 
-在项目源码根目录执行。推荐使用辅助脚本导出，因为脚本会同时生成与镜像 tag 匹配的 `offline-release/deploy/offline/docker-compose.yml`，避免镜像 tag 与 compose 文件不一致。
+在项目源码根目录执行。推荐使用辅助脚本导出，因为脚本会同时生成与镜像 tag 匹配的 `offline-release/docker-compose.yml`，避免镜像 tag 与 compose 文件不一致。生成后的 `offline-release/` 与内网 `/opt/supervision-system/` 目标目录结构一致，可以直接压缩打包。
 
 ```bash
 mkdir -p offline-release/images
@@ -74,7 +74,7 @@ docker save postgres:16 | gzip > offline-release/images/postgres_16.tar.gz
 sh deploy/offline/scripts/export-images.sh 20260521 offline-release/images
 ```
 
-如果手工执行 `docker save` 且使用了非默认 tag，必须同步修改摆渡包中的 `deploy/offline/docker-compose.yml`：
+如果手工执行 `docker save` 且使用了非默认 tag，必须同步修改摆渡包中的 `docker-compose.yml`：
 
 ```yaml
 image: supervision-system-app:你的TAG
@@ -100,19 +100,23 @@ offline-release/
 │  ├─ supervision-system-migrate_20260521.tar.gz
 │  ├─ supervision-system-seed_20260521.tar.gz
 │  └─ postgres_16.tar.gz
-├─ deploy/
-│  └─ offline/
-│     ├─ docker-compose.yml
-│     ├─ .env.production.template
-│     ├─ README.md
-│     └─ scripts/
-│        ├─ build-images.sh
-│        ├─ export-images.sh
-│        └─ load-images.sh
+├─ scripts/
+│  ├─ build-images.sh
+│  ├─ export-images.sh
+│  └─ load-images.sh
+├─ docker-compose.yml
+├─ .env.production.template
+├─ README.md
 └─ SHA256SUMS.txt
 ```
 
-`deploy/offline/scripts/` 中的脚本只是辅助工具，正式交付时可以一并摆渡。
+`offline-release/` 的结构与内网 `/opt/supervision-system/` 目标目录一致。外网构建机可以直接压缩整个 `offline-release/` 目录，内网解压后将内容放入 `/opt/supervision-system/`。
+
+例如：
+
+```bash
+tar -czf supervision-system-offline-20260521.tar.gz offline-release
+```
 
 ## 7. 内网服务器目录结构
 
@@ -123,7 +127,7 @@ mkdir -p /opt/supervision-system
 cd /opt/supervision-system
 ```
 
-将 `images`、`docker-compose.yml`、`.env.production.template` 放入 `/opt/supervision-system`。推荐结构：
+将 `offline-release/` 中的内容放入 `/opt/supervision-system`。推荐结构：
 
 ```text
 /opt/supervision-system/
