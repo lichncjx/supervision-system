@@ -34,7 +34,7 @@ docker pull postgres:16
 
 ## 4. 外网构建镜像
 
-在项目根目录执行：
+在项目源码根目录执行。脚本和下面的手工命令都需要当前目录包含 `Dockerfile`、`package.json`、`prisma/`、`src/` 等完整源码。
 
 ```bash
 docker build --target app -t supervision-system-app:20260521 .
@@ -48,7 +48,16 @@ docker build --target seed -t supervision-system-seed:20260521 .
 sh deploy/offline/scripts/build-images.sh 20260521
 ```
 
+如需使用其他版本号，构建和导出必须使用同一个 tag。例如：
+
+```bash
+sh deploy/offline/scripts/build-images.sh 20260601
+sh deploy/offline/scripts/export-images.sh 20260601 offline-release/images
+```
+
 ## 5. 外网导出镜像
+
+在项目源码根目录执行。推荐使用辅助脚本导出，因为脚本会同时生成与镜像 tag 匹配的 `offline-release/deploy/offline/docker-compose.yml`，避免镜像 tag 与 compose 文件不一致。
 
 ```bash
 mkdir -p offline-release/images
@@ -63,6 +72,14 @@ docker save postgres:16 | gzip > offline-release/images/postgres_16.tar.gz
 
 ```bash
 sh deploy/offline/scripts/export-images.sh 20260521 offline-release/images
+```
+
+如果手工执行 `docker save` 且使用了非默认 tag，必须同步修改摆渡包中的 `deploy/offline/docker-compose.yml`：
+
+```yaml
+image: supervision-system-app:你的TAG
+image: supervision-system-migrate:你的TAG
+image: supervision-system-seed:你的TAG
 ```
 
 建议生成校验文件：
