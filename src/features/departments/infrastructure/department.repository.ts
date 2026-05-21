@@ -7,17 +7,8 @@ export interface Department {
   isBusiness: boolean
 }
 
-let cache: Department[] | null = null
-
 async function loadAllDepartments(): Promise<Department[]> {
-  if (!cache) {
-    cache = await prisma.department.findMany()
-  }
-  return cache
-}
-
-export function clearDepartmentCache() {
-  cache = null
+  return prisma.department.findMany()
 }
 
 export async function findAllDepartments(): Promise<Department[]> {
@@ -36,7 +27,7 @@ export async function findDepartmentsByIds(
 ): Promise<Department[]> {
   const idSet = new Set(ids)
   const all = await loadAllDepartments()
-  return all.filter((d) => idSet.has(d.id))
+  return all.filter((d) => idSet.has(d.id) && d.isBusiness)
 }
 
 export async function findBusinessDepartments(): Promise<Department[]> {

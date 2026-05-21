@@ -62,6 +62,17 @@ async function getDepartmentStats(
   return { departmentId, departmentName, ...stats }
 }
 
+function normalizeTypeFilter(type: string | null): WorkItemType | undefined {
+  if (!type) return undefined
+
+  const normalized = type.toUpperCase()
+  if (!Object.values(WorkItemType).includes(normalized as WorkItemType)) {
+    return undefined
+  }
+
+  return normalized as WorkItemType
+}
+
 export async function getCompletionRateUseCase(
   input: GetCompletionRateInput,
 ): Promise<GetCompletionRateResult> {
@@ -71,9 +82,10 @@ export async function getCompletionRateUseCase(
 
   const sDate = startDate ? new Date(startDate) : undefined
   const eDate = endDate ? new Date(endDate) : undefined
-  const typeFilter = type && Object.values(WorkItemType).includes(type.toUpperCase() as WorkItemType)
-    ? type.toUpperCase() as WorkItemType
-    : undefined
+  const typeFilter = normalizeTypeFilter(type)
+  if (type && !typeFilter) {
+    return { kind: 'error', status: 400, message: '无效的事项类型' }
+  }
 
   let departments: Department[]
   if (isGlobalView(currentUser.role)) {
