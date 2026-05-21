@@ -8,6 +8,7 @@ RUN npm config set registry https://registry.npmmirror.com && npm install -g pnp
 FROM base AS deps
 
 COPY package.json pnpm-lock.yaml .npmrc ./
+COPY prisma/schema.prisma ./prisma/schema.prisma
 
 RUN pnpm config set registry https://registry.npmmirror.com && pnpm install --frozen-lockfile
 
@@ -53,10 +54,27 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-RUN corepack enable
-
+COPY --from=deps /app/node_modules ./node_modules
+COPY package.json pnpm-lock.yaml ./
 COPY prisma ./prisma
+COPY scripts/wait-for-db.mjs ./scripts/wait-for-db.mjs
 
-RUN npm config set registry https://registry.npmmirror.com && npm install prisma@6.19.3
+CMD ["sh", "-c", "node ./scripts/wait-for-db.mjs && ./node_modules/.bin/prisma migrate deploy --schema=./prisma/schema.prisma"]
 
-CMD ["./node_modules/.bin/prisma", "migrate", "deploy", "--schema=./prisma/schema.prisma"]
+
+FROM base AS seed
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+COPY --from=deps /app/node_modules ./node_modules
+COPY package.json pnpm-lock.yaml ./
+COPY prisma/schema.prisma ./prisma/schema.prisma
+COPY prisma/seed-admin.ts ./prisma/seed-admin.ts
+COPY prisma/seed-demo.ts ./prisma/seed-demo.ts
+COPY scripts/wait-for-db.mjs ./scripts/wait-for-db.mjs
+
+RUN pnpm prisma generate
+
+CMD ["sh", "-c", "node ./scripts/wait-for-db.mjs && pnpm seed:admin"]

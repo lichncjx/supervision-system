@@ -97,6 +97,13 @@ Desktop.ini
 # Uploads
 uploads/
 
+# Offline deployment local artifacts
+offline-release/
+deploy/offline/.env.production
+deploy/offline/data/
+deploy/offline/uploads/
+deploy/offline/backup/
+
 # Claude Code local settings
 .claude/settings.local.json
 
