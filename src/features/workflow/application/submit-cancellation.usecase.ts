@@ -28,6 +28,7 @@ export async function submitCancellation(
     return { success: false, error: '只有进行中事项可以申请取消' }
   }
 
+  // 办理人权限按 firstSubmitterId ?? creatorId 保留，不随当前主责部门人员调整而收回。
   if (!canUserOperate(user, workItem)) {
     return { success: false, error: '无权申请取消' }
   }

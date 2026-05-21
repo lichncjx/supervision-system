@@ -50,17 +50,18 @@ export function getProposalFirstApprover(
     approvalLeaderId?: number | null
   },
   user: BaseCurrentUser,
+  nextApproverId?: number | null,
 ): ApproverAssignment | null {
   if (isDeptManager(user.role)) {
     return departmentLeaderAssignment()
   }
 
   if (isDeptLeader(user.role)) {
-    return companyLeaderAssignment(workItem, 'propose')
+    return companyLeaderAssignment(workItem, 'propose', nextApproverId)
   }
 
   if (isCompanyLevel(user.role)) {
-    return companyLeaderAssignment(workItem, 'propose')
+    return companyLeaderAssignment(workItem, 'propose', nextApproverId)
   }
 
   return departmentLeaderAssignment()

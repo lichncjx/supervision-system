@@ -5,6 +5,7 @@ import { getProposalFirstApprover, canUserSubmit } from '@/features/workflow/dom
 import { toPermissionUser } from '@/features/works/domain/work-permission-user.mapper'
 import { findWorkForUpdateById, updateWorkItem } from '@/features/works/infrastructure/work.repository'
 import { isCompanyLevel } from '@/features/users/domain/role.rules'
+import { ensureNextApproverIsActiveCompanyLeader } from './workflow-next-approver.guard'
 import {
   createWorkflowRecord,
   createOperationLog,
@@ -14,6 +15,7 @@ export async function submitProposal(
   workItemId: number,
   user: CurrentUser,
   comment?: string,
+  nextApproverId?: number | null,
 ): Promise<WorkflowResult> {
   const permUser = toPermissionUser(user)
   const workItem = await findWorkForUpdateById(workItemId)
@@ -28,6 +30,9 @@ export async function submitProposal(
   if (!canUserSubmit(workItem, user)) {
     return { success: false, error: '无权提交该事项' }
   }
+
+  const nextApproverError = await ensureNextApproverIsActiveCompanyLeader(nextApproverId)
+  if (nextApproverError) return nextApproverError
 
   const oldStatus = workItem.status
 
@@ -68,7 +73,7 @@ export async function submitProposal(
     return { success: true, workItem: updated }
   }
 
-  const approver = getProposalFirstApprover(workItem, user)
+  const approver = getProposalFirstApprover(workItem, user, nextApproverId)
   if (!approver) {
     return { success: false, error: '请先指定公司领导后再提交审批' }
   }
