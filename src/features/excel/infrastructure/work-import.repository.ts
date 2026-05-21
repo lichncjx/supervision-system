@@ -1,21 +1,6 @@
 import { Role } from '@prisma/client'
 import { prisma } from '@/shared/db/prisma'
 
-export async function findBusinessDepartments() {
-  return prisma.department.findMany({
-    where: { isBusiness: true },
-    select: { id: true, name: true },
-    orderBy: { name: 'asc' },
-  })
-}
-
-export async function findDepartmentsForImport() {
-  return prisma.department.findMany({
-    where: { isBusiness: true },
-    select: { id: true, name: true, code: true },
-  })
-}
-
 export async function findCompanyLeaders() {
   return prisma.user.findMany({
     where: {

@@ -1,5 +1,6 @@
 import { prisma } from '@/shared/db/prisma'
 import { toMemberResponse, type MemberResponse } from '@/features/members/application/member.dto'
+import { findDepartmentById } from '@/features/users/infrastructure/department.repository'
 
 export interface UpdateMemberInput {
   memberId: number
@@ -32,7 +33,7 @@ export async function updateMemberUseCase(
 
   if (input.name !== undefined) updateData.name = input.name
   if (input.departmentId !== undefined) {
-    const dept = await prisma.department.findUnique({ where: { id: input.departmentId } })
+    const dept = await findDepartmentById(input.departmentId)
     if (!dept) {
       return { kind: 'error', status: 400, message: '部门不存在' }
     }
@@ -68,7 +69,7 @@ export async function updateMemberUseCase(
       }
       if (user.departmentId !== effectiveDeptId) {
         const memberDeptName = input.departmentId
-          ? (await prisma.department.findUnique({ where: { id: effectiveDeptId } }))?.name
+          ? (await findDepartmentById(effectiveDeptId))?.name
           : member.department?.name
         warnings.push(`人员部门与系统用户部门不一致（人员: ${memberDeptName ?? '未知'}，用户: ${user.department?.name ?? '未知'}）`)
       }

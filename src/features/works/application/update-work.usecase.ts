@@ -7,7 +7,7 @@ import {
   updateWorkItem,
   createWorkUpdateOperationLog,
 } from '@/features/works/infrastructure/work.repository'
-import { findDepartmentById } from '@/features/works/infrastructure/work.repository'
+import { findDepartmentById } from '@/features/users/infrastructure/department.repository'
 import {
   validateMemberAssignments,
   type MemberAssignment,

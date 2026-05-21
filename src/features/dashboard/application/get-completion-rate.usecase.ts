@@ -11,7 +11,7 @@ import {
   findBusinessDepartments,
   findDepartmentById,
   findDepartmentsByIds,
-} from '@/features/dashboard/infrastructure/dashboard.repository'
+} from '@/features/users/infrastructure/department.repository'
 
 export interface GetCompletionRateInput {
   currentUser: BaseCurrentUser

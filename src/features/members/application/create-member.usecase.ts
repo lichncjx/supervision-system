@@ -1,5 +1,6 @@
 import { prisma } from '@/shared/db/prisma'
 import { toMemberResponse, type MemberResponse } from '@/features/members/application/member.dto'
+import { findDepartmentById } from '@/features/users/infrastructure/department.repository'
 
 export interface CreateMemberInput {
   name: string
@@ -41,9 +42,7 @@ export async function createMemberUseCase(
     return { kind: 'error', status: 400, message: '姓名和部门为必填字段' }
   }
 
-  const department = await prisma.department.findUnique({
-    where: { id: resolvedDepartmentId },
-  })
+  const department = await findDepartmentById(resolvedDepartmentId)
   if (!department) {
     return { kind: 'error', status: 400, message: '部门不存在' }
   }
