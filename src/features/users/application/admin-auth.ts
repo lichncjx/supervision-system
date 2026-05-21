@@ -1,6 +1,6 @@
 import { Role } from '@prisma/client'
 import { verifyToken } from '@/shared/auth/jwt'
-import { findUserWithPasswordById } from '@/features/users/infrastructure/user.repository'
+import { findUserBasicAuthById } from '@/features/users/infrastructure/user.repository'
 
 export type AdminAuthResult =
   | { ok: true; user: { id: number; role: string; departmentId: number; name: string } }
@@ -18,7 +18,7 @@ export async function authenticateAdmin(
     return { ok: false, status: 401, message: '登录已过期' }
   }
 
-  const user = await findUserWithPasswordById(decoded.userId)
+  const user = await findUserBasicAuthById(decoded.userId)
   if (!user || user.role !== Role.ADMIN) {
     return { ok: false, status: 403, message: '权限不足' }
   }

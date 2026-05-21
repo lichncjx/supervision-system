@@ -1,13 +1,5 @@
 import type { UserListItem, LeaderItem } from './user-api.types'
-
-const PROTECTED_USERNAMES = [
-  'admin',
-  'supervisor',
-  'president',
-  'vice_president',
-  'dept_leader',
-  'dept_manager',
-]
+import { PROTECTED_USERNAMES } from '@/features/users/domain/protected-usernames'
 
 export function toUserListItem(user: {
   id: number

@@ -1,5 +1,6 @@
 import { Role } from '@prisma/client'
 import { isAdmin } from '@/features/users/domain/role.rules'
+import { PROTECTED_USERNAMES } from '@/features/users/domain/protected-usernames'
 import {
   findUserByUsername,
   findDepartmentById,
@@ -8,15 +9,6 @@ import {
 import { hashPassword } from '@/shared/auth/password'
 import { toUserListItem } from '@/features/users/application/user-api.mapper'
 import type { UserListItem } from '@/features/users/application/user-api.types'
-
-const PROTECTED_USERNAMES = [
-  'admin',
-  'supervisor',
-  'president',
-  'vice_president',
-  'dept_leader',
-  'dept_manager',
-]
 
 export interface CreateUserBody {
   username: string

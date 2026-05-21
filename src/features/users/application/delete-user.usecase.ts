@@ -1,17 +1,9 @@
 import { isAdmin } from '@/features/users/domain/role.rules'
+import { PROTECTED_USERNAMES } from '@/features/users/domain/protected-usernames'
 import {
   findUserById,
   deleteUser,
 } from '@/features/users/infrastructure/user.repository'
-
-const PROTECTED_USERNAMES = [
-  'admin',
-  'supervisor',
-  'president',
-  'vice_president',
-  'dept_leader',
-  'dept_manager',
-]
 
 export type DeleteUserResult =
   | { kind: 'ok' }

@@ -1,20 +1,12 @@
 import { isAdmin } from '@/features/users/domain/role.rules'
+import { PROTECTED_USERNAMES } from '@/features/users/domain/protected-usernames'
 import {
   findUserById,
   updateUser,
 } from '@/features/users/infrastructure/user.repository'
 
-const PROTECTED_USERNAMES = [
-  'admin',
-  'supervisor',
-  'president',
-  'vice_president',
-  'dept_leader',
-  'dept_manager',
-]
-
 export interface ToggleUserStatusBody {
-  isActive: boolean
+  isActive?: boolean
 }
 
 export type ToggleUserStatusResult =
