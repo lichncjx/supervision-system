@@ -7,8 +7,22 @@ export interface Department {
   isBusiness: boolean
 }
 
+const DEPARTMENT_CACHE_TTL_MS = 5 * 60 * 1000
+
+let cache: { departments: Department[]; expiresAt: number } | null = null
+
 async function loadAllDepartments(): Promise<Department[]> {
-  return prisma.department.findMany()
+  if (cache && cache.expiresAt > Date.now()) {
+    return cache.departments
+  }
+
+  const departments = await prisma.department.findMany()
+  cache = {
+    departments,
+    expiresAt: Date.now() + DEPARTMENT_CACHE_TTL_MS,
+  }
+
+  return departments
 }
 
 export async function findAllDepartments(): Promise<Department[]> {
