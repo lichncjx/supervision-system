@@ -35,9 +35,7 @@ export async function downloadAttachmentUseCase(
 
   if (attachment.workItem) {
     // Work-linked attachments inherit the parent work item's visibility rules.
-    const permUser = toPermissionUser(currentUser)
-
-    if (!canViewAttachment(permUser, attachment.workItem)) {
+    if (!canViewAttachment(toPermissionUser(currentUser), attachment.workItem)) {
       return { kind: 'error', status: 403, message: '无权查看该附件' }
     }
   }
