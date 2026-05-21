@@ -77,4 +77,4 @@ COPY scripts/wait-for-db.mjs ./scripts/wait-for-db.mjs
 
 RUN pnpm prisma generate
 
-CMD ["pnpm", "seed:admin"]
+CMD ["sh", "-c", "node ./scripts/wait-for-db.mjs && pnpm seed:admin"]

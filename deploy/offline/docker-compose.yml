@@ -32,7 +32,7 @@ services:
       - .env.production
     depends_on:
       - db
-    command: ["pnpm", "seed:admin"]
+    command: ["sh", "-c", "node ./scripts/wait-for-db.mjs && pnpm seed:admin"]
     networks:
       - supervision-net
 
