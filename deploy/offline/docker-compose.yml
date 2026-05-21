@@ -22,6 +22,7 @@ services:
       - .env.production
     depends_on:
       - db
+    command: ["sh", "-c", "node ./scripts/wait-for-db.mjs && ./node_modules/.bin/prisma migrate deploy --schema=./prisma/schema.prisma"]
     networks:
       - supervision-net
 
