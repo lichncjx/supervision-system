@@ -3,6 +3,7 @@ set -eu
 
 TAG="${1:-20260521}"
 OUT_DIR="${2:-offline-release/images}"
+OUT_DIR="${OUT_DIR%/}"
 RELEASE_ROOT="$(dirname "$OUT_DIR")"
 
 mkdir -p "$OUT_DIR"
