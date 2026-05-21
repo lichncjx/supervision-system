@@ -3,52 +3,6 @@ import type { Work } from '@/features/works/client/work-view.types'
 import type { WorkflowStep } from '@/features/workflow/domain/workflow-client.types'
 import { isCompanyLevel } from '@/features/users/domain/role.rules'
 
-export function getWorkflowRecordDescription(
-  action: string,
-  previousStatus: string,
-  newStatus: string,
-): string {
-  const na = action.toLowerCase()
-  const nsOld = previousStatus.toLowerCase()
-  const nsNew = newStatus.toLowerCase()
-
-  if (na === 'reject') return '审批退回，待修改后重新提交'
-  if (na === 'adjust') return '提交调整申请，进入调整审批流程'
-  if (na === 'cancel') return '提交取消申请，进入取消审批流程'
-  if (na === 'evidence') {
-    if (nsNew === 'completing') return '提交完成申请，进入完成审批流程'
-    return '提交见证材料'
-  }
-  if (na === 'submit') return '提交审批申请'
-  if (na === 'approve') {
-    if (nsOld === 'adjusting') {
-      if (nsNew === 'adjusting')
-        return '调整申请审批通过，继续流转至下一审批节点'
-      if (nsNew === 'in_progress')
-        return '调整申请审批通过，事项恢复进行中'
-    }
-    if (nsOld === 'cancelling') {
-      if (nsNew === 'cancelling')
-        return '取消申请审批通过，继续流转至下一审批节点'
-      if (nsNew === 'cancelled')
-        return '取消申请审批通过，事项已取消'
-    }
-    if (nsOld === nsNew) return '审批通过，流程继续流转'
-
-    const statusChangeDesc: Record<string, Record<string, string>> = {
-      draft: { proposing: '提交审批，进入立项审批中' },
-      pending_decompose: { proposing: '分解方案提交审批' },
-      proposing: { in_progress: '公司领导审批通过，事项进入进行中' },
-      in_progress: { completing: '提交完成申请' },
-      completing: { completed: '完成审批通过，事项已完成' },
-    }
-    if (statusChangeDesc[nsOld]?.[nsNew]) return statusChangeDesc[nsOld][nsNew]
-    return '审批通过，状态变更'
-  }
-  if (na === 'decompose') return '待办事项已分解'
-  return ''
-}
-
 function statusToStepIndex(work: Work): number | undefined {
   const status = work.status as string
   if (status === 'pending_decompose') return 1

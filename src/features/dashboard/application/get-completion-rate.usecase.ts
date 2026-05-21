@@ -9,9 +9,9 @@ import {
 } from '@/features/dashboard/infrastructure/dashboard.repository'
 import {
   findBusinessDepartments,
-  findDepartmentByIdForDashboard as findDepartmentById,
+  findDepartmentById,
   findDepartmentsByIds,
-} from '@/features/departments/infrastructure/department.repository'
+} from '@/features/dashboard/infrastructure/dashboard.repository'
 
 export interface GetCompletionRateInput {
   currentUser: BaseCurrentUser

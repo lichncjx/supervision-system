@@ -1,4 +1,3 @@
-import { Prisma } from '@prisma/client'
 import { prisma } from '@/shared/db/prisma'
 
 const WORK_ITEM_FOR_UPLOAD_SELECT = {
@@ -13,10 +12,6 @@ const WORK_ITEM_FOR_UPLOAD_SELECT = {
   currentApproverRole: true,
   type: true,
 } as const
-
-export type WorkItemForUpload = Prisma.WorkItemGetPayload<{
-  select: typeof WORK_ITEM_FOR_UPLOAD_SELECT
-}>
 
 export async function findWorkItemForUpload(id: number) {
   return prisma.workItem.findUnique({
@@ -40,10 +35,6 @@ const ATTACHMENT_WITH_WORK_ITEM_INCLUDE = {
     },
   },
 } as const
-
-export type AttachmentWithWorkItem = Prisma.AttachmentGetPayload<{
-  include: typeof ATTACHMENT_WITH_WORK_ITEM_INCLUDE
-}>
 
 export async function findAttachmentWithWorkItem(id: number) {
   return prisma.attachment.findUnique({

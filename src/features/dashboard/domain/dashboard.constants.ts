@@ -1,7 +1,5 @@
 import { WorkItemStatus } from '@prisma/client'
 
-export const EXPIRING_DAYS = 7
-
 export const IN_PROGRESS_STATUSES: WorkItemStatus[] = [
   WorkItemStatus.IN_PROGRESS,
 ]
@@ -16,11 +14,6 @@ export const COMPLETED_STATUSES: WorkItemStatus[] = [
 
 export const CANCELLED_STATUSES: WorkItemStatus[] = [
   WorkItemStatus.CANCELLED,
-]
-
-export const TERMINAL_STATUSES: WorkItemStatus[] = [
-  ...COMPLETED_STATUSES,
-  ...CANCELLED_STATUSES,
 ]
 
 export const DEFAULT_LIST_LIMIT = 5

@@ -1,7 +1,6 @@
 import type { CurrentUser } from '@/shared/auth/current-user'
 import { validateAndParseExcel } from '@/features/excel/infrastructure/work-import-parser'
-import { findDepartmentsForImport } from '@/features/departments/infrastructure/department.repository'
-import { findCompanyLeaders } from '@/features/users/infrastructure/user.repository'
+import { findDepartmentsForImport, findCompanyLeaders } from '@/features/excel/infrastructure/work-import.repository'
 import {
   createImportedWorkItems,
 } from '@/features/excel/infrastructure/work-import.repository'

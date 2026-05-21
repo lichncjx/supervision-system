@@ -5,8 +5,8 @@ import {
   WorkItemType,
   ApprovalType,
 } from '@prisma/client'
-import { isReturnedDraftWork, isReturnedInProgressWork, isApproving, isTerminal, isHandling } from './work-status.rules'
-import { isGlobalView, isDepartmentLevel, isCompanyLevel, isPresident, isVicePresident, isDeptLeader } from '@/features/users/domain/role.rules'
+import { isReturnedInProgressWork, isApproving, isHandling } from './work-status.rules'
+import { isGlobalView, isDepartmentLevel, isCompanyLevel, isDeptLeader } from '@/features/users/domain/role.rules'
 
 export type PermissionUser = Pick<User, 'id' | 'role' | 'departmentId'>
 

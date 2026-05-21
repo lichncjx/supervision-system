@@ -4,12 +4,9 @@ import type {
   WorkNode,
   Cooperator,
   AdjustHistory,
-  WorkStatusFilter,
 } from '@/features/works/client/work-client.types'
 import type { WorkStatus } from '@/features/works/domain/work-status'
 import type { Attachment } from '@/features/attachments/client/attachment-client.types'
-
-export type WorkFilter = WorkStatusFilter
 
 export interface Work {
   id: number

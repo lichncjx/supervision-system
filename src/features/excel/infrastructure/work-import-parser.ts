@@ -5,7 +5,14 @@ import {
   type ImportRow,
 } from '@/features/excel/domain/excel-import.rules'
 import type { ValidationError as ImportValidationError } from '@/features/excel/domain/excel-import.rules'
-import type { DepartmentInfo, CompanyLeaderInfo } from './work-import.repository'
+
+interface DepartmentInfo {
+  id: number; name: string; code: string | null
+}
+
+interface CompanyLeaderInfo {
+  id: number; name: string
+}
 
 export async function validateAndParseExcel(
   fileBuffer: Buffer,
