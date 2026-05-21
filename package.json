@@ -13,7 +13,9 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
-    "prisma:seed": "tsx prisma/seed.ts",
+    "seed:admin": "tsx prisma/seed-admin.ts",
+    "seed:demo": "tsx prisma/seed-demo.ts",
+    "prisma:seed": "pnpm seed:demo",
     "db:deploy": "pnpm prisma:generate && pnpm prisma:deploy",
     "db:init": "pnpm prisma:generate && pnpm prisma:deploy && pnpm prisma:seed",
     "test:regression": "node tests/regression-baseline.cjs",
@@ -23,7 +25,7 @@
     "check": "pnpm typecheck && pnpm lint && pnpm build"
   },
   "prisma": {
-    "seed": "node_modules/.bin/tsx prisma/seed.ts"
+    "seed": "node_modules/.bin/tsx prisma/seed-demo.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

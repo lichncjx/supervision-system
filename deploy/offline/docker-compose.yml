@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16
+    container_name: supervision-db
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    environment:
+      POSTGRES_DB: supervision
+      POSTGRES_USER: supervision
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    networks:
+      - supervision-net
+
+  migrate:
+    image: supervision-system-migrate:20260521
+    container_name: supervision-migrate
+    env_file:
+      - .env.production
+    depends_on:
+      - db
+    networks:
+      - supervision-net
+
+  seed-admin:
+    image: supervision-system-seed:20260521
+    container_name: supervision-seed-admin
+    env_file:
+      - .env.production
+    depends_on:
+      - db
+    command: ["pnpm", "seed:admin"]
+    networks:
+      - supervision-net
+
+  app:
+    image: supervision-system-app:20260521
+    container_name: supervision-app
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    depends_on:
+      - db
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./uploads:/app/uploads
+    networks:
+      - supervision-net
+
+networks:
+  supervision-net:
+    name: supervision-net
+    driver: bridge
