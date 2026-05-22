@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { getCurrentUserOrAuthError } from '@/shared/auth/get-current-user-or-auth-error'
-import { actionOk, fail, failResult } from '@/shared/http/api-response'
+import { success, fail, fromError } from '@/shared/http/api-response'
 import { deleteAttachmentUseCase } from '@/features/attachments/application/delete-attachment.usecase'
 
 export async function DELETE(
@@ -23,10 +23,10 @@ export async function DELETE(
     const result = await deleteAttachmentUseCase({ currentUser, attachmentId })
 
     if (result.kind === 'error') {
-      return failResult(result)
+      return fromError(result)
     }
 
-    return actionOk()
+    return success()
   } catch (error) {
     console.error('Delete attachment error:', error)
     return fail('删除失败', 500)

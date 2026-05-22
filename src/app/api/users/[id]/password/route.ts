@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { authenticateAdmin } from '@/features/users/application/admin-auth'
-import { actionOk, fail, failResult } from '@/shared/http/api-response'
+import { success, fail, fromError } from '@/shared/http/api-response'
 import { resetUserPasswordUseCase } from '@/features/users/application/reset-user-password.usecase'
 import type { ResetUserPasswordRequest } from '@/features/users/contract/user-api.types'
 
@@ -10,7 +10,7 @@ export async function PUT(
 ) {
   try {
     const auth = await authenticateAdmin(request.cookies.get('token')?.value)
-    if (!auth.ok) return failResult(auth)
+    if (!auth.ok) return fromError(auth)
 
     const { id } = await params
     const userId = parseInt(id)
@@ -22,9 +22,9 @@ export async function PUT(
 
     const result = await resetUserPasswordUseCase(auth.user, userId, body)
     if (result.kind === 'error')
-      return failResult(result)
+      return fromError(result)
 
-    return actionOk()
+    return success()
   } catch (error) {
     console.error('Reset password error:', error)
     return fail('重置密码失败', 500)

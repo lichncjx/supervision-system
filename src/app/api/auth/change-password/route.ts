@@ -1,28 +1,17 @@
-import { NextResponse, NextRequest } from 'next/server'
-import { verifyToken } from '@/shared/auth/jwt'
+import { NextRequest } from 'next/server'
+import { requireCurrentUser } from '@/shared/auth/require-current-user'
+import { success, fromError } from '@/shared/http/api-response'
+import { withApiHandler } from '@/shared/http/with-api-handler'
 import { changePasswordUseCase } from '@/features/users/application/change-password.usecase'
 import type { ChangePasswordRequest } from '@/features/users/contract/user-api.types'
 
-export async function POST(request: NextRequest) {
-  try {
-    const token = request.cookies.get('token')?.value
-    if (!token) {
-      return NextResponse.json({ error: '未登录' }, { status: 401 })
-    }
+export const POST = withApiHandler(async (request: NextRequest) => {
+  const currentUser = await requireCurrentUser(request)
+  const body = (await request.json()) as ChangePasswordRequest
 
-    const decoded = verifyToken(token)
-    if (!decoded) {
-      return NextResponse.json({ error: '登录已过期' }, { status: 401 })
-    }
+  const result = await changePasswordUseCase(currentUser.id, body)
+  if (result.kind === 'error')
+    return fromError(result)
 
-    const body = (await request.json()) as ChangePasswordRequest
-    const result = await changePasswordUseCase(decoded.userId, body)
-    if (result.kind === 'error')
-      return NextResponse.json({ error: result.message }, { status: result.status })
-
-    return NextResponse.json({ success: true })
-  } catch (error) {
-    console.error('Change password error:', error)
-    return NextResponse.json({ error: '修改密码失败' }, { status: 500 })
-  }
-}
+  return success()
+})

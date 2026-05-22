@@ -21,7 +21,7 @@ export function ok<T>(data: T, init?: ResponseInit) {
   return NextResponse.json(data, init)
 }
 
-export function actionOk(init?: ResponseInit) {
+export function success(init?: ResponseInit) {
   return ok<ActionSuccessResponse>({ success: true }, init)
 }
 
@@ -38,7 +38,7 @@ export function fail<Code extends string = string>(
   return NextResponse.json(body, { status })
 }
 
-export function failResult(error: {
+export function fromError(error: {
   status: number
   message: string
   code?: string
