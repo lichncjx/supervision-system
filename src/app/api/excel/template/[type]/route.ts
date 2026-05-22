@@ -5,12 +5,12 @@ import { fail } from '@/shared/http/api-response'
 import type { ExcelRouteType } from '@/features/excel/domain/excel.types'
 import { getExcelTemplate } from '@/features/excel/infrastructure/excel-template-generator'
 
-type TemplateParams = { params: Promise<{ type: string }> }
+type RouteContext = { params: Promise<{ type: string }> }
 
-export const GET = withApiHandler(async (request: NextRequest, ...args: unknown[]) => {
+export const GET = withApiHandler(async (request: NextRequest, { params }: RouteContext) => {
   await requireCurrentUser(request)
 
-  const { type } = await (args[0] as TemplateParams).params
+  const { type } = await params
   const validTypes = ['priority', 'main', 'todo', 'PRIORITY', 'MAIN', 'TODO']
 
   if (!validTypes.includes(type)) {

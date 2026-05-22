@@ -13,11 +13,11 @@ import { getWorkflowRecords } from '@/features/workflow/application/get-workflow
 import type { WorkflowActionRequest } from '@/features/workflow/contract/workflow-api.types'
 import type { WorkflowResult } from '@/features/workflow/domain/workflow.types'
 
-type WorkflowParams = { params: Promise<{ id: string }> }
+type RouteContext = { params: Promise<{ id: string }> }
 
 export const POST = withApiHandler(
-  async (request: NextRequest, ...args: unknown[]) => {
-    const { id } = await (args[0] as WorkflowParams).params
+  async (request: NextRequest, { params }: RouteContext) => {
+    const { id } = await params
     const workItemId = parseInt(id)
 
     if (isNaN(workItemId)) {
@@ -98,8 +98,8 @@ export const POST = withApiHandler(
 )
 
 export const GET = withApiHandler(
-  async (request: NextRequest, ...args: unknown[]) => {
-    const { id } = await (args[0] as WorkflowParams).params
+  async (request: NextRequest, { params }: RouteContext) => {
+    const { id } = await params
     const workItemId = parseInt(id)
 
     if (isNaN(workItemId)) {

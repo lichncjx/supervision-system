@@ -7,13 +7,13 @@ import { updateWorkUseCase } from '@/features/works/application/update-work.usec
 import { deleteWorkUseCase } from '@/features/works/application/delete-work.usecase'
 import type { UpdateWorkRequest } from '@/features/works/contract/work-api.types'
 
-type WorkParams = { params: Promise<{ id: string }> }
+type RouteContext = { params: Promise<{ id: string }> }
 
 export const GET = withApiHandler(
-  async (request: NextRequest, ...args: unknown[]) => {
+  async (request: NextRequest, { params }: RouteContext) => {
     const currentUser = await requireCurrentUser(request)
 
-    const { id } = await (args[0] as WorkParams).params
+    const { id } = await params
     const workId = parseInt(id)
     if (isNaN(workId)) {
       return fail('无效的事项ID', 400)
@@ -34,10 +34,10 @@ export const GET = withApiHandler(
 )
 
 export const PUT = withApiHandler(
-  async (request: NextRequest, ...args: unknown[]) => {
+  async (request: NextRequest, { params }: RouteContext) => {
     const currentUser = await requireCurrentUser(request)
 
-    const { id } = await (args[0] as WorkParams).params
+    const { id } = await params
     const workId = parseInt(id)
     if (isNaN(workId)) {
       return fail('无效的事项ID', 400)
@@ -52,10 +52,10 @@ export const PUT = withApiHandler(
 )
 
 export const DELETE = withApiHandler(
-  async (request: NextRequest, ...args: unknown[]) => {
+  async (request: NextRequest, { params }: RouteContext) => {
     const currentUser = await requireCurrentUser(request)
 
-    const { id } = await (args[0] as WorkParams).params
+    const { id } = await params
     const workId = parseInt(id)
     if (isNaN(workId)) {
       return fail('无效的事项ID', 400)

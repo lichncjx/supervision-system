@@ -4,13 +4,13 @@ import { withApiHandler } from '@/shared/http/with-api-handler'
 import { success, fail, fromError } from '@/shared/http/api-response'
 import { deleteAttachmentUseCase } from '@/features/attachments/application/delete-attachment.usecase'
 
-type AttachmentParams = { params: Promise<{ id: string }> }
+type RouteContext = { params: Promise<{ id: string }> }
 
 export const DELETE = withApiHandler(
-  async (request: NextRequest, ...args: unknown[]) => {
+  async (request: NextRequest, { params }: RouteContext) => {
     const currentUser = await requireCurrentUser(request)
 
-    const { id } = await (args[0] as AttachmentParams).params
+    const { id } = await params
     const attachmentId = parseInt(id)
 
     if (isNaN(attachmentId)) {
