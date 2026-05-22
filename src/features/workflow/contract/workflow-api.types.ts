@@ -37,7 +37,3 @@ export interface WorkflowRecordApiDto {
 }
 
 export type WorkflowRecordsResponse = WorkflowRecordApiDto[]
-
-export interface WorkflowApiErrorDto {
-  error?: string
-}

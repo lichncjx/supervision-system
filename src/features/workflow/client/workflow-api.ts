@@ -1,16 +1,16 @@
 import type { User } from '@/features/users/client/user-client.types'
 import type { Work, WorkEditablePatch } from '@/features/works/client/work-view.types'
-import type { WorkflowRecord } from '@/features/workflow/domain/workflow-client.types'
+import type { WorkflowRecordApiDto as WorkflowRecord } from '@/features/workflow/contract/workflow-api.types'
 import type {
   WorkflowActionRequest,
   WorkflowActionResponse,
-  WorkflowApiErrorDto,
   WorkflowRecordsResponse,
 } from '@/features/workflow/contract/workflow-api.types'
+import type { ApiErrorResponse } from '@/shared/http/api-response.types'
 import { getWorkById } from '@/features/works/client/work-api'
 
-async function readWorkflowResult(response: Response): Promise<WorkflowActionResponse & WorkflowApiErrorDto> {
-  return (await response.json()) as WorkflowActionResponse & WorkflowApiErrorDto
+async function readWorkflowResult(response: Response): Promise<WorkflowActionResponse & ApiErrorResponse> {
+  return (await response.json()) as WorkflowActionResponse & ApiErrorResponse
 }
 
 export async function approveWork(user: User, work: Work, comment?: string, nextApproverId?: number | null) {

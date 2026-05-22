@@ -17,7 +17,3 @@ export interface UploadAttachmentResponse {
 export interface DeleteAttachmentResponse {
   success: true
 }
-
-export interface AttachmentApiErrorDto {
-  error?: string
-}

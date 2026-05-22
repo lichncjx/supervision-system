@@ -7,7 +7,7 @@ import type {
   WorkPersonApiDto,
 } from '@/features/works/contract/work-api.types'
 import type { AttachmentApiDto } from '@/features/attachments/contract/attachment-api.types'
-import type { Attachment } from '@/features/attachments/client/attachment-client.types'
+import type { AttachmentApiDto as Attachment } from '@/features/attachments/contract/attachment-api.types'
 import type { Work, WorkEditablePatch } from './work-view.types'
 
 function normalizeAction(action: unknown): ActionType {

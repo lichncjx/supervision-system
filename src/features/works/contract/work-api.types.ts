@@ -52,11 +52,6 @@ export interface WorkApiDto {
   updatedAt: string
 }
 
-export type WorkListResponse = WorkApiDto[]
-export type WorkDetailResponse = WorkApiDto
-export type CreateWorkResponse = WorkApiDto
-export type UpdateWorkResponse = WorkApiDto
-
 export interface CreateWorkRequest {
   type: string
   departmentId: number | null
@@ -104,8 +99,4 @@ export interface UpdateWorkRequest {
   progress?: string | null
   approvalLeaderId?: number | null
   nodes?: unknown
-}
-
-export interface WorkApiErrorDto {
-  error?: string
 }

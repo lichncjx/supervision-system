@@ -7,14 +7,12 @@ import { useAuth } from '@/components/providers/auth-provider';
 import { getRoleName } from '@/features/users/domain/role.rules';
 import type { Role } from '@/features/users/client/user-client.types';
 import type {
-  CreateUserResponse,
-  UserApiErrorDto,
   UserListItemApiDto,
   UserListResponse,
 } from '@/features/users/contract/user-api.types';
+import type { ApiErrorResponse } from '@/shared/http/api-response.types';
 import type {
   DepartmentApiDto,
-  DepartmentListResponse,
 } from '@/features/departments/contract/department-api.types';
 import type { MemberListResponse } from '@/features/members/contract/member-api.types';
 import { Button } from '@/components/ui/button';
@@ -73,7 +71,7 @@ export default function AdminPage() {
   const fetchDepartments = async () => {
     try {
       const response = await fetch('/api/departments', { credentials: 'include' });
-      if (response.ok) setDepartments((await response.json()) as DepartmentListResponse);
+      if (response.ok) setDepartments((await response.json()) as DepartmentApiDto[]);
     } catch (error) {
       console.error('Fetch departments error:', error);
     }
@@ -148,7 +146,7 @@ export default function AdminPage() {
         credentials: 'include',
       });
 
-      const data = (await response.json()) as CreateUserResponse & UserApiErrorDto;
+      const data = (await response.json()) as UserListItemApiDto & ApiErrorResponse;
 
       if (!response.ok) {
         alert(data.error || '创建失败');
@@ -182,7 +180,7 @@ export default function AdminPage() {
       });
 
       if (!response.ok) {
-        const data = (await response.json()) as UserApiErrorDto;
+        const data = (await response.json()) as ApiErrorResponse;
         alert(data.error || '操作失败');
         return;
       }
@@ -203,7 +201,7 @@ export default function AdminPage() {
       });
 
       if (!response.ok) {
-        const data = (await response.json()) as UserApiErrorDto;
+        const data = (await response.json()) as ApiErrorResponse;
         alert(data.error || '删除失败');
         return;
       }
@@ -246,7 +244,7 @@ export default function AdminPage() {
       });
 
       if (!response.ok) {
-        const data = (await response.json()) as UserApiErrorDto;
+        const data = (await response.json()) as ApiErrorResponse;
         alert(data.error || '修改失败');
         return;
       }
@@ -287,7 +285,7 @@ export default function AdminPage() {
       });
 
       if (!response.ok) {
-        const data = (await response.json()) as UserApiErrorDto;
+        const data = (await response.json()) as ApiErrorResponse;
         alert(data.error || '修改失败');
         return;
       }

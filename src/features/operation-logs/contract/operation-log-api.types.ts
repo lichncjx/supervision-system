@@ -21,7 +21,3 @@ export interface OperationLogListResponse {
   pageSize: number
   totalPages: number
 }
-
-export interface OperationLogApiErrorDto {
-  error?: string
-}

@@ -55,7 +55,3 @@ export interface UpdateMemberRequest {
 export interface MemberMutationResponse extends MemberApiDto {
   warnings?: string[]
 }
-
-export interface MemberApiErrorDto {
-  error?: string
-}

@@ -15,7 +15,3 @@ export interface ImportExcelValidationErrorResponse {
 export type ImportExcelResponse =
   | ImportExcelSuccessResponse
   | ImportExcelValidationErrorResponse
-
-export interface ExcelApiErrorDto {
-  error?: string
-}

@@ -29,8 +29,6 @@ export interface UserListItemApiDto extends CurrentUserApiDto {
 export type CompanyLeadersResponse = UserApiDto[]
 export type DepartmentUsersResponse = UserApiDto[]
 export type UserListResponse = UserListItemApiDto[]
-export type CreateUserResponse = UserListItemApiDto
-export type UpdateUserResponse = UserListItemApiDto
 
 export interface CreateUserRequest {
   username: string
@@ -79,8 +77,6 @@ export interface LoginResponse {
   user: CurrentUserApiDto
 }
 
-export type CurrentUserResponse = CurrentUserApiDto
-
 export interface ChangePasswordRequest {
   oldPassword: string
   newPassword: string
@@ -88,9 +84,4 @@ export interface ChangePasswordRequest {
 
 export interface ChangePasswordResponse {
   success: true
-}
-
-export interface UserApiErrorDto {
-  error?: string
-  code?: string
 }
