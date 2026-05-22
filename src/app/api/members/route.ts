@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { requireCurrentUser } from '@/shared/auth/require-current-user'
+import { requireCurrentUser } from '@/shared/auth/current-user'
 import { withApiHandler } from '@/shared/http/with-api-handler'
 import { ok, fail, fromError } from '@/shared/http/api-response'
 import { queryMembersUseCase } from '@/features/members/application/query-members.usecase'

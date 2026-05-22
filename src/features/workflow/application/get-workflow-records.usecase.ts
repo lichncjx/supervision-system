@@ -1,4 +1,4 @@
-import type { AuthUser } from '@/shared/auth/auth.types'
+import type { BaseCurrentUser } from '@/shared/auth/current-user'
 import { toPermissionUser } from '@/features/works/domain/work-permission-user.mapper'
 import { canViewWorkItem } from '@/features/works/domain/work.permissions'
 import { findWorkForUpdateById } from '@/features/works/infrastructure/work.repository'
@@ -10,7 +10,7 @@ export type GetWorkflowRecordsResult =
   | { kind: 'error'; status: number; message: string }
 
 export async function getWorkflowRecords(
-  currentUser: AuthUser,
+  currentUser: BaseCurrentUser,
   workItemId: number,
 ): Promise<GetWorkflowRecordsResult> {
   const workItem = await findWorkForUpdateById(workItemId)
