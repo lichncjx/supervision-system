@@ -1,43 +1,32 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getUserFromToken } from '@/shared/auth/get-current-user';
-import type { ExcelRouteType } from '@/features/excel/domain/excel.types';
-import { getExcelTemplate } from '@/features/excel/infrastructure/excel-template-generator';
+import { NextRequest, NextResponse } from 'next/server'
+import { requireCurrentUser } from '@/shared/auth/require-current-user'
+import { withApiHandler } from '@/shared/http/with-api-handler'
+import { fail } from '@/shared/http/api-response'
+import type { ExcelRouteType } from '@/features/excel/domain/excel.types'
+import { getExcelTemplate } from '@/features/excel/infrastructure/excel-template-generator'
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ type: string }> }
-) {
-  try {
-    const token = request.cookies.get('token')?.value;
-    if (!token) {
-      return NextResponse.json({ error: '未登录' }, { status: 401 });
-    }
+type TemplateParams = { params: Promise<{ type: string }> }
 
-    const currentUser = await getUserFromToken(token);
-    if (!currentUser) {
-      return NextResponse.json({ error: '登录已过期' }, { status: 401 });
-    }
+export const GET = withApiHandler(async (request: NextRequest, ...args: unknown[]) => {
+  await requireCurrentUser(request)
 
-    const { type } = await params;
-    const validTypes = ['priority', 'main', 'todo', 'PRIORITY', 'MAIN', 'TODO'];
+  const { type } = await (args[0] as TemplateParams).params
+  const validTypes = ['priority', 'main', 'todo', 'PRIORITY', 'MAIN', 'TODO']
 
-    if (!validTypes.includes(type)) {
-      return NextResponse.json({ error: '无效的模板类型' }, { status: 400 });
-    }
-
-    const normalizedType = type.toLowerCase() as ExcelRouteType;
-    const { body, fileName } = getExcelTemplate(normalizedType);
-
-    return new NextResponse(new Uint8Array(body), {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'Content-Length': String(body.byteLength),
-        'Content-Disposition': `attachment; filename="${encodeURIComponent(fileName)}"`,
-      },
-    });
-  } catch (error) {
-    console.error('Download template error:', error);
-    return NextResponse.json({ error: '下载模板失败' }, { status: 500 });
+  if (!validTypes.includes(type)) {
+    return fail('无效的模板类型', 400)
   }
-}
+
+  const normalizedType = type.toLowerCase() as ExcelRouteType
+  const { body, fileName } = getExcelTemplate(normalizedType)
+
+  return new NextResponse(new Uint8Array(body), {
+    status: 200,
+    headers: {
+      'Content-Type':
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Length': String(body.byteLength),
+      'Content-Disposition': `attachment; filename="${encodeURIComponent(fileName)}"`,
+    },
+  })
+})

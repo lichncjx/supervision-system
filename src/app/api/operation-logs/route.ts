@@ -1,38 +1,22 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getUserFromToken } from '@/shared/auth/get-current-user'
+import { NextRequest } from 'next/server'
+import { requireCurrentUser } from '@/shared/auth/require-current-user'
+import { withApiHandler } from '@/shared/http/with-api-handler'
+import { ok, fromError } from '@/shared/http/api-response'
 import {
   listOperationLogsUseCase,
   parseOperationLogQuery,
 } from '@/features/operation-logs/application/list-operation-logs.usecase'
 
-export async function GET(request: NextRequest) {
-  try {
-    const token = request.cookies.get('token')?.value
-    if (!token) {
-      return NextResponse.json({ error: '未登录' }, { status: 401 })
-    }
+export const GET = withApiHandler(async (request: NextRequest) => {
+  const currentUser = await requireCurrentUser(request)
 
-    const currentUser = await getUserFromToken(token)
-    if (!currentUser) {
-      return NextResponse.json({ error: '登录已过期' }, { status: 401 })
-    }
+  const { searchParams } = new URL(request.url)
+  const result = await listOperationLogsUseCase(
+    currentUser,
+    parseOperationLogQuery(searchParams),
+  )
 
-    const { searchParams } = new URL(request.url)
-    const result = await listOperationLogsUseCase(
-      currentUser,
-      parseOperationLogQuery(searchParams),
-    )
+  if (result.kind === 'error') return fromError(result)
 
-    if (result.kind === 'error') {
-      return NextResponse.json(
-        { error: result.message },
-        { status: result.status },
-      )
-    }
-
-    return NextResponse.json(result.data)
-  } catch (error) {
-    console.error('Get operation logs error:', error)
-    return NextResponse.json({ error: '获取操作日志失败' }, { status: 500 })
-  }
-}
+  return ok(result.data)
+})
