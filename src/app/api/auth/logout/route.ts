@@ -1,11 +1,11 @@
 import { NextRequest } from 'next/server'
-import { actionOk } from '@/shared/http/api-response'
+import { success } from '@/shared/http/api-response'
 
 export async function POST(request: NextRequest) {
-  const response = actionOk()
+  const response = success()
 
-  const isHttps = request.headers.get('x-forwarded-proto') === 'https' || 
-                 process.env.NODE_ENV !== 'production'
+  const isHttps = request.headers.get('x-forwarded-proto') === 'https' ||
+    process.env.NODE_ENV !== 'production'
 
   response.cookies.set({
     name: 'token',
