@@ -1,5 +1,5 @@
 import { NextResponse, NextRequest } from 'next/server'
-import { getCurrentUser } from '@/shared/auth/get-current-user'
+import { getCurrentUser } from '@/shared/auth/current-user'
 import { withApiHandler } from '@/shared/http/with-api-handler'
 import { ok, fail } from '@/shared/http/api-response'
 
