@@ -1,27 +1,20 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getCurrentUserOrAuthError } from '@/shared/auth/get-current-user-or-auth-error'
+import { NextRequest } from 'next/server'
+import { requireCurrentUser } from '@/shared/auth/require-current-user'
+import { withApiHandler } from '@/shared/http/with-api-handler'
+import { ok } from '@/shared/http/api-response'
 import { getDashboardDataUseCase } from '@/features/dashboard/application/get-dashboard-data.usecase'
 import type { DashboardData } from '@/features/dashboard/domain/dashboard.types'
 
-export async function GET(request: NextRequest) {
-  try {
-    const auth = await getCurrentUserOrAuthError(request)
-    if (!auth.ok) return auth.response
+export const GET = withApiHandler(async (request: NextRequest) => {
+  const currentUser = await requireCurrentUser(request)
 
-    const { searchParams } = new URL(request.url)
-    const limit = Number(searchParams.get('limit') || undefined)
+  const { searchParams } = new URL(request.url)
+  const limit = Number(searchParams.get('limit') || undefined)
 
-    const response: DashboardData = await getDashboardDataUseCase({
-      currentUser: auth.user,
-      options: { limit },
-    })
+  const response: DashboardData = await getDashboardDataUseCase({
+    currentUser,
+    options: { limit },
+  })
 
-    return NextResponse.json(response)
-  } catch (error) {
-    console.error('Dashboard error:', error)
-    return NextResponse.json(
-      { error: '获取首页数据失败' },
-      { status: 500 },
-    )
-  }
-}
+  return ok(response)
+})

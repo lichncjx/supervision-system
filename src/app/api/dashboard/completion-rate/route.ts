@@ -1,43 +1,31 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getCurrentUserOrAuthError } from '@/shared/auth/get-current-user-or-auth-error'
+import { NextRequest } from 'next/server'
+import { requireCurrentUser } from '@/shared/auth/require-current-user'
+import { withApiHandler } from '@/shared/http/with-api-handler'
+import { ok, fromError } from '@/shared/http/api-response'
 import { getCompletionRateUseCase } from '@/features/dashboard/application/get-completion-rate.usecase'
 import type { DashboardCompletionRateResponse } from '@/features/dashboard/contract/dashboard-api.types'
 
-export async function GET(request: NextRequest) {
-  try {
-    const auth = await getCurrentUserOrAuthError(request)
-    if (!auth.ok) return auth.response
+export const GET = withApiHandler(async (request: NextRequest) => {
+  const currentUser = await requireCurrentUser(request)
 
-    const { searchParams } = new URL(request.url)
-    const type = searchParams.get('type')
-    const startDate = searchParams.get('startDate')
-    const endDate = searchParams.get('endDate')
+  const { searchParams } = new URL(request.url)
+  const type = searchParams.get('type')
+  const startDate = searchParams.get('startDate')
+  const endDate = searchParams.get('endDate')
 
-    const result = await getCompletionRateUseCase({
-      currentUser: auth.user,
-      type,
-      startDate,
-      endDate,
-    })
+  const result = await getCompletionRateUseCase({
+    currentUser,
+    type,
+    startDate,
+    endDate,
+  })
 
-    if (result.kind === 'error') {
-      return NextResponse.json(
-        { error: result.message },
-        { status: result.status },
-      )
-    }
+  if (result.kind === 'error') return fromError(result)
 
-    const response: DashboardCompletionRateResponse = {
-      items: result.items,
-      total: result.total,
-    }
-
-    return NextResponse.json(response)
-  } catch (error) {
-    console.error('Completion rate error:', error)
-    return NextResponse.json(
-      { error: '获取完成率统计失败' },
-      { status: 500 },
-    )
+  const response: DashboardCompletionRateResponse = {
+    items: result.items,
+    total: result.total,
   }
-}
+
+  return ok(response)
+})
