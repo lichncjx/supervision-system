@@ -1,5 +1,7 @@
 import type { CurrentUser } from '@/shared/auth/current-user'
 import { isGlobalView } from '@/features/users/domain/role.rules'
+import { err, ok, type Result } from '@/shared/result'
+import type { ExcelExportFile } from '@/features/excel/application/excel-export.types'
 
 export interface ExportCompletionRateInput {
   currentUser: CurrentUser
@@ -7,9 +9,6 @@ export interface ExportCompletionRateInput {
   endDate: string | null
 }
 
-export type ExportCompletionRateResult =
-  | { kind: 'ok'; buffer: Buffer; fileName: string }
-  | { kind: 'error'; status: number; message: string }
 import { getResponsibleDepartmentIds } from '@/features/works/domain/work.permissions'
 import {
   findWorksForCompletionRate,
@@ -49,7 +48,7 @@ async function getDepartmentStats(
 
 export async function exportCompletionRateUseCase(
   input: ExportCompletionRateInput,
-): Promise<ExportCompletionRateResult> {
+): Promise<Result<ExcelExportFile>> {
   const { currentUser, startDate, endDate } = input
 
   if (
@@ -57,12 +56,7 @@ export async function exportCompletionRateUseCase(
       currentUser.role as import('@prisma/client').Role,
     )
   ) {
-    return {
-      kind: 'error',
-      status: 403,
-      message:
-        '无权导出完成率统计，仅限系统管理员和督办管理员',
-    }
+    return err(403, '无权导出完成率统计，仅限系统管理员和督办管理员')
   }
 
   const sDate = startDate ? new Date(startDate) : undefined
@@ -90,5 +84,5 @@ export async function exportCompletionRateUseCase(
     userRole: currentUser.role,
   })
 
-  return { kind: 'ok', buffer, fileName }
+  return ok({ buffer, fileName })
 }

@@ -1,5 +1,7 @@
 import type { CurrentUser } from '@/shared/auth/current-user'
 import { WorkItemStatus, WorkItemType } from '@prisma/client'
+import { err, ok, type Result } from '@/shared/result'
+import type { ExcelExportFile } from '@/features/excel/application/excel-export.types'
 
 export interface ExportWorksToExcelInput {
   currentUser: CurrentUser
@@ -9,14 +11,6 @@ export interface ExportWorksToExcelInput {
   keyword: string | null
 }
 
-export type ExportWorksToExcelResult =
-  | {
-    kind: 'ok'
-    buffer: Buffer
-    fileName: string
-    visibleItemCount: number
-  }
-  | { kind: 'error'; status: number; message: string }
 import {
   canViewWorkItem,
   shouldHandleWorkItem,
@@ -93,17 +87,17 @@ function keywordMatches(
 
 export async function exportWorksToExcelUseCase(
   input: ExportWorksToExcelInput,
-): Promise<ExportWorksToExcelResult> {
+): Promise<Result<ExcelExportFile>> {
   const { currentUser, type, status, departmentId, keyword } = input
 
   const typeFilter = normalizeTypeFilter(type)
   if (type && !typeFilter) {
-    return { kind: 'error', status: 400, message: '无效的事项类型' }
+    return err(400, '无效的事项类型')
   }
 
   const rawStatusFilter = status?.trim() || null
   if (!isValidStatusFilter(rawStatusFilter)) {
-    return { kind: 'error', status: 400, message: '无效的状态筛选' }
+    return err(400, '无效的状态筛选')
   }
 
   const statusFilter = normalizeStatusFilter(rawStatusFilter)
@@ -186,10 +180,5 @@ export async function exportWorksToExcelUseCase(
     visibleItemCount: visibleItems.length,
   })
 
-  return {
-    kind: 'ok',
-    buffer,
-    fileName,
-    visibleItemCount: visibleItems.length,
-  }
+  return ok({ buffer, fileName, })
 }

@@ -21,14 +21,14 @@ export const GET = withApiHandler(async (request: NextRequest) => {
     keyword,
   })
 
-  if (result.kind === 'error') return fromError(result)
+  if (!result.ok) return fromError(result)
 
-  return new NextResponse(result.buffer as unknown as BodyInit, {
+  return new NextResponse(result.data.buffer as unknown as BodyInit, {
     status: 200,
     headers: {
       'Content-Type':
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'Content-Disposition': `attachment; filename="${encodeURIComponent(result.fileName)}"`,
+      'Content-Disposition': `attachment; filename="${encodeURIComponent(result.data.fileName)}"`,
     },
   })
 })
