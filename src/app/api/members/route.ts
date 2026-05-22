@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { requireCurrentUser } from '@/shared/auth/require-current-user'
 import { withApiHandler } from '@/shared/http/with-api-handler'
 import { ok, fail, fromError } from '@/shared/http/api-response'
@@ -65,10 +65,7 @@ export const POST = withApiHandler(async (request: NextRequest) => {
     importFromUserId: body.importFromUserId,
   })
 
-  if (result.kind === 'error') return fromError(result)
+  if (!result.ok) return fromError(result)
 
-  return NextResponse.json(
-    { ...result.data, warnings: result.warnings },
-    { status: 201 },
-  )
+  return ok(result.data, { status: 201 })
 })

@@ -1,7 +1,8 @@
 import { prisma } from '@/shared/db/prisma'
 import { toMemberResponse } from '@/features/members/application/member.dto'
 import { findDepartmentById } from '@/features/departments/infrastructure/department.repository'
-import type { MemberApiDto } from '@/features/members/contract/member-api.types'
+import { type Result, ok, err } from '@/shared/result'
+import type { MemberMutationResponse } from '@/features/members/contract/member-api.types'
 
 export interface UpdateMemberInput {
   memberId: number
@@ -14,19 +15,15 @@ export interface UpdateMemberInput {
   userId?: number | null
 }
 
-export type UpdateMemberResult =
-  | { kind: 'ok'; data: MemberApiDto; warnings?: string[] }
-  | { kind: 'error'; status: number; message: string }
-
 export async function updateMemberUseCase(
   input: UpdateMemberInput,
-): Promise<UpdateMemberResult> {
+): Promise<Result<MemberMutationResponse>> {
   const member = await prisma.member.findUnique({
     where: { id: input.memberId },
     include: { department: true, user: true },
   })
   if (!member) {
-    return { kind: 'error', status: 404, message: '人员不存在' }
+    return err(404, '人员不存在')
   }
 
   const warnings: string[] = []
@@ -36,7 +33,7 @@ export async function updateMemberUseCase(
   if (input.departmentId !== undefined) {
     const dept = await findDepartmentById(input.departmentId)
     if (!dept) {
-      return { kind: 'error', status: 400, message: '部门不存在' }
+      return err(400, '部门不存在')
     }
     updateData.departmentId = input.departmentId
   }
@@ -52,14 +49,14 @@ export async function updateMemberUseCase(
         include: { department: true },
       })
       if (!user) {
-        return { kind: 'error', status: 400, message: '绑定的系统用户不存在' }
+        return err(400, '绑定的系统用户不存在')
       }
 
       const existing = await prisma.member.findUnique({
         where: { userId: input.userId },
       })
       if (existing && existing.id !== input.memberId) {
-        return { kind: 'error', status: 409, message: `该系统用户已绑定到人员 "${existing.name}"（ID: ${existing.id}）` }
+        return err(409, `该系统用户已绑定到人员 "${existing.name}"（ID: ${existing.id}）`)
       }
 
       const effectiveName = (input.name ?? member.name) as string
@@ -90,5 +87,6 @@ export async function updateMemberUseCase(
     },
   })
 
-  return { kind: 'ok', data: toMemberResponse(updated), warnings: warnings.length > 0 ? warnings : undefined }
+  const memberData = toMemberResponse(updated)
+  return ok(warnings.length > 0 ? { ...memberData, warnings } : memberData)
 }

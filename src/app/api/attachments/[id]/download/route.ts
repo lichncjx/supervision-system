@@ -1,40 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getCurrentUserOrAuthError } from '@/shared/auth/get-current-user-or-auth-error'
+import { requireCurrentUser } from '@/shared/auth/require-current-user'
+import { withApiHandler } from '@/shared/http/with-api-handler'
+import { fail, fromError } from '@/shared/http/api-response'
 import { downloadAttachmentUseCase } from '@/features/attachments/application/download-attachment.usecase'
 
-export async function GET(
+export const GET = withApiHandler(async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
-) {
-  try {
-    const auth = await getCurrentUserOrAuthError(request)
-    if (!auth.ok) return auth.response
+) => {
+  const currentUser = await requireCurrentUser(request)
 
-    const currentUser = auth.user
+  const { id } = await params
+  const attachmentId = parseInt(id)
 
-    const { id } = await params
-    const attachmentId = parseInt(id)
-
-    if (isNaN(attachmentId)) {
-      return NextResponse.json({ error: '无效的附件ID' }, { status: 400 })
-    }
-
-    const result = await downloadAttachmentUseCase({ currentUser, attachmentId })
-
-    if (result.kind === 'error') {
-      return NextResponse.json({ error: result.message }, { status: result.status })
-    }
-
-    return new NextResponse(result.fileBuffer as unknown as BodyInit, {
-      status: 200,
-      headers: {
-        'Content-Type': result.contentType,
-        'Content-Disposition': `attachment; filename="${encodeURIComponent(result.fileName)}"`,
-        'Content-Length': String(result.fileBuffer.length),
-      },
-    })
-  } catch (error) {
-    console.error('Download error:', error)
-    return NextResponse.json({ error: '下载失败' }, { status: 500 })
+  if (isNaN(attachmentId)) {
+    return fail('无效的附件ID', 400)
   }
-}
+
+  const result = await downloadAttachmentUseCase({ currentUser, attachmentId })
+  if (result.kind === 'error') return fromError(result)
+
+  return new NextResponse(result.fileBuffer as unknown as BodyInit, {
+    status: 200,
+    headers: {
+      'Content-Type': result.contentType,
+      'Content-Disposition': `attachment; filename="${encodeURIComponent(result.fileName)}"`,
+      'Content-Length': String(result.fileBuffer.length),
+    },
+  })
+})
