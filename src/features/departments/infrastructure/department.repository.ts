@@ -16,7 +16,9 @@ async function loadAllDepartments(): Promise<Department[]> {
     return cache.departments
   }
 
-  const departments = await prisma.department.findMany()
+  const departments = await prisma.department.findMany({
+    orderBy: { id: 'asc' },
+  })
   cache = {
     departments,
     expiresAt: Date.now() + DEPARTMENT_CACHE_TTL_MS,
