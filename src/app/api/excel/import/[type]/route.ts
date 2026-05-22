@@ -1,20 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getCurrentUserOrAuthError } from '@/shared/auth/get-current-user-or-auth-error'
+import { requireCurrentUser } from '@/shared/auth/require-current-user'
+import { withApiHandler } from '@/shared/http/with-api-handler'
+import { fail, fromError } from '@/shared/http/api-response'
 import { importWorksFromExcelUseCase } from '@/features/excel/application/import-works-from-excel.usecase'
 import type {
   ImportExcelSuccessResponse,
   ImportExcelValidationErrorResponse,
 } from '@/features/excel/contract/excel-api.types'
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ type: string }> },
-) {
-  try {
-    const auth = await getCurrentUserOrAuthError(request)
-    if (!auth.ok) return auth.response
-
-    const currentUser = auth.user
+export const POST = withApiHandler(
+  async (request: NextRequest, { params }: { params: Promise<{ type: string }> }) => {
+    const currentUser = await requireCurrentUser(request)
 
     const { type } = await params
     const validTypes = [
@@ -26,26 +22,17 @@ export async function POST(
       'TODO',
     ]
     if (!validTypes.includes(type)) {
-      return NextResponse.json(
-        { error: '无效的导入类型' },
-        { status: 400 },
-      )
+      return fail('无效的导入类型', 400)
     }
 
     const formData = await request.formData()
     const file = formData.get('file') as File
     if (!file) {
-      return NextResponse.json(
-        { error: '请选择要导入的文件' },
-        { status: 400 },
-      )
+      return fail('请选择要导入的文件', 400)
     }
 
     if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
-      return NextResponse.json(
-        { error: '只支持 .xlsx 或 .xls 格式' },
-        { status: 400 },
-      )
+      return fail('只支持 .xlsx 或 .xls 格式', 400)
     }
 
     const fileBuffer = Buffer.from(await file.arrayBuffer())
@@ -57,12 +44,7 @@ export async function POST(
       fileName: file.name,
     })
 
-    if (result.kind === 'error') {
-      return NextResponse.json(
-        { error: result.message },
-        { status: result.status },
-      )
-    }
+    if (result.kind === 'error') return fromError(result)
 
     if (result.kind === 'validation-error') {
       const status =
@@ -91,11 +73,5 @@ export async function POST(
     }
 
     return NextResponse.json(response)
-  } catch (error) {
-    console.error('Import error:', error)
-    return NextResponse.json(
-      { error: '导入失败：' + (error as Error).message },
-      { status: 500 },
-    )
-  }
-}
+  },
+)

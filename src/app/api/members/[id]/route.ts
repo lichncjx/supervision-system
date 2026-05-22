@@ -6,17 +6,15 @@ import { Role } from '@prisma/client'
 import { updateMemberUseCase } from '@/features/members/application/update-member.usecase'
 import type { UpdateMemberRequest } from '@/features/members/contract/member-api.types'
 
-type MemberParams = { params: Promise<{ id: string }> }
-
 export const PATCH = withApiHandler(
-  async (request: NextRequest, ...args: unknown[]) => {
+  async (request: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
     const currentUser = await requireCurrentUser(request)
 
     if (currentUser.role !== Role.ADMIN) {
       return fail('权限不足', 403)
     }
 
-    const { id } = await (args[0] as MemberParams).params
+    const { id } = await params
     const memberId = parseInt(id)
     if (isNaN(memberId)) {
       return fail('无效的人员ID', 400)

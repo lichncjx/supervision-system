@@ -2,15 +2,17 @@ import { NextRequest, NextResponse } from 'next/server'
 import { AppError } from '@/shared/errors/app-error'
 import { fail } from '@/shared/http/api-response'
 
-type Handler = (
+type Handler<Args extends unknown[] = []> = (
   request: NextRequest,
-  ...args: unknown[]
+  ...args: Args
 ) => Promise<NextResponse> | NextResponse
 
-export function withApiHandler(handler: Handler) {
+export function withApiHandler<Args extends unknown[] = []>(
+  handler: Handler<Args>,
+) {
   return async (
     request: NextRequest,
-    ...args: unknown[]
+    ...args: Args
   ): Promise<NextResponse> => {
     try {
       return await handler(request, ...args)
