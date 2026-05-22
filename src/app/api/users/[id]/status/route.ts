@@ -1,31 +1,25 @@
-import { NextResponse, NextRequest } from 'next/server'
-import { authenticateAdmin } from '@/features/users/application/admin-auth'
+import { NextRequest } from 'next/server'
+import { Role } from '@prisma/client'
+import { requireCurrentUser } from '@/shared/auth/current-user'
+import { withApiHandler } from '@/shared/http/with-api-handler'
+import { ok, fail, fromError } from '@/shared/http/api-response'
 import { toggleUserStatusUseCase } from '@/features/users/application/toggle-user-status.usecase'
 import type { ToggleUserStatusRequest } from '@/features/users/contract/user-api.types'
 
-export async function PUT(
+export const PUT = withApiHandler(async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
-) {
-  try {
-    const auth = await authenticateAdmin(request.cookies.get('token')?.value)
-    if (!auth.ok) return NextResponse.json({ error: auth.message }, { status: auth.status })
+) => {
+  const currentUser = await requireCurrentUser(request)
+  if (currentUser.role !== Role.ADMIN) return fail('权限不足', 403)
 
-    const { id } = await params
-    const userId = parseInt(id)
-    if (isNaN(userId)) {
-      return NextResponse.json({ error: '无效的用户ID' }, { status: 400 })
-    }
+  const { id } = await params
+  const userId = parseInt(id)
+  if (isNaN(userId)) return fail('无效的用户ID', 400)
 
-    const body = (await request.json()) as ToggleUserStatusRequest
+  const body = (await request.json()) as ToggleUserStatusRequest
+  const result = await toggleUserStatusUseCase(currentUser, userId, body)
+  if (result.kind === 'error') return fromError(result)
 
-    const result = await toggleUserStatusUseCase(auth.user, userId, body)
-    if (result.kind === 'error')
-      return NextResponse.json({ error: result.message }, { status: result.status })
-
-    return NextResponse.json(result.data)
-  } catch (error) {
-    console.error('Update user status error:', error)
-    return NextResponse.json({ error: '更新用户状态失败' }, { status: 500 })
-  }
-}
+  return ok(result.data)
+})
