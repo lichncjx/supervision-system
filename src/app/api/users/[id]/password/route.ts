@@ -21,7 +21,7 @@ export async function PUT(
     const body = (await request.json()) as ResetUserPasswordRequest
 
     const result = await resetUserPasswordUseCase(auth.user, userId, body)
-    if (result.kind === 'error')
+    if (!result.ok)
       return fromError(result)
 
     return success()
