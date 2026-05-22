@@ -1,6 +1,5 @@
 import { NextResponse, NextRequest } from 'next/server'
-import { verifyToken } from '@/shared/auth/jwt'
-import { findUserById } from '@/shared/auth/get-current-user'
+import { getCurrentUser } from '@/shared/auth/get-current-user'
 import { withApiHandler } from '@/shared/http/with-api-handler'
 import { ok, fail } from '@/shared/http/api-response'
 
@@ -21,24 +20,10 @@ function clearTokenCookie(request: NextRequest, response: NextResponse) {
 }
 
 export const GET = withApiHandler(async (request: NextRequest) => {
-  const token = request.cookies.get('token')?.value
-
-  if (!token) {
-    return fail('未登录', 401)
-  }
-
-  const decoded = verifyToken(token)
-
-  if (!decoded) {
-    const response = fail('登录已过期', 401)
-    clearTokenCookie(request, response)
-    return response
-  }
-
-  const user = await findUserById(decoded.userId)
+  const user = await getCurrentUser(request)
 
   if (!user) {
-    const response = fail('用户不存在或已停用', 401)
+    const response = fail('未登录或登录已过期', 401)
     clearTokenCookie(request, response)
     return response
   }
