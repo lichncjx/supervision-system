@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { requireCurrentUser } from '@/shared/auth/require-current-user'
+import { requireCurrentUser } from '@/shared/auth/current-user'
 import { success, fromError } from '@/shared/http/api-response'
 import { withApiHandler } from '@/shared/http/with-api-handler'
 import { changePasswordUseCase } from '@/features/users/application/change-password.usecase'

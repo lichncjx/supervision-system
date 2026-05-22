@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireCurrentUser } from '@/shared/auth/require-current-user'
+import { requireCurrentUser } from '@/shared/auth/current-user'
 import { withApiHandler } from '@/shared/http/with-api-handler'
 import { fromError } from '@/shared/http/api-response'
 import { exportCompletionRateUseCase } from '@/features/excel/application/export-completion-rate.usecase'

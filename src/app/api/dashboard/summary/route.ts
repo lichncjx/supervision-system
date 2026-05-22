@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { requireCurrentUser } from '@/shared/auth/require-current-user'
+import { requireCurrentUser } from '@/shared/auth/current-user'
 import { withApiHandler } from '@/shared/http/with-api-handler'
 import { ok } from '@/shared/http/api-response'
 import { getDashboardSummaryUseCase } from '@/features/dashboard/application/get-dashboard-summary.usecase'
