@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getCurrentUserOrAuthError } from '@/shared/auth/get-current-user-or-auth-error'
+import { requireCurrentUser } from '@/shared/auth/require-current-user'
+import { fail, fromError } from '@/shared/http/api-response'
 import { exportWorksToExcelUseCase } from '@/features/excel/application/export-works-to-excel.usecase'
 
 export async function GET(request: NextRequest) {
   try {
-    const auth = await getCurrentUserOrAuthError(request)
-    if (!auth.ok) return auth.response
-
-    const currentUser = auth.user
+    const currentUser = await requireCurrentUser(request)
 
     const { searchParams } = new URL(request.url)
     const type = searchParams.get('type')
@@ -23,12 +21,7 @@ export async function GET(request: NextRequest) {
       keyword,
     })
 
-    if (result.kind === 'error') {
-      return NextResponse.json(
-        { error: result.message },
-        { status: result.status },
-      )
-    }
+    if (result.kind === 'error') return fromError(result)
 
     return new NextResponse(result.buffer as unknown as BodyInit, {
       status: 200,
@@ -41,9 +34,6 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     const message = error instanceof Error ? error.message : '未知错误'
     console.error('Export error:', message)
-    return NextResponse.json(
-      { error: `导出失败: ${message}` },
-      { status: 500 },
-    )
+    return fail(`导出失败: ${message}`, 500)
   }
 }
