@@ -28,13 +28,5 @@ export const GET = withApiHandler(async (request: NextRequest) => {
     return response
   }
 
-  return ok({
-    id: user.id,
-    username: user.username,
-    name: user.name,
-    role: user.role,
-    departmentId: user.departmentId,
-    departmentName: user.department?.name || '',
-    isActive: user.isActive,
-  })
+  return ok(user)
 })

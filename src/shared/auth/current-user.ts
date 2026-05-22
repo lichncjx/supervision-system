@@ -3,7 +3,6 @@ import { prisma } from '@/shared/db/prisma'
 import { verifyToken } from '@/shared/auth/jwt'
 import { AppError } from '@/shared/errors/app-error'
 import { ErrorCode } from '@/shared/errors/error-codes'
-import type { AuthUser } from '@/shared/auth/auth.types'
 
 export interface BaseCurrentUser {
   id: number
@@ -12,12 +11,15 @@ export interface BaseCurrentUser {
 }
 
 export interface CurrentUser extends BaseCurrentUser {
+  username: string
   name: string
+  departmentName: string
+  isActive: boolean
 }
 
 export async function getCurrentUser(
   request: NextRequest,
-): Promise<AuthUser | null> {
+): Promise<CurrentUser | null> {
   const token = request.cookies.get('token')?.value
   if (!token) return null
 
@@ -31,19 +33,21 @@ export async function getCurrentUser(
 
   if (!user || !user.isActive) return null
 
-  return user
+  return {
+    id: user.id,
+    username: user.username,
+    name: user.name,
+    role: user.role,
+    departmentId: user.departmentId,
+    departmentName: user.department?.name || '',
+    isActive: user.isActive,
+  }
 }
 
 export async function requireCurrentUser(request: NextRequest) {
   const user = await getCurrentUser(request)
-
-  if (!user) {
-    throw new AppError(
-      ErrorCode.UNAUTHORIZED,
-      '未登录或登录已过期',
-      401,
-    )
-  }
+  if (!user)
+    throw new AppError(ErrorCode.UNAUTHORIZED, '登录或登录已过期', 401,)
 
   return user
 }
