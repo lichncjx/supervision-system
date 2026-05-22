@@ -4,10 +4,8 @@ import { withApiHandler } from '@/shared/http/with-api-handler'
 import { success, fail, fromError } from '@/shared/http/api-response'
 import { deleteAttachmentUseCase } from '@/features/attachments/application/delete-attachment.usecase'
 
-type RouteContext = { params: Promise<{ id: string }> }
-
 export const DELETE = withApiHandler(
-  async (request: NextRequest, { params }: RouteContext) => {
+  async (request: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
     const currentUser = await requireCurrentUser(request)
 
     const { id } = await params

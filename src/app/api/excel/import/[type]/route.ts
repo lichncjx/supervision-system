@@ -8,10 +8,8 @@ import type {
   ImportExcelValidationErrorResponse,
 } from '@/features/excel/contract/excel-api.types'
 
-type RouteContext = { params: Promise<{ type: string }> }
-
 export const POST = withApiHandler(
-  async (request: NextRequest, { params }: RouteContext) => {
+  async (request: NextRequest, { params }: { params: Promise<{ type: string }> }) => {
     const currentUser = await requireCurrentUser(request)
 
     const { type } = await params

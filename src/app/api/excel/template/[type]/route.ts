@@ -5,9 +5,7 @@ import { fail } from '@/shared/http/api-response'
 import type { ExcelRouteType } from '@/features/excel/domain/excel.types'
 import { getExcelTemplate } from '@/features/excel/infrastructure/excel-template-generator'
 
-type RouteContext = { params: Promise<{ type: string }> }
-
-export const GET = withApiHandler(async (request: NextRequest, { params }: RouteContext) => {
+export const GET = withApiHandler(async (request: NextRequest, { params }: { params: Promise<{ type: string }> }) => {
   await requireCurrentUser(request)
 
   const { type } = await params

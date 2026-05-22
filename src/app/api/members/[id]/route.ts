@@ -6,10 +6,8 @@ import { Role } from '@prisma/client'
 import { updateMemberUseCase } from '@/features/members/application/update-member.usecase'
 import type { UpdateMemberRequest } from '@/features/members/contract/member-api.types'
 
-type RouteContext = { params: Promise<{ id: string }> }
-
 export const PATCH = withApiHandler(
-  async (request: NextRequest, { params }: RouteContext) => {
+  async (request: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
     const currentUser = await requireCurrentUser(request)
 
     if (currentUser.role !== Role.ADMIN) {

@@ -7,10 +7,8 @@ import { updateWorkUseCase } from '@/features/works/application/update-work.usec
 import { deleteWorkUseCase } from '@/features/works/application/delete-work.usecase'
 import type { UpdateWorkRequest } from '@/features/works/contract/work-api.types'
 
-type RouteContext = { params: Promise<{ id: string }> }
-
 export const GET = withApiHandler(
-  async (request: NextRequest, { params }: RouteContext) => {
+  async (request: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
     const currentUser = await requireCurrentUser(request)
 
     const { id } = await params
@@ -34,7 +32,7 @@ export const GET = withApiHandler(
 )
 
 export const PUT = withApiHandler(
-  async (request: NextRequest, { params }: RouteContext) => {
+  async (request: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
     const currentUser = await requireCurrentUser(request)
 
     const { id } = await params
@@ -52,7 +50,7 @@ export const PUT = withApiHandler(
 )
 
 export const DELETE = withApiHandler(
-  async (request: NextRequest, { params }: RouteContext) => {
+  async (request: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
     const currentUser = await requireCurrentUser(request)
 
     const { id } = await params

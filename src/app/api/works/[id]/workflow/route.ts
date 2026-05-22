@@ -13,10 +13,8 @@ import { getWorkflowRecords } from '@/features/workflow/application/get-workflow
 import type { WorkflowActionRequest } from '@/features/workflow/contract/workflow-api.types'
 import type { WorkflowResult } from '@/features/workflow/domain/workflow.types'
 
-type RouteContext = { params: Promise<{ id: string }> }
-
 export const POST = withApiHandler(
-  async (request: NextRequest, { params }: RouteContext) => {
+  async (request: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
     const { id } = await params
     const workItemId = parseInt(id)
 
@@ -98,7 +96,7 @@ export const POST = withApiHandler(
 )
 
 export const GET = withApiHandler(
-  async (request: NextRequest, { params }: RouteContext) => {
+  async (request: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
     const { id } = await params
     const workItemId = parseInt(id)
 
