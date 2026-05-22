@@ -1,32 +1,25 @@
 import { NextRequest } from 'next/server'
-import { authenticateAdmin } from '@/features/users/application/admin-auth'
+import { Role } from '@prisma/client'
+import { requireCurrentUser } from '@/shared/auth/current-user'
+import { withApiHandler } from '@/shared/http/with-api-handler'
 import { success, fail, fromError } from '@/shared/http/api-response'
 import { resetUserPasswordUseCase } from '@/features/users/application/reset-user-password.usecase'
 import type { ResetUserPasswordRequest } from '@/features/users/contract/user-api.types'
 
-export async function PUT(
+export const PUT = withApiHandler(async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
-) {
-  try {
-    const auth = await authenticateAdmin(request.cookies.get('token')?.value)
-    if (!auth.ok) return fromError(auth)
+) => {
+  const currentUser = await requireCurrentUser(request)
+  if (currentUser.role !== Role.ADMIN) return fail('权限不足', 403)
 
-    const { id } = await params
-    const userId = parseInt(id)
-    if (isNaN(userId)) {
-      return fail('无效的用户ID', 400)
-    }
+  const { id } = await params
+  const userId = parseInt(id)
+  if (isNaN(userId)) return fail('无效的用户ID', 400)
 
-    const body = (await request.json()) as ResetUserPasswordRequest
+  const body = (await request.json()) as ResetUserPasswordRequest
+  const result = await resetUserPasswordUseCase(currentUser, userId, body)
+  if (!result.ok) return fromError(result)
 
-    const result = await resetUserPasswordUseCase(auth.user, userId, body)
-    if (!result.ok)
-      return fromError(result)
-
-    return success()
-  } catch (error) {
-    console.error('Reset password error:', error)
-    return fail('重置密码失败', 500)
-  }
-}
+  return success()
+})

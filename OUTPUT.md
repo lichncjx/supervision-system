@@ -69,10 +69,10 @@
 
 | 文件 | 当前写法 | 风险 | 推荐改造 | 单独 PR |
 |------|----------|:---:|----------|:---:|
-| `users/route.ts` | authenticateAdmin + raw NextResponse.json | 低 | isActive 已修复（PR #86）。响应标准化后续做 | 合并 |
-| `users/[id]/route.ts` | authenticateAdmin + success/fail/fromError | 低 | isActive 已修复（PR #86） | 合并 |
-| `users/[id]/status/route.ts` | authenticateAdmin + raw NextResponse.json | 低 | isActive 已修复（PR #86）。响应标准化后续做 | 合并 |
-| `users/[id]/password/route.ts` | authenticateAdmin + success/fail/fromError | 低 | isActive 已修复（PR #86） | 合并 |
+| `users/route.ts` | requireCurrentUser + withApiHandler + ok/fail/fromError | 无 | **已收口**（PR #97） | - |
+| `users/[id]/route.ts` | requireCurrentUser + withApiHandler + ok/success/fail/fromError | 无 | **已收口**（PR #97） | - |
+| `users/[id]/status/route.ts` | requireCurrentUser + withApiHandler + ok/fail/fromError | 无 | **已收口**（PR #97） | - |
+| `users/[id]/password/route.ts` | requireCurrentUser + withApiHandler + success/fail/fromError | 无 | **已收口**（PR #97） | - |
 | `users/company-leaders/route.ts` | requireCurrentUser + withApiHandler + ok | 无 | **已收口**（PR #87 修复） | - |
 | `users/department-leaders/route.ts` | getUserFromToken + raw NextResponse.json | 低 | 写法不统一，isActive 已有。后续标准化 | 是 |
 | `users/department-managers/route.ts` | getUserFromToken + raw NextResponse | 低 | 同上 | 合并 |
@@ -192,12 +192,12 @@
 
 | 状态 | 文件数 | 占比 |
 |------|:---:|:---:|
-| 已完全收口（withApiHandler + api-response helpers + isActive） | 13 | 43% |
-| 用 getCurrentUserOrAuthError（PR #86 已修复 isActive） | 8 | 27% |
-| 用 authenticateAdmin（PR #86 已修复 isActive） | 4 | 13% |
-| 用 getUserFromToken（isActive 已有，写法不统一） | 5 | 17% |
-| 用 verifyToken（已全部修复） | 0 | 0% |
-| 公开接口（无需改造） | 1 | 3% |
+| 已完全收口（withApiHandler + api-response helpers + isActive） | 27 | 90% |
+| 用 authenticateAdmin（PR #86 已修复 isActive） | 0 | 0%（PR #97 已消除） |
+| 用 getUserFromToken | 0 | 0% |
+| 用 getCurrentUserOrAuthError | 0 | 0% |
+| 用 verifyToken | 0 | 0% |
+| 公开接口（无需改造） | 3 | 10% |
 | **总计** | **30** | **100%** |
 
 ### isActive 校验覆盖情况
@@ -207,8 +207,15 @@
 ### getCurrentUserOrAuthError 迁移进度
 
 - PR #94：works（2）、excel/completion-rate、excel/import、attachments/[id] = 5 个 route ✅
-- PR #95：upload、excel/export、attachments/download = 3 个 route ✅（待合并）
-- **route 层零残留**，仅 `get-current-user-or-auth-error.ts` 文件本身待删除
+- PR #95：upload、excel/export、attachments/download = 3 个 route ✅
+- PR #96：删除 get-current-user-or-auth-error.ts、get-current-user.ts、require-current-user.ts ✅
+- **route 层零残留** ✅
+
+### authenticateAdmin 迁移进度
+
+- PR #97：users 模块 4 个 route 迁移到 requireCurrentUser + withApiHandler ✅
+- 删除 admin-auth.ts、findUserBasicAuthById ✅
+- **全 30 个 route 鉴权统一为 requireCurrentUser** ✅
 
 ### 今日完成（2026-05-22）
 
@@ -222,11 +229,6 @@
 | #92 | dashboard 模块 3 个 route 迁移 | ✅ 已合并 |
 | #93 | members 模块 2 个 route 迁移 | ✅ 已合并 |
 | #94 | works/excel/attachments 5 个 route + withApiHandler 泛型 + 架构文档 | ✅ 已合并 |
-| #95 | members Result<T> + workflow contract + upload/export/download auth + isExpiringWork 去重 | 🟡 待合并 |
-
-### 待办（明天）
-
-1. **合并 PR #95**
-2. **删除 `src/shared/auth/get-current-user-or-auth-error.ts`** — route 层已无消费者，验证后删除
-3. **Users 模块 4 个 route 迁移** — `users/route.ts`、`users/[id]/route.ts`、`users/[id]/status/route.ts`、`users/[id]/password/route.ts`，从 `authenticateAdmin` 迁移到 `requireCurrentUser + withApiHandler`，需要单独 PR
-4. **验证 `src/shared/auth/current-user.ts` 的 `CurrentUser` 类型** — 确认是否还有其他消费者，考虑合并到 shared auth 模块
+| #95 | members Result<T> + workflow contract + upload/export/download/excel auth + isExpiringWork 去重 | ✅ 已合并 |
+| #96 | 清理 auth helpers — 删除 3 个冗余文件，内联无用函数，CurrentUser 去 Prisma | ✅ 已合并 |
+| #97 | users 模块 4 个 route 迁移 + 删除 authenticateAdmin | 🟡 待提交 |
