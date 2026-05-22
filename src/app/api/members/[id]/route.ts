@@ -1,25 +1,25 @@
-import { NextResponse, NextRequest } from 'next/server'
-import { getCurrentUserOrAuthError } from '@/shared/auth/get-current-user-or-auth-error'
+import { NextRequest, NextResponse } from 'next/server'
+import { requireCurrentUser } from '@/shared/auth/require-current-user'
+import { withApiHandler } from '@/shared/http/with-api-handler'
+import { fail, fromError } from '@/shared/http/api-response'
 import { Role } from '@prisma/client'
 import { updateMemberUseCase } from '@/features/members/application/update-member.usecase'
 import type { UpdateMemberRequest } from '@/features/members/contract/member-api.types'
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  try {
-    const auth = await getCurrentUserOrAuthError(request)
-    if (!auth.ok) return auth.response
+type MemberParams = { params: Promise<{ id: string }> }
 
-    if (auth.user.role !== Role.ADMIN) {
-      return NextResponse.json({ error: '权限不足' }, { status: 403 })
+export const PATCH = withApiHandler(
+  async (request: NextRequest, ...args: unknown[]) => {
+    const currentUser = await requireCurrentUser(request)
+
+    if (currentUser.role !== Role.ADMIN) {
+      return fail('权限不足', 403)
     }
 
-    const { id } = await params
+    const { id } = await (args[0] as MemberParams).params
     const memberId = parseInt(id)
     if (isNaN(memberId)) {
-      return NextResponse.json({ error: '无效的人员ID' }, { status: 400 })
+      return fail('无效的人员ID', 400)
     }
 
     const body = (await request.json()) as UpdateMemberRequest
@@ -34,15 +34,8 @@ export async function PATCH(
       userId: body.userId,
     })
 
-    if (result.kind === 'error') {
-      return NextResponse.json({ error: result.message }, { status: result.status })
-    }
+    if (result.kind === 'error') return fromError(result)
 
-    return NextResponse.json(
-      { ...result.data, warnings: result.warnings },
-    )
-  } catch (error) {
-    console.error('Update member error:', error)
-    return NextResponse.json({ error: '更新人员失败' }, { status: 500 })
-  }
-}
+    return NextResponse.json({ ...result.data, warnings: result.warnings })
+  },
+)
