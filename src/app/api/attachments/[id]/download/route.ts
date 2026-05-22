@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireCurrentUser } from '@/shared/auth/require-current-user'
+import { AppError } from '@/shared/errors/app-error'
 import { fail, fromError } from '@/shared/http/api-response'
 import { downloadAttachmentUseCase } from '@/features/attachments/application/download-attachment.usecase'
 
@@ -29,6 +30,7 @@ export async function GET(
       },
     })
   } catch (error) {
+    if (error instanceof AppError) return fail(error.message, error.status, error.code)
     console.error('Download error:', error)
     return fail('下载失败', 500)
   }

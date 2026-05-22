@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireCurrentUser } from '@/shared/auth/require-current-user'
+import { AppError } from '@/shared/errors/app-error'
 import { fail, fromError } from '@/shared/http/api-response'
 import { exportWorksToExcelUseCase } from '@/features/excel/application/export-works-to-excel.usecase'
 
@@ -32,6 +33,7 @@ export async function GET(request: NextRequest) {
       },
     })
   } catch (error) {
+    if (error instanceof AppError) return fail(error.message, error.status, error.code)
     const message = error instanceof Error ? error.message : '未知错误'
     console.error('Export error:', message)
     return fail(`导出失败: ${message}`, 500)

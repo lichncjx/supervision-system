@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireCurrentUser } from '@/shared/auth/require-current-user'
+import { AppError } from '@/shared/errors/app-error'
 import { fail } from '@/shared/http/api-response'
 import { getFileExtension } from '@/features/attachments/infrastructure/local-file-storage'
 import {
@@ -74,6 +75,7 @@ export async function POST(request: NextRequest) {
       attachment: result.attachment,
     })
   } catch (error) {
+    if (error instanceof AppError) return fail(error.message, error.status, error.code)
     console.error('Upload error:', error)
     return fail('上传失败', 500)
   }
