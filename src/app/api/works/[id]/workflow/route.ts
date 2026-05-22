@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { requireCurrentUser } from '@/shared/auth/require-current-user'
 import { withApiHandler } from '@/shared/http/with-api-handler'
-import { fail, fromError } from '@/shared/http/api-response'
+import { ok, fail, fromError } from '@/shared/http/api-response'
 import { submitProposal } from '@/features/workflow/application/submit-proposal.usecase'
 import { approveWorkflowAction } from '@/features/workflow/application/approve-workflow-action.usecase'
 import { rejectWorkflowAction } from '@/features/workflow/application/reject-workflow-action.usecase'
@@ -91,7 +91,7 @@ export const POST = withApiHandler(
       return fail(result.error ?? '操作失败', 400)
     }
 
-    return NextResponse.json({ success: true, workItem: result.workItem })
+    return ok({ success: true, workItem: result.workItem })
   },
 )
 
@@ -109,6 +109,6 @@ export const GET = withApiHandler(
     const result = await getWorkflowRecords(currentUser, workItemId)
     if (result.kind === 'error') return fromError(result)
 
-    return NextResponse.json(result.data)
+    return ok(result.data)
   },
 )

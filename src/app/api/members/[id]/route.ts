@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { requireCurrentUser } from '@/shared/auth/require-current-user'
 import { withApiHandler } from '@/shared/http/with-api-handler'
-import { fail, fromError } from '@/shared/http/api-response'
+import { ok, fail, fromError } from '@/shared/http/api-response'
 import { Role } from '@prisma/client'
 import { updateMemberUseCase } from '@/features/members/application/update-member.usecase'
 import type { UpdateMemberRequest } from '@/features/members/contract/member-api.types'
@@ -34,6 +34,6 @@ export const PATCH = withApiHandler(
 
     if (result.kind === 'error') return fromError(result)
 
-    return NextResponse.json({ ...result.data, warnings: result.warnings })
+    return ok({ ...result.data, warnings: result.warnings })
   },
 )
