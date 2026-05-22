@@ -73,7 +73,7 @@ export async function findUserWithPasswordById(id: number) {
 
 export async function findUserBasicAuthById(id: number) {
   return prisma.user.findUnique({
-    where: { id },
+    where: { id, isActive: true },
     select: { id: true, role: true, departmentId: true, name: true },
   })
 }

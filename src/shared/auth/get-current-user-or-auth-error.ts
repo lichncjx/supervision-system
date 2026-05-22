@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/shared/db/prisma'
-import { verifyToken } from '@/shared/auth/jwt'
+import { getCurrentUser } from '@/shared/auth/get-current-user'
 import { fail } from '@/shared/http/api-response'
 import type { CurrentUser } from './current-user'
 
@@ -11,32 +10,12 @@ type AuthResult =
 export async function getCurrentUserOrAuthError(
   request: NextRequest,
 ): Promise<AuthResult> {
-  const token = request.cookies.get('token')?.value
-
-  if (!token) {
-    return {
-      ok: false,
-      response: fail('未登录', 401),
-    }
-  }
-
-  const decoded = verifyToken(token)
-
-  if (!decoded) {
-    return {
-      ok: false,
-      response: fail('登录已过期', 401),
-    }
-  }
-
-  const user = await prisma.user.findUnique({
-    where: { id: decoded.userId },
-  })
+  const user = await getCurrentUser(request)
 
   if (!user) {
     return {
       ok: false,
-      response: fail('用户不存在', 401),
+      response: fail('未登录或登录已过期', 401),
     }
   }
 
