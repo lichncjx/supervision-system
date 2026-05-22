@@ -11,8 +11,8 @@
 - Next.js App Router
 - React
 - TypeScript
-- Tailwind CSS
-- shadcn/ui
+- Tailwind CSS 3（tailwind.config.ts 管理主题，hsl(var(--xxx)) 语义色，class 暗色模式）
+- shadcn/ui（new-york style，CSS variables）
 - PostgreSQL
 - Prisma
 - pnpm
@@ -75,6 +75,22 @@ Context7 请求需要在 Codex 默认沙箱外执行；如果遇到 DNS、ENOTFO
 
 1. 表单控件优先使用 shadcn/ui 组件（`Checkbox`、`Select`、`Dialog`、`Button`、`Input` 等），避免使用原生 HTML 控件。
 2. 图标统一使用 `lucide-react`。
+3. 主题配置使用 `tailwind.config.ts`，不要在 CSS 中使用 `@theme inline`（v4 遗留写法）。
+4. 避免使用 `oklch()`、`color-mix()`、`oklab()` 等现代 CSS 颜色函数，当前兼容目标为 Chrome 109。
+5. 新增 shadcn 组件时注意 CLI 默认生成 v4 语法，需手动转换为 v3 写法。转换速查表：
+
+   | v4 写法 | v3 写法 | 说明 |
+   |---------|---------|------|
+   | `shadow-xs` | `shadow-sm` | v3 无 xs 档位 |
+   | `outline-hidden` | `outline-none` | v3 无 hidden 变体 |
+   | `--spacing(N)` | 硬编码 `N*0.25rem` 或 `calc(var(--x)*0.25rem)` | v4 内置 CSS 函数 |
+   | `w-(--var)` | `w-[var(--var)]` | 任意属性简写（h、size、max-h、origin、border、bg 等同理） |
+   | `utility!` | `!utility` | important 修饰符前置 |
+   | `@theme inline { }` | `tailwind.config.ts` 的 `theme.extend` | 主题定义迁移 |
+   | `@import 'tailwindcss'` | `@tailwind base; @tailwind components; @tailwind utilities;` | CSS 入口语法 |
+   | `@custom-variant dark` | `darkMode: 'class'`（config） | 暗色模式声明 |
+   | `tw-animate-css` | `tailwindcss-animate` 插件 | 动画库替换 |
+   | `@tailwindcss/postcss` | `tailwindcss`（PostCSS 插件） | 构建插件替换 |
 
 ## 代码组织规范
 

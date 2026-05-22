@@ -5,8 +5,8 @@
 - Next.js 15 App Router
 - React 19
 - TypeScript 5
-- Tailwind CSS 4
-- shadcn/ui
+- Tailwind CSS 3（tailwind.config.ts 管理主题，hsl(var(--xxx)) 语义色体系，darkMode: 'class'）
+- shadcn/ui（new-york style，CSS variables 模式）
 - PostgreSQL + Prisma
 - React Hook Form + Zod
 - pnpm 9+
