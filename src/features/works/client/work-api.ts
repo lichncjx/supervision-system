@@ -4,7 +4,7 @@ import type { Work, WorkEditablePatch } from './work-view.types'
 import type {
   WorkApiDto,
 } from '@/features/works/contract/work-api.types'
-import type { ApiErrorResponse } from '@/shared/http/api-response.types'
+import type { ApiErrorResponse } from '@/shared/http/api-response'
 import { sortWorksByDueDate } from './work-sort'
 import {
   buildCreateWorkRequest,

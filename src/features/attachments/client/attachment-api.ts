@@ -2,7 +2,7 @@ import type {
   DeleteAttachmentResponse,
   UploadAttachmentResponse,
 } from '@/features/attachments/contract/attachment-api.types'
-import type { ApiErrorResponse } from '@/shared/http/api-response.types'
+import type { ApiErrorResponse } from '@/shared/http/api-response'
 
 export async function uploadFiles(workId: number, files: FileList | File[], category?: string) {
   for (const file of Array.from(files)) {

@@ -6,7 +6,7 @@ import type {
   WorkflowActionResponse,
   WorkflowRecordsResponse,
 } from '@/features/workflow/contract/workflow-api.types'
-import type { ApiErrorResponse } from '@/shared/http/api-response.types'
+import type { ApiErrorResponse } from '@/shared/http/api-response'
 import { getWorkById } from '@/features/works/client/work-api'
 
 async function readWorkflowResult(response: Response): Promise<WorkflowActionResponse & ApiErrorResponse> {

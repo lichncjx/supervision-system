@@ -10,7 +10,7 @@ import type {
   UserListItemApiDto,
   UserListResponse,
 } from '@/features/users/contract/user-api.types';
-import type { ApiErrorResponse } from '@/shared/http/api-response.types';
+import type { ApiErrorResponse } from '@/shared/http/api-response';
 import type {
   DepartmentApiDto,
 } from '@/features/departments/contract/department-api.types';

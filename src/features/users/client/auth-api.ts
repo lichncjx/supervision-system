@@ -4,7 +4,7 @@ import type {
   CurrentUserApiDto,
   LoginResponse,
 } from '@/features/users/contract/user-api.types'
-import type { ApiErrorResponse } from '@/shared/http/api-response.types'
+import type { ApiErrorResponse } from '@/shared/http/api-response'
 
 export async function login(
   username: string,
