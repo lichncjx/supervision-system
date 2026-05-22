@@ -6,7 +6,7 @@ import type {
   AdjustHistory,
 } from '@/features/works/client/work-client.types'
 import type { WorkStatus } from '@/features/works/domain/work-status'
-import type { Attachment } from '@/features/attachments/client/attachment-client.types'
+import type { AttachmentApiDto as Attachment } from '@/features/attachments/contract/attachment-api.types'
 
 export interface Work {
   id: number

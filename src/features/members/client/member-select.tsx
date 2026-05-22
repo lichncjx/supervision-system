@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { SELECT_CONTROL } from '@/features/works/ui/visual-tokens'
-import type { MemberOption } from '@/features/members/client/member-client.types'
+import type { MemberOptionApiDto as MemberOption } from '@/features/members/contract/member-api.types'
 import type { MemberOptionListResponse } from '@/features/members/contract/member-api.types'
 
 export interface MemberSelectProps {

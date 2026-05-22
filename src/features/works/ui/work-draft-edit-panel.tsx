@@ -16,7 +16,7 @@ import {
 } from '@/features/works/ui/work-form-fields';
 import type { Cooperator, WorkNode } from '@/features/works/client/work-client.types';
 import type { User } from '@/features/users/client/user-client.types';
-import type { Department } from '@/features/departments/client/department-client.types';
+import type { DepartmentApiDto as Department } from '@/features/departments/contract/department-api.types';
 import { FIELD_LABEL, PANEL_PADDED } from './visual-tokens';
 
 interface WorkDraftEditPanelProps {

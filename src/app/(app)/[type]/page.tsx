@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { useAuth } from '@/components/providers/auth-provider';
 import { isCompanyLevel, isGlobalView } from '@/features/users/domain/role.rules';
 import { getDepartments } from '@/features/departments/client/department-api';
-import type { Department } from '@/features/departments/client/department-client.types';
+import type { DepartmentApiDto as Department } from '@/features/departments/contract/department-api.types';
 import { getVisibleWorks, queryWorks } from '@/features/works/client/work-api';
 import type { Work } from '@/features/works/client/work-view.types';
 import type { WorkType, WorkStatusFilter } from '@/features/works/client/work-client.types';

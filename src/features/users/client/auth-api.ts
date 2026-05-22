@@ -1,10 +1,10 @@
 import type { User, Role, LoginResult } from '@/features/users/client/user-client.types'
 import type {
   ChangePasswordResponse,
-  CurrentUserResponse,
+  CurrentUserApiDto,
   LoginResponse,
-  UserApiErrorDto,
 } from '@/features/users/contract/user-api.types'
+import type { ApiErrorResponse } from '@/shared/http/api-response'
 
 export async function login(
   username: string,
@@ -20,7 +20,7 @@ export async function login(
       credentials: 'include',
     })
 
-    const data = (await response.json()) as LoginResponse & UserApiErrorDto
+    const data = (await response.json()) as LoginResponse & ApiErrorResponse
 
     if (!response.ok) {
       return { success: false, error: data.error || '登录失败' }
@@ -66,7 +66,7 @@ export async function getCurrentUser(): Promise<User | null> {
       return null
     }
 
-    const data = (await response.json()) as CurrentUserResponse
+    const data = (await response.json()) as CurrentUserApiDto
 
     return {
       id: data.id,
@@ -97,7 +97,7 @@ export async function changePassword(
       credentials: 'include',
     })
 
-    const data = (await response.json()) as ChangePasswordResponse & UserApiErrorDto
+    const data = (await response.json()) as ChangePasswordResponse & ApiErrorResponse
 
     if (!response.ok) {
       return { success: false, error: data.error || '修改密码失败' }

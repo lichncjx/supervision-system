@@ -15,19 +15,17 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog'
-import type { Member } from '@/features/members/client/member-client.types'
-import type { Department } from '@/features/departments/client/department-client.types'
-import type { DepartmentListResponse } from '@/features/departments/contract/department-api.types'
+import type { DepartmentApiDto as Department } from '@/features/departments/contract/department-api.types'
+import type { MemberApiDto as Member } from '@/features/members/contract/member-api.types'
 import type {
-  MemberApiErrorDto,
   MemberListResponse,
   MemberMutationResponse,
 } from '@/features/members/contract/member-api.types'
 import type {
-  UserApiErrorDto,
   UserListItemApiDto,
   UserListResponse,
 } from '@/features/users/contract/user-api.types'
+import type { ApiErrorResponse } from '@/shared/http/api-response'
 
 type SystemUser = UserListItemApiDto
 
@@ -65,7 +63,7 @@ export default function AdminMembersPage() {
         fetch('/api/users', { credentials: 'include' }),
       ])
       if (deptRes.ok) {
-        depts = (await deptRes.json()) as DepartmentListResponse
+        depts = (await deptRes.json()) as Department[]
         setDepartments(depts)
       }
       if (userRes.ok) setSystemUsers((await userRes.json()) as UserListResponse)
@@ -109,7 +107,7 @@ export default function AdminMembersPage() {
       body: JSON.stringify({ name: createForm.name.trim(), departmentId: createForm.departmentId, phone: createForm.phone || null, isLeader: createForm.isLeader, sortOrder: createForm.sortOrder }),
       credentials: 'include',
     })
-    if (!res.ok) { alert(((await res.json()) as MemberApiErrorDto).error || '创建失败'); return }
+    if (!res.ok) { alert(((await res.json()) as ApiErrorResponse).error || '创建失败'); return }
     setCreateForm({ name: '', departmentId: 0, phone: '', isLeader: false, sortOrder: 0 })
     await loadMembers()
   }
@@ -125,7 +123,7 @@ export default function AdminMembersPage() {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(editForm), credentials: 'include',
     })
-    if (!res.ok) { alert(((await res.json()) as MemberApiErrorDto).error || '保存失败'); return }
+    if (!res.ok) { alert(((await res.json()) as ApiErrorResponse).error || '保存失败'); return }
     const data = (await res.json()) as MemberMutationResponse
     if (data.warnings?.length) alert('提示：\n' + data.warnings.join('\n'))
     setEditTarget(null); await loadMembers()
@@ -136,7 +134,7 @@ export default function AdminMembersPage() {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ isActive: !m.isActive }), credentials: 'include',
     })
-    if (!res.ok) { alert(((await res.json()) as MemberApiErrorDto).error || '操作失败'); return }
+    if (!res.ok) { alert(((await res.json()) as ApiErrorResponse).error || '操作失败'); return }
     await loadMembers()
   }
 
@@ -146,7 +144,7 @@ export default function AdminMembersPage() {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userId: null }), credentials: 'include',
     })
-    if (!res.ok) { alert(((await res.json()) as MemberApiErrorDto).error || '解绑失败'); return }
+    if (!res.ok) { alert(((await res.json()) as ApiErrorResponse).error || '解绑失败'); return }
     await loadMembers()
   }
 
@@ -156,7 +154,7 @@ export default function AdminMembersPage() {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userId: Number(bindUserId) }), credentials: 'include',
     })
-    if (!res.ok) { alert(((await res.json()) as MemberApiErrorDto).error || '绑定失败'); return }
+    if (!res.ok) { alert(((await res.json()) as ApiErrorResponse).error || '绑定失败'); return }
     const data = (await res.json()) as MemberMutationResponse
     if (data.warnings?.length) alert('提示：\n' + data.warnings.join('\n'))
     setBindTarget(null); setBindUserId(''); await loadMembers()
@@ -170,7 +168,7 @@ export default function AdminMembersPage() {
       body: JSON.stringify({ importFromUserId: Number(importUserId), departmentId: importDeptId, isLeader: importIsLeader, sortOrder: importSortOrder }),
       credentials: 'include',
     })
-    if (!res.ok) { alert(((await res.json()) as UserApiErrorDto).error || '导入失败'); return }
+    if (!res.ok) { alert(((await res.json()) as ApiErrorResponse).error || '导入失败'); return }
     const data = (await res.json()) as MemberMutationResponse
     if (data.warnings?.length) alert('提示：\n' + data.warnings.join('\n'))
     setImportOpen(false); setImportUserId(''); setImportIsLeader(false); setImportSortOrder(0); setImportDeptId(0)

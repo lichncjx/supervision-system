@@ -1,10 +1,11 @@
-import { NextResponse, NextRequest } from 'next/server';
+import { NextRequest } from 'next/server'
+import { actionOk } from '@/shared/http/api-response'
 
 export async function POST(request: NextRequest) {
-  const response = NextResponse.json({ success: true });
+  const response = actionOk()
 
   const isHttps = request.headers.get('x-forwarded-proto') === 'https' || 
-                 process.env.NODE_ENV !== 'production';
+                 process.env.NODE_ENV !== 'production'
 
   response.cookies.set({
     name: 'token',
@@ -14,7 +15,7 @@ export async function POST(request: NextRequest) {
     sameSite: 'lax',
     maxAge: 0,
     path: '/',
-  });
+  })
 
-  return response;
+  return response
 }

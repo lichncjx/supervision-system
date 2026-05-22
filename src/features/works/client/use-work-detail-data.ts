@@ -6,9 +6,9 @@ import { getDepartments } from '@/features/departments/client/department-api';
 import { getWorkById } from '@/features/works/client/work-api';
 import { getWorkflowRecords } from '@/features/workflow/client/workflow-api';
 import type { Work } from '@/features/works/client/work-view.types';
-import type { WorkflowRecord } from '@/features/workflow/domain/workflow-client.types';
+import type { WorkflowRecordApiDto as WorkflowRecord } from '@/features/workflow/contract/workflow-api.types';
 import type { User } from '@/features/users/client/user-client.types';
-import type { Department } from '@/features/departments/client/department-client.types';
+import type { DepartmentApiDto as Department } from '@/features/departments/contract/department-api.types';
 
 export function useWorkDetailData(id: string) {
   const [refresh, setRefresh] = useState(0);

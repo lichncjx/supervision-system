@@ -16,7 +16,7 @@ import { sortWorksByDueDate } from '@/features/works/client/work-sort';
 import type { WorkStatusFilter, WorkType } from '@/features/works/client/work-client.types';
 import type { Work } from '@/features/works/client/work-view.types';
 import { getDepartments } from '@/features/departments/client/department-api';
-import type { Department } from '@/features/departments/client/department-client.types';
+import type { DepartmentApiDto as Department } from '@/features/departments/contract/department-api.types';
 import { isCompanyLevel, isGlobalView } from '@/features/users/domain/role.rules';
 import { StatusBadge } from '@/features/works/ui/badges';
 import { WorkListToolbar } from '@/features/works/ui/work-list-toolbar';

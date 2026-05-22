@@ -18,7 +18,7 @@ import { WorkListPagination } from '@/features/works/ui/work-list-pagination';
 import { WorkSearchBar } from '@/features/works/ui/work-search-bar';
 import { ApproveDialog } from '@/features/workflow/ui/approve-dialog';
 import type { User } from '@/features/users/client/user-client.types';
-import type { Department } from '@/features/departments/client/department-client.types';
+import type { DepartmentApiDto as Department } from '@/features/departments/contract/department-api.types';
 
 export default function ApprovalPage() {
   const { user } = useAuth();

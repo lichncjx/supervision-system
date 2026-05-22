@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/shared/db/prisma'
 import { verifyToken } from '@/shared/auth/jwt'
+import { fail } from '@/shared/http/api-response'
 import type { CurrentUser } from './current-user'
 
 type AuthResult =
@@ -15,7 +16,7 @@ export async function getCurrentUserOrAuthError(
   if (!token) {
     return {
       ok: false,
-      response: NextResponse.json({ error: '未登录' }, { status: 401 }),
+      response: fail('未登录', 401),
     }
   }
 
@@ -24,7 +25,7 @@ export async function getCurrentUserOrAuthError(
   if (!decoded) {
     return {
       ok: false,
-      response: NextResponse.json({ error: '登录已过期' }, { status: 401 }),
+      response: fail('登录已过期', 401),
     }
   }
 
@@ -35,7 +36,7 @@ export async function getCurrentUserOrAuthError(
   if (!user) {
     return {
       ok: false,
-      response: NextResponse.json({ error: '用户不存在' }, { status: 401 }),
+      response: fail('用户不存在', 401),
     }
   }
 

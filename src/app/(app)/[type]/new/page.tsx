@@ -27,7 +27,7 @@ import {
 import { validateCreateWorkFormFields, type CreateWorkFormField } from '@/features/works/ui/work-form-validations';
 import { buildCreateWorkPayload } from '@/features/works/client/build-create-work-payload';
 import type { User } from '@/features/users/client/user-client.types';
-import type { Department } from '@/features/departments/client/department-client.types';
+import type { DepartmentApiDto as Department } from '@/features/departments/contract/department-api.types';
 import { ERROR_BOX, HINT_BOX, STICKY_ACTION_BAR } from '@/features/works/ui/visual-tokens';
 
 export default function NewWorkPage() {

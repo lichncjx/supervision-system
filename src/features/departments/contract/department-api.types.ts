@@ -4,9 +4,3 @@ export interface DepartmentApiDto {
   code: string
   isBusiness: boolean
 }
-
-export type DepartmentListResponse = DepartmentApiDto[]
-
-export interface DepartmentApiErrorDto {
-  error?: string
-}
