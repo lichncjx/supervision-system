@@ -10,7 +10,7 @@ import { submitAdjustment } from '@/features/workflow/application/submit-adjustm
 import { submitCancellation } from '@/features/workflow/application/submit-cancellation.usecase'
 import { decomposeTodoWork } from '@/features/workflow/application/decompose-todo-work.usecase'
 import { getWorkflowRecords } from '@/features/workflow/application/get-workflow-records.usecase'
-import type { WorkflowActionRequest } from '@/features/workflow/contract/workflow-api.types'
+import type { WorkflowActionRequest, WorkflowActionResponse } from '@/features/workflow/contract/workflow-api.types'
 import type { WorkflowResult } from '@/features/workflow/domain/workflow.types'
 
 export const POST = withApiHandler(
@@ -91,7 +91,8 @@ export const POST = withApiHandler(
       return fail(result.error ?? '操作失败', 400)
     }
 
-    return ok({ success: true, workItem: result.workItem })
+    const response: WorkflowActionResponse = { success: true, workItem: result.workItem }
+    return ok(response)
   },
 )
 

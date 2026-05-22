@@ -65,10 +65,7 @@ export const POST = withApiHandler(async (request: NextRequest) => {
     importFromUserId: body.importFromUserId,
   })
 
-  if (result.kind === 'error') return fromError(result)
+  if (!result.ok) return fromError(result)
 
-  return ok(
-    { ...result.data, warnings: result.warnings },
-    { status: 201 },
-  )
+  return ok(result.data, { status: 201 })
 })

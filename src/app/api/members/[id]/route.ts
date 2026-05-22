@@ -32,8 +32,8 @@ export const PATCH = withApiHandler(
       userId: body.userId,
     })
 
-    if (result.kind === 'error') return fromError(result)
+    if (!result.ok) return fromError(result)
 
-    return ok({ ...result.data, warnings: result.warnings })
+    return ok(result.data)
   },
 )

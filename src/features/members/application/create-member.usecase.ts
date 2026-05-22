@@ -1,7 +1,8 @@
 import { prisma } from '@/shared/db/prisma'
 import { toMemberResponse } from '@/features/members/application/member.dto'
 import { findDepartmentById } from '@/features/departments/infrastructure/department.repository'
-import type { MemberApiDto } from '@/features/members/contract/member-api.types'
+import { type Result, ok, err } from '@/shared/result'
+import type { MemberMutationResponse } from '@/features/members/contract/member-api.types'
 
 export interface CreateMemberInput {
   name: string
@@ -13,13 +14,9 @@ export interface CreateMemberInput {
   importFromUserId?: number
 }
 
-export type CreateMemberResult =
-  | { kind: 'ok'; data: MemberApiDto; warnings?: string[] }
-  | { kind: 'error'; status: number; message: string }
-
 export async function createMemberUseCase(
   input: CreateMemberInput,
-): Promise<CreateMemberResult> {
+): Promise<Result<MemberMutationResponse>> {
   let resolvedName = input.name
   let resolvedDepartmentId = input.departmentId
   let resolvedPhone = input.phone ?? null
@@ -31,7 +28,7 @@ export async function createMemberUseCase(
       include: { department: true },
     })
     if (!importUser) {
-      return { kind: 'error', status: 400, message: '导入用户不存在' }
+      return err(400, '导入用户不存在')
     }
     resolvedName = input.name || importUser.name
     resolvedDepartmentId = input.departmentId || importUser.departmentId
@@ -40,12 +37,12 @@ export async function createMemberUseCase(
   }
 
   if (!resolvedName || !resolvedDepartmentId) {
-    return { kind: 'error', status: 400, message: '姓名和部门为必填字段' }
+    return err(400, '姓名和部门为必填字段')
   }
 
   const department = await findDepartmentById(resolvedDepartmentId)
   if (!department) {
-    return { kind: 'error', status: 400, message: '部门不存在' }
+    return err(400, '部门不存在')
   }
 
   const warnings: string[] = []
@@ -55,14 +52,14 @@ export async function createMemberUseCase(
       include: { department: true },
     })
     if (!user) {
-      return { kind: 'error', status: 400, message: '绑定的系统用户不存在' }
+      return err(400, '绑定的系统用户不存在')
     }
 
     const existing = await prisma.member.findUnique({
       where: { userId: resolvedUserId },
     })
     if (existing) {
-      return { kind: 'error', status: 409, message: `该系统用户已绑定到人员 "${existing.name}"（ID: ${existing.id}）` }
+      return err(409, `该系统用户已绑定到人员 "${existing.name}"（ID: ${existing.id}）`)
     }
 
     if (user.name !== resolvedName) {
@@ -92,5 +89,6 @@ export async function createMemberUseCase(
     },
   })
 
-  return { kind: 'ok', data: toMemberResponse(member), warnings: warnings.length > 0 ? warnings : undefined }
+  const memberData = toMemberResponse(member)
+  return ok(warnings.length > 0 ? { ...memberData, warnings } : memberData)
 }
