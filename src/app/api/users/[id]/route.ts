@@ -1,5 +1,6 @@
 import { NextResponse, NextRequest } from 'next/server'
 import { authenticateAdmin } from '@/features/users/application/admin-auth'
+import { actionOk, fail, failResult } from '@/shared/http/api-response'
 import { updateUserUseCase } from '@/features/users/application/update-user.usecase'
 import { deleteUserUseCase } from '@/features/users/application/delete-user.usecase'
 import type { UpdateUserRequest } from '@/features/users/contract/user-api.types'
@@ -10,19 +11,19 @@ export async function PUT(
 ) {
   try {
     const auth = await authenticateAdmin(request.cookies.get('token')?.value)
-    if (!auth.ok) return NextResponse.json({ error: auth.message }, { status: auth.status })
+    if (!auth.ok) return failResult(auth)
 
     const { id } = await params
     const userId = parseInt(id)
     if (isNaN(userId)) {
-      return NextResponse.json({ error: '无效的用户ID' }, { status: 400 })
+      return fail('无效的用户ID', 400)
     }
 
     const body = (await request.json()) as UpdateUserRequest
 
     const result = await updateUserUseCase(auth.user, userId, body)
     if (result.kind === 'error')
-      return NextResponse.json({ error: result.message }, { status: result.status })
+      return failResult(result)
 
     return NextResponse.json(result.data)
   } catch (error) {
@@ -37,18 +38,18 @@ export async function DELETE(
 ) {
   try {
     const auth = await authenticateAdmin(request.cookies.get('token')?.value)
-    if (!auth.ok) return NextResponse.json({ error: auth.message }, { status: auth.status })
+    if (!auth.ok) return failResult(auth)
 
     const { id } = await params
     const userId = parseInt(id)
 
     const result = await deleteUserUseCase(auth.user, userId)
     if (result.kind === 'error')
-      return NextResponse.json({ error: result.message }, { status: result.status })
+      return failResult(result)
 
-    return NextResponse.json({ success: true })
+    return actionOk()
   } catch (error) {
     console.error('Delete user error:', error)
-    return NextResponse.json({ error: '删除用户失败' }, { status: 500 })
+    return fail('删除用户失败', 500)
   }
 }

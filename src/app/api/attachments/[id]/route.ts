@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { getCurrentUserOrAuthError } from '@/shared/auth/get-current-user-or-auth-error'
+import { actionOk, fail, failResult } from '@/shared/http/api-response'
 import { deleteAttachmentUseCase } from '@/features/attachments/application/delete-attachment.usecase'
 
 export async function DELETE(
@@ -16,18 +17,18 @@ export async function DELETE(
     const attachmentId = parseInt(id)
 
     if (isNaN(attachmentId)) {
-      return NextResponse.json({ error: '无效的附件ID' }, { status: 400 })
+      return fail('无效的附件ID', 400)
     }
 
     const result = await deleteAttachmentUseCase({ currentUser, attachmentId })
 
     if (result.kind === 'error') {
-      return NextResponse.json({ error: result.message }, { status: result.status })
+      return failResult(result)
     }
 
-    return NextResponse.json({ success: true })
+    return actionOk()
   } catch (error) {
     console.error('Delete attachment error:', error)
-    return NextResponse.json({ error: '删除失败' }, { status: 500 })
+    return fail('删除失败', 500)
   }
 }

@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextResponse } from 'next/server'
 
 export interface ApiErrorResponse<Code extends string = string> {
   error: string
@@ -18,15 +18,31 @@ export interface PageResponse<T> {
 }
 
 export function ok<T>(data: T, init?: ResponseInit) {
-  return NextResponse.json(data, init);
+  return NextResponse.json(data, init)
 }
 
-export function fail(message: string, status = 400, code?: string) {
-  return NextResponse.json(
-    {
-      error: message,
-      code,
-    },
-    { status },
-  );
+export function actionOk(init?: ResponseInit) {
+  return ok<ActionSuccessResponse>({ success: true }, init)
+}
+
+export function fail<Code extends string = string>(
+  message: string,
+  status = 400,
+  code?: Code,
+  details?: unknown,
+) {
+  const body: ApiErrorResponse<Code> = { error: message }
+  if (code) body.code = code
+  if (details !== undefined) body.details = details
+
+  return NextResponse.json(body, { status })
+}
+
+export function failResult(error: {
+  status: number
+  message: string
+  code?: string
+  details?: unknown
+}) {
+  return fail(error.message, error.status, error.code, error.details)
 }

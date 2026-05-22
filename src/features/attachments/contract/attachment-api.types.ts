@@ -1,3 +1,5 @@
+import type { ActionSuccessResponse } from '@/shared/http/api-response'
+
 export interface AttachmentApiDto {
   id: number
   fileName: string
@@ -14,6 +16,4 @@ export interface UploadAttachmentResponse {
   attachment: AttachmentApiDto
 }
 
-export interface DeleteAttachmentResponse {
-  success: true
-}
+export type DeleteAttachmentResponse = ActionSuccessResponse

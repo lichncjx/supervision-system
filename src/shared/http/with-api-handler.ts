@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { AppError } from '@/shared/errors/app-error'
+import { fail } from '@/shared/http/api-response'
 
 type Handler = (
   request: NextRequest,
@@ -15,17 +16,11 @@ export function withApiHandler(handler: Handler) {
       return await handler(request, ...args)
     } catch (error) {
       if (error instanceof AppError) {
-        return NextResponse.json(
-          { error: error.message, code: error.code },
-          { status: error.status },
-        )
+        return fail(error.message, error.status, error.code)
       }
 
       console.error('Unhandled API error:', error)
-      return NextResponse.json(
-        { error: '服务器内部错误', code: 'INTERNAL_ERROR' },
-        { status: 500 },
-      )
+      return fail('服务器内部错误', 500, 'INTERNAL_ERROR')
     }
   }
 }
