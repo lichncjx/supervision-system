@@ -1,19 +1,16 @@
 import { NextRequest } from 'next/server'
-import { getCurrentUserOrAuthError } from '@/shared/auth/get-current-user-or-auth-error'
+import { requireCurrentUser } from '@/shared/auth/require-current-user'
+import { withApiHandler } from '@/shared/http/with-api-handler'
 import { success, fail, fromError } from '@/shared/http/api-response'
 import { deleteAttachmentUseCase } from '@/features/attachments/application/delete-attachment.usecase'
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  try {
-    const auth = await getCurrentUserOrAuthError(request)
-    if (!auth.ok) return auth.response
+type AttachmentParams = { params: Promise<{ id: string }> }
 
-    const currentUser = auth.user
+export const DELETE = withApiHandler(
+  async (request: NextRequest, ...args: unknown[]) => {
+    const currentUser = await requireCurrentUser(request)
 
-    const { id } = await params
+    const { id } = await (args[0] as AttachmentParams).params
     const attachmentId = parseInt(id)
 
     if (isNaN(attachmentId)) {
@@ -21,14 +18,8 @@ export async function DELETE(
     }
 
     const result = await deleteAttachmentUseCase({ currentUser, attachmentId })
-
-    if (result.kind === 'error') {
-      return fromError(result)
-    }
+    if (result.kind === 'error') return fromError(result)
 
     return success()
-  } catch (error) {
-    console.error('Delete attachment error:', error)
-    return fail('删除失败', 500)
-  }
-}
+  },
+)
