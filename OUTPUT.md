@@ -231,4 +231,4 @@
 | #94 | works/excel/attachments 5 个 route + withApiHandler 泛型 + 架构文档 | ✅ 已合并 |
 | #95 | members Result<T> + workflow contract + upload/export/download/excel auth + isExpiringWork 去重 | ✅ 已合并 |
 | #96 | 清理 auth helpers — 删除 3 个冗余文件，内联无用函数，CurrentUser 去 Prisma | ✅ 已合并 |
-| #97 | users 模块 4 个 route 迁移 + 删除 authenticateAdmin | 🟡 待提交 |
+| #97 | users 模块 4 个 route 迁移 + 删除 authenticateAdmin | ✅ 已合并 |
