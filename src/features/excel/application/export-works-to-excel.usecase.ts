@@ -30,18 +30,7 @@ import {
   createExportOperationLog,
 } from '@/features/excel/infrastructure/excel-work.repository'
 import { generateExportBuffer } from '@/features/excel/infrastructure/work-exporter'
-
-const EXPIRING_DAYS = 7
-const APPROVING_STATUSES: WorkItemStatus[] = [
-  WorkItemStatus.PROPOSING,
-  WorkItemStatus.ADJUSTING,
-  WorkItemStatus.CANCELLING,
-  WorkItemStatus.COMPLETING,
-]
-const TERMINAL_STATUSES: WorkItemStatus[] = [
-  WorkItemStatus.COMPLETED,
-  WorkItemStatus.CANCELLED,
-]
+import { isApproving, isOverdueWorkItem, isExpiringWorkItem } from '@/features/works/domain/work-status.rules'
 
 function normalizeTypeFilter(
   type: string | null,
@@ -64,41 +53,6 @@ function normalizeStatusFilter(status: string | null): string | null {
     : null
 }
 
-function getDueDate(workItem: {
-  type: WorkItemType
-  planCompleteTime: Date | null
-}): Date | null {
-  return workItem.planCompleteTime
-}
-
-function isOverdueWork(
-  workItem: {
-    type: WorkItemType
-    status: WorkItemStatus
-    planCompleteTime: Date | null
-  },
-  now: Date,
-): boolean {
-  if (TERMINAL_STATUSES.includes(workItem.status)) return false
-  const dueDate = getDueDate(workItem)
-  return dueDate ? dueDate < now : false
-}
-
-function isExpiringWork(
-  workItem: {
-    type: WorkItemType
-    status: WorkItemStatus
-    planCompleteTime: Date | null
-  },
-  now: Date,
-): boolean {
-  if (TERMINAL_STATUSES.includes(workItem.status)) return false
-  const dueDate = getDueDate(workItem)
-  if (!dueDate) return false
-  const deadline = new Date(now)
-  deadline.setDate(deadline.getDate() + EXPIRING_DAYS)
-  return dueDate >= now && dueDate <= deadline
-}
 
 function isValidStatusFilter(status: string | null): boolean {
   if (!status || status === 'all') return true
@@ -194,7 +148,7 @@ export async function exportWorksToExcelUseCase(
         return workItem.status === WorkItemStatus.PENDING_DECOMPOSE
       }
       if (rawStatusLower === 'approving')
-        return APPROVING_STATUSES.includes(workItem.status)
+        return isApproving(workItem.status)
       if (rawStatusLower === 'handling')
         return shouldHandleWorkItem(permUser, workItem)
       if (
@@ -207,9 +161,9 @@ export async function exportWorksToExcelUseCase(
       if (rawStatusLower === 'cancelled')
         return workItem.status === WorkItemStatus.CANCELLED
       if (rawStatusLower === 'overdue')
-        return isOverdueWork(workItem, now)
+        return isOverdueWorkItem(workItem, now)
       if (rawStatusLower === 'expiring')
-        return isExpiringWork(workItem, now)
+        return isExpiringWorkItem(workItem, now)
       return !statusFilter || workItem.status === statusFilter
     })
     .filter((workItem) => keywordMatches(workItem, keywordFilter))
