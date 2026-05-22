@@ -4,39 +4,36 @@ import {
   updateUser,
 } from '@/features/users/infrastructure/user.repository'
 import { hashPassword } from '@/shared/auth/password'
+import { type Result, err, ok } from '@/shared/result'
 
 export interface ResetPasswordBody {
   password: string
 }
 
-export type ResetPasswordResult =
-  | { kind: 'ok' }
-  | { kind: 'error'; status: number; message: string }
-
 export async function resetUserPasswordUseCase(
   currentUser: { id: number; role: string },
   userId: number,
   body: ResetPasswordBody,
-): Promise<ResetPasswordResult> {
+): Promise<Result> {
   if (!isAdmin(currentUser.role)) {
-    return { kind: 'error', status: 403, message: '权限不足' }
+    return err(403, '权限不足')
   }
 
   if (isNaN(userId)) {
-    return { kind: 'error', status: 400, message: '无效的用户ID' }
+    return err(400, '无效的用户ID')
   }
 
   const user = await findUserWithPasswordById(userId)
   if (!user) {
-    return { kind: 'error', status: 404, message: '用户不存在' }
+    return err(404, '用户不存在')
   }
 
   const { password } = body
   if (!password || password.length < 6) {
-    return { kind: 'error', status: 400, message: '密码长度不能少于6位' }
+    return err(400, '密码长度不能少于6位')
   }
 
   const passwordHash = await hashPassword(password)
   await updateUser(userId, { passwordHash })
-  return { kind: 'ok' }
+  return ok()
 }

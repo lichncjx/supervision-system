@@ -10,7 +10,7 @@ export const POST = withApiHandler(async (request: NextRequest) => {
   const body = (await request.json()) as ChangePasswordRequest
 
   const result = await changePasswordUseCase(currentUser.id, body)
-  if (result.kind === 'error')
+  if (!result.ok)
     return fromError(result)
 
   return success()
