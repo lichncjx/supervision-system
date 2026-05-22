@@ -8,10 +8,12 @@ import { submitAdjustment } from '@/features/workflow/application/submit-adjustm
 import { submitCancellation } from '@/features/workflow/application/submit-cancellation.usecase'
 import { decomposeTodoWork } from '@/features/workflow/application/decompose-todo-work.usecase'
 import { getWorkflowRecords } from '@/features/workflow/application/get-workflow-records.usecase'
+import type { WorkflowActionRequest } from '@/features/workflow/contract/workflow-api.types'
+import type { WorkflowResult } from '@/features/workflow/domain/workflow.types'
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id } = await params
@@ -31,8 +33,17 @@ export async function POST(
       return NextResponse.json({ error: '登录已过期' }, { status: 401 })
     }
 
-    const body = await request.json()
-    const { action, comment, proof, adjustReason, cancelReason, rejectReason, nodes, nextApproverId } = body
+    const body = (await request.json()) as WorkflowActionRequest
+    const {
+      action,
+      comment,
+      proof,
+      adjustReason,
+      cancelReason,
+      rejectReason,
+      nodes,
+      nextApproverId,
+    } = body
 
     if (
       nextApproverId != null &&
@@ -41,7 +52,7 @@ export async function POST(
       return NextResponse.json({ error: '无效的下一审批人' }, { status: 400 })
     }
 
-    let result
+    let result: WorkflowResult
 
     switch (action) {
       case 'submit':
@@ -98,7 +109,7 @@ export async function POST(
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id } = await params

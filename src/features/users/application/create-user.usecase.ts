@@ -3,9 +3,9 @@ import { isAdmin } from '@/features/users/domain/role.rules'
 import { PROTECTED_USERNAMES } from '@/features/users/domain/protected-usernames'
 import {
   findUserByUsername,
-  findDepartmentById,
   createUser,
 } from '@/features/users/infrastructure/user.repository'
+import { findDepartmentById } from '@/features/departments/infrastructure/department.repository'
 import { hashPassword } from '@/shared/auth/password'
 import { toUserListItem } from '@/features/users/application/user-api.mapper'
 import type { UserListItem } from '@/features/users/application/user-api.types'

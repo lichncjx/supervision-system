@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useAuth } from '@/components/providers/auth-provider';
 import { isCompanyLevel, isGlobalView } from '@/features/users/domain/role.rules';
 import { getDepartments } from '@/features/departments/client/department-api';
+import type { Department } from '@/features/departments/client/department-client.types';
 import { getVisibleWorks, queryWorks } from '@/features/works/client/work-api';
 import type { Work } from '@/features/works/client/work-view.types';
 import type { WorkType, WorkStatusFilter } from '@/features/works/client/work-client.types';
@@ -28,7 +29,7 @@ export default function ItemListPage() {
   const [departmentFilter, setDepartmentFilter] = useState<number | '全部'>('全部');
   const [statusFilter, setStatusFilter] = useState<WorkStatusFilter>('all');
   const [monthFilter, setMonthFilter] = useState('');
-  const [departments, setDepartments] = useState<Array<{ id: number; name: string; code: string; isBusiness: boolean }>>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const companyLevel = isGlobalView(user?.role) || isCompanyLevel(user?.role);
 
   useEffect(() => {
@@ -107,7 +108,7 @@ export default function ItemListPage() {
     const fetchList = async () => {
       const data = await queryWorks(user, {
         type,
-        departmentId: companyLevel ? departmentFilter : user?.departmentId,
+        departmentId: companyLevel ? departmentFilter : (user?.departmentId ?? undefined),
         status: statusFilter,
         keyword,
       });

@@ -16,7 +16,7 @@ import {
 export async function decomposeTodoWork(
   workItemId: number,
   user: CurrentUser,
-  nodes: any[],
+  nodes: unknown[],
   comment?: string,
 ): Promise<WorkflowResult> {
   const permUser = toPermissionUser(user)

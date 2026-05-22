@@ -1,6 +1,7 @@
 import { NextResponse, NextRequest } from 'next/server'
 import { authenticateAdmin } from '@/features/users/application/admin-auth'
 import { toggleUserStatusUseCase } from '@/features/users/application/toggle-user-status.usecase'
+import type { ToggleUserStatusRequest } from '@/features/users/contract/user-api.types'
 
 export async function PUT(
   request: NextRequest,
@@ -16,7 +17,7 @@ export async function PUT(
       return NextResponse.json({ error: '无效的用户ID' }, { status: 400 })
     }
 
-    const body = await request.json()
+    const body = (await request.json()) as ToggleUserStatusRequest
 
     const result = await toggleUserStatusUseCase(auth.user, userId, body)
     if (result.kind === 'error')

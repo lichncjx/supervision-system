@@ -7,15 +7,17 @@ import { getWorkById } from '@/features/works/client/work-api';
 import { getWorkflowRecords } from '@/features/workflow/client/workflow-api';
 import type { Work } from '@/features/works/client/work-view.types';
 import type { WorkflowRecord } from '@/features/workflow/domain/workflow-client.types';
+import type { User } from '@/features/users/client/user-client.types';
+import type { Department } from '@/features/departments/client/department-client.types';
 
 export function useWorkDetailData(id: string) {
   const [refresh, setRefresh] = useState(0);
   const [work, setWork] = useState<Work | undefined>();
   const [workflowRecords, setWorkflowRecords] = useState<WorkflowRecord[]>([]);
-  const [companyLeaders, setCompanyLeaders] = useState<Array<{ id: number; name: string; role: string }>>([]);
-  const [departments, setDepartments] = useState<Array<{ id: number; name: string; code: string; isBusiness: boolean }>>([]);
-  const [departmentLeaders, setDepartmentLeaders] = useState<Array<{ id: number; name: string; role: string; departmentId: number }>>([]);
-  const [departmentManagers, setDepartmentManagers] = useState<Array<{ id: number; name: string; role: string; departmentId: number }>>([]);
+  const [companyLeaders, setCompanyLeaders] = useState<User[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [departmentLeaders, setDepartmentLeaders] = useState<User[]>([]);
+  const [departmentManagers, setDepartmentManagers] = useState<User[]>([]);
 
   const onRefresh = () => setRefresh((v) => v + 1);
 

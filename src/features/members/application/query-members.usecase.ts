@@ -1,5 +1,6 @@
 import { prisma } from '@/shared/db/prisma'
 import { toMemberResponse } from '@/features/members/application/member.dto'
+import type { MemberApiDto } from '@/features/members/contract/member-api.types'
 
 export interface QueryMembersInput {
   departmentId?: number
@@ -7,7 +8,7 @@ export interface QueryMembersInput {
   includeInactive?: boolean
 }
 
-export async function queryMembersUseCase(input: QueryMembersInput) {
+export async function queryMembersUseCase(input: QueryMembersInput): Promise<MemberApiDto[]> {
   const where: Record<string, unknown> = {}
 
   if (input.departmentId !== undefined) {

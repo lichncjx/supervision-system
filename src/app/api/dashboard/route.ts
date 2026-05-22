@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUserOrAuthError } from '@/shared/auth/get-current-user-or-auth-error'
 import { getDashboardDataUseCase } from '@/features/dashboard/application/get-dashboard-data.usecase'
+import type { DashboardDataResponse } from '@/features/dashboard/contract/dashboard-api.types'
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,12 +11,12 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const limit = Number(searchParams.get('limit') || undefined)
 
-    return NextResponse.json(
-      await getDashboardDataUseCase({
-        currentUser: auth.user,
-        options: { limit },
-      }),
-    )
+    const response: DashboardDataResponse = await getDashboardDataUseCase({
+      currentUser: auth.user,
+      options: { limit },
+    })
+
+    return NextResponse.json(response)
   } catch (error) {
     console.error('Dashboard error:', error)
     return NextResponse.json(

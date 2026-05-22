@@ -2,6 +2,7 @@ import { NextResponse, NextRequest } from 'next/server'
 import { authenticateAdmin } from '@/features/users/application/admin-auth'
 import { updateUserUseCase } from '@/features/users/application/update-user.usecase'
 import { deleteUserUseCase } from '@/features/users/application/delete-user.usecase'
+import type { UpdateUserRequest } from '@/features/users/contract/user-api.types'
 
 export async function PUT(
   request: NextRequest,
@@ -17,7 +18,7 @@ export async function PUT(
       return NextResponse.json({ error: '无效的用户ID' }, { status: 400 })
     }
 
-    const body = await request.json()
+    const body = (await request.json()) as UpdateUserRequest
 
     const result = await updateUserUseCase(auth.user, userId, body)
     if (result.kind === 'error')

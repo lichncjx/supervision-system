@@ -5,7 +5,18 @@ import Link from 'next/link';
 import { Building2, Settings, Users, UserCog, Plus, Trash2, Power, KeyRound, Eye, EyeOff, Pencil } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { getRoleName } from '@/features/users/domain/role.rules';
-import type { Role } from '@/features/users/domain/user.types';
+import type { Role } from '@/features/users/client/user-client.types';
+import type {
+  CreateUserResponse,
+  UserApiErrorDto,
+  UserListItemApiDto,
+  UserListResponse,
+} from '@/features/users/contract/user-api.types';
+import type {
+  DepartmentApiDto,
+  DepartmentListResponse,
+} from '@/features/departments/contract/department-api.types';
+import type { MemberListResponse } from '@/features/members/contract/member-api.types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -18,25 +29,8 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 
-interface User {
-  id: number;
-  username: string;
-  name: string;
-  role: string;
-  departmentId: number;
-  departmentName: string;
-  isActive: boolean;
-  email?: string;
-  phone?: string;
-  isProtected?: boolean;
-}
-
-interface Department {
-  id: number;
-  name: string;
-  code: string;
-  isBusiness: boolean;
-}
+type User = UserListItemApiDto;
+type Department = DepartmentApiDto;
 
 export default function AdminPage() {
   const { user } = useAuth();
@@ -79,7 +73,7 @@ export default function AdminPage() {
   const fetchDepartments = async () => {
     try {
       const response = await fetch('/api/departments', { credentials: 'include' });
-      if (response.ok) setDepartments(await response.json());
+      if (response.ok) setDepartments((await response.json()) as DepartmentListResponse);
     } catch (error) {
       console.error('Fetch departments error:', error);
     }
@@ -88,7 +82,7 @@ export default function AdminPage() {
   const fetchMemberCount = async () => {
     try {
       const res = await fetch('/api/members?includeInactive=true', { credentials: 'include' });
-      if (res.ok) setMemberCount((await res.json()).length);
+      if (res.ok) setMemberCount(((await res.json()) as MemberListResponse).length);
     } catch { /* ignore */ }
   };
 
@@ -98,7 +92,7 @@ export default function AdminPage() {
         credentials: 'include',
       });
       if (response.ok) {
-        const data = await response.json();
+        const data = (await response.json()) as UserListResponse;
         setUserList(data);
       }
     } catch (error) {
@@ -154,7 +148,7 @@ export default function AdminPage() {
         credentials: 'include',
       });
 
-      const data = await response.json();
+      const data = (await response.json()) as CreateUserResponse & UserApiErrorDto;
 
       if (!response.ok) {
         alert(data.error || '创建失败');
@@ -188,7 +182,7 @@ export default function AdminPage() {
       });
 
       if (!response.ok) {
-        const data = await response.json();
+        const data = (await response.json()) as UserApiErrorDto;
         alert(data.error || '操作失败');
         return;
       }
@@ -209,7 +203,7 @@ export default function AdminPage() {
       });
 
       if (!response.ok) {
-        const data = await response.json();
+        const data = (await response.json()) as UserApiErrorDto;
         alert(data.error || '删除失败');
         return;
       }
@@ -252,7 +246,7 @@ export default function AdminPage() {
       });
 
       if (!response.ok) {
-        const data = await response.json();
+        const data = (await response.json()) as UserApiErrorDto;
         alert(data.error || '修改失败');
         return;
       }
@@ -272,7 +266,7 @@ export default function AdminPage() {
     setEditForm({
       name: target.name,
       role: target.role as Role,
-      departmentId: target.departmentId,
+      departmentId: target.departmentId ?? 0,
       email: target.email || '',
       phone: target.phone || '',
       isActive: target.isActive,
@@ -293,7 +287,7 @@ export default function AdminPage() {
       });
 
       if (!response.ok) {
-        const data = await response.json();
+        const data = (await response.json()) as UserApiErrorDto;
         alert(data.error || '修改失败');
         return;
       }

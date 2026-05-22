@@ -1,5 +1,5 @@
-import type { User } from '@/features/users/domain/user.types';
 import type { WorkNode, WorkType } from '@/features/works/client/work-client.types';
+import type { User } from '@/features/users/client/user-client.types';
 
 interface BuildCreateWorkPayloadParams {
   type: string;
@@ -33,7 +33,7 @@ interface BuildCreateWorkPayloadParams {
   };
   isInnovation: boolean;
   nodes: WorkNode[];
-  companyLeaders: Array<{ id: number; name: string; role: string }>;
+  companyLeaders: User[];
 }
 
 export function buildCreateWorkPayload({

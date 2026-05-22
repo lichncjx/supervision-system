@@ -1,29 +1,6 @@
-import { Prisma } from '@prisma/client'
+import { Prisma, WorkItemType } from '@prisma/client'
 import { prisma } from '@/shared/db/prisma'
 import { getResponsibleDepartmentIds } from '@/features/works/domain/work.permissions'
-
-export async function findDepartmentById(id: number) {
-  return prisma.department.findUnique({
-    where: { id },
-    select: { id: true, name: true },
-  })
-}
-
-export async function findBusinessDepartments() {
-  return prisma.department.findMany({
-    where: { isBusiness: true },
-    select: { id: true, name: true },
-    orderBy: { name: 'asc' },
-  })
-}
-
-export async function findDepartmentsByIds(ids: number[]) {
-  return prisma.department.findMany({
-    where: { id: { in: ids }, isBusiness: true },
-    select: { id: true, name: true },
-    orderBy: { name: 'asc' },
-  })
-}
 
 export const dashboardWorkSelect = {
   id: true,
@@ -62,11 +39,11 @@ export async function findDashboardWorks(
 
 export async function findWorksForDashboardCompletionRate(params: {
   departmentId: number
-  visibilityWhere: any
+  visibilityWhere: Prisma.WorkItemWhereInput
   dateFilter: Record<string, unknown>
-  typeFilter?: string
+  typeFilter?: WorkItemType
 }) {
-  const filters: any[] = [
+  const filters: Prisma.WorkItemWhereInput[] = [
     params.visibilityWhere,
     { departmentId: params.departmentId },
   ]
@@ -76,7 +53,7 @@ export async function findWorksForDashboardCompletionRate(params: {
   }
 
   if (params.typeFilter) {
-    filters.push({ type: params.typeFilter.toUpperCase() })
+    filters.push({ type: params.typeFilter })
   }
 
   return prisma.workItem.findMany({
@@ -85,7 +62,7 @@ export async function findWorksForDashboardCompletionRate(params: {
 }
 
 export async function findDepartmentIdsFromVisibleWorks(
-  visibilityWhere: any,
+  visibilityWhere: Prisma.WorkItemWhereInput,
 ): Promise<number[]> {
   const visibleWorks = await prisma.workItem.findMany({
     where: visibilityWhere,

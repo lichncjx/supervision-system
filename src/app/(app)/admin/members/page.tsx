@@ -15,24 +15,25 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog'
+import type { Member } from '@/features/members/client/member-client.types'
+import type { Department } from '@/features/departments/client/department-client.types'
+import type { DepartmentListResponse } from '@/features/departments/contract/department-api.types'
+import type {
+  MemberApiErrorDto,
+  MemberListResponse,
+  MemberMutationResponse,
+} from '@/features/members/contract/member-api.types'
+import type {
+  UserApiErrorDto,
+  UserListItemApiDto,
+  UserListResponse,
+} from '@/features/users/contract/user-api.types'
 
-interface MemberInfo {
-  id: number; name: string; departmentId: number; departmentName: string
-  phone: string | null; isLeader: boolean; sortOrder: number; isActive: boolean
-  userId: number | null
-  user: { id: number; username: string; name: string; isActive: boolean } | null
-}
-
-interface Department { id: number; name: string; code: string; isBusiness: boolean }
-
-interface SystemUser {
-  id: number; username: string; name: string; departmentId: number
-  department: { name: string }; isActive: boolean
-}
+type SystemUser = UserListItemApiDto
 
 export default function AdminMembersPage() {
   const { user } = useAuth()
-  const [members, setMembers] = useState<MemberInfo[]>([])
+  const [members, setMembers] = useState<Member[]>([])
   const [departments, setDepartments] = useState<Department[]>([])
   const [systemUsers, setSystemUsers] = useState<SystemUser[]>([])
   const [deptFilter, setDeptFilter] = useState<number | '全部'>('全部')
@@ -42,12 +43,12 @@ export default function AdminMembersPage() {
     name: '', departmentId: 0, phone: '', isLeader: false, sortOrder: 0,
   })
 
-  const [editTarget, setEditTarget] = useState<MemberInfo | null>(null)
+  const [editTarget, setEditTarget] = useState<Member | null>(null)
   const [editForm, setEditForm] = useState({
     name: '', phone: '', isLeader: false, sortOrder: 0, isActive: true,
   })
 
-  const [bindTarget, setBindTarget] = useState<MemberInfo | null>(null)
+  const [bindTarget, setBindTarget] = useState<Member | null>(null)
   const [bindUserId, setBindUserId] = useState<string>('')
 
   const [importOpen, setImportOpen] = useState(false)
@@ -64,10 +65,10 @@ export default function AdminMembersPage() {
         fetch('/api/users', { credentials: 'include' }),
       ])
       if (deptRes.ok) {
-        depts = await deptRes.json()
+        depts = (await deptRes.json()) as DepartmentListResponse
         setDepartments(depts)
       }
-      if (userRes.ok) setSystemUsers(await userRes.json())
+      if (userRes.ok) setSystemUsers((await userRes.json()) as UserListResponse)
     } catch { /* ignore */ }
     await loadMembers(depts)
   }
@@ -85,7 +86,7 @@ export default function AdminMembersPage() {
           .filter((d) => d.isBusiness)
           .map((dept) =>
             fetch(`/api/members?departmentId=${dept.id}&includeInactive=true`, { credentials: 'include' })
-              .then((res) => (res.ok ? res.json() : []))
+              .then((res) => (res.ok ? (res.json() as Promise<MemberListResponse>) : []))
           ),
       )
       setMembers(results.flat())
@@ -108,12 +109,12 @@ export default function AdminMembersPage() {
       body: JSON.stringify({ name: createForm.name.trim(), departmentId: createForm.departmentId, phone: createForm.phone || null, isLeader: createForm.isLeader, sortOrder: createForm.sortOrder }),
       credentials: 'include',
     })
-    if (!res.ok) { alert((await res.json()).error || '创建失败'); return }
+    if (!res.ok) { alert(((await res.json()) as MemberApiErrorDto).error || '创建失败'); return }
     setCreateForm({ name: '', departmentId: 0, phone: '', isLeader: false, sortOrder: 0 })
     await loadMembers()
   }
 
-  const handleEdit = (m: MemberInfo) => {
+  const handleEdit = (m: Member) => {
     setEditTarget(m)
     setEditForm({ name: m.name, phone: m.phone || '', isLeader: m.isLeader, sortOrder: m.sortOrder, isActive: m.isActive })
   }
@@ -124,28 +125,28 @@ export default function AdminMembersPage() {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(editForm), credentials: 'include',
     })
-    if (!res.ok) { alert((await res.json()).error || '保存失败'); return }
-    const data = await res.json()
+    if (!res.ok) { alert(((await res.json()) as MemberApiErrorDto).error || '保存失败'); return }
+    const data = (await res.json()) as MemberMutationResponse
     if (data.warnings?.length) alert('提示：\n' + data.warnings.join('\n'))
     setEditTarget(null); await loadMembers()
   }
 
-  const handleToggle = async (m: MemberInfo) => {
+  const handleToggle = async (m: Member) => {
     const res = await fetch(`/api/members/${m.id}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ isActive: !m.isActive }), credentials: 'include',
     })
-    if (!res.ok) { alert((await res.json()).error || '操作失败'); return }
+    if (!res.ok) { alert(((await res.json()) as MemberApiErrorDto).error || '操作失败'); return }
     await loadMembers()
   }
 
-  const handleUnbind = async (m: MemberInfo) => {
+  const handleUnbind = async (m: Member) => {
     if (!confirm(`确认解除 ${m.name} 与系统用户 ${m.user?.name} 的绑定？`)) return
     const res = await fetch(`/api/members/${m.id}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userId: null }), credentials: 'include',
     })
-    if (!res.ok) { alert((await res.json()).error || '解绑失败'); return }
+    if (!res.ok) { alert(((await res.json()) as MemberApiErrorDto).error || '解绑失败'); return }
     await loadMembers()
   }
 
@@ -155,8 +156,8 @@ export default function AdminMembersPage() {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userId: Number(bindUserId) }), credentials: 'include',
     })
-    if (!res.ok) { alert((await res.json()).error || '绑定失败'); return }
-    const data = await res.json()
+    if (!res.ok) { alert(((await res.json()) as MemberApiErrorDto).error || '绑定失败'); return }
+    const data = (await res.json()) as MemberMutationResponse
     if (data.warnings?.length) alert('提示：\n' + data.warnings.join('\n'))
     setBindTarget(null); setBindUserId(''); await loadMembers()
   }
@@ -169,8 +170,8 @@ export default function AdminMembersPage() {
       body: JSON.stringify({ importFromUserId: Number(importUserId), departmentId: importDeptId, isLeader: importIsLeader, sortOrder: importSortOrder }),
       credentials: 'include',
     })
-    if (!res.ok) { alert((await res.json()).error || '导入失败'); return }
-    const data = await res.json()
+    if (!res.ok) { alert(((await res.json()) as UserApiErrorDto).error || '导入失败'); return }
+    const data = (await res.json()) as MemberMutationResponse
     if (data.warnings?.length) alert('提示：\n' + data.warnings.join('\n'))
     setImportOpen(false); setImportUserId(''); setImportIsLeader(false); setImportSortOrder(0); setImportDeptId(0)
     await loadMembers()
@@ -307,7 +308,7 @@ export default function AdminMembersPage() {
               <Select value={bindUserId} onValueChange={setBindUserId}>
                 <SelectTrigger className="rounded-full border-slate-200 bg-slate-50 h-10 px-4 w-full text-sm mt-1"><SelectValue placeholder="请选择用户" /></SelectTrigger>
                 <SelectContent>
-                  {systemUsers.filter((u) => u.isActive).map((u) => <SelectItem key={u.id} value={String(u.id)}>{u.name} (@{u.username}) · {u.department?.name || '-'}</SelectItem>)}
+                  {systemUsers.filter((u) => u.isActive).map((u) => <SelectItem key={u.id} value={String(u.id)}>{u.name} (@{u.username}) · {u.departmentName || '-'}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -329,7 +330,7 @@ export default function AdminMembersPage() {
               <label className="text-sm font-medium">选择系统用户</label>
               <Select value={importUserId} onValueChange={setImportUserId}>
                 <SelectTrigger className="rounded-full border-slate-200 bg-slate-50 h-10 px-4 w-full text-sm mt-1"><SelectValue placeholder="选择用户" /></SelectTrigger>
-                <SelectContent>{systemUsers.filter((u) => u.isActive).map((u) => <SelectItem key={u.id} value={String(u.id)}>{u.name} (@{u.username}) · {u.department?.name || '-'}</SelectItem>)}</SelectContent>
+                <SelectContent>{systemUsers.filter((u) => u.isActive).map((u) => <SelectItem key={u.id} value={String(u.id)}>{u.name} (@{u.username}) · {u.departmentName || '-'}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div>

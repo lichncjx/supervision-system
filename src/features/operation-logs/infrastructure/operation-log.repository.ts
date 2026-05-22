@@ -1,53 +1,56 @@
+import { Prisma } from '@prisma/client'
 import { prisma } from '@/shared/db/prisma'
 
-export interface OperationLogFilters {
+export interface OperationLogListQuery {
+  page: number
+  pageSize: number
   action?: string
   module?: string
   userId?: number
   targetType?: string
   targetId?: number
-  startDate?: string
-  endDate?: string
+  startDate?: Date
+  endDate?: Date
   keyword?: string
 }
 
-export async function findOperationLogs(
-  filters: OperationLogFilters,
-  skip: number,
-  take: number,
-) {
-  const where: Record<string, unknown> = {}
+function buildOperationLogWhere(
+  query: OperationLogListQuery,
+): Prisma.OperationLogWhereInput {
+  const where: Prisma.OperationLogWhereInput = {}
 
-  if (filters.action) where.action = filters.action
-  if (filters.module) where.module = filters.module
-  if (filters.userId) where.userId = filters.userId
-  if (filters.targetType) where.targetType = filters.targetType
-  if (filters.targetId) where.targetId = filters.targetId
+  if (query.action) where.action = query.action
+  if (query.module) where.module = query.module
+  if (query.userId !== undefined) where.userId = query.userId
+  if (query.targetType) where.targetType = query.targetType
+  if (query.targetId !== undefined) where.targetId = query.targetId
 
-  if (filters.startDate || filters.endDate) {
-    const createdAt: Record<string, Date> = {}
-    if (filters.startDate) createdAt.gte = new Date(filters.startDate)
-    if (filters.endDate) {
-      const end = new Date(filters.endDate)
-      end.setHours(23, 59, 59, 999)
-      createdAt.lte = end
-    }
+  if (query.startDate || query.endDate) {
+    const createdAt: Prisma.DateTimeFilter = {}
+    if (query.startDate) createdAt.gte = query.startDate
+    if (query.endDate) createdAt.lte = query.endDate
     where.createdAt = createdAt
   }
 
-  if (filters.keyword) {
+  if (query.keyword) {
     where.OR = [
-      { description: { contains: filters.keyword } },
-      { userName: { contains: filters.keyword } },
+      { description: { contains: query.keyword } },
+      { userName: { contains: query.keyword } },
     ]
   }
+
+  return where
+}
+
+export async function findOperationLogs(query: OperationLogListQuery) {
+  const where = buildOperationLogWhere(query)
 
   const [items, total] = await Promise.all([
     prisma.operationLog.findMany({
       where,
       orderBy: { createdAt: 'desc' },
-      skip,
-      take,
+      skip: (query.page - 1) * query.pageSize,
+      take: query.pageSize,
     }),
     prisma.operationLog.count({ where }),
   ])

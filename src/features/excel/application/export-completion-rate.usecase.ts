@@ -15,7 +15,7 @@ import {
   findWorksForCompletionRate,
   createCompletionRateLog,
 } from '@/features/excel/infrastructure/completion-rate.repository'
-import { findBusinessDepartments } from '@/features/excel/infrastructure/work-import.repository'
+import { findBusinessDepartments } from '@/features/departments/infrastructure/department.repository'
 import { generateCompletionRateBuffer } from '@/features/excel/infrastructure/completion-rate-exporter'
 import { calculateDepartmentStats, type CompletionRateStat } from '@/shared/completion-rate.rules'
 

@@ -1,4 +1,8 @@
-import type { UserListItem, LeaderItem } from './user-api.types'
+import type {
+  UserApiDto,
+  UserListItemApiDto,
+  UserRoleApiDto,
+} from '@/features/users/contract/user-api.types'
 import { PROTECTED_USERNAMES } from '@/features/users/domain/protected-usernames'
 
 export function toUserListItem(user: {
@@ -12,33 +16,33 @@ export function toUserListItem(user: {
   email: string | null
   phone: string | null
   createdAt: Date
-}): UserListItem {
+}): UserListItemApiDto {
   return {
     id: user.id,
     username: user.username,
     name: user.name,
-    role: user.role as UserListItem['role'],
+    role: user.role as UserRoleApiDto,
     departmentId: user.departmentId,
     departmentName: user.department?.name || '',
     isActive: user.isActive,
     email: user.email,
     phone: user.phone,
-    createdAt: user.createdAt,
+    createdAt: user.createdAt.toISOString(),
     isProtected: PROTECTED_USERNAMES.includes(user.username),
   }
 }
 
-export function toLeaderItem(user: {
+export function toUserApiDto(user: {
   id: number
   name: string
   role: string
   departmentId: number | null
   department: { name: string } | null
-}): LeaderItem {
+}): UserApiDto {
   return {
     id: user.id,
     name: user.name,
-    role: user.role as LeaderItem['role'],
+    role: user.role as UserRoleApiDto,
     departmentId: user.departmentId,
     departmentName: user.department?.name || '',
   }

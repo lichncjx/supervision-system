@@ -1,5 +1,9 @@
 import type { BaseCurrentUser } from '@/shared/auth/current-user'
-import type { DashboardData, DashboardDataOptions } from '@/features/dashboard/domain/dashboard.types'
+import type {
+  DashboardData,
+  DashboardDataOptions,
+  DashboardWorkLike,
+} from '@/features/dashboard/domain/dashboard.types'
 import {
   canViewWorkItem,
   canApproveWorkItem,
@@ -37,34 +41,34 @@ export async function getDashboardDataUseCase(
   const whereClause = await buildWorkVisibilityWhere(currentUser)
   const allRelevantWorks = await findDashboardWorks(whereClause)
 
-  const visibleWorks = allRelevantWorks.filter((workItem) =>
+  const visibleWorks: DashboardWorkLike[] = allRelevantWorks.filter((workItem) =>
     canViewWorkItem(permUser, workItem),
   )
   const now = new Date()
-  const summary = buildSummary(permUser, visibleWorks as any[], now)
+  const summary = buildSummary(permUser, visibleWorks, now)
 
   const expiringAndOverdue = sortExpiringAndOverdue(
     visibleWorks.filter(
-      (workItem: any) =>
+      (workItem) =>
         isExpiringWorkItem(workItem, now) ||
         isOverdueWorkItem(workItem, now),
     ),
     now,
   )
     .slice(0, limit)
-    .map((workItem: any) => toDashboardItem(permUser, workItem, now))
+    .map((workItem) => toDashboardItem(permUser, workItem, now))
 
   const myActionRequired = sortMyActionRequired(
     permUser,
     visibleWorks.filter(
-      (workItem: any) =>
+      (workItem) =>
         canApproveWorkItem(permUser, workItem) ||
         shouldHandleWorkItem(permUser, workItem),
-    ) as any[],
+    ),
     now,
   )
     .slice(0, limit)
-    .map((workItem: any) => toDashboardItem(permUser, workItem, now))
+    .map((workItem) => toDashboardItem(permUser, workItem, now))
 
   return {
     summary,

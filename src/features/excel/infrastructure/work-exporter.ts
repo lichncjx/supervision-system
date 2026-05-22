@@ -15,12 +15,15 @@ function formatDate(value: Date | null): string {
 
 function joinCooperators(cooperators: unknown): string {
   if (!Array.isArray(cooperators)) return ''
-  return (cooperators as any[])
-    .map((c: any) => {
+  return cooperators
+    .map((cooperator) => {
+      const c = cooperator && typeof cooperator === 'object'
+        ? cooperator as Record<string, unknown>
+        : {}
       const parts = [
-        c?.departmentName || c?.departmentId || '',
-        c?.leader || '',
-        c?.person || '',
+        c.departmentName || c.departmentId || '',
+        c.leader || '',
+        c.person || '',
       ]
       return parts.join('|')
     })

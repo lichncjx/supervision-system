@@ -3,9 +3,10 @@ import { toPermissionUser } from '@/features/works/domain/work-permission-user.m
 import { canViewWorkItem } from '@/features/works/domain/work.permissions'
 import { findWorkForUpdateById } from '@/features/works/infrastructure/work.repository'
 import { findWorkflowRecordsByWorkItemId } from '@/features/workflow/infrastructure/workflow.repository'
+import type { WorkflowRecordsResponse } from '@/features/workflow/contract/workflow-api.types'
 
 export type GetWorkflowRecordsResult =
-  | { kind: 'ok'; data: unknown[] }
+  | { kind: 'ok'; data: WorkflowRecordsResponse }
   | { kind: 'error'; status: number; message: string }
 
 export async function getWorkflowRecords(
@@ -35,7 +36,7 @@ export async function getWorkflowRecords(
       previousStatus: record.statusBefore,
       newStatus: record.statusAfter,
       comment: record.comment,
-      createdAt: record.createdAt,
+      createdAt: record.createdAt.toISOString(),
     })),
   }
 }

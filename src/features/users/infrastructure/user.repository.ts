@@ -84,10 +84,6 @@ export async function findUserByUsername(username: string) {
   })
 }
 
-export async function findDepartmentById(id: number) {
-  return prisma.department.findUnique({ where: { id } })
-}
-
 export async function createUser(data: {
   username: string
   passwordHash: string

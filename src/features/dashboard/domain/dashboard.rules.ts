@@ -19,7 +19,7 @@ import {
   COMPLETED_STATUSES,
   CANCELLED_STATUSES,
 } from './dashboard.constants'
-import type { DashboardSummary, WorkDashboardItem } from './dashboard.types'
+import type { DashboardSummary, DashboardWorkLike, WorkDashboardItem } from './dashboard.types'
 
 export function normalizeLimit(limit?: number): number {
   if (!Number.isFinite(limit)) return DEFAULT_LIST_LIMIT
@@ -38,7 +38,7 @@ export function getTypeLabel(type: WorkItemType): string {
 
 export function getActionType(
   user: PermissionUser,
-  workItem: any,
+  workItem: DashboardWorkLike,
 ): WorkDashboardItem['actionType'] {
   if (canApproveWorkItem(user, workItem)) return 'approval'
   if (shouldHandleWorkItem(user, workItem)) return 'handling'
@@ -50,18 +50,23 @@ export function parseCooperators(
 ): Array<{ departmentId: number; departmentName?: string; leader?: string; person?: string }> {
   if (!Array.isArray(value)) return []
   return value
-    .map((item: any) => ({
-      departmentId: Number(item?.departmentId) || 0,
-      departmentName: item?.departmentName || undefined,
-      leader: item?.leader || undefined,
-      person: item?.person || undefined,
-    }))
+    .map((item) => {
+      const record = item && typeof item === 'object'
+        ? item as Record<string, unknown>
+        : {}
+      return {
+        departmentId: Number(record.departmentId) || 0,
+        departmentName: typeof record.departmentName === 'string' ? record.departmentName : undefined,
+        leader: typeof record.leader === 'string' ? record.leader : undefined,
+        person: typeof record.person === 'string' ? record.person : undefined,
+      }
+    })
     .filter((c) => c.departmentId > 0)
 }
 
 export function toDashboardItem(
   user: PermissionUser,
-  workItem: any,
+  workItem: DashboardWorkLike,
   now: Date,
 ): WorkDashboardItem {
   const dueDate = getWorkDueDate(workItem)
@@ -89,7 +94,7 @@ export function toDashboardItem(
   }
 }
 
-export function compareDueDate(a: any, b: any): number {
+export function compareDueDate(a: DashboardWorkLike, b: DashboardWorkLike): number {
   const aDue = getWorkDueDate(a)?.getTime()
   const bDue = getWorkDueDate(b)?.getTime()
   if (aDue == null && bDue == null) return a.id - b.id
@@ -98,7 +103,7 @@ export function compareDueDate(a: any, b: any): number {
   return aDue - bDue || a.id - b.id
 }
 
-export function sortExpiringAndOverdue(works: any[], now: Date) {
+export function sortExpiringAndOverdue(works: DashboardWorkLike[], now: Date) {
   return [...works].sort((a, b) => {
     const aOverdue = isOverdueWorkItem(a, now)
     const bOverdue = isOverdueWorkItem(b, now)
@@ -107,7 +112,7 @@ export function sortExpiringAndOverdue(works: any[], now: Date) {
   })
 }
 
-export function actionPriority(user: PermissionUser, work: any): number {
+export function actionPriority(user: PermissionUser, work: DashboardWorkLike): number {
   if (canApproveWorkItem(user, work)) return 0
   if (shouldHandleWorkItem(user, work)) return 1
   return 2
@@ -115,7 +120,7 @@ export function actionPriority(user: PermissionUser, work: any): number {
 
 export function sortMyActionRequired(
   user: PermissionUser,
-  works: any[],
+  works: DashboardWorkLike[],
   now: Date,
 ) {
   return [...works].sort((a, b) => {
@@ -136,13 +141,13 @@ export function sortMyActionRequired(
 
 export function buildSummary(
   user: PermissionUser,
-  visibleWorks: any[],
+  visibleWorks: DashboardWorkLike[],
   now: Date,
 ): DashboardSummary {
   const priorityWorks = visibleWorks.filter((w) => w.type === WorkItemType.PRIORITY)
   const mainWorks = visibleWorks.filter((w) => w.type === WorkItemType.MAIN)
   const todoWorks = visibleWorks.filter((w) => w.type === WorkItemType.TODO)
-  const completedWorks = visibleWorks.filter((w) => COMPLETED_STATUSES.includes(w.status as any))
+  const completedWorks = visibleWorks.filter((w) => COMPLETED_STATUSES.includes(w.status))
   const pendingApprovalWorks = visibleWorks.filter((w) => canApproveWorkItem(user, w))
   const pendingHandlingWorks = visibleWorks.filter((w) => shouldHandleWorkItem(user, w))
   const expiringWorks = visibleWorks.filter((w) => isExpiringWorkItem(w, now))
@@ -150,10 +155,10 @@ export function buildSummary(
 
   const pendingApprovalCount = pendingApprovalWorks.length
   const pendingHandlingCount = pendingHandlingWorks.length
-  const inProgressCount = visibleWorks.filter((w) => IN_PROGRESS_STATUSES.includes(w.status as any)).length
-  const completingCount = visibleWorks.filter((w) => COMPLETING_STATUSES.includes(w.status as any)).length
+  const inProgressCount = visibleWorks.filter((w) => IN_PROGRESS_STATUSES.includes(w.status)).length
+  const completingCount = visibleWorks.filter((w) => COMPLETING_STATUSES.includes(w.status)).length
   const completedCount = completedWorks.length
-  const cancelledCount = visibleWorks.filter((w) => CANCELLED_STATUSES.includes(w.status as any)).length
+  const cancelledCount = visibleWorks.filter((w) => CANCELLED_STATUSES.includes(w.status)).length
   const expiringCount = expiringWorks.length
   const overdueCount = overdueWorks.length
 

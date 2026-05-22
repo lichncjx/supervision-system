@@ -1,10 +1,6 @@
 import { Prisma, Role } from '@prisma/client'
 import { prisma } from '@/shared/db/prisma'
 
-export async function findDepartmentById(id: number) {
-  return prisma.department.findUnique({ where: { id } })
-}
-
 const WORK_LIST_INCLUDE = {
   department: true,
   creator: { select: { name: true, role: true } },

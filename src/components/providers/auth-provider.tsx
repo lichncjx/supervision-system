@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { login, logout, getCurrentUser } from '@/features/users/client/auth-api';
-import type { User } from '@/features/users/domain/user.types';
+import type { User } from '@/features/users/client/user-client.types';
 
 interface AuthContextType {
   user: User | null;

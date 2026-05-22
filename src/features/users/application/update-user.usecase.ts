@@ -2,9 +2,9 @@ import { Role } from '@prisma/client'
 import { isAdmin } from '@/features/users/domain/role.rules'
 import {
   findUserById,
-  findDepartmentById,
   updateUser,
 } from '@/features/users/infrastructure/user.repository'
+import { findDepartmentById } from '@/features/departments/infrastructure/department.repository'
 import { toUserListItem } from '@/features/users/application/user-api.mapper'
 import type { UserListItem } from '@/features/users/application/user-api.types'
 

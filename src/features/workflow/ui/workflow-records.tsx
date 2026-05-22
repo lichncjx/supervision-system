@@ -4,17 +4,7 @@ import { getRoleName } from '@/features/users/domain/role.rules';
 import { getActionName } from '@/features/works/client/work-display.utils';
 import { getWorkStatusLabel } from '@/features/works/domain/work-status.rules';
 import { PANEL_PADDED } from '@/features/works/ui/visual-tokens';
-
-interface WorkflowRecord {
-  id: number;
-  action: string;
-  previousStatus: string;
-  newStatus: string;
-  initiatorName: string;
-  initiatorRole: string;
-  comment?: string;
-  createdAt: string;
-}
+import type { WorkflowRecord } from '@/features/workflow/domain/workflow-client.types';
 
 interface WorkflowRecordsProps {
   records: WorkflowRecord[];
@@ -47,7 +37,7 @@ export function WorkflowRecords({ records }: WorkflowRecordsProps) {
           const color = getActionColor(record.action);
           const statusLabel = record.previousStatus.toLowerCase() === record.newStatus.toLowerCase()
             ? ''
-            : `${getWorkStatusLabel(record.previousStatus as any)} → ${getWorkStatusLabel(record.newStatus as any)}`;
+            : `${getWorkStatusLabel(record.previousStatus)} → ${getWorkStatusLabel(record.newStatus)}`;
 
           return (
             <div
@@ -68,7 +58,7 @@ export function WorkflowRecords({ records }: WorkflowRecordsProps) {
 
               {/* 动作 + 状态变更 */}
               <div className="text-xs font-semibold" style={{ color }}>
-                {getActionName(record.action as any)}
+                {getActionName(record.action)}
                 {statusLabel && <span className="font-normal text-slate-500"> · {statusLabel}</span>}
               </div>
 

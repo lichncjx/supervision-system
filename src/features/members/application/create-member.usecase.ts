@@ -1,5 +1,7 @@
 import { prisma } from '@/shared/db/prisma'
-import { toMemberResponse, type MemberResponse } from '@/features/members/application/member.dto'
+import { toMemberResponse } from '@/features/members/application/member.dto'
+import { findDepartmentById } from '@/features/departments/infrastructure/department.repository'
+import type { MemberApiDto } from '@/features/members/contract/member-api.types'
 
 export interface CreateMemberInput {
   name: string
@@ -12,7 +14,7 @@ export interface CreateMemberInput {
 }
 
 export type CreateMemberResult =
-  | { kind: 'ok'; data: MemberResponse; warnings?: string[] }
+  | { kind: 'ok'; data: MemberApiDto; warnings?: string[] }
   | { kind: 'error'; status: number; message: string }
 
 export async function createMemberUseCase(
@@ -41,9 +43,7 @@ export async function createMemberUseCase(
     return { kind: 'error', status: 400, message: '姓名和部门为必填字段' }
   }
 
-  const department = await prisma.department.findUnique({
-    where: { id: resolvedDepartmentId },
-  })
+  const department = await findDepartmentById(resolvedDepartmentId)
   if (!department) {
     return { kind: 'error', status: 400, message: '部门不存在' }
   }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUserOrAuthError } from '@/shared/auth/get-current-user-or-auth-error'
 import { getCompletionRateUseCase } from '@/features/dashboard/application/get-completion-rate.usecase'
+import type { DashboardCompletionRateResponse } from '@/features/dashboard/contract/dashboard-api.types'
 
 export async function GET(request: NextRequest) {
   try {
@@ -26,10 +27,12 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    return NextResponse.json({
+    const response: DashboardCompletionRateResponse = {
       items: result.items,
       total: result.total,
-    })
+    }
+
+    return NextResponse.json(response)
   } catch (error) {
     console.error('Completion rate error:', error)
     return NextResponse.json(

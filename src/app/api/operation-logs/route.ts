@@ -1,19 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getUserFromToken } from '@/shared/auth/get-current-user'
-import { queryOperationLogsUseCase } from '@/features/operation-logs/application/query-operation-logs.usecase'
-
-const PARAM_KEYS = [
-  'page',
-  'pageSize',
-  'action',
-  'module',
-  'userId',
-  'targetType',
-  'targetId',
-  'startDate',
-  'endDate',
-  'keyword',
-] as const
+import {
+  listOperationLogsUseCase,
+  parseOperationLogQuery,
+} from '@/features/operation-logs/application/list-operation-logs.usecase'
 
 export async function GET(request: NextRequest) {
   try {
@@ -28,14 +18,16 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url)
-    const rawParams: Record<string, string | null> = {}
-    for (const key of PARAM_KEYS) {
-      rawParams[key] = searchParams.get(key)
-    }
+    const result = await listOperationLogsUseCase(
+      currentUser,
+      parseOperationLogQuery(searchParams),
+    )
 
-    const result = await queryOperationLogsUseCase(currentUser, rawParams)
     if (result.kind === 'error') {
-      return NextResponse.json({ error: result.message }, { status: result.status })
+      return NextResponse.json(
+        { error: result.message },
+        { status: result.status },
+      )
     }
 
     return NextResponse.json(result.data)

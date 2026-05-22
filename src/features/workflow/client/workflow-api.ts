@@ -1,11 +1,21 @@
-import type { User } from '@/features/users/domain/user.types'
+import type { User } from '@/features/users/client/user-client.types'
 import type { Work, WorkEditablePatch } from '@/features/works/client/work-view.types'
 import type { WorkflowRecord } from '@/features/workflow/domain/workflow-client.types'
+import type {
+  WorkflowActionRequest,
+  WorkflowActionResponse,
+  WorkflowApiErrorDto,
+  WorkflowRecordsResponse,
+} from '@/features/workflow/contract/workflow-api.types'
 import { getWorkById } from '@/features/works/client/work-api'
+
+async function readWorkflowResult(response: Response): Promise<WorkflowActionResponse & WorkflowApiErrorDto> {
+  return (await response.json()) as WorkflowActionResponse & WorkflowApiErrorDto
+}
 
 export async function approveWork(user: User, work: Work, comment?: string, nextApproverId?: number | null) {
   try {
-    const body: Record<string, unknown> = { action: 'approve' }
+    const body: WorkflowActionRequest = { action: 'approve' }
     if (comment) body.comment = comment
     if (nextApproverId) body.nextApproverId = nextApproverId
     const response = await fetch(`/api/works/${work.id}/workflow`, {
@@ -14,7 +24,7 @@ export async function approveWork(user: User, work: Work, comment?: string, next
       credentials: 'include',
       body: JSON.stringify(body),
     })
-    const result = await response.json()
+    const result = await readWorkflowResult(response)
     if (!response.ok) throw new Error(result.error || '审批失败')
     return await getWorkById(work.id)
   } catch (error) {
@@ -31,7 +41,7 @@ export async function rejectWork(work: Work, user: User, reason = '审批退回'
       credentials: 'include',
       body: JSON.stringify({ action: 'reject', rejectReason: reason }),
     })
-    const result = await response.json()
+    const result = await readWorkflowResult(response)
     if (!response.ok) throw new Error(result.error || '退回失败')
     return await getWorkById(work.id)
   } catch (error) {
@@ -48,7 +58,7 @@ export async function submitComplete(work: Work, user: User, proof: string) {
       credentials: 'include',
       body: JSON.stringify({ action: 'evidence', proof, comment: '提交完成' }),
     })
-    const result = await response.json()
+    const result = await readWorkflowResult(response)
     if (!response.ok) throw new Error(result.error || '提交失败')
     return await getWorkById(work.id)
   } catch (error) {
@@ -70,7 +80,7 @@ export async function submitAdjust(
       credentials: 'include',
       body: JSON.stringify({ action: 'adjust', adjustReason: reason, comment: '申请调整' }),
     })
-    const result = await response.json()
+    const result = await readWorkflowResult(response)
     if (!response.ok) throw new Error(result.error || '申请调整失败')
     return await getWorkById(work.id)
   } catch (error) {
@@ -87,7 +97,7 @@ export async function submitCancel(work: Work, user: User, reason: string) {
       credentials: 'include',
       body: JSON.stringify({ action: 'cancel', cancelReason: reason, comment: '申请取消' }),
     })
-    const result = await response.json()
+    const result = await readWorkflowResult(response)
     if (!response.ok) throw new Error(result.error || '申请取消失败')
     return await getWorkById(work.id)
   } catch (error) {
@@ -103,7 +113,7 @@ export async function submitWork(
   comment = '提交审批',
 ) {
   try {
-    const body: Record<string, unknown> = { action: 'submit', comment }
+    const body: WorkflowActionRequest = { action: 'submit', comment }
     if (nextApproverId) body.nextApproverId = nextApproverId
 
     const response = await fetch(`/api/works/${work.id}/workflow`, {
@@ -112,7 +122,7 @@ export async function submitWork(
       credentials: 'include',
       body: JSON.stringify(body),
     })
-    const result = await response.json()
+    const result = await readWorkflowResult(response)
     if (!response.ok) throw new Error(result.error || '提交审批失败')
     return await getWorkById(work.id)
   } catch (error) {
@@ -134,7 +144,7 @@ export async function submitTodoDecomposition(
       credentials: 'include',
       body: JSON.stringify({ action: 'decompose', nodes, comment: '待办分解' }),
     })
-    const result = await response.json()
+    const result = await readWorkflowResult(response)
     if (!response.ok) throw new Error(result.error || '分解失败')
     return await getWorkById(work.id)
   } catch (error) {
@@ -150,7 +160,7 @@ export async function getWorkflowRecords(workId: number): Promise<WorkflowRecord
       credentials: 'include',
     })
     if (!response.ok) throw new Error('获取审批记录失败')
-    return await response.json()
+    return (await response.json()) as WorkflowRecordsResponse
   } catch (error) {
     console.error('获取审批记录失败:', error)
     return []

@@ -1,9 +1,5 @@
-export interface Department {
-  id: number
-  name: string
-  code: string
-  isBusiness: boolean
-}
+import type { Department } from '@/features/departments/client/department-client.types'
+import type { DepartmentListResponse } from '@/features/departments/contract/department-api.types'
 
 let departmentsCache: Department[] | null = null
 
@@ -18,10 +14,9 @@ export async function getDepartments(): Promise<Department[]> {
       credentials: 'include',
     })
     if (!response.ok) return []
-    departmentsCache = await response.json()
-    return departmentsCache || []
+    departmentsCache = (await response.json()) as DepartmentListResponse
+    return departmentsCache ?? []
   } catch {
     return []
   }
 }
-

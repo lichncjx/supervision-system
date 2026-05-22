@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUserOrAuthError } from '@/shared/auth/get-current-user-or-auth-error'
 import { importWorksFromExcelUseCase } from '@/features/excel/application/import-works-from-excel.usecase'
+import type {
+  ImportExcelSuccessResponse,
+  ImportExcelValidationErrorResponse,
+} from '@/features/excel/contract/excel-api.types'
 
 export async function POST(
   request: NextRequest,
@@ -71,21 +75,22 @@ export async function POST(
         )
           ? 403
           : 400
-      return NextResponse.json(
-        {
-          success: false,
-          error: result.error,
-          details: result.details,
-        },
-        { status },
-      )
+      const response: ImportExcelValidationErrorResponse = {
+        success: false,
+        error: result.error,
+        details: result.details,
+      }
+
+      return NextResponse.json(response, { status })
     }
 
-    return NextResponse.json({
+    const response: ImportExcelSuccessResponse = {
       success: true,
       imported: result.imported,
       message: result.message,
-    })
+    }
+
+    return NextResponse.json(response)
   } catch (error) {
     console.error('Import error:', error)
     return NextResponse.json(

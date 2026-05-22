@@ -1,8 +1,9 @@
-export interface MemberResponse {
+import type { MemberApiDto } from '@/features/members/contract/member-api.types'
+
+interface MemberRecordForApi {
   id: number
   name: string
   departmentId: number
-  departmentName: string
   phone: string | null
   isLeader: boolean
   sortOrder: number
@@ -11,9 +12,10 @@ export interface MemberResponse {
   user: { id: number; username: string; name: string; isActive: boolean } | null
   createdAt: Date
   updatedAt: Date
+  department: { name: string } | null
 }
 
-export function toMemberResponse(m: any): MemberResponse {
+export function toMemberResponse(m: MemberRecordForApi): MemberApiDto {
   return {
     id: m.id,
     name: m.name,
@@ -27,7 +29,7 @@ export function toMemberResponse(m: any): MemberResponse {
     user: m.user
       ? { id: m.user.id, username: m.user.username, name: m.user.name, isActive: m.user.isActive }
       : null,
-    createdAt: m.createdAt,
-    updatedAt: m.updatedAt,
+    createdAt: m.createdAt.toISOString(),
+    updatedAt: m.updatedAt.toISOString(),
   }
 }

@@ -2,6 +2,7 @@ import { NextResponse, NextRequest } from 'next/server'
 import { authenticateAdmin } from '@/features/users/application/admin-auth'
 import { listUsersUseCase } from '@/features/users/application/list-users.usecase'
 import { createUserUseCase } from '@/features/users/application/create-user.usecase'
+import type { CreateUserRequest } from '@/features/users/contract/user-api.types'
 
 export async function GET(request: NextRequest) {
   try {
@@ -24,7 +25,7 @@ export async function POST(request: NextRequest) {
     const auth = await authenticateAdmin(request.cookies.get('token')?.value)
     if (!auth.ok) return NextResponse.json({ error: auth.message }, { status: auth.status })
 
-    const body = await request.json()
+    const body = (await request.json()) as CreateUserRequest
     const result = await createUserUseCase(auth.user, body)
     if (result.kind === 'error')
       return NextResponse.json({ error: result.message }, { status: result.status })
