@@ -138,9 +138,9 @@ export function rejectableBeforeStatus(workItem: {
 /**
  * 提交权限：仅草稿创建人可以提交。
  *
- * - PRIORITY/MAIN：提交后进入 PROPOSING，firstSubmitterId = creatorId；
- *   被拒回到 DRAFT，仍由创建人重提。
- * - TODO：公司领导创建后提交进入 PENDING_DECOMPOSE；部门分解后进入
+ * - PRIORITY / MAIN / 部门创建的 TODO：提交后进入 PROPOSING，
+ *   firstSubmitterId = creatorId；被拒回到 DRAFT，仍由创建人重提。
+ * - 公司领导创建的 TODO：提交后进入 PENDING_DECOMPOSE；部门分解后进入
  *   PROPOSING；被拒回到 PENDING_DECOMPOSE，由 decomposeTodoWork 处理，
  *   不走本函数。
  * - 当前业务规则不支持"同部门非创建人代提交"。
