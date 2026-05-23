@@ -134,16 +134,21 @@ export function rejectableBeforeStatus(workItem: {
   return (workItem.beforeApprovalStatus as WorkItemStatus) ?? null
 }
 
+
+/**
+ * 提交权限：仅草稿创建人可以提交。
+ *
+ * - PRIORITY / MAIN / 部门创建的 TODO：提交后进入 PROPOSING，
+ *   firstSubmitterId = creatorId；被拒回到 DRAFT，仍由创建人重提。
+ * - 公司领导创建的 TODO：提交后进入 PENDING_DECOMPOSE；部门分解后进入
+ *   PROPOSING；被拒回到 PENDING_DECOMPOSE，由 decomposeTodoWork 处理，
+ *   不走本函数。
+ * - 当前业务规则不支持"同部门非创建人代提交"。
+ */
 export function canUserSubmit(
   workItem: PermissionWorkItem,
   user: BaseCurrentUser,
 ): boolean {
-  if (String(workItem.status).toUpperCase() !== WorkItemStatus.DRAFT) {
-    return false
-  }
-
-  if (workItem.creatorId === user.id) return true
-  if ((workItem.firstSubmitterId ?? workItem.creatorId) === user.id)
-    return true
-  return shouldHandleWorkItem(toPermissionUser(user), workItem)
+  return workItem.status === WorkItemStatus.DRAFT
+      && workItem.creatorId === user.id
 }

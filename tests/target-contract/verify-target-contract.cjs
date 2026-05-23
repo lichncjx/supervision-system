@@ -288,6 +288,9 @@ function record({ role, endpoint, actual, expected, expectedFailure = false, not
   console.log(`[${status}] role=${role} endpoint=${endpoint}`);
   console.log(`  actual:   ${format(actual)}`);
   console.log(`  expected: ${format(expected)}`);
+  if (!passed && actual && typeof actual.statusCode === 'number' && actual.statusCode >= 400) {
+    console.log(`  errorDetail: ${JSON.stringify(actual._body || actual)}`);
+  }
   if (note) console.log(`  note:     ${note}`);
 }
 
@@ -1684,24 +1687,24 @@ async function verifyWorkflowTransitions(baseUrl, loginByUsername, deptByCode, u
 
   record({
     role: 'workflow',
-    endpoint: 'POST /api/works/[id]/workflow DRAFT -> CANCELLED',
+    endpoint: 'POST /api/works/[id]/workflow DRAFT -> CANCELLED (rejected)',
     actual: { draftCancel },
     expected: {
       draftCancel: {
-        statusCode: 200,
-        success: true,
+        statusCode: 400,
+        success: false,
         work: {
-          status: 'CANCELLED',
+          status: 'DRAFT',
           beforeApprovalStatus: null,
           approvalType: null,
           currentApproverId: null,
           currentApproverRole: null,
           rejectedFromStatus: null,
         },
-        record: { actionType: 'cancel', statusBefore: 'DRAFT', statusAfter: 'CANCELLED' },
+        record: null,
       },
     },
-    note: 'PR 6.2: draft cancellation is direct and does not enter CANCELLING.',
+    note: 'Commit 81c6d90: DRAFT cancellation path removed. Only IN_PROGRESS items can be cancelled via workflow. DRAFT items use DELETE /api/works/[id] instead.',
   });
 
   const mainLeaderCancelId = await createWorkflowWork({
@@ -1982,6 +1985,7 @@ async function verifyMemberEndpoints(baseUrl, loginByUsername, deptByCode, _work
       departmentId: createdMember?.departmentId,
       isLeader: createdMember?.isLeader,
       userId: createdMember?.userId,
+      _error: createResponse.statusCode !== 201 ? (createResponse.body?.error || createResponse.body) : undefined,
     },
     expected: { statusCode: 201, name: 'TC-新成员', departmentId: deptAId, isLeader: false, userId: null },
     expectedFailure: false,

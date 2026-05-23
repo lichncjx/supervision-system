@@ -4,7 +4,7 @@ import type { BaseCurrentUser } from '@/shared/auth/current-user'
 
 async function findCooperatorWorkItemIds(departmentId: number): Promise<number[]> {
   const rows = await prisma.$queryRaw<{ id: number }[]>`
-    SELECT id FROM "WorkItem"
+    SELECT id FROM work_items
     WHERE cooperators @> ${JSON.stringify([{ departmentId }])}::jsonb
   `
   return rows.map((r) => r.id)

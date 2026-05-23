@@ -533,6 +533,8 @@ function canOperate(user, work) {
   }
 
   if (ownerId !== user.id) return false;
+  if (user.role === 'VICE_PRESIDENT' || user.role === 'PRESIDENT')
+    return targetStatus === 'DRAFT';
   return targetStatus !== 'COMPLETED' && targetStatus !== 'CANCELLED';
 }
 
