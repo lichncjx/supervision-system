@@ -140,6 +140,53 @@ async function main() {
   const works = await seedWorks(deptByKey, userByKey, memberByKey);
 
   console.log('[target-contract-seed] done');
+
+  // Clear server-side department cache so the dev server picks up new department IDs
+  const BASE_URL = process.env.TARGET_CONTRACT_BASE_URL || 'http://localhost:5000';
+  try {
+    await new Promise((resolve) => {
+      const http = require('http');
+      // Login as admin to get auth cookie
+      const loginBody = JSON.stringify({ username: 'admin', password: '123456' });
+      const loginReq = http.request(`${BASE_URL}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(loginBody) },
+      }, (res) => {
+        let body = '';
+        res.on('data', (c) => { body += c; });
+        res.on('end', () => {
+          const cookies = (res.headers['set-cookie'] || []).map((c) => c.split(';')[0]);
+          const clearBody = JSON.stringify({ cache: 'departments' });
+          const clearReq = http.request(`${BASE_URL}/api/admin/caches`, {
+            method: 'POST',
+            headers: {
+              Cookie: cookies.join('; '),
+              'Content-Type': 'application/json',
+              'Content-Length': Buffer.byteLength(clearBody),
+            },
+          }, (clearRes) => {
+            let clearBody = '';
+            clearRes.on('data', (c) => { clearBody += c; });
+            clearRes.on('end', () => {
+              console.log(`[target-contract-seed] cache clear: ${clearRes.statusCode} ${clearBody}`);
+              resolve();
+            });
+          });
+          clearReq.on('error', (e) => { console.log(`[target-contract-seed] cache clear WARN: ${e.message}`); resolve(); });
+          clearReq.setTimeout(5000, () => { console.log('[target-contract-seed] cache clear WARN: timeout'); resolve(); });
+          clearReq.write(clearBody);
+          clearReq.end();
+        });
+      });
+      loginReq.on('error', (e) => { console.log(`[target-contract-seed] cache clear login WARN: ${e.message}`); resolve(); });
+      loginReq.setTimeout(5000, () => { console.log('[target-contract-seed] cache clear login WARN: timeout'); resolve(); });
+      loginReq.write(loginBody);
+      loginReq.end();
+    });
+  } catch (e) {
+    console.log(`[target-contract-seed] cache clear WARN: ${e.message}`);
+  }
+
   console.log(JSON.stringify({
     departments: Object.fromEntries(Object.entries(deptByKey).map(([key, value]) => [key, value.id])),
     users: Object.fromEntries(Object.entries(userByKey).map(([key, value]) => [key, value.id])),

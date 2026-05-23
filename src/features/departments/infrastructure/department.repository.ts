@@ -11,6 +11,10 @@ const DEPARTMENT_CACHE_TTL_MS = 5 * 60 * 1000
 
 let cache: { departments: Department[]; expiresAt: number } | null = null
 
+export function clearDepartmentCache(): void {
+  cache = null
+}
+
 async function loadAllDepartments(): Promise<Department[]> {
   if (cache && cache.expiresAt > Date.now()) {
     return cache.departments
