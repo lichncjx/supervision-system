@@ -18,7 +18,7 @@ export const POST = withApiHandler(async (request: NextRequest) => {
   const body = await request.json().catch(() => ({}))
   const cache = body.cache
 
-  if (!cache || !(cache in CACHE_CLEARERS)) {
+  if (!cache || !Object.hasOwn(CACHE_CLEARERS, cache)) {
     return fail(
       `无效的缓存名称，可用: ${Object.keys(CACHE_CLEARERS).join(', ')}`,
       400,
