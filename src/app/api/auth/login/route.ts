@@ -1,67 +1,29 @@
-import { NextResponse } from 'next/server';
-import prisma from '@/shared/db/prisma';
-import { verifyPassword } from '@/shared/auth/password';
-import { generateToken } from '@/shared/auth/jwt';
-import type { LoginRequest } from '@/features/users/contract/user-api.types';
+import { NextRequest } from 'next/server'
+import { withApiHandler } from '@/shared/http/with-api-handler'
+import { ok, fromError } from '@/shared/http/api-response'
+import { loginUseCase } from '@/features/users/application/login.usecase'
+import type { LoginRequest } from '@/features/users/contract/user-api.types'
 
-export async function POST(request: Request) {
-  try {
-    const { username, password } = (await request.json()) as LoginRequest;
+export const POST = withApiHandler(async (request: NextRequest) => {
+  const { username, password } = (await request.json()) as LoginRequest
 
-    if (!username || !password) {
-      return NextResponse.json({ error: '用户名和密码不能为空' }, { status: 400 });
-    }
+  const result = await loginUseCase(username, password)
+  if (!result.ok) return fromError(result)
 
-    const user = await prisma.user.findUnique({
-      where: { username: username.trim() },
-      include: { department: true },
-    });
+  const isHttps =
+    request.headers.get('x-forwarded-proto') === 'https' ||
+    process.env.NODE_ENV !== 'production'
 
-    if (!user) {
-      return NextResponse.json({ error: '用户名或密码错误' }, { status: 401 });
-    }
+  const response = ok({ success: true, user: result.data.user })
+  response.cookies.set({
+    name: 'token',
+    value: result.data.token,
+    httpOnly: true,
+    secure: isHttps,
+    sameSite: 'lax',
+    maxAge: 24 * 60 * 60,
+    path: '/',
+  })
 
-    if (!user.isActive) {
-      return NextResponse.json({ error: '账号已停用' }, { status: 401 });
-    }
-
-    const isPasswordValid = await verifyPassword(password, user.passwordHash);
-
-    if (!isPasswordValid) {
-      return NextResponse.json({ error: '用户名或密码错误' }, { status: 401 });
-    }
-
-    const token = generateToken(user.id);
-
-    const response = NextResponse.json({
-      success: true,
-      user: {
-        id: user.id,
-        username: user.username,
-        name: user.name,
-        role: user.role,
-        departmentId: user.departmentId,
-        departmentName: user.department?.name || '',
-        isActive: user.isActive,
-      },
-    });
-
-    const isHttps = request.headers.get('x-forwarded-proto') === 'https' || 
-                   process.env.NODE_ENV !== 'production';
-
-    response.cookies.set({
-      name: 'token',
-      value: token,
-      httpOnly: true,
-      secure: isHttps,
-      sameSite: 'lax',
-      maxAge: 24 * 60 * 60,
-      path: '/',
-    });
-
-    return response;
-  } catch (error) {
-    console.error('Login error:', error);
-    return NextResponse.json({ error: '登录失败，请稍后重试' }, { status: 500 });
-  }
-}
+  return response
+})
