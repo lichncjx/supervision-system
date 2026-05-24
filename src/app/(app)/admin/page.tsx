@@ -11,9 +11,7 @@ import type {
   UserListResponse,
 } from '@/features/users/contract/user-api.types';
 import type { ApiErrorResponse } from '@/shared/http/api-response';
-import type {
-  DepartmentApiDto,
-} from '@/features/departments/contract/department-api.types';
+import type { Department } from '@/features/departments/client/department-api';
 import type { MemberListResponse } from '@/features/members/contract/member-api.types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,7 +26,6 @@ import {
 } from '@/components/ui/dialog';
 
 type User = UserListItemApiDto;
-type Department = DepartmentApiDto;
 
 export default function AdminPage() {
   const { user } = useAuth();
@@ -71,7 +68,7 @@ export default function AdminPage() {
   const fetchDepartments = async () => {
     try {
       const response = await fetch('/api/departments', { credentials: 'include' });
-      if (response.ok) setDepartments((await response.json()) as DepartmentApiDto[]);
+      if (response.ok) setDepartments((await response.json()) as Department[]);
     } catch (error) {
       console.error('Fetch departments error:', error);
     }

@@ -8,7 +8,7 @@ import { getWorkflowRecords } from '@/features/workflow/client/workflow-api';
 import type { Work } from '@/features/works/client/work-view.types';
 import type { WorkflowRecordApiDto as WorkflowRecord } from '@/features/workflow/contract/workflow-api.types';
 import type { User } from '@/features/users/client/user-client.types';
-import type { DepartmentApiDto as Department } from '@/features/departments/contract/department-api.types';
+import type { Department } from '@/features/departments/client/department-api';
 
 export function useWorkDetailData(id: string) {
   const [refresh, setRefresh] = useState(0);

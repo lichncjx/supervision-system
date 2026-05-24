@@ -15,7 +15,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog'
-import type { DepartmentApiDto as Department } from '@/features/departments/contract/department-api.types'
+import type { Department } from '@/features/departments/client/department-api'
 import type { MemberApiDto as Member } from '@/features/members/contract/member-api.types'
 import type {
   MemberListResponse,

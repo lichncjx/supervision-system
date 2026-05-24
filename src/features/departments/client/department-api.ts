@@ -1,6 +1,9 @@
-import type {
-  DepartmentApiDto as Department,
-} from '@/features/departments/contract/department-api.types'
+export interface Department {
+  id: number
+  name: string
+  code: string
+  isBusiness: boolean
+}
 
 let departmentsCache: Department[] | null = null
 
