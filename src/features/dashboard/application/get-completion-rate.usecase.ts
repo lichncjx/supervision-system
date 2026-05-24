@@ -4,7 +4,7 @@ import { err, ok, type Result } from '@/shared/result'
 import { getResponsibleDepartmentIds } from '@/features/works/domain/work.permissions'
 import { buildWorkVisibilityWhere } from '@/shared/db/work-visibility-builder'
 import { isDepartmentLevel, isGlobalView } from '@/features/users/domain/role.rules'
-import { calculateDepartmentStats, type CompletionRateStat } from '@/shared/completion-rate.rules'
+import { calculateDepartmentStats, type CompletionRateStat } from '@/features/works/domain/completion-rate.calculator'
 import {
   findWorksForDashboardCompletionRate,
   findDepartmentIdsFromVisibleWorks,
