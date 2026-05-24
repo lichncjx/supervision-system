@@ -2,7 +2,7 @@
 
 import { Upload, Download, Trash2, Paperclip } from 'lucide-react'
 import { PANEL_PADDED } from '@/features/works/ui/visual-tokens'
-import type { AttachmentApiDto as Attachment } from '@/features/attachments/contract/attachment-api.types'
+import type { AttachmentDto as Attachment } from '@/features/attachments/application/attachment.dto'
 
 interface WorkAttachmentPanelProps {
   attachments: Attachment[]

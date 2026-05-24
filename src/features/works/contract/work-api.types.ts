@@ -1,4 +1,4 @@
-import type { AttachmentApiDto } from '@/features/attachments/contract/attachment-api.types'
+import type { AttachmentDto } from '@/features/attachments/application/attachment.dto'
 
 export type WorkPersonApiDto = string | { name?: unknown } | null
 
@@ -47,7 +47,7 @@ export interface WorkApiDto {
   approvalType?: string | null
   nodes?: unknown
   adjustHistory?: unknown
-  attachments?: AttachmentApiDto[]
+  attachments?: AttachmentDto[]
   createdAt?: string
   updatedAt: string
 }

@@ -1,4 +1,4 @@
-export interface AttachmentApiDto {
+export interface AttachmentDto {
   id: number
   fileName: string
   fileSize: number

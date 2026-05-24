@@ -3,7 +3,7 @@ import {
   processAdjustHistory,
   processNodesForDisplay,
 } from '@/features/works/application/work-display.utils'
-import type { AttachmentApiDto } from '@/features/attachments/contract/attachment-api.types'
+import type { AttachmentDto } from '@/features/attachments/application/attachment.dto'
 import type { WorkApiDto } from '@/features/works/contract/work-api.types'
 
 const TYPE_LABEL: Record<string, string> = {
@@ -77,7 +77,7 @@ function parseJsonField<T>(value: unknown, fallback: T): T {
 
 function toWorkAttachments(
   attachments: WorkApiSource['attachments'],
-): AttachmentApiDto[] | undefined {
+): AttachmentDto[] | undefined {
   return attachments?.map((attachment) => ({
     id: attachment.id,
     fileName: attachment.fileName,

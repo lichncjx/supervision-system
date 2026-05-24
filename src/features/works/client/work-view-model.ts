@@ -6,8 +6,8 @@ import type {
   WorkApiDto,
   WorkPersonApiDto,
 } from '@/features/works/contract/work-api.types'
-import type { AttachmentApiDto } from '@/features/attachments/contract/attachment-api.types'
-import type { AttachmentApiDto as Attachment } from '@/features/attachments/contract/attachment-api.types'
+import type { AttachmentDto } from '@/features/attachments/application/attachment.dto'
+import type { AttachmentDto as Attachment } from '@/features/attachments/application/attachment.dto'
 import type { Work, WorkEditablePatch } from './work-view.types'
 
 function normalizeAction(action: unknown): ActionType {
@@ -48,7 +48,7 @@ function parseCooperators(value: unknown): Cooperator[] {
     .filter((c) => c.departmentId > 0)
 }
 
-function parseAttachments(value: AttachmentApiDto[] | undefined): Attachment[] {
+function parseAttachments(value: AttachmentDto[] | undefined): Attachment[] {
   return (value || []).map((attachment) => ({
     id: attachment.id,
     fileName: attachment.fileName,
