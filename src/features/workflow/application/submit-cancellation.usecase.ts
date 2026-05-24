@@ -1,5 +1,5 @@
 import { ActionType, ApprovalType, WorkItemStatus } from '@prisma/client'
-import type { CurrentUser } from '@/shared/auth/current-user'
+import type { BaseCurrentUser } from '@/shared/auth/current-user'
 import type { WorkflowResult } from '@/features/workflow/domain/workflow.types'
 import {
   canUserOperate,
@@ -14,7 +14,7 @@ import {
 
 export async function submitCancellation(
   workItemId: number,
-  user: CurrentUser,
+  user: BaseCurrentUser,
   cancelReason: string,
   comment?: string,
 ): Promise<WorkflowResult> {

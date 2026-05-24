@@ -1,9 +1,9 @@
-import type { CurrentUser } from '@/shared/auth/current-user'
+import type { BaseCurrentUser } from '@/shared/auth/current-user'
 import type { AttachmentDto } from '@/features/attachments/application/attachment.dto'
 import { type Result, ok, err } from '@/shared/result'
 
 export interface UploadAttachmentInput {
-  currentUser: CurrentUser
+  currentUser: BaseCurrentUser
   workItemId: number
   fileName: string
   fileBuffer: Buffer

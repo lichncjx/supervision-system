@@ -1,4 +1,4 @@
-import type { CurrentUser } from '@/shared/auth/current-user'
+import type { BaseCurrentUser } from '@/shared/auth/current-user'
 import { Role } from '@prisma/client'
 
 interface DeleteWorkResultData {
@@ -12,7 +12,7 @@ import {
 } from '@/features/works/infrastructure/work.repository'
 
 export interface DeleteWorkInput {
-  currentUser: CurrentUser
+  currentUser: BaseCurrentUser
   workId: number
 }
 

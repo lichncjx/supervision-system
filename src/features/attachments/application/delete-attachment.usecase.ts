@@ -1,4 +1,5 @@
-import type { CurrentUser } from '@/shared/auth/current-user'
+import type { BaseCurrentUser } from '@/shared/auth/current-user'
+import { type Result, ok, err } from '@/shared/result'
 import { canDeleteAttachment } from '@/features/attachments/domain/attachment.permissions'
 import {
   findAttachmentWithWorkItem,
@@ -9,23 +10,19 @@ import { deleteAttachmentFileIfExists } from '@/features/attachments/infrastruct
 import { toPermissionUser } from '@/features/works/domain/work-permission-user.mapper'
 
 export interface DeleteAttachmentInput {
-  currentUser: CurrentUser
+  currentUser: BaseCurrentUser
   attachmentId: number
 }
 
-export type DeleteAttachmentResult =
-  | { kind: 'ok' }
-  | { kind: 'error'; status: number; message: string }
-
 export async function deleteAttachmentUseCase(
   input: DeleteAttachmentInput,
-): Promise<DeleteAttachmentResult> {
+): Promise<Result> {
   const { currentUser, attachmentId } = input
 
   const attachment = await findAttachmentWithWorkItem(attachmentId)
 
   if (!attachment) {
-    return { kind: 'error', status: 404, message: '附件不存在' }
+    return err(404, '附件不存在')
   }
 
   let canDelete = false
@@ -40,7 +37,7 @@ export async function deleteAttachmentUseCase(
   }
 
   if (!canDelete) {
-    return { kind: 'error', status: 403, message: '无权删除该附件' }
+    return err(403, '无权删除该附件')
   }
 
   await deleteAttachmentRecord(attachmentId)
@@ -56,5 +53,5 @@ export async function deleteAttachmentUseCase(
     fileName: attachment.fileName,
   })
 
-  return { kind: 'ok' }
+  return ok()
 }

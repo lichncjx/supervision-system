@@ -1,4 +1,4 @@
-import type { CurrentUser } from '@/shared/auth/current-user'
+import type { BaseCurrentUser } from '@/shared/auth/current-user'
 import { canViewAttachment } from '@/features/attachments/domain/attachment.permissions'
 import { findAttachmentWithWorkItem } from '@/features/attachments/infrastructure/attachment.repository'
 import {
@@ -9,17 +9,17 @@ import { getContentType } from '@/features/attachments/domain/attachment.rules'
 import { toPermissionUser } from '@/features/works/domain/work-permission-user.mapper'
 
 export interface DownloadAttachmentInput {
-  currentUser: CurrentUser
+  currentUser: BaseCurrentUser
   attachmentId: number
 }
 
 export type DownloadAttachmentResult =
   | {
-      kind: 'ok'
-      fileBuffer: Buffer
-      fileName: string
-      contentType: string
-    }
+    kind: 'ok'
+    fileBuffer: Buffer
+    fileName: string
+    contentType: string
+  }
   | { kind: 'error'; status: number; message: string }
 
 export async function downloadAttachmentUseCase(

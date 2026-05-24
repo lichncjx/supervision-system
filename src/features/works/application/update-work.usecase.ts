@@ -1,4 +1,4 @@
-import type { CurrentUser } from '@/shared/auth/current-user'
+import type { BaseCurrentUser } from '@/shared/auth/current-user'
 import { Role } from '@prisma/client'
 import { canEditWorkItem } from '@/features/works/domain/work.permissions'
 import { toPermissionUser } from '@/features/works/domain/work-permission-user.mapper'
@@ -18,7 +18,7 @@ import type { UpdateWorkRequest, WorkApiDto } from '@/features/works/contract/wo
 export type UpdateWorkBody = UpdateWorkRequest
 
 export interface UpdateWorkInput {
-  currentUser: CurrentUser
+  currentUser: BaseCurrentUser
   workId: number
   body: UpdateWorkBody
 }

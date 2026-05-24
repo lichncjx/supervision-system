@@ -1,5 +1,5 @@
 import { ActionType, ApprovalType, WorkItemStatus } from '@prisma/client'
-import type { CurrentUser } from '@/shared/auth/current-user'
+import type { BaseCurrentUser } from '@/shared/auth/current-user'
 import type { WorkflowResult } from '@/features/workflow/domain/workflow.types'
 import { canUserOperate, getProcessFirstApprover } from '@/features/workflow/domain/workflow.rules'
 import { toPermissionUser } from '@/features/works/domain/work-permission-user.mapper'
@@ -11,7 +11,7 @@ import {
 
 export async function submitAdjustment(
   workItemId: number,
-  user: CurrentUser,
+  user: BaseCurrentUser,
   adjustReason: string,
   comment?: string,
 ): Promise<WorkflowResult> {

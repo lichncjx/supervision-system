@@ -1,5 +1,5 @@
 import { ActionType, ApprovalType, WorkItemStatus, WorkItemType } from '@prisma/client'
-import type { CurrentUser } from '@/shared/auth/current-user'
+import type { BaseCurrentUser } from '@/shared/auth/current-user'
 import type { WorkflowResult } from '@/features/workflow/domain/workflow.types'
 import {
   canUserOperate,
@@ -15,7 +15,7 @@ import {
 
 export async function submitCompletion(
   workItemId: number,
-  user: CurrentUser,
+  user: BaseCurrentUser,
   proof: string,
   comment?: string,
 ): Promise<WorkflowResult> {

@@ -1,4 +1,4 @@
-import type { CurrentUser } from '@/shared/auth/current-user'
+import type { BaseCurrentUser } from '@/shared/auth/current-user'
 import { Prisma, WorkItemStatus, WorkItemType } from '@prisma/client'
 import { validateAndParseExcel } from '@/features/excel/infrastructure/work-import-parser'
 import { findDepartmentsForImport } from '@/features/departments/infrastructure/department.repository'
@@ -10,7 +10,7 @@ import { validateImportScope } from '@/features/excel/domain/excel-import.rules'
 import type { ValidationError as ImportValidationError } from '@/features/excel/domain/excel-import.rules'
 
 export interface ImportWorksFromExcelInput {
-  currentUser: CurrentUser
+  currentUser: BaseCurrentUser
   type: string
   fileBuffer: Buffer
   fileName: string
@@ -18,15 +18,15 @@ export interface ImportWorksFromExcelInput {
 
 export type ImportWorksFromExcelResult =
   | {
-      kind: 'success'
-      imported: number
-      message: string
-    }
+    kind: 'success'
+    imported: number
+    message: string
+  }
   | {
-      kind: 'validation-error'
-      error: string
-      details: ImportValidationError[]
-    }
+    kind: 'validation-error'
+    error: string
+    details: ImportValidationError[]
+  }
   | { kind: 'error'; status: number; message: string }
 
 function toInputJsonValue(value: unknown): Prisma.InputJsonValue {

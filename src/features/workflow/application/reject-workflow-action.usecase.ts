@@ -1,6 +1,6 @@
 import { isApprovalStatus, rejectableBeforeStatus } from '@/features/workflow/domain/workflow.rules'
 import { toPermissionUser } from '@/features/works/domain/work-permission-user.mapper'
-import type { CurrentUser } from '@/shared/auth/current-user'
+import type { BaseCurrentUser } from '@/shared/auth/current-user'
 import type { WorkflowResult } from '@/features/workflow/domain/workflow.types'
 import { canApproveWorkItem } from '@/features/works/domain/work.permissions'
 import { findWorkForUpdateById, updateWorkItem } from '@/features/works/infrastructure/work.repository'
@@ -11,7 +11,7 @@ import {
 
 export async function rejectWorkflowAction(
   workItemId: number,
-  user: CurrentUser,
+  user: BaseCurrentUser,
   rejectReason: string,
 ): Promise<WorkflowResult> {
   const permUser = toPermissionUser(user)

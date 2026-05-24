@@ -1,7 +1,7 @@
 import { APPROVAL_TARGET_STATUS } from '@/features/workflow/domain/workflow.constants'
 import { isApprovalStatus } from '@/features/workflow/domain/workflow.rules'
 import { toPermissionUser } from '@/features/works/domain/work-permission-user.mapper'
-import type { CurrentUser } from '@/shared/auth/current-user'
+import type { BaseCurrentUser } from '@/shared/auth/current-user'
 import type { WorkflowResult } from '@/features/workflow/domain/workflow.types'
 import { canApproveWorkItem } from '@/features/works/domain/work.permissions'
 import { isCompanyLevel } from '@/features/users/domain/role.rules'
@@ -15,7 +15,7 @@ import {
 
 export async function approveWorkflowAction(
   workItemId: number,
-  user: CurrentUser,
+  user: BaseCurrentUser,
   comment?: string,
   nextApproverId?: number | null,
 ): Promise<WorkflowResult> {

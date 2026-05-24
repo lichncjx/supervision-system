@@ -1,10 +1,10 @@
-import type { CurrentUser } from '@/shared/auth/current-user'
+import type { BaseCurrentUser } from '@/shared/auth/current-user'
 import { isGlobalView } from '@/features/users/domain/role.rules'
 import { err, ok, type Result } from '@/shared/result'
 import type { ExcelExportFile } from '@/features/excel/application/excel-export.types'
 
 export interface ExportCompletionRateInput {
-  currentUser: CurrentUser
+  currentUser: BaseCurrentUser
   startDate: string | null
   endDate: string | null
 }

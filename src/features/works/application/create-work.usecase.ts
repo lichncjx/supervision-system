@@ -1,4 +1,4 @@
-import type { CurrentUser } from '@/shared/auth/current-user'
+import type { BaseCurrentUser } from '@/shared/auth/current-user'
 import { Role, WorkItemType, WorkItemStatus } from '@prisma/client'
 import {
   createWorkItem,
@@ -15,7 +15,7 @@ import type { CreateWorkRequest, WorkApiDto } from '@/features/works/contract/wo
 export type CreateWorkBody = CreateWorkRequest
 
 export interface CreateWorkInput {
-  currentUser: CurrentUser
+  currentUser: BaseCurrentUser
   body: CreateWorkBody
 }
 
@@ -36,11 +36,11 @@ function processNodes(nodes: any[]) {
       : null,
     children: node.children
       ? node.children.map((child: any) => ({
-          ...child,
-          completeTime: child.completeTime
-            ? new Date(child.completeTime + 'T00:00:00.000Z').toISOString()
-            : null,
-        }))
+        ...child,
+        completeTime: child.completeTime
+          ? new Date(child.completeTime + 'T00:00:00.000Z').toISOString()
+          : null,
+      }))
       : [],
   }))
 }
