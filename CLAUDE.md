@@ -12,7 +12,7 @@
 
 涉及部署、迁移、群晖环境时，还必须阅读：
 
-- `docs/deploy/部署说明-群晖.md`
+- `deploy/synology/README.md`
 
 ## AI 执行模式
 

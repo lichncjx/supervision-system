@@ -27,7 +27,7 @@
 | 业务人员字段、人员体系、附件权限 | `docs/rules/业务人员与附件权限规则.md` |
 | Git 分支、Issue、PR、CI | `docs/core/GitHub协作流程.md` |
 | 代码组织、分层、目录、API 路由、表归属 | `docs/design/后端模块化架构约定.md` |
-| 群晖部署、迁移、运维排查 | `docs/deploy/部署说明-群晖.md` |
+| 群晖部署、迁移、运维排查 | `deploy/synology/README.md` |
 | 发布前验证 | `docs/release/测试发布检查清单.md` |
 | 正式发布记录 | `docs/release/发布记录.md` |
 
@@ -40,7 +40,7 @@
 - `docs/rules/业务人员与附件权限规则.md`：业务人员字段命名体系、人员分类、附件机制和附件权限的集中参考。
 - `docs/core/项目说明.md`：项目背景、功能模块、目录结构、数据模型和 API 概览。
 - `docs/core/GitHub协作流程.md`：Issue、分支、PR、CI、验收流程。
-- `docs/deploy/部署说明-群晖.md`：部署、迁移、运维排查的唯一权威文档。
+- `deploy/synology/README.md`：部署、迁移、运维排查的唯一权威文档。
 - `docs/release/测试发布检查清单.md`：测试环境发布验证清单。
 - `docs/release/发布记录.md`：正式发布记录。
 
@@ -278,4 +278,4 @@ pnpm check
 - 普通发布执行 `sh deploy.sh`。
 - 涉及数据库结构、Prisma schema 或 migrations 变化时，先执行 `sh migrate.sh`，再执行 `sh deploy.sh`。
 - 群晖部署命令统一使用 `docker-compose`，不使用 `docker compose`，不使用 `-f` 参数。
-- 详细部署说明以 `docs/deploy/部署说明-群晖.md` 为准。
+- 详细部署说明以 `deploy/synology/README.md` 为准。

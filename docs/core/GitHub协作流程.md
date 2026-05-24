@@ -151,7 +151,7 @@ sh migrate.sh
 sh deploy.sh
 ```
 
-群晖环境统一使用 `docker-compose`，不使用 `docker compose`，不使用 `-f` 参数。详细说明见 `docs/deploy/部署说明-群晖.md`。
+群晖环境统一使用 `docker-compose`，不使用 `docker compose`，不使用 `-f` 参数。详细说明见 `deploy/synology/README.md`。
 
 ## 验收与关闭 Issue
 
