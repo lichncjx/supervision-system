@@ -289,9 +289,9 @@ export default function ItemListPage() {
           <div className="py-16 text-center text-slate-400 text-sm">暂无{titleMap[type]}</div>
         ) : (
           <>
-            <div className="divide-y divide-slate-100">
+            <div>
               {pagedList.map((item) => (
-                <div key={item.id} className={`p-4 ${getStatusAccent(item.status)}`}>
+                <div key={item.id} className={`p-4 list-separator ${getStatusAccent(item.status)}`}>
                   {isPriorityOrMain ? (
                     <PriorityMainWorkListItem
                       item={item}

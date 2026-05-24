@@ -155,12 +155,12 @@ export default function ApprovalPage() {
           <div className="py-16 text-center text-slate-400 text-sm">暂无数据</div>
         ) : (
           <>
-            <div className="divide-y divide-slate-100">
+            <div>
               {list.map((work) => {
                 const borderClass = getWorkTypeAccent(work.type);
 
                 return (
-                  <div key={work.id} className={`flex items-start justify-between hover:translate-x-0.5 transition min-w-0 ${borderClass}`}>
+                  <div key={work.id} className={`list-separator flex items-start justify-between hover:translate-x-0.5 transition min-w-0 ${borderClass}`}>
                     <div className="p-4 min-w-0 flex-1">
                       <div className="text-sm font-medium text-slate-700 break-words leading-snug">{work.title}</div>
                       <div className="text-xs text-slate-500 mt-1.5 flex items-center gap-2 flex-wrap">
