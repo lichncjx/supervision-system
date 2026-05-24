@@ -222,9 +222,9 @@ export default function StatusFilterPage() {
             暂无{safeFilterTitle}
           </div>
         ) : (
-          <div className="divide-y divide-slate-100">
+          <div>
             {finalList.map((work) => (
-              <div key={work.id} className={`flex items-start justify-between gap-4 min-w-0 rounded-lg hover:translate-x-0.5 transition ${getWorkTypeAccent(work.type)}`}>
+              <div key={work.id} className={`list-separator flex items-start justify-between gap-4 min-w-0 rounded-lg hover:translate-x-0.5 transition ${getWorkTypeAccent(work.type)}`}>
                 <div className="p-4 min-w-0">
                   <div className="text-sm font-medium text-slate-700 break-words leading-snug">
                     {work.title}

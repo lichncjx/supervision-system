@@ -156,3 +156,8 @@ body {
 input[type="date"]::-webkit-calendar-picker-indicator {
   cursor: pointer;
 }
+
+/* list-separator: 替代 divide-y，避免高特异性 border-color 覆盖 border-l-{color} */
+.list-separator + .list-separator {
+  border-top: 1px solid rgb(241 245 249);
+}
