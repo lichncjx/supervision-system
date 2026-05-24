@@ -3,8 +3,7 @@
 import React, { useEffect, useState } from 'react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { SELECT_CONTROL } from '@/features/works/ui/visual-tokens'
-import type { MemberOptionApiDto as MemberOption } from '@/features/members/contract/member-api.types'
-import type { MemberOptionListResponse } from '@/features/members/contract/member-api.types'
+import type { MemberOptionDto as MemberOption } from '@/features/members/contract/member-api.types'
 
 export interface MemberSelectProps {
   departmentId: number | undefined
@@ -48,7 +47,7 @@ export function MemberSelect({
     fetch(url.toString(), { credentials: 'include' })
       .then((res) => {
         if (!res.ok) throw new Error('Failed to fetch members')
-        return res.json() as Promise<MemberOptionListResponse>
+        return res.json() as Promise<MemberOption[]>
       })
       .then((data) => {
         if (!cancelled) setMembers(data)

@@ -1,6 +1,7 @@
-import { prisma } from '@/shared/db/prisma'
+import type { Prisma } from '@prisma/client'
 import { toMemberResponse } from '@/features/members/application/member.dto'
-import type { MemberApiDto } from '@/features/members/contract/member-api.types'
+import { findMembersForApi } from '@/features/members/infrastructure/member.repository'
+import type { MemberDto } from '@/features/members/application/member.dto'
 
 export interface QueryMembersInput {
   departmentId?: number
@@ -8,8 +9,10 @@ export interface QueryMembersInput {
   includeInactive?: boolean
 }
 
-export async function queryMembersUseCase(input: QueryMembersInput): Promise<MemberApiDto[]> {
-  const where: Record<string, unknown> = {}
+export async function queryMembersUseCase(
+  input: QueryMembersInput
+): Promise<MemberDto[]> {
+  const where: Prisma.MemberWhereInput = {}
 
   if (input.departmentId !== undefined) {
     where.departmentId = input.departmentId
@@ -23,14 +26,6 @@ export async function queryMembersUseCase(input: QueryMembersInput): Promise<Mem
     where.isLeader = input.isLeader
   }
 
-  const members = await prisma.member.findMany({
-    where,
-    include: {
-      user: { select: { id: true, username: true, name: true, isActive: true } },
-      department: { select: { id: true, name: true } },
-    },
-    orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }],
-  })
-
+  const members = await findMembersForApi(where)
   return members.map(toMemberResponse)
 }

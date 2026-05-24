@@ -12,7 +12,7 @@ import type {
 } from '@/features/users/contract/user-api.types';
 import type { ApiErrorResponse } from '@/shared/http/api-response';
 import type { Department } from '@/features/departments/client/department-api';
-import type { MemberListResponse } from '@/features/members/contract/member-api.types';
+import type { MemberDto } from '@/features/members/application/member.dto';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -77,7 +77,7 @@ export default function AdminPage() {
   const fetchMemberCount = async () => {
     try {
       const res = await fetch('/api/members?includeInactive=true', { credentials: 'include' });
-      if (res.ok) setMemberCount(((await res.json()) as MemberListResponse).length);
+      if (res.ok) setMemberCount(((await res.json()) as MemberDto[]).length);
     } catch { /* ignore */ }
   };
 
@@ -409,33 +409,33 @@ export default function AdminPage() {
                   ))}
                 </SelectContent>
               </Select>
-          </div>
+            </div>
 
-          <div className="w-[150px]">
-            <label className="block text-xs font-medium text-slate-400 mb-1">所属部门</label>
-            <Select
-              value={String(form.departmentId)}
-              disabled={isCompanyRole}
-              onValueChange={(v) => setForm({ ...form, departmentId: Number(v) })}
-            >
-              <SelectTrigger className="rounded-full border-slate-200 bg-slate-50 h-10 px-4 w-full text-sm text-slate-600">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {departments
-                  .filter((d) => (isCompanyRole ? d.id === 1 : d.id !== 1))
-                  .map((d) => (
-                    <SelectItem key={d.id} value={String(d.id)}>{d.name}</SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-          </div>
+            <div className="w-[150px]">
+              <label className="block text-xs font-medium text-slate-400 mb-1">所属部门</label>
+              <Select
+                value={String(form.departmentId)}
+                disabled={isCompanyRole}
+                onValueChange={(v) => setForm({ ...form, departmentId: Number(v) })}
+              >
+                <SelectTrigger className="rounded-full border-slate-200 bg-slate-50 h-10 px-4 w-full text-sm text-slate-600">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {departments
+                    .filter((d) => (isCompanyRole ? d.id === 1 : d.id !== 1))
+                    .map((d) => (
+                      <SelectItem key={d.id} value={String(d.id)}>{d.name}</SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-          <button onClick={handleAddUser} className="inline-flex items-center gap-1.5 rounded-full bg-slate-800 px-5 py-2.5 text-sm font-medium text-white hover:bg-slate-900 transition-colors">
-            <Plus className="h-4 w-4" />
-            新增
-          </button>
-        </div>
+            <button onClick={handleAddUser} className="inline-flex items-center gap-1.5 rounded-full bg-slate-800 px-5 py-2.5 text-sm font-medium text-white hover:bg-slate-900 transition-colors">
+              <Plus className="h-4 w-4" />
+              新增
+            </button>
+          </div>
         </div>
       </div>
 
@@ -532,11 +532,10 @@ export default function AdminPage() {
                 </span>
                 <span className="text-sm font-medium text-slate-700">{dept.name}</span>
                 <span
-                  className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                    dept.isBusiness
+                  className={`w-1.5 h-1.5 rounded-full shrink-0 ${dept.isBusiness
                       ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.3)]'
                       : 'bg-slate-300'
-                  }`}
+                    }`}
                 />
               </div>
             ))}

@@ -5,10 +5,8 @@ import { ok, fail, fromError } from '@/shared/http/api-response'
 import { queryMembersUseCase } from '@/features/members/application/query-members.usecase'
 import { createMemberUseCase } from '@/features/members/application/create-member.usecase'
 import { isAdmin } from '@/features/users/domain/role.rules'
-import type {
-  CreateMemberRequest,
-  MemberOptionApiDto,
-} from '@/features/members/contract/member-api.types'
+import type { MemberOptionDto } from '@/features/members/contract/member-api.types'
+import type { CreateMemberRequest } from '@/features/members/contract/member-api.types'
 
 export const GET = withApiHandler(async (request: NextRequest) => {
   const currentUser = await requireCurrentUser(request)
@@ -40,7 +38,7 @@ export const GET = withApiHandler(async (request: NextRequest) => {
   // Non-admin callers only receive fields needed for form dropdowns.
   const sanitized = isAdminUser
     ? result
-    : result.map(({ id, name, departmentId, departmentName, isLeader }): MemberOptionApiDto => ({
+    : result.map(({ id, name, departmentId, departmentName, isLeader }): MemberOptionDto => ({
       id, name, departmentId, departmentName, isLeader,
     }))
 

@@ -16,11 +16,10 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import type { Department } from '@/features/departments/client/department-api'
-import type { MemberApiDto as Member } from '@/features/members/contract/member-api.types'
 import type {
-  MemberListResponse,
-  MemberMutationResponse,
-} from '@/features/members/contract/member-api.types'
+  MemberDto as Member,
+  MemberMutation,
+} from '@/features/members/application/member.dto'
 import type {
   UserListItemApiDto,
   UserListResponse,
@@ -84,7 +83,7 @@ export default function AdminMembersPage() {
           .filter((d) => d.isBusiness)
           .map((dept) =>
             fetch(`/api/members?departmentId=${dept.id}&includeInactive=true`, { credentials: 'include' })
-              .then((res) => (res.ok ? (res.json() as Promise<MemberListResponse>) : []))
+              .then((res) => (res.ok ? (res.json() as Promise<Member[]>) : []))
           ),
       )
       setMembers(results.flat())
@@ -124,7 +123,7 @@ export default function AdminMembersPage() {
       body: JSON.stringify(editForm), credentials: 'include',
     })
     if (!res.ok) { alert(((await res.json()) as ApiErrorResponse).error || '保存失败'); return }
-    const data = (await res.json()) as MemberMutationResponse
+    const data = (await res.json()) as MemberMutation
     if (data.warnings?.length) alert('提示：\n' + data.warnings.join('\n'))
     setEditTarget(null); await loadMembers()
   }
@@ -155,7 +154,7 @@ export default function AdminMembersPage() {
       body: JSON.stringify({ userId: Number(bindUserId) }), credentials: 'include',
     })
     if (!res.ok) { alert(((await res.json()) as ApiErrorResponse).error || '绑定失败'); return }
-    const data = (await res.json()) as MemberMutationResponse
+    const data = (await res.json()) as MemberMutation
     if (data.warnings?.length) alert('提示：\n' + data.warnings.join('\n'))
     setBindTarget(null); setBindUserId(''); await loadMembers()
   }
@@ -169,7 +168,7 @@ export default function AdminMembersPage() {
       credentials: 'include',
     })
     if (!res.ok) { alert(((await res.json()) as ApiErrorResponse).error || '导入失败'); return }
-    const data = (await res.json()) as MemberMutationResponse
+    const data = (await res.json()) as MemberMutation
     if (data.warnings?.length) alert('提示：\n' + data.warnings.join('\n'))
     setImportOpen(false); setImportUserId(''); setImportIsLeader(false); setImportSortOrder(0); setImportDeptId(0)
     await loadMembers()

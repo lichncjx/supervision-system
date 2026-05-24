@@ -1,36 +1,6 @@
-export interface MemberUserApiDto {
-  id: number
-  username: string
-  name: string
-  isActive: boolean
-}
+import type { MemberDto } from '@/features/members/application/member.dto'
 
-export interface MemberApiDto {
-  id: number
-  name: string
-  departmentId: number
-  departmentName: string
-  phone: string | null
-  isLeader: boolean
-  sortOrder: number
-  isActive: boolean
-  userId: number | null
-  user: MemberUserApiDto | null
-  createdAt: string
-  updatedAt: string
-}
-
-export interface MemberOptionApiDto {
-  id: number
-  name: string
-  departmentId: number
-  departmentName: string
-  isLeader: boolean
-}
-
-export type MemberListResponse = MemberApiDto[]
-export type MemberOptionListResponse = MemberOptionApiDto[]
-export type QueryMembersResponse = MemberListResponse | MemberOptionListResponse
+export type MemberOptionDto = Pick<MemberDto, 'id' | 'name' | 'departmentId' | 'departmentName' | 'isLeader'>
 
 export interface CreateMemberRequest {
   name: string
@@ -50,8 +20,4 @@ export interface UpdateMemberRequest {
   sortOrder?: number
   isActive?: boolean
   userId?: number | null
-}
-
-export interface MemberMutationResponse extends MemberApiDto {
-  warnings?: string[]
 }
