@@ -1,5 +1,3 @@
-import type { ActionSuccessResponse } from '@/shared/http/api-response'
-
 export type UserRoleApiDto =
   | 'ADMIN'
   | 'SUPERVISOR'
@@ -65,8 +63,6 @@ export interface ResetUserPasswordRequest {
   password: string
 }
 
-export type DeleteUserResponse = ActionSuccessResponse
-
 export interface LoginRequest {
   username: string
   password: string
@@ -82,4 +78,3 @@ export interface ChangePasswordRequest {
   newPassword: string
 }
 
-export type ChangePasswordResponse = ActionSuccessResponse

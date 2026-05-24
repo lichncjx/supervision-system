@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { requireCurrentUser } from '@/shared/auth/current-user'
-import { success, fromError } from '@/shared/http/api-response'
+import { ok, fromError } from '@/shared/http/api-response'
 import { withApiHandler } from '@/shared/http/with-api-handler'
 import { changePasswordUseCase } from '@/features/users/application/change-password.usecase'
 import type { ChangePasswordRequest } from '@/features/users/contract/user-api.types'
@@ -13,5 +13,5 @@ export const POST = withApiHandler(async (request: NextRequest) => {
   if (!result.ok)
     return fromError(result)
 
-  return success()
+  return ok()
 })

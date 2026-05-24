@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { requireCurrentUser } from '@/shared/auth/current-user'
 import { withApiHandler } from '@/shared/http/with-api-handler'
-import { success, fail, fromError } from '@/shared/http/api-response'
+import { ok, fail, fromError } from '@/shared/http/api-response'
 import { deleteAttachmentUseCase } from '@/features/attachments/application/delete-attachment.usecase'
 
 export const DELETE = withApiHandler(
@@ -18,6 +18,6 @@ export const DELETE = withApiHandler(
     const result = await deleteAttachmentUseCase({ currentUser, attachmentId })
     if (result.kind === 'error') return fromError(result)
 
-    return success()
+    return ok()
   },
 )

@@ -1,8 +1,6 @@
 import type { BaseCurrentUser } from '@/shared/auth/current-user'
-import type {
-  OperationLogApiDto,
-  OperationLogListResponse,
-} from '@/features/operation-logs/contract/operation-log-api.types'
+import type { Page } from '@/shared/page'
+import { type Result, ok, err } from '@/shared/result'
 import {
   findOperationLogs,
   type OperationLogListQuery,
@@ -26,6 +24,22 @@ const ACTION_MAP: Record<string, string> = {
   decompose: '分解待办',
 }
 
+export interface OperationLogDto {
+  id: number
+  userId: number
+  userName: string
+  userRole: string
+  action: string
+  actionText: string
+  module: string
+  moduleText: string
+  targetId: number | null
+  targetType: string | null
+  description: string
+  ipAddress: string | null
+  createdAt: string
+}
+
 const MODULE_MAP: Record<string, string> = {
   works: '事项',
   workflow: '审批流',
@@ -35,9 +49,6 @@ const MODULE_MAP: Record<string, string> = {
   auth: '认证',
 }
 
-export type ListOperationLogsResult =
-  | { kind: 'ok'; data: OperationLogListResponse }
-  | { kind: 'error'; status: number; message: string }
 
 function parsePositiveInt(value: string | null, fallback: number): number {
   const parsed = Number.parseInt(value || '', 10)
@@ -87,7 +98,7 @@ export function parseOperationLogQuery(
   }
 }
 
-function toOperationLogApiDto(log: {
+function toOperationLogDto(log: {
   id: number
   userId: number
   userName: string
@@ -99,7 +110,7 @@ function toOperationLogApiDto(log: {
   description: string
   ipAddress: string | null
   createdAt: Date
-}): OperationLogApiDto {
+}): OperationLogDto {
   return {
     id: log.id,
     userId: log.userId,
@@ -120,21 +131,17 @@ function toOperationLogApiDto(log: {
 export async function listOperationLogsUseCase(
   currentUser: BaseCurrentUser,
   query: OperationLogListQuery,
-): Promise<ListOperationLogsResult> {
+): Promise<Result<Page<OperationLogDto>>> {
   if (currentUser.role !== 'ADMIN' && currentUser.role !== 'SUPERVISOR') {
-    return { kind: 'error', status: 403, message: '无权查看操作日志' }
+    return err(403, '无权查看操作日志')
   }
 
   const { items, total } = await findOperationLogs(query)
 
-  return {
-    kind: 'ok',
-    data: {
-      items: items.map(toOperationLogApiDto),
-      total,
-      page: query.page,
-      pageSize: query.pageSize,
-      totalPages: Math.ceil(total / query.pageSize),
-    },
-  }
+  return ok({
+    items: items.map(toOperationLogDto),
+    total,
+    page: query.page,
+    pageSize: query.pageSize,
+  })
 }

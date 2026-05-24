@@ -1,6 +1,5 @@
 import type { User, Role, LoginResult } from '@/features/users/client/user-client.types'
 import type {
-  ChangePasswordResponse,
   CurrentUserApiDto,
   LoginResponse,
 } from '@/features/users/contract/user-api.types'
@@ -97,9 +96,8 @@ export async function changePassword(
       credentials: 'include',
     })
 
-    const data = (await response.json()) as ChangePasswordResponse & ApiErrorResponse
-
     if (!response.ok) {
+      const data = await response.json() as ApiErrorResponse
       return { success: false, error: data.error || '修改密码失败' }
     }
 

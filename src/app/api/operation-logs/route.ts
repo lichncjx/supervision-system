@@ -16,7 +16,7 @@ export const GET = withApiHandler(async (request: NextRequest) => {
     parseOperationLogQuery(searchParams),
   )
 
-  if (result.kind === 'error') return fromError(result)
+  if (!result.ok) return fromError(result)
 
   return ok(result.data)
 })

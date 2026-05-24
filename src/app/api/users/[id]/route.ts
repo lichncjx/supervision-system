@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server'
 import { Role } from '@prisma/client'
 import { requireCurrentUser } from '@/shared/auth/current-user'
 import { withApiHandler } from '@/shared/http/with-api-handler'
-import { ok, success, fail, fromError } from '@/shared/http/api-response'
+import { ok, fail, fromError } from '@/shared/http/api-response'
 import { updateUserUseCase } from '@/features/users/application/update-user.usecase'
 import { deleteUserUseCase } from '@/features/users/application/delete-user.usecase'
 import type { UpdateUserRequest } from '@/features/users/contract/user-api.types'
@@ -38,5 +38,5 @@ export const DELETE = withApiHandler(async (
   const result = await deleteUserUseCase(currentUser, userId)
   if (result.kind === 'error') return fromError(result)
 
-  return success()
+  return ok()
 })
