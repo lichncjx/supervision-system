@@ -25,7 +25,9 @@ export interface UserListItemDto extends CurrentUserDto {
     phone: string | null
     createdAt: string
     isProtected: boolean
-}export function toUserDto(user: {
+}
+
+export function toUserDto(user: {
     id: number
     name: string
     role: string
@@ -40,6 +42,7 @@ export interface UserListItemDto extends CurrentUserDto {
         departmentName: user.department?.name || '',
     }
 }
+
 export function toUserListItemDto(user: {
     id: number
     username: string
@@ -66,4 +69,3 @@ export function toUserListItemDto(user: {
         isProtected: PROTECTED_USERNAMES.includes(user.username),
     }
 }
-

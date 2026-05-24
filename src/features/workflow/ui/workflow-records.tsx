@@ -4,7 +4,7 @@ import { getRoleName } from '@/features/users/domain/role.rules';
 import { getActionName } from '@/features/works/client/work-display.utils';
 import { getWorkStatusLabel } from '@/features/works/domain/work-status.rules';
 import { PANEL_PADDED } from '@/features/works/ui/visual-tokens';
-import type { WorkflowRecordApiDto as WorkflowRecord } from '@/features/workflow/contract/workflow-api.types';
+import type { WorkflowRecordDto as WorkflowRecord } from "../application/get-workflow-records.usecase";
 
 interface WorkflowRecordsProps {
   records: WorkflowRecord[];

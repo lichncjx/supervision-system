@@ -1,37 +1,37 @@
 import { ActionType, ApprovalType, WorkItemStatus, WorkItemType } from '@prisma/client'
 import type { BaseCurrentUser } from '@/shared/auth/current-user'
-import type { WorkflowResult } from '@/features/workflow/domain/workflow.types'
 import { getProposalFirstApprover, canUserSubmit } from '@/features/workflow/domain/workflow.rules'
 import { toPermissionUser } from '@/features/works/domain/work-permission-user.mapper'
 import { findWorkForUpdateById, updateWorkItem } from '@/features/works/infrastructure/work.repository'
 import { isCompanyLevel } from '@/features/users/domain/role.rules'
-import { ensureNextApproverIsActiveCompanyLeader } from './workflow-next-approver.guard'
+import { ensureIsActiveCompanyLeader } from './workflow-next-approver.guard'
 import {
   createWorkflowRecord,
   createOperationLog,
 } from '@/features/workflow/infrastructure/workflow.repository'
+import { type Result, err, ok } from '@/shared/result'
 
 export async function submitProposal(
   workItemId: number,
   user: BaseCurrentUser,
   comment?: string,
   nextApproverId?: number | null,
-): Promise<WorkflowResult> {
+): Promise<Result> {
   const permUser = toPermissionUser(user)
   const workItem = await findWorkForUpdateById(workItemId)
   if (!workItem) {
-    return { success: false, error: '事项不存在' }
+    return err(404, '事项不存在')
   }
 
   if (workItem.status !== WorkItemStatus.DRAFT) {
-    return { success: false, error: '只有草稿事项可以提交审批' }
+    return err(400, '只有草稿事项可以提交审批')
   }
 
   if (!canUserSubmit(workItem, user)) {
-    return { success: false, error: '无权提交该事项' }
+    return err(403, '无权提交该事项')
   }
 
-  const nextApproverError = await ensureNextApproverIsActiveCompanyLeader(nextApproverId)
+  const nextApproverError = await ensureIsActiveCompanyLeader(nextApproverId)
   if (nextApproverError) return nextApproverError
 
   const oldStatus = workItem.status
@@ -70,12 +70,12 @@ export async function submitProposal(
       targetId: workItemId,
     })
 
-    return { success: true, workItem: updated }
+    return ok()
   }
 
   const approver = getProposalFirstApprover(workItem, user, nextApproverId)
   if (!approver) {
-    return { success: false, error: '请先指定公司领导后再提交审批' }
+    return err(400, '请先指定公司领导后再提交审批')
   }
 
   const updated = await updateWorkItem(workItemId, {
@@ -109,5 +109,5 @@ export async function submitProposal(
     targetId: workItemId,
   })
 
-  return { success: true, workItem: updated }
+  return ok()
 }

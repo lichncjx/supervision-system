@@ -39,7 +39,7 @@ import { isTerminal, isReturnedDraftWork, isInProgress } from '@/features/works/
 import { isWorkRelatedToDepartment } from '@/features/works/client/work-client-permissions';
 import { updateWork, deleteWork, resubmitRejectedWork } from '@/features/works/client/work-api';
 import {
-  submitWork,
+  submitPropose,
   submitComplete,
   submitAdjust,
   submitCancel,
@@ -228,7 +228,7 @@ export default function WorkDetailPage() {
   const handleSubmitConfirm = async (comment?: string, nextApproverId?: number | null) => {
     if (!user) return;
     try {
-      await submitWork(work, user, nextApproverId, comment);
+      await submitPropose(work, nextApproverId, comment);
       onRefresh();
       alert('已提交审批');
     } catch (error) {
@@ -278,7 +278,7 @@ export default function WorkDetailPage() {
       return;
     }
     try {
-      await submitComplete(work, user, proof);
+      await submitComplete(work, proof);
       onRefresh();
       alert('已提交完成材料');
     } catch (error) {
@@ -303,7 +303,7 @@ export default function WorkDetailPage() {
       title: editForm.workItem || editForm.title || work.title,
     };
     try {
-      await submitAdjust(work, user, adjustReason, pendingAdjustment);
+      await submitAdjust(work, adjustReason, pendingAdjustment);
       onRefresh();
       alert('已提交调整申请，等待审批');
     } catch (error) {
@@ -324,7 +324,7 @@ export default function WorkDetailPage() {
       return;
     }
     try {
-      await submitCancel(work, user, cancelReason);
+      await submitCancel(work, cancelReason);
       onRefresh();
       alert('已提交取消申请');
     } catch (error) {
@@ -353,7 +353,7 @@ export default function WorkDetailPage() {
       return;
     }
     try {
-      await submitTodoDecomposition(work, user, { ...editForm, title: editForm.workItem || work.title });
+      await submitTodoDecomposition(work, { ...editForm, title: editForm.workItem || work.title });
       onRefresh();
       alert('已提交待办事项分解，等待审批');
     } catch (error) {
@@ -365,7 +365,7 @@ export default function WorkDetailPage() {
   const handleApprove = async (comment?: string, nextApproverId?: number | null) => {
     if (!user) return;
     try {
-      await approveWork(user, work, comment, nextApproverId);
+      await approveWork(work, comment, nextApproverId);
       onRefresh();
       alert('审批已通过');
     } catch (error) {
@@ -379,7 +379,7 @@ export default function WorkDetailPage() {
     if (reason === null) return;
     if (!user) return;
     try {
-      await rejectWork(work, user, reason || '审批退回');
+      await rejectWork(work, reason || '审批退回');
       onRefresh();
       alert('已退回');
     } catch (error) {

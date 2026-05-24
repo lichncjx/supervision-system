@@ -84,7 +84,7 @@ export default function ApprovalPage() {
   const handleApproveConfirm = async (comment?: string, nextApproverId?: number | null) => {
     if (!user || !selectedWork) return;
     try {
-      await approveWork(user, selectedWork, comment, nextApproverId);
+      await approveWork(selectedWork, comment, nextApproverId);
       await load();
       alert('审批已通过');
     } catch (error) {
@@ -98,7 +98,7 @@ export default function ApprovalPage() {
     if (reason === null) return;
 
     try {
-      await rejectWork(work, user, reason || '审批退回');
+      await rejectWork(work, reason || '审批退回');
       await load();
       alert('已退回');
     } catch (error) {

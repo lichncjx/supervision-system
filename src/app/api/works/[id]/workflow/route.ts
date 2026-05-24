@@ -10,9 +10,6 @@ import { submitAdjustment } from '@/features/workflow/application/submit-adjustm
 import { submitCancellation } from '@/features/workflow/application/submit-cancellation.usecase'
 import { decomposeTodoWork } from '@/features/workflow/application/decompose-todo-work.usecase'
 import { getWorkflowRecords } from '@/features/workflow/application/get-workflow-records.usecase'
-import type { WorkflowActionRequest, WorkflowActionResponse } from '@/features/workflow/contract/workflow-api.types'
-import type { WorkflowResult } from '@/features/workflow/domain/workflow.types'
-
 export const POST = withApiHandler(
   async (request: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
     const { id } = await params
@@ -23,76 +20,61 @@ export const POST = withApiHandler(
     }
 
     const currentUser = await requireCurrentUser(request)
+    const body = await request.json()
 
-    const body = (await request.json()) as WorkflowActionRequest
-    const {
-      action,
-      comment,
-      proof,
-      adjustReason,
-      cancelReason,
-      rejectReason,
-      nodes,
-      nextApproverId,
-    } = body
+    let result
 
-    if (
-      nextApproverId != null &&
-      (!Number.isInteger(nextApproverId) || nextApproverId <= 0)
-    ) {
-      return fail('无效的下一审批人', 400)
-    }
-
-    let result: WorkflowResult
-
-    switch (action) {
+    switch (body.action) {
       case 'submit':
-        result = await submitProposal(workItemId, currentUser, comment, nextApproverId)
+        if (body.nextApproverId != null && (!Number.isInteger(body.nextApproverId) || body.nextApproverId <= 0)) {
+          return fail('无效的下一审批人', 400)
+        }
+        result = await submitProposal(workItemId, currentUser, body.comment, body.nextApproverId)
         break
       case 'approve':
-        result = await approveWorkflowAction(workItemId, currentUser, comment, nextApproverId)
+        if (body.nextApproverId != null && (!Number.isInteger(body.nextApproverId) || body.nextApproverId <= 0)) {
+          return fail('无效的下一审批人', 400)
+        }
+        result = await approveWorkflowAction(workItemId, currentUser, body.comment, body.nextApproverId)
         break
       case 'reject':
-        if (!rejectReason) {
+        if (!body.rejectReason) {
           return fail('请提供退回原因', 400)
         }
-        result = await rejectWorkflowAction(workItemId, currentUser, rejectReason)
+        result = await rejectWorkflowAction(workItemId, currentUser, body.rejectReason)
         break
       case 'evidence':
       case 'complete':
-        if (!proof) {
+        if (!body.proof) {
           return fail('请提供见证材料说明', 400)
         }
-        result = await submitCompletion(workItemId, currentUser, proof, comment)
+        result = await submitCompletion(workItemId, currentUser, body.proof, body.comment)
         break
       case 'adjust':
-        if (!adjustReason) {
+        if (!body.adjustReason) {
           return fail('请提供调整原因', 400)
         }
-        result = await submitAdjustment(workItemId, currentUser, adjustReason, comment)
+        result = await submitAdjustment(workItemId, currentUser, body.adjustReason, body.comment)
         break
       case 'cancel':
-        if (!cancelReason) {
+        if (!body.cancelReason) {
           return fail('请提供取消原因', 400)
         }
-        result = await submitCancellation(workItemId, currentUser, cancelReason, comment)
+        result = await submitCancellation(workItemId, currentUser, body.cancelReason, body.comment)
         break
       case 'decompose':
-        if (!nodes || !Array.isArray(nodes)) {
+        if (!body.nodes || !Array.isArray(body.nodes)) {
           return fail('请提供分解节点', 400)
         }
-        result = await decomposeTodoWork(workItemId, currentUser, nodes, comment)
+        result = await decomposeTodoWork(workItemId, currentUser, body.nodes, body.comment)
         break
       default:
         return fail('无效的操作', 400)
     }
 
-    if (!result.success) {
-      return fail(result.error ?? '操作失败', 400)
-    }
+    if (!result.ok) return fromError(result)
 
-    const response: WorkflowActionResponse = { success: true, workItem: result.workItem }
-    return ok(response)
+    return ok()
   },
 )
 
@@ -108,7 +90,7 @@ export const GET = withApiHandler(
     const currentUser = await requireCurrentUser(request)
 
     const result = await getWorkflowRecords(currentUser, workItemId)
-    if (result.kind === 'error') return fromError(result)
+    if (!result.ok) return fromError(result)
 
     return ok(result.data)
   },
