@@ -20,13 +20,8 @@ import type {
   MemberDto as Member,
   MemberMutation,
 } from '@/features/members/application/member.dto'
-import type {
-  UserListItemApiDto,
-  UserListResponse,
-} from '@/features/users/contract/user-api.types'
+import type { UserListItemDto as SystemUser } from "@/features/users/application/user.dto"
 import type { ApiErrorResponse } from '@/shared/http/api-response'
-
-type SystemUser = UserListItemApiDto
 
 export default function AdminMembersPage() {
   const { user } = useAuth()
@@ -65,7 +60,9 @@ export default function AdminMembersPage() {
         depts = (await deptRes.json()) as Department[]
         setDepartments(depts)
       }
-      if (userRes.ok) setSystemUsers((await userRes.json()) as UserListResponse)
+      if (userRes.ok) {
+        setSystemUsers((await userRes.json()) as SystemUser[])
+      }
     } catch { /* ignore */ }
     await loadMembers(depts)
   }

@@ -6,10 +6,7 @@ import { Building2, Settings, Users, UserCog, Plus, Trash2, Power, KeyRound, Eye
 import { useAuth } from '@/components/providers/auth-provider';
 import { getRoleName } from '@/features/users/domain/role.rules';
 import type { Role } from '@/features/users/client/user-client.types';
-import type {
-  UserListItemApiDto,
-  UserListResponse,
-} from '@/features/users/contract/user-api.types';
+import type { UserListItemDto } from "@/features/users/application/user.dto";
 import type { ApiErrorResponse } from '@/shared/http/api-response';
 import type { Department } from '@/features/departments/client/department-api';
 import type { MemberDto } from '@/features/members/application/member.dto';
@@ -25,7 +22,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 
-type User = UserListItemApiDto;
+type User = UserListItemDto;
 
 export default function AdminPage() {
   const { user } = useAuth();
@@ -87,7 +84,7 @@ export default function AdminPage() {
         credentials: 'include',
       });
       if (response.ok) {
-        const data = (await response.json()) as UserListResponse;
+        const data = (await response.json()) as UserListItemDto[];
         setUserList(data);
       }
     } catch (error) {
@@ -143,7 +140,7 @@ export default function AdminPage() {
         credentials: 'include',
       });
 
-      const data = (await response.json()) as UserListItemApiDto & ApiErrorResponse;
+      const data = (await response.json()) as UserListItemDto & ApiErrorResponse;
 
       if (!response.ok) {
         alert(data.error || '创建失败');
@@ -533,8 +530,8 @@ export default function AdminPage() {
                 <span className="text-sm font-medium text-slate-700">{dept.name}</span>
                 <span
                   className={`w-1.5 h-1.5 rounded-full shrink-0 ${dept.isBusiness
-                      ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.3)]'
-                      : 'bg-slate-300'
+                    ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.3)]'
+                    : 'bg-slate-300'
                     }`}
                 />
               </div>

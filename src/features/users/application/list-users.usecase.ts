@@ -1,10 +1,10 @@
 import { isAdmin } from '@/features/users/domain/role.rules'
 import { findAllUsers } from '@/features/users/infrastructure/user.repository'
 import { toUserListItem } from '@/features/users/application/user-api.mapper'
-import type { UserListItem } from '@/features/users/application/user-api.types'
+import type { UserListItemDto } from '@/features/users/application/user.dto'
 
 export type ListUsersResult =
-  | { kind: 'ok'; data: UserListItem[] }
+  | { kind: 'ok'; data: UserListItemDto[] }
   | { kind: 'error'; status: number; message: string }
 
 export async function listUsersUseCase(currentUser: {

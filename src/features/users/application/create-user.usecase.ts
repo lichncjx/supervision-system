@@ -8,7 +8,7 @@ import {
 import { findDepartmentById } from '@/features/departments/infrastructure/department.repository'
 import { hashPassword } from '@/shared/auth/password'
 import { toUserListItem } from '@/features/users/application/user-api.mapper'
-import type { UserListItem } from '@/features/users/application/user-api.types'
+import type { UserListItemDto } from '@/features/users/application/user.dto'
 
 export interface CreateUserBody {
   username: string
@@ -21,7 +21,7 @@ export interface CreateUserBody {
 }
 
 export type CreateUserResult =
-  | { kind: 'ok'; data: UserListItem }
+  | { kind: 'ok'; data: UserListItemDto }
   | { kind: 'error'; status: number; message: string }
 
 export async function createUserUseCase(

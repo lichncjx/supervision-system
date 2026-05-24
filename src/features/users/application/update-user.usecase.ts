@@ -6,7 +6,7 @@ import {
 } from '@/features/users/infrastructure/user.repository'
 import { findDepartmentById } from '@/features/departments/infrastructure/department.repository'
 import { toUserListItem } from '@/features/users/application/user-api.mapper'
-import type { UserListItem } from '@/features/users/application/user-api.types'
+import type { UserListItemDto } from '@/features/users/application/user.dto'
 
 export interface UpdateUserBody {
   name?: string
@@ -18,7 +18,7 @@ export interface UpdateUserBody {
 }
 
 export type UpdateUserResult =
-  | { kind: 'ok'; data: UserListItem }
+  | { kind: 'ok'; data: UserListItemDto }
   | { kind: 'error'; status: number; message: string }
 
 export async function updateUserUseCase(

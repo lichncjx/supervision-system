@@ -1,8 +1,6 @@
-import type {
-  UserApiDto,
-  UserListItemApiDto,
-  UserRoleApiDto,
-} from '@/features/users/contract/user-api.types'
+import type { UserListItemDto } from "./user.dto"
+import type { UserDto } from "./user.dto"
+import type { RoleDto } from "./user.dto"
 import { PROTECTED_USERNAMES } from '@/features/users/domain/protected-usernames'
 
 export function toUserListItem(user: {
@@ -16,12 +14,12 @@ export function toUserListItem(user: {
   email: string | null
   phone: string | null
   createdAt: Date
-}): UserListItemApiDto {
+}): UserListItemDto {
   return {
     id: user.id,
     username: user.username,
     name: user.name,
-    role: user.role as UserRoleApiDto,
+    role: user.role as RoleDto,
     departmentId: user.departmentId,
     departmentName: user.department?.name || '',
     isActive: user.isActive,
@@ -38,11 +36,11 @@ export function toUserApiDto(user: {
   role: string
   departmentId: number | null
   department: { name: string } | null
-}): UserApiDto {
+}): UserDto {
   return {
     id: user.id,
     name: user.name,
-    role: user.role as UserRoleApiDto,
+    role: user.role as RoleDto,
     departmentId: user.departmentId,
     departmentName: user.department?.name || '',
   }

@@ -1,8 +1,8 @@
 import type { User, Role, LoginResult } from '@/features/users/client/user-client.types'
 import type {
-  CurrentUserApiDto,
   LoginResponse,
 } from '@/features/users/contract/user-api.types'
+import type { CurrentUserDto } from "../application/user.dto"
 import type { ApiErrorResponse } from '@/shared/http/api-response'
 
 export async function login(
@@ -65,7 +65,7 @@ export async function getCurrentUser(): Promise<User | null> {
       return null
     }
 
-    const data = (await response.json()) as CurrentUserApiDto
+    const data = (await response.json()) as CurrentUserDto
 
     return {
       id: data.id,
