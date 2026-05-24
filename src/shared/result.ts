@@ -18,6 +18,6 @@ export function ok<T>(data?: T): ResultOk<T> | ResultOk<void> {
   return (data !== undefined ? { ok: true, data } : { ok: true }) as ResultOk<T> | ResultOk<void>
 }
 
-export function err(status: number, message: string, code?: string): ResultError {
-  return { ok: false, status, message, code }
+export function err(status: number, message: string, code?: string, details?: unknown): ResultError {
+  return { ok: false, status, message, code, details }
 }
