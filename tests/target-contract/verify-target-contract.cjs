@@ -386,7 +386,7 @@ async function verifyDashboardSummary(baseUrl, loginByUsername, userByUsername, 
       actual,
       expected,
       expectedFailure: false,
-      note: 'Target: summary follows docs/rules/API说明.md using target status groups, organization visibility, my approval/handling, expiring/overdue.',
+      note: 'Target: summary follows docs/core/API说明.md using target status groups, organization visibility, my approval/handling, expiring/overdue.',
     });
   }
 }
