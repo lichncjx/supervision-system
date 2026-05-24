@@ -1,4 +1,4 @@
-import type { ApiErrorResponse } from '@/shared/http/api-response'
+import type { ErrorData } from '@/shared/http/api-response'
 
 export async function uploadFiles(workId: number, files: FileList | File[], category?: string) {
   for (const file of Array.from(files)) {
@@ -13,8 +13,8 @@ export async function uploadFiles(workId: number, files: FileList | File[], cate
       credentials: 'include',
     })
     if (!res.ok) {
-      const data = await res.json() as ApiErrorResponse
-      throw new Error(data.error || '上传失败')
+      const data = await res.json() as ErrorData
+      throw new Error(data.message || '上传失败')
     }
   }
 }
@@ -25,7 +25,7 @@ export async function deleteAttachment(attachmentId: number) {
     credentials: 'include',
   })
   if (!res.ok) {
-    const data = await res.json() as ApiErrorResponse
-    throw new Error(data.error || '删除失败')
+    const data = await res.json() as ErrorData
+    throw new Error(data.message || '删除失败')
   }
 }

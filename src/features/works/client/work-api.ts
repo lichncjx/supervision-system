@@ -4,7 +4,7 @@ import type { Work, WorkEditablePatch } from './work-view.types'
 import type {
   WorkApiDto,
 } from '@/features/works/contract/work-api.types'
-import type { ApiErrorResponse } from '@/shared/http/api-response'
+import type { ErrorData } from '@/shared/http/api-response'
 import { sortWorksByDueDate } from './work-sort'
 import {
   buildCreateWorkRequest,
@@ -77,8 +77,8 @@ export async function addWork(work: Omit<Work, 'createdAt' | 'updatedAt'>): Prom
     credentials: 'include',
   })
   if (!response.ok) {
-    const error = (await response.json()) as ApiErrorResponse
-    throw new Error(error.error || '创建失败')
+    const error = (await response.json()) as ErrorData
+    throw new Error(error.message || '创建失败')
   }
   return transformWorkFromAPI((await response.json()) as WorkApiDto)
 }
@@ -92,8 +92,8 @@ export async function updateWork(id: number, patch: WorkEditablePatch): Promise<
     credentials: 'include',
   })
   if (!response.ok) {
-    const error = (await response.json()) as ApiErrorResponse
-    throw new Error(error.error || '修改失败')
+    const error = (await response.json()) as ErrorData
+    throw new Error(error.message || '修改失败')
   }
   return transformWorkFromAPI((await response.json()) as WorkApiDto)
 }
@@ -104,8 +104,8 @@ export async function deleteWork(id: number): Promise<void> {
     credentials: 'include',
   })
   if (!response.ok) {
-    const error = (await response.json()) as ApiErrorResponse
-    throw new Error(error.error || '删除失败')
+    const error = (await response.json()) as ErrorData
+    throw new Error(error.message || '删除失败')
   }
 }
 
@@ -118,8 +118,8 @@ export async function resubmitRejectedWork(work: Work, user: User, patch: WorkEd
     body: JSON.stringify({ action: 'submit', comment: '修改后重新提交审批' }),
   })
   if (!response.ok) {
-    const error = (await response.json()) as ApiErrorResponse
-    throw new Error(error.error || '重新提交失败')
+    const error = (await response.json()) as ErrorData
+    throw new Error(error.message || '重新提交失败')
   }
   return await getWorkById(work.id)
 }

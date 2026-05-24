@@ -7,7 +7,7 @@ import { useAuth } from '@/components/providers/auth-provider';
 import { getRoleName } from '@/features/users/domain/role.rules';
 import type { Role } from '@/features/users/client/user-client.types';
 import type { UserListItemDto } from "@/features/users/application/user.dto";
-import type { ApiErrorResponse } from '@/shared/http/api-response';
+import type { ErrorData } from '@/shared/http/api-response';
 import type { Department } from '@/features/departments/client/department-api';
 import type { MemberDto } from '@/features/members/application/member.dto';
 import { Button } from '@/components/ui/button';
@@ -140,10 +140,10 @@ export default function AdminPage() {
         credentials: 'include',
       });
 
-      const data = (await response.json()) as UserListItemDto & ApiErrorResponse;
+      const data = (await response.json()) as UserListItemDto & ErrorData;
 
       if (!response.ok) {
-        alert(data.error || '创建失败');
+        alert(data.message || '创建失败');
         return;
       }
 
@@ -163,25 +163,26 @@ export default function AdminPage() {
   };
 
   const handleToggleActive = async (u: User) => {
+    setUserList(prev => prev.map(item => item.id === u.id ? { ...item, isActive: !item.isActive } : item))
+
     try {
       const response = await fetch(`/api/users/${u.id}/status`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ isActive: !u.isActive }),
         credentials: 'include',
       });
 
       if (!response.ok) {
-        const data = (await response.json()) as ApiErrorResponse;
-        alert(data.error || '操作失败');
-        return;
+        const data = (await response.json()) as ErrorData;
+        alert(data.message || '操作失败');
+        setUserList(prev => prev.map(item => item.id === u.id ? { ...item, isActive: u.isActive } : item))
+        return
       }
 
-      fetchUsers();
+      const newIsActive = (await response.json()) as boolean
+      setUserList(prev => prev.map(item => item.id === u.id ? { ...item, isActive: newIsActive } : item))
     } catch (e) {
       alert((e as Error).message || '操作失败');
+      setUserList(prev => prev.map(item => item.id === u.id ? { ...item, isActive: u.isActive } : item))
     }
   };
 
@@ -195,8 +196,8 @@ export default function AdminPage() {
       });
 
       if (!response.ok) {
-        const data = (await response.json()) as ApiErrorResponse;
-        alert(data.error || '删除失败');
+        const data = (await response.json()) as ErrorData;
+        alert(data.message || '删除失败');
         return;
       }
 
@@ -238,8 +239,8 @@ export default function AdminPage() {
       });
 
       if (!response.ok) {
-        const data = (await response.json()) as ApiErrorResponse;
-        alert(data.error || '修改失败');
+        const data = (await response.json()) as ErrorData;
+        alert(data.message || '修改失败');
         return;
       }
 
@@ -279,8 +280,8 @@ export default function AdminPage() {
       });
 
       if (!response.ok) {
-        const data = (await response.json()) as ApiErrorResponse;
-        alert(data.error || '修改失败');
+        const data = (await response.json()) as ErrorData;
+        alert(data.message || '修改失败');
         return;
       }
 

@@ -2,7 +2,12 @@ import { verifyPassword } from '@/shared/auth/password'
 import { generateToken } from '@/shared/auth/jwt'
 import { err, ok, type Result } from '@/shared/result'
 import { findUserByUsernameWithDepartment } from '@/features/users/infrastructure/user.repository'
-import type { CurrentUserDto } from '@/features/users/application/user.dto'
+import type { CurrentUserDto, RoleDto } from '@/features/users/application/user.dto'
+
+export interface LoginInput {
+  username: string
+  password: string
+}
 
 export interface LoginOutput {
   user: CurrentUserDto
@@ -10,9 +15,9 @@ export interface LoginOutput {
 }
 
 export async function loginUseCase(
-  username: string,
-  password: string,
+  input: LoginInput,
 ): Promise<Result<LoginOutput>> {
+  const { username, password } = input
   if (!username || !password) {
     return err(400, '用户名和密码不能为空')
   }
@@ -38,7 +43,7 @@ export async function loginUseCase(
       id: user.id,
       username: user.username,
       name: user.name,
-      role: user.role as CurrentUserDto['role'],
+      role: user.role as RoleDto,
       departmentId: user.departmentId,
       departmentName: user.department?.name ?? '',
       isActive: user.isActive,

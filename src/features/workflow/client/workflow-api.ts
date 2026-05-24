@@ -6,11 +6,11 @@ import type {
   WorkflowActionResponse,
   WorkflowRecordsResponse,
 } from '@/features/workflow/contract/workflow-api.types'
-import type { ApiErrorResponse } from '@/shared/http/api-response'
+import type { ErrorData } from '@/shared/http/api-response'
 import { getWorkById } from '@/features/works/client/work-api'
 
-async function readWorkflowResult(response: Response): Promise<WorkflowActionResponse & ApiErrorResponse> {
-  return (await response.json()) as WorkflowActionResponse & ApiErrorResponse
+async function readWorkflowResult(response: Response): Promise<WorkflowActionResponse & ErrorData> {
+  return (await response.json()) as WorkflowActionResponse & ErrorData
 }
 
 export async function approveWork(user: User, work: Work, comment?: string, nextApproverId?: number | null) {
@@ -25,7 +25,7 @@ export async function approveWork(user: User, work: Work, comment?: string, next
       body: JSON.stringify(body),
     })
     const result = await readWorkflowResult(response)
-    if (!response.ok) throw new Error(result.error || '审批失败')
+    if (!response.ok) throw new Error(result.message || '审批失败')
     return await getWorkById(work.id)
   } catch (error) {
     console.error('Approve work error:', error)
@@ -42,7 +42,7 @@ export async function rejectWork(work: Work, user: User, reason = '审批退回'
       body: JSON.stringify({ action: 'reject', rejectReason: reason }),
     })
     const result = await readWorkflowResult(response)
-    if (!response.ok) throw new Error(result.error || '退回失败')
+    if (!response.ok) throw new Error(result.message || '退回失败')
     return await getWorkById(work.id)
   } catch (error) {
     console.error('Reject work error:', error)
@@ -59,7 +59,7 @@ export async function submitComplete(work: Work, user: User, proof: string) {
       body: JSON.stringify({ action: 'evidence', proof, comment: '提交完成' }),
     })
     const result = await readWorkflowResult(response)
-    if (!response.ok) throw new Error(result.error || '提交失败')
+    if (!response.ok) throw new Error(result.message || '提交失败')
     return await getWorkById(work.id)
   } catch (error) {
     console.error('Submit complete error:', error)
@@ -81,7 +81,7 @@ export async function submitAdjust(
       body: JSON.stringify({ action: 'adjust', adjustReason: reason, comment: '申请调整' }),
     })
     const result = await readWorkflowResult(response)
-    if (!response.ok) throw new Error(result.error || '申请调整失败')
+    if (!response.ok) throw new Error(result.message || '申请调整失败')
     return await getWorkById(work.id)
   } catch (error) {
     console.error('Submit adjust error:', error)
@@ -98,7 +98,7 @@ export async function submitCancel(work: Work, user: User, reason: string) {
       body: JSON.stringify({ action: 'cancel', cancelReason: reason, comment: '申请取消' }),
     })
     const result = await readWorkflowResult(response)
-    if (!response.ok) throw new Error(result.error || '申请取消失败')
+    if (!response.ok) throw new Error(result.message || '申请取消失败')
     return await getWorkById(work.id)
   } catch (error) {
     console.error('Submit cancel error:', error)
@@ -123,7 +123,7 @@ export async function submitWork(
       body: JSON.stringify(body),
     })
     const result = await readWorkflowResult(response)
-    if (!response.ok) throw new Error(result.error || '提交审批失败')
+    if (!response.ok) throw new Error(result.message || '提交审批失败')
     return await getWorkById(work.id)
   } catch (error) {
     console.error('Submit work error:', error)
@@ -145,7 +145,7 @@ export async function submitTodoDecomposition(
       body: JSON.stringify({ action: 'decompose', nodes, comment: '待办分解' }),
     })
     const result = await readWorkflowResult(response)
-    if (!response.ok) throw new Error(result.error || '分解失败')
+    if (!response.ok) throw new Error(result.message || '分解失败')
     return await getWorkById(work.id)
   } catch (error) {
     console.error('Submit todo decomposition error:', error)
