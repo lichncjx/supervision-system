@@ -16,7 +16,7 @@ export const DELETE = withApiHandler(
     }
 
     const result = await deleteAttachmentUseCase({ currentUser, attachmentId })
-    if (result.kind === 'error') return fromError(result)
+    if (!result.ok) return fromError(result)
 
     return ok()
   },

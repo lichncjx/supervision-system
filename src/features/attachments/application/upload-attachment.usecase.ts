@@ -1,17 +1,6 @@
 import type { BaseCurrentUser } from '@/shared/auth/current-user'
 import type { AttachmentDto } from '@/features/attachments/application/attachment.dto'
 import { type Result, ok, err } from '@/shared/result'
-
-export interface UploadAttachmentInput {
-  currentUser: BaseCurrentUser
-  workItemId: number
-  fileName: string
-  fileBuffer: Buffer
-  fileSize: number
-  ext: string
-  category: string
-}
-
 import {
   canViewAttachment,
   canUploadAttachment,
@@ -23,6 +12,16 @@ import {
 } from '@/features/attachments/infrastructure/attachment.repository'
 import { saveUploadedFile } from '@/features/attachments/infrastructure/local-file-storage'
 import { toPermissionUser } from '@/features/works/domain/work-permission-user.mapper'
+
+export interface UploadAttachmentInput {
+  currentUser: BaseCurrentUser
+  workItemId: number
+  fileName: string
+  fileBuffer: Buffer
+  fileSize: number
+  ext: string
+  category: string
+}
 
 export async function uploadAttachmentUseCase(
   input: UploadAttachmentInput,

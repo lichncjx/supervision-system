@@ -18,14 +18,14 @@ export const GET = withApiHandler(async (
   }
 
   const result = await downloadAttachmentUseCase({ currentUser, attachmentId })
-  if (result.kind === 'error') return fromError(result)
+  if (!result.ok) return fromError(result)
 
-  return new NextResponse(result.fileBuffer as unknown as BodyInit, {
+  return new NextResponse(result.data.fileBuffer as unknown as BodyInit, {
     status: 200,
     headers: {
-      'Content-Type': result.contentType,
-      'Content-Disposition': `attachment; filename="${encodeURIComponent(result.fileName)}"`,
-      'Content-Length': String(result.fileBuffer.length),
+      'Content-Type': result.data.contentType,
+      'Content-Disposition': `attachment; filename="${encodeURIComponent(result.data.fileName)}"`,
+      'Content-Length': String(result.data.fileBuffer.length),
     },
   })
 })

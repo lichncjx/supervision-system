@@ -1,5 +1,6 @@
 import type { BaseCurrentUser } from '@/shared/auth/current-user'
 import { WorkItemType, type Prisma } from '@prisma/client'
+import { err, ok, type Result } from '@/shared/result'
 import { getResponsibleDepartmentIds } from '@/features/works/domain/work.permissions'
 import { buildWorkVisibilityWhere } from '@/shared/db/work-visibility-builder'
 import { isDepartmentLevel, isGlobalView } from '@/features/users/domain/role.rules'
@@ -21,14 +22,6 @@ export interface GetCompletionRateInput {
   startDate: string | null
   endDate: string | null
 }
-
-export type GetCompletionRateResult =
-  | {
-      kind: 'ok'
-      items: CompletionRateStat[]
-      total: number
-    }
-  | { kind: 'error'; status: number; message: string }
 
 async function getDepartmentStats(
   departmentId: number,
@@ -75,7 +68,7 @@ function normalizeTypeFilter(type: string | null): WorkItemType | undefined {
 
 export async function getCompletionRateUseCase(
   input: GetCompletionRateInput,
-): Promise<GetCompletionRateResult> {
+): Promise<Result<CompletionRateStat[]>> {
   const { currentUser, type, startDate, endDate } = input
 
   const visibilityWhere = await buildWorkVisibilityWhere(currentUser, false)
@@ -84,7 +77,7 @@ export async function getCompletionRateUseCase(
   const eDate = endDate ? new Date(endDate) : undefined
   const typeFilter = normalizeTypeFilter(type)
   if (type && !typeFilter) {
-    return { kind: 'error', status: 400, message: '无效的事项类型' }
+    return err(400, '无效的事项类型')
   }
 
   let departments: Department[]
@@ -111,5 +104,5 @@ export async function getCompletionRateUseCase(
     ),
   )
 
-  return { kind: 'ok', items: stats, total: stats.length }
+  return ok(stats)
 }
