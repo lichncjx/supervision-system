@@ -219,7 +219,7 @@ sh migrate.sh
 **问题**：提示 `.env` 文件未找到
 
 **解决**：
-1. 复制 `deploy/synology/.env.example` 为 `.env`
+1. 复制 `.env.example` 为 `.env`
 2. 填写必要的配置项
 
 ### POSTGRES_PASSWORD 不一致

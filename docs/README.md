@@ -11,7 +11,7 @@
 
 ### 部署运维
 
-1. [群晖部署说明](../../deploy/synology/README.md) — 群晖 NAS Docker 部署
+1. [群晖部署说明](../deploy/synology/README.md) — 群晖 NAS Docker 部署
 2. [Vercel 部署说明](deploy/Vercel部署说明.md) — Vercel 环境配置与测试数据初始化
 
 ### 发布与测试
