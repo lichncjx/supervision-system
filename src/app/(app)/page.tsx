@@ -311,7 +311,7 @@ export default function DashboardPage() {
             <div className="flex items-center gap-2">
               <h3 className="text-sm font-semibold text-slate-500 tracking-wide flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-orange-300" />
-                临超期
+                到期提醒
               </h3>
               {(stats.expiring + stats.overdue) > 0 && (
                 <span className="inline-flex items-center justify-center min-w-[1.25rem] h-5 rounded-full bg-slate-100 text-slate-500 text-xs font-semibold px-1.5 tabular-nums">
@@ -354,7 +354,7 @@ export default function DashboardPage() {
             <div className="flex items-center gap-2">
               <h3 className="text-sm font-semibold text-slate-500 tracking-wide flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-purple-400" />
-                待处理
+                处理中心
               </h3>
               {(stats.approving + stats.handling) > 0 && (
                 <span className="inline-flex items-center justify-center min-w-[1.25rem] h-5 rounded-full bg-slate-100 text-slate-500 text-xs font-semibold px-1.5 tabular-nums">
