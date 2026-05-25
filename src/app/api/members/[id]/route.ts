@@ -4,7 +4,6 @@ import { withApiHandler } from '@/shared/http/with-api-handler'
 import { ok, fail, fromError } from '@/shared/http/api-response'
 import { Role } from '@prisma/client'
 import { updateMemberUseCase } from '@/features/members/application/update-member.usecase'
-import type { UpdateMemberRequest } from '@/features/members/contract/member-api.types'
 
 export const PATCH = withApiHandler(
   async (request: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
@@ -20,17 +19,8 @@ export const PATCH = withApiHandler(
       return fail('无效的人员ID', 400)
     }
 
-    const body = (await request.json()) as UpdateMemberRequest
-    const result = await updateMemberUseCase({
-      memberId,
-      name: body.name,
-      departmentId: body.departmentId,
-      phone: body.phone,
-      isLeader: body.isLeader,
-      sortOrder: body.sortOrder,
-      isActive: body.isActive,
-      userId: body.userId,
-    })
+    const body = await request.json()
+    const result = await updateMemberUseCase({ ...body, memberId })
 
     if (!result.ok) return fromError(result)
 

@@ -12,7 +12,7 @@ const TYPE_LABEL: Record<string, string> = {
   TODO: '待办',
 }
 
-interface WorkApiSource {
+interface WorkSource {
   id: number
   title: string
   type: string
@@ -76,7 +76,7 @@ function parseJsonField<T>(value: unknown, fallback: T): T {
 }
 
 function toWorkAttachments(
-  attachments: WorkApiSource['attachments'],
+  attachments: WorkSource['attachments'],
 ): AttachmentDto[] | undefined {
   return attachments?.map((attachment) => ({
     id: attachment.id,
@@ -90,7 +90,7 @@ function toWorkAttachments(
   }))
 }
 
-export function toWorkDto(work: WorkApiSource): WorkDto {
+export function toWorkDto(work: WorkSource): WorkDto {
   return {
     id: work.id,
     title: work.title,

@@ -1,6 +1,6 @@
 import { prisma } from '@/shared/db/prisma'
 import type { Prisma } from '@prisma/client'
-import { toMemberResponse } from '@/features/members/application/member.dto'
+import { toMemberDto } from '@/features/members/application/member.dto'
 import { updateMemberWithRelations } from '@/features/members/infrastructure/member.repository'
 import { findDepartmentById } from '@/features/departments/infrastructure/department.repository'
 import { type Result, ok, err } from '@/shared/result'
@@ -82,6 +82,6 @@ export async function updateMemberUseCase(
 
   const updated = await updateMemberWithRelations({ id: input.memberId }, updateData)
 
-  const memberData = toMemberResponse(updated)
+  const memberData = toMemberDto(updated)
   return ok(warnings.length > 0 ? { ...memberData, warnings } : memberData)
 }

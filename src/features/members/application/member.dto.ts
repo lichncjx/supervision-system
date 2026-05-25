@@ -22,11 +22,13 @@ export interface MemberDto {
   updatedAt: string
 }
 
+export type MemberOptionDto = Pick<MemberDto, 'id' | 'name' | 'departmentId' | 'departmentName' | 'isLeader'>
+
 export interface MemberMutation extends MemberDto {
   warnings?: string[]
 }
 
-export function toMemberResponse(m: MemberWithRelations): MemberDto {
+export function toMemberDto(m: MemberWithRelations): MemberDto {
   return {
     id: m.id,
     name: m.name,

@@ -1,5 +1,5 @@
 import { prisma } from '@/shared/db/prisma'
-import { toMemberResponse } from '@/features/members/application/member.dto'
+import { toMemberDto } from '@/features/members/application/member.dto'
 import { createMemberWithRelations } from '@/features/members/infrastructure/member.repository'
 import { findDepartmentById } from '@/features/departments/infrastructure/department.repository'
 import { type Result, ok, err } from '@/shared/result'
@@ -9,8 +9,8 @@ export interface CreateMemberInput {
   name: string
   departmentId: number
   phone?: string | null
-  isLeader: boolean
-  sortOrder: number
+  isLeader?: boolean
+  sortOrder?: number
   userId?: number | null
   importFromUserId?: number
 }
@@ -77,13 +77,13 @@ export async function createMemberUseCase(
   const member = await createMemberWithRelations({
     name: resolvedName,
     phone: resolvedPhone,
-    isLeader: input.isLeader,
-    sortOrder: input.sortOrder,
+    isLeader: input.isLeader ?? false,
+    sortOrder: input.sortOrder ?? 0,
     isActive: true,
     department: { connect: { id: resolvedDepartmentId } },
     ...(resolvedUserId ? { user: { connect: { id: resolvedUserId } } } : {}),
   })
 
-  const memberData = toMemberResponse(member)
+  const memberData = toMemberDto(member)
   return ok(warnings.length > 0 ? { ...memberData, warnings } : memberData)
 }

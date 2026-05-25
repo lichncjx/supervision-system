@@ -1,5 +1,5 @@
 import type { Prisma } from '@prisma/client'
-import { toMemberResponse } from '@/features/members/application/member.dto'
+import { toMemberDto } from '@/features/members/application/member.dto'
 import { findMembersForApi } from '@/features/members/infrastructure/member.repository'
 import type { MemberDto } from '@/features/members/application/member.dto'
 
@@ -27,5 +27,5 @@ export async function queryMembersUseCase(
   }
 
   const members = await findMembersForApi(where)
-  return members.map(toMemberResponse)
+  return members.map(toMemberDto)
 }
