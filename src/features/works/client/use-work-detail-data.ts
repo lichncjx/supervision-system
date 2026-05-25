@@ -39,7 +39,7 @@ export function useWorkDetailData(id: string) {
 
   useEffect(() => {
     if (work) {
-      getWorkflowRecords(work.id).then(setWorkflowRecords);
+      getWorkflowRecords(work.id).then(setWorkflowRecords).catch(() => setWorkflowRecords([]));
     }
   }, [work, refresh]);
 

@@ -142,8 +142,8 @@ export default function ItemListPage() {
     try {
       const res = await fetch(`/api/excel/export?${params.toString()}`, { credentials: 'include' });
       if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: '导出失败' }));
-        alert(err.error || '导出失败');
+        const err = await res.json().catch(() => ({ message: '导出失败' }));
+        alert(err.message || '导出失败');
         return;
       }
       const blob = await res.blob();
@@ -191,7 +191,7 @@ export default function ItemListPage() {
       const result = await response.json();
 
       if (!response.ok) {
-        alert(result.error || '导入失败');
+        alert(result.message || '导入失败');
       } else {
         alert('导入成功');
         load();
@@ -207,8 +207,8 @@ export default function ItemListPage() {
     try {
       const res = await fetch(`/api/excel/template/${routeType}`, { credentials: 'include' });
       if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: '下载模板失败' }));
-        alert(err.error || '下载模板失败');
+        const err = await res.json().catch(() => ({ message: '下载模板失败' }));
+        alert(err.message || '下载模板失败');
         return;
       }
       const blob = await res.blob();
