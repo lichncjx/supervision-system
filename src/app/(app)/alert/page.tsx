@@ -74,7 +74,7 @@ export default function AlertPage() {
       <h1 className="stagger-1 flex items-center gap-3 text-2xl font-bold text-slate-800">
         <span className="w-1 h-6 rounded-full bg-orange-500" />
         <AlertTriangle className="h-6 w-6 text-orange-500" />
-        临超期
+        到期提醒
       </h1>
 
       <div className="stagger-2 flex rounded-full bg-slate-100 p-1 w-fit">
