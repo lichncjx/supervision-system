@@ -1,6 +1,8 @@
+import type { ErrorCode } from '@/shared/errors/error-codes'
+
 export class AppError extends Error {
   constructor(
-    public code: string,
+    public code: ErrorCode,
     message: string,
     public status = 400,
   ) {

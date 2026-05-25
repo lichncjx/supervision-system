@@ -1,8 +1,8 @@
 import { NextRequest } from 'next/server'
-import { success } from '@/shared/http/api-response'
+import { ok } from '@/shared/http/api-response'
 
 export async function POST(request: NextRequest) {
-  const response = success()
+  const response = ok()
 
   const isHttps = request.headers.get('x-forwarded-proto') === 'https' ||
     process.env.NODE_ENV !== 'production'

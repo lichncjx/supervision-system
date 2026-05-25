@@ -1,12 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { requireCurrentUser } from '@/shared/auth/current-user'
 import { withApiHandler } from '@/shared/http/with-api-handler'
-import { fail, fromError } from '@/shared/http/api-response'
+import { ok, fail } from '@/shared/http/api-response'
 import { importWorksFromExcelUseCase } from '@/features/excel/application/import-works-from-excel.usecase'
-import type {
-  ImportExcelSuccessResponse,
-  ImportExcelValidationErrorResponse,
-} from '@/features/excel/contract/excel-api.types'
 
 export const POST = withApiHandler(
   async (request: NextRequest, { params }: { params: Promise<{ type: string }> }) => {
@@ -44,11 +40,10 @@ export const POST = withApiHandler(
       fileName: file.name,
     })
 
-    if (result.kind === 'error') return fromError(result)
-
-    if (result.kind === 'validation-error') {
+    if (!result.ok) {
+      const details = result.details as { reason: string }[] | undefined
       const status =
-        result.details.some(
+        details?.some(
           (d) =>
             d.reason.includes('部门用户只能导入') ||
             d.reason.includes('公司领导普通导入') ||
@@ -57,21 +52,10 @@ export const POST = withApiHandler(
         )
           ? 403
           : 400
-      const response: ImportExcelValidationErrorResponse = {
-        success: false,
-        error: result.error,
-        details: result.details,
-      }
 
-      return NextResponse.json(response, { status })
+      return fail(result.message, status, undefined, details)
     }
 
-    const response: ImportExcelSuccessResponse = {
-      success: true,
-      imported: result.imported,
-      message: result.message,
-    }
-
-    return NextResponse.json(response)
+    return ok({ imported: result.data })
   },
 )

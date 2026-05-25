@@ -1,6 +1,5 @@
 import { ActionType, ApprovalType, WorkItemStatus } from '@prisma/client'
-import type { CurrentUser } from '@/shared/auth/current-user'
-import type { WorkflowResult } from '@/features/workflow/domain/workflow.types'
+import type { BaseCurrentUser } from '@/shared/auth/current-user'
 import {
   canUserOperate,
   getProcessFirstApprover,
@@ -11,35 +10,36 @@ import {
   createWorkflowRecord,
   createOperationLog,
 } from '@/features/workflow/infrastructure/workflow.repository'
+import { type Result, err, ok } from '@/shared/result'
 
 export async function submitCancellation(
   workItemId: number,
-  user: CurrentUser,
+  user: BaseCurrentUser,
   cancelReason: string,
   comment?: string,
-): Promise<WorkflowResult> {
+): Promise<Result> {
   const permUser = toPermissionUser(user)
   const workItem = await findWorkForUpdateById(workItemId)
   if (!workItem) {
-    return { success: false, error: '事项不存在' }
+    return err(404, '事项不存在')
   }
 
   if (workItem.status !== WorkItemStatus.IN_PROGRESS) {
-    return { success: false, error: '只有进行中事项可以申请取消' }
+    return err(400, '只有进行中事项可以申请取消')
   }
 
   // 办理人权限按 firstSubmitterId ?? creatorId 保留，不随当前主责部门人员调整而收回。
   if (!canUserOperate(user, workItem)) {
-    return { success: false, error: '无权申请取消' }
+    return err(403, '无权申请取消')
   }
 
   const oldStatus = workItem.status
   const approver = getProcessFirstApprover(workItem, user)
   if (!approver) {
-    return { success: false, error: '请先指定公司领导后再提交审批' }
+    return err(400, '请先指定公司领导后再提交审批')
   }
 
-  const updated = await updateWorkItem(workItemId, {
+  await updateWorkItem(workItemId, {
     status: WorkItemStatus.CANCELLING,
     action: ActionType.CANCEL,
     cancelReason,
@@ -57,7 +57,7 @@ export async function submitCancellation(
     operatorId: user.id,
     operatorRole: permUser.role,
     statusBefore: oldStatus,
-    statusAfter: updated.status,
+    statusAfter: WorkItemStatus.CANCELLING,
     comment: comment || '申请取消',
   })
   await createOperationLog({
@@ -70,5 +70,5 @@ export async function submitCancellation(
     targetId: workItemId,
   })
 
-  return { success: true, workItem: updated }
+  return ok()
 }

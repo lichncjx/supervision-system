@@ -1,19 +1,16 @@
 import { Role } from '@prisma/client'
 import { isGlobalView, isCompanyLevel } from '@/features/users/domain/role.rules'
 import { findUsersByDepartment } from '@/features/users/infrastructure/user.repository'
-import { toUserApiDto } from '@/features/users/application/user-api.mapper'
-import type { UserApiDto } from '@/features/users/contract/user-api.types'
-
-export type ListDepartmentUsersResult =
-  | { kind: 'ok'; data: UserApiDto[] }
-  | { kind: 'error'; status: number; message: string }
+import { toUserDto } from "./user.dto"
+import type { UserDto } from "./user.dto"
+import { type Result, err, ok } from '@/shared/result'
 
 export async function listDepartmentLeadersUseCase(
   currentUser: { id: number; role: string; departmentId: number },
   departmentId: number,
-): Promise<ListDepartmentUsersResult> {
+): Promise<Result<UserDto[]>> {
   if (isNaN(departmentId)) {
-    return { kind: 'error', status: 400, message: '请提供部门ID' }
+    return err(400, '请提供部门ID')
   }
 
   if (
@@ -21,19 +18,19 @@ export async function listDepartmentLeadersUseCase(
     !isCompanyLevel(currentUser.role) &&
     currentUser.departmentId !== departmentId
   ) {
-    return { kind: 'error', status: 403, message: '无权限查询其他部门领导' }
+    return err(403, '无权限查询其他部门领导')
   }
 
   const leaders = await findUsersByDepartment(departmentId, Role.DEPARTMENT_LEADER)
-  return { kind: 'ok', data: leaders.map(toUserApiDto) }
+  return ok(leaders.map(toUserDto))
 }
 
 export async function listDepartmentManagersUseCase(
   currentUser: { id: number; role: string; departmentId: number },
   departmentId: number,
-): Promise<ListDepartmentUsersResult> {
+): Promise<Result<UserDto[]>> {
   if (isNaN(departmentId)) {
-    return { kind: 'error', status: 400, message: '请提供部门ID' }
+    return err(400, '请提供部门ID')
   }
 
   if (
@@ -41,9 +38,9 @@ export async function listDepartmentManagersUseCase(
     !isCompanyLevel(currentUser.role) &&
     currentUser.departmentId !== departmentId
   ) {
-    return { kind: 'error', status: 403, message: '无权限查询其他部门主管' }
+    return err(403, '无权限查询其他部门主管')
   }
 
   const managers = await findUsersByDepartment(departmentId, Role.DEPARTMENT_MANAGER)
-  return { kind: 'ok', data: managers.map(toUserApiDto) }
+  return ok(managers.map(toUserDto))
 }

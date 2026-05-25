@@ -1,6 +1,5 @@
 import { ActionType, ApprovalType, WorkItemStatus, WorkItemType } from '@prisma/client'
-import type { CurrentUser } from '@/shared/auth/current-user'
-import type { WorkflowResult } from '@/features/workflow/domain/workflow.types'
+import type { BaseCurrentUser } from '@/shared/auth/current-user'
 import {
   canUserOperate,
   companyLeaderAssignment,
@@ -12,26 +11,27 @@ import {
   createWorkflowRecord,
   createOperationLog,
 } from '@/features/workflow/infrastructure/workflow.repository'
+import { type Result, err, ok } from '@/shared/result'
 
 export async function submitCompletion(
   workItemId: number,
-  user: CurrentUser,
+  user: BaseCurrentUser,
   proof: string,
   comment?: string,
-): Promise<WorkflowResult> {
+): Promise<Result> {
   const permUser = toPermissionUser(user)
   const workItem = await findWorkForUpdateById(workItemId)
   if (!workItem) {
-    return { success: false, error: '事项不存在' }
+    return err(404, '事项不存在')
   }
 
   if (workItem.status !== WorkItemStatus.IN_PROGRESS) {
-    return { success: false, error: '只有进行中事项可以提交完成申请' }
+    return err(400, '只有进行中事项可以提交完成申请')
   }
 
   // 办理人权限按 firstSubmitterId ?? creatorId 保留，不随当前主责部门人员调整而收回。
   if (!canUserOperate(user, workItem)) {
-    return { success: false, error: '无权提交完成申请' }
+    return err(403, '无权提交完成申请')
   }
 
   const oldStatus = workItem.status
@@ -40,10 +40,10 @@ export async function submitCompletion(
       ? companyLeaderAssignment(workItem, 'approval')
       : getProcessFirstApprover(workItem, user)
   if (!approver) {
-    return { success: false, error: '请先指定公司领导后再提交审批' }
+    return err(400, '请先指定公司领导后再提交审批')
   }
 
-  const updated = await updateWorkItem(workItemId, {
+  await updateWorkItem(workItemId, {
     status: WorkItemStatus.COMPLETING,
     action: ActionType.COMPLETE,
     proof,
@@ -61,7 +61,7 @@ export async function submitCompletion(
     operatorId: user.id,
     operatorRole: permUser.role,
     statusBefore: oldStatus,
-    statusAfter: updated.status,
+    statusAfter: WorkItemStatus.COMPLETING,
     comment: comment || '提交完成申请',
   })
   await createOperationLog({
@@ -74,5 +74,5 @@ export async function submitCompletion(
     targetId: workItemId,
   })
 
-  return { success: true, workItem: updated }
+  return ok()
 }

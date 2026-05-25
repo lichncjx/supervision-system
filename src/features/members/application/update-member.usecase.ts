@@ -1,8 +1,10 @@
 import { prisma } from '@/shared/db/prisma'
-import { toMemberResponse } from '@/features/members/application/member.dto'
+import type { Prisma } from '@prisma/client'
+import { toMemberDto } from '@/features/members/application/member.dto'
+import { updateMemberWithRelations } from '@/features/members/infrastructure/member.repository'
 import { findDepartmentById } from '@/features/departments/infrastructure/department.repository'
 import { type Result, ok, err } from '@/shared/result'
-import type { MemberMutationResponse } from '@/features/members/contract/member-api.types'
+import type { MemberMutation } from '@/features/members/application/member.dto'
 
 export interface UpdateMemberInput {
   memberId: number
@@ -17,7 +19,7 @@ export interface UpdateMemberInput {
 
 export async function updateMemberUseCase(
   input: UpdateMemberInput,
-): Promise<Result<MemberMutationResponse>> {
+): Promise<Result<MemberMutation>> {
   const member = await prisma.member.findUnique({
     where: { id: input.memberId },
     include: { department: true, user: true },
@@ -27,7 +29,7 @@ export async function updateMemberUseCase(
   }
 
   const warnings: string[] = []
-  const updateData: Record<string, unknown> = {}
+  const updateData: Prisma.MemberUpdateInput = {}
 
   if (input.name !== undefined) updateData.name = input.name
   if (input.departmentId !== undefined) {
@@ -35,7 +37,7 @@ export async function updateMemberUseCase(
     if (!dept) {
       return err(400, '部门不存在')
     }
-    updateData.departmentId = input.departmentId
+    updateData.department = { connect: { id: input.departmentId } }
   }
   if (input.phone !== undefined) updateData.phone = input.phone
   if (input.isLeader !== undefined) updateData.isLeader = input.isLeader
@@ -75,18 +77,11 @@ export async function updateMemberUseCase(
         warnings.push('该系统用户已被停用')
       }
     }
-    updateData.userId = input.userId
+    updateData.user = input.userId ? { connect: { id: input.userId } } : { disconnect: true }
   }
 
-  const updated = await prisma.member.update({
-    where: { id: input.memberId },
-    data: updateData,
-    include: {
-      user: { select: { id: true, username: true, name: true, isActive: true } },
-      department: { select: { id: true, name: true } },
-    },
-  })
+  const updated = await updateMemberWithRelations({ id: input.memberId }, updateData)
 
-  const memberData = toMemberResponse(updated)
+  const memberData = toMemberDto(updated)
   return ok(warnings.length > 0 ? { ...memberData, warnings } : memberData)
 }

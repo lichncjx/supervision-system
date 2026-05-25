@@ -1,4 +1,4 @@
-import type { CurrentUser } from '@/shared/auth/current-user'
+import type { BaseCurrentUser } from '@/shared/auth/current-user'
 import { Role } from '@prisma/client'
 import { canEditWorkItem } from '@/features/works/domain/work.permissions'
 import { toPermissionUser } from '@/features/works/domain/work-permission-user.mapper'
@@ -12,13 +12,36 @@ import {
   validateMemberAssignments,
   type MemberAssignment,
 } from '@/features/members/domain/member.rules'
-import { toWorkApiDto } from '@/features/works/application/work-api.mapper'
-import type { UpdateWorkRequest, WorkApiDto } from '@/features/works/contract/work-api.types'
+import { toWorkDto } from '@/features/works/application/work.mapper'
+import type { WorkDto } from './work.dto'
+import { type Result, err, ok } from '@/shared/result'
 
-export type UpdateWorkBody = UpdateWorkRequest
+export interface UpdateWorkBody {
+  title?: string | null
+  departmentId?: number
+  workItem?: string | null
+  workNode?: string | null
+  businessCategory?: string | null
+  completeForm?: string | null
+  isInnovation?: boolean | null
+  responsibleLeader?: string | null
+  responsiblePerson?: string | null
+  responsibleLeaderMemberId?: number | null
+  responsiblePersonMemberId?: number | null
+  proposedLeader?: string | null
+  proposedLeaderId?: number | null
+  proposedScene?: string | null
+  formedTime?: string | null
+  cooperators?: unknown
+  workPlan?: string | null
+  planCompleteTime?: string | null
+  progress?: string | null
+  approvalLeaderId?: number | null
+  nodes?: unknown
+}
 
 export interface UpdateWorkInput {
-  currentUser: CurrentUser
+  currentUser: BaseCurrentUser
   workId: number
   body: UpdateWorkBody
 }
@@ -28,25 +51,17 @@ function convertToDateTime(dateStr: string | null | undefined): Date | null {
   return new Date(dateStr + 'T00:00:00.000Z')
 }
 
-export type UpdateWorkResult =
-  | { kind: 'ok'; data: WorkApiDto }
-  | { kind: 'error'; status: number; message: string }
-
-export async function updateWorkUseCase(input: UpdateWorkInput): Promise<UpdateWorkResult> {
+export async function updateWorkUseCase(input: UpdateWorkInput): Promise<Result<WorkDto>> {
   const { currentUser, workId, body } = input
 
   const work = await findWorkForUpdateById(workId)
 
   if (!work) {
-    return { kind: 'error', status: 404, message: '事项不存在' }
+    return err(404, '事项不存在')
   }
 
   if (!canEditWorkItem(toPermissionUser(currentUser), work)) {
-    return {
-      kind: 'error',
-      status: 403,
-      message: '只能修改草稿或已退回状态的本权限事项',
-    }
+    return err(403, '只能修改草稿或已退回状态的本权限事项')
   }
 
   // Validate member IDs if provided
@@ -69,7 +84,7 @@ export async function updateWorkUseCase(input: UpdateWorkInput): Promise<UpdateW
     }
     const errors = await validateMemberAssignments(assignments)
     if (errors.length > 0) {
-      return { kind: 'error', status: 400, message: errors[0].message }
+      return err(400, errors[0].message)
     }
   }
 
@@ -95,7 +110,7 @@ export async function updateWorkUseCase(input: UpdateWorkInput): Promise<UpdateW
     }
     const coopErrors = await validateMemberAssignments(coopAssignments)
     if (coopErrors.length > 0) {
-      return { kind: 'error', status: 400, message: `配合方: ${coopErrors[0].message}` }
+      return err(400, `配合方: ${coopErrors[0].message}`)
     }
   }
 
@@ -103,7 +118,7 @@ export async function updateWorkUseCase(input: UpdateWorkInput): Promise<UpdateW
   if (body.departmentId !== undefined) {
     const dept = await findDepartmentById(body.departmentId)
     if (!dept) {
-      return { kind: 'error', status: 400, message: '部门不存在' }
+      return err(400, '部门不存在')
     }
     updateData.departmentId = body.departmentId
   }
@@ -143,5 +158,5 @@ export async function updateWorkUseCase(input: UpdateWorkInput): Promise<UpdateW
     workTitle: updatedWork.title,
   })
 
-  return { kind: 'ok', data: toWorkApiDto(updatedWork) }
+  return ok(toWorkDto(updatedWork))
 }

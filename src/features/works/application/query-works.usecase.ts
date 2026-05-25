@@ -1,6 +1,7 @@
 import type { BaseCurrentUser } from '@/shared/auth/current-user'
 import { WorkItemType, WorkItemStatus } from '@prisma/client'
 import type { Prisma } from '@prisma/client'
+import { type Result, err, ok } from '@/shared/result'
 import {
   canViewWorkItem,
   shouldHandleWorkItem,
@@ -11,8 +12,8 @@ import { toPermissionUser } from '@/features/works/domain/work-permission-user.m
 import { isGlobalView } from '@/features/users/domain/role.rules'
 import { findManyWorks, type WorkListRow } from '@/features/works/infrastructure/work.repository'
 import { buildWorkVisibilityWhere } from '@/shared/db/work-visibility-builder'
-import { toWorkApiDto } from '@/features/works/application/work-api.mapper'
-import type { WorkApiDto } from '@/features/works/contract/work-api.types'
+import { toWorkDto } from '@/features/works/application/work.mapper'
+import type { WorkDto } from './work.dto'
 import {
   isExpiringWorkItem,
   isOverdueWorkItem,
@@ -30,19 +31,15 @@ export interface QueryWorksParams {
 export type StatusFilter =
   | { kind: 'where'; where: Prisma.WorkItemWhereInput }
   | {
-      kind: 'post'
-      where: Prisma.WorkItemWhereInput
-      postFilter: 'handling' | 'overdue' | 'expiring' | 'approving'
-    }
+    kind: 'post'
+    where: Prisma.WorkItemWhereInput
+    postFilter: 'handling' | 'overdue' | 'expiring' | 'approving'
+  }
 
 export interface QueryWorksInput {
   currentUser: BaseCurrentUser
   params: QueryWorksParams
 }
-
-export type QueryWorksResult =
-  | { kind: 'ok'; data: WorkApiDto[] }
-  | { kind: 'error'; status: 400; message: string }
 
 // ── Constants ──
 
@@ -57,7 +54,10 @@ const ON_GOING_STATUSES = [
   WorkItemStatus.PENDING_DECOMPOSE,
   WorkItemStatus.IN_PROGRESS,
 ]
-const TERMINAL_STATUSES: WorkItemStatus[] = [WorkItemStatus.COMPLETED, WorkItemStatus.CANCELLED]
+const TERMINAL_STATUSES = [
+  WorkItemStatus.COMPLETED,
+  WorkItemStatus.CANCELLED,
+]
 
 // ── Parsers ──
 
@@ -130,8 +130,8 @@ function parseWorkStatusFilter(raw: string | null): StatusFilter | null {
 
 // ── Private helpers ──
 
-function toWorkListItems(works: WorkListRow[]): WorkApiDto[] {
-  return works.map(toWorkApiDto)
+function toWorkListItems(works: WorkListRow[]): WorkDto[] {
+  return works.map(toWorkDto)
 }
 
 function applyPostFilter(
@@ -161,17 +161,17 @@ async function buildWorksWhere(
   params: QueryWorksParams,
   currentUser: PermissionUser,
 ): Promise<
-  | { kind: 'ok'; where: Prisma.WorkItemWhereInput; statusFilter: StatusFilter | null }
-  | { kind: 'error'; status: 400; message: string }
+  | { ok: true; where: Prisma.WorkItemWhereInput; statusFilter: StatusFilter | null }
+  | { ok: false; status: number; message: string }
 > {
   const workType = parseWorkType(params.type)
   if (hasFilterValue(params.type) && !workType) {
-    return { kind: 'error', status: 400, message: '无效的事项类型筛选条件' }
+    return err(400, '无效的事项类型筛选条件')
   }
 
   const statusFilter = parseWorkStatusFilter(params.status)
   if (hasFilterValue(params.status) && !statusFilter) {
-    return { kind: 'error', status: 400, message: '无效的事项状态筛选条件' }
+    return err(400, '无效的事项状态筛选条件')
   }
 
   const filters: Prisma.WorkItemWhereInput[] = [await buildWorkVisibilityWhere(currentUser)]
@@ -202,19 +202,19 @@ async function buildWorksWhere(
   }
 
   const where = filters.length > 1 ? { AND: filters } : (filters[0] ?? {})
-  return { kind: 'ok', where, statusFilter }
+  return { ok: true, where, statusFilter }
 }
 
 // ── Usecase ──
 
 /** 查询事项列表：SQL 粗筛 → 权限/状态后过滤 → 转 DTO */
-export async function queryWorksUseCase(input: QueryWorksInput): Promise<QueryWorksResult> {
+export async function queryWorksUseCase(input: QueryWorksInput): Promise<Result<WorkDto[]>> {
   const { currentUser, params } = input
   const permUser = toPermissionUser(currentUser)
 
   // 构建 WHERE（可见性 + 类型/状态/部门/关键词），同时解析 statusFilter 供后过滤用
   const whereResult = await buildWorksWhere(params, permUser)
-  if (whereResult.kind === 'error') return whereResult
+  if (!whereResult.ok) return whereResult
 
   const { where, statusFilter } = whereResult
 
@@ -227,5 +227,5 @@ export async function queryWorksUseCase(input: QueryWorksInput): Promise<QueryWo
   // 状态后过滤（handling/approving/overdue/expiring 需应用层判断）
   const filteredWorks = applyPostFilter(viewableWorks, statusFilter, permUser)
 
-  return { kind: 'ok', data: toWorkListItems(filteredWorks) }
+  return ok(toWorkListItems(filteredWorks))
 }

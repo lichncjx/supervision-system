@@ -1,22 +1,22 @@
-export interface CompletionRateWorksInput {
+interface WorkToCalculate {
   type: string
   status: string
   planCompleteTime: Date | null
 }
 
-export function isCompletionRateCompleted(work: CompletionRateWorksInput) {
+export function isCompleted(work: WorkToCalculate) {
   return work.status === 'COMPLETED'
 }
 
-export function isCompletionRateCancelled(work: CompletionRateWorksInput) {
+export function isCancelled(work: WorkToCalculate) {
   return work.status === 'CANCELLED'
 }
 
-export function isCompletionRateOverdue(work: CompletionRateWorksInput) {
-  if (isCompletionRateCompleted(work) || isCompletionRateCancelled(work))
+export function isOverdue(work: WorkToCalculate) {
+  if (isCompleted(work) || isCancelled(work))
     return false
   const due = work.planCompleteTime
-  return due ? due < new Date() : false
+  return due && due < new Date()
 }
 
 export function formatCompletionRate(
@@ -47,18 +47,18 @@ export interface CompletionRateStat {
 }
 
 export function calculateDepartmentStats(
-  works: CompletionRateWorksInput[],
+  works: WorkToCalculate[],
 ): CompletionRateStat {
   const priority = works.filter((w) => w.type === 'PRIORITY')
   const main = works.filter((w) => w.type === 'MAIN')
   const todo = works.filter((w) => w.type === 'TODO')
 
-  const priorityCompleted = priority.filter(isCompletionRateCompleted).length
-  const mainCompleted = main.filter(isCompletionRateCompleted).length
-  const todoCompleted = todo.filter(isCompletionRateCompleted).length
+  const priorityCompleted = priority.filter(isCompleted).length
+  const mainCompleted = main.filter(isCompleted).length
+  const todoCompleted = todo.filter(isCompleted).length
 
-  const cancelled = works.filter(isCompletionRateCancelled).length
-  const overdue = works.filter(isCompletionRateOverdue).length
+  const cancelled = works.filter(isCancelled).length
+  const overdue = works.filter(isOverdue).length
 
   const priorityTotal = priority.length
   const mainTotal = main.length

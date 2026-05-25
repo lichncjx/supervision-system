@@ -1,11 +1,7 @@
 import type { User } from '@/features/users/client/user-client.types'
-import type {
-  CompanyLeadersResponse,
-  DepartmentUsersResponse,
-  UserApiDto,
-} from '@/features/users/contract/user-api.types'
+import type { UserDto } from '@/features/users/application/user.dto'
 
-function toClientUser(user: UserApiDto): User {
+function toClientUser(user: UserDto): User {
   return {
     id: user.id,
     name: user.name,
@@ -22,7 +18,7 @@ export async function getCompanyLeaders(): Promise<User[]> {
       credentials: 'include',
     })
     if (!response.ok) return []
-    const data = (await response.json()) as CompanyLeadersResponse
+    const data = (await response.json()) as UserDto[]
     return data.map(toClientUser)
   } catch {
     return []
@@ -39,7 +35,7 @@ export async function getDepartmentLeaders(departmentId: number): Promise<User[]
       },
     )
     if (!response.ok) return []
-    const data = (await response.json()) as DepartmentUsersResponse
+    const data = (await response.json()) as UserDto[]
     return data.map(toClientUser)
   } catch {
     return []
@@ -56,7 +52,7 @@ export async function getDepartmentManagers(departmentId: number): Promise<User[
       },
     )
     if (!response.ok) return []
-    const data = (await response.json()) as DepartmentUsersResponse
+    const data = (await response.json()) as UserDto[]
     return data.map(toClientUser)
   } catch {
     return []

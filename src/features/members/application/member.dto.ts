@@ -1,21 +1,34 @@
-import type { MemberApiDto } from '@/features/members/contract/member-api.types'
+import type { MemberWithRelations } from '@/features/members/infrastructure/member.repository'
 
-interface MemberRecordForApi {
+export interface MemberUserDto {
+  id: number
+  username: string
+  name: string
+  isActive: boolean
+}
+
+export interface MemberDto {
   id: number
   name: string
   departmentId: number
+  departmentName: string
   phone: string | null
   isLeader: boolean
   sortOrder: number
   isActive: boolean
   userId: number | null
-  user: { id: number; username: string; name: string; isActive: boolean } | null
-  createdAt: Date
-  updatedAt: Date
-  department: { name: string } | null
+  user: MemberUserDto | null
+  createdAt: string
+  updatedAt: string
 }
 
-export function toMemberResponse(m: MemberRecordForApi): MemberApiDto {
+export type MemberOptionDto = Pick<MemberDto, 'id' | 'name' | 'departmentId' | 'departmentName' | 'isLeader'>
+
+export interface MemberMutation extends MemberDto {
+  warnings?: string[]
+}
+
+export function toMemberDto(m: MemberWithRelations): MemberDto {
   return {
     id: m.id,
     name: m.name,

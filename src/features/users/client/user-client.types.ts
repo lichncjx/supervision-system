@@ -1,12 +1,12 @@
-import type { UserRoleApiDto } from '@/features/users/contract/user-api.types'
+import type { RoleDto } from "../application/user.dto"
 
-export type { UserRoleApiDto as Role } from '@/features/users/contract/user-api.types'
+export type { RoleDto as Role } from '@/features/users/application/user.dto'
 
 export interface User {
   id: number
   username?: string
   name: string
-  role: UserRoleApiDto
+  role: RoleDto
   departmentId: number | null
   departmentName: string
   isActive?: boolean

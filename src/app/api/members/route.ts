@@ -5,10 +5,7 @@ import { ok, fail, fromError } from '@/shared/http/api-response'
 import { queryMembersUseCase } from '@/features/members/application/query-members.usecase'
 import { createMemberUseCase } from '@/features/members/application/create-member.usecase'
 import { isAdmin } from '@/features/users/domain/role.rules'
-import type {
-  CreateMemberRequest,
-  MemberOptionApiDto,
-} from '@/features/members/contract/member-api.types'
+import type { MemberOptionDto } from '@/features/members/application/member.dto'
 
 export const GET = withApiHandler(async (request: NextRequest) => {
   const currentUser = await requireCurrentUser(request)
@@ -40,7 +37,7 @@ export const GET = withApiHandler(async (request: NextRequest) => {
   // Non-admin callers only receive fields needed for form dropdowns.
   const sanitized = isAdminUser
     ? result
-    : result.map(({ id, name, departmentId, departmentName, isLeader }): MemberOptionApiDto => ({
+    : result.map(({ id, name, departmentId, departmentName, isLeader }): MemberOptionDto => ({
       id, name, departmentId, departmentName, isLeader,
     }))
 
@@ -54,16 +51,8 @@ export const POST = withApiHandler(async (request: NextRequest) => {
     return fail('权限不足', 403)
   }
 
-  const body = (await request.json()) as CreateMemberRequest
-  const result = await createMemberUseCase({
-    name: body.name,
-    departmentId: body.departmentId,
-    phone: body.phone,
-    isLeader: body.isLeader ?? false,
-    sortOrder: body.sortOrder ?? 0,
-    userId: body.userId,
-    importFromUserId: body.importFromUserId,
-  })
+  const body = await request.json()
+  const result = await createMemberUseCase(body)
 
   if (!result.ok) return fromError(result)
 

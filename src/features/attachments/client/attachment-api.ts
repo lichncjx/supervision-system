@@ -1,8 +1,4 @@
-import type {
-  DeleteAttachmentResponse,
-  UploadAttachmentResponse,
-} from '@/features/attachments/contract/attachment-api.types'
-import type { ApiErrorResponse } from '@/shared/http/api-response'
+import type { ErrorData } from '@/shared/http/api-response'
 
 export async function uploadFiles(workId: number, files: FileList | File[], category?: string) {
   for (const file of Array.from(files)) {
@@ -16,9 +12,9 @@ export async function uploadFiles(workId: number, files: FileList | File[], cate
       body: formData,
       credentials: 'include',
     })
-    const data = (await res.json()) as UploadAttachmentResponse & ApiErrorResponse
-    if (!res.ok || !data.success) {
-      throw new Error(data.error || '上传失败')
+    if (!res.ok) {
+      const data = await res.json() as ErrorData
+      throw new Error(data.message || '上传失败')
     }
   }
 }
@@ -28,8 +24,8 @@ export async function deleteAttachment(attachmentId: number) {
     method: 'DELETE',
     credentials: 'include',
   })
-  const data = (await res.json()) as DeleteAttachmentResponse & ApiErrorResponse
-  if (!res.ok || !data.success) {
-    throw new Error(data.error || '删除失败')
+  if (!res.ok) {
+    const data = await res.json() as ErrorData
+    throw new Error(data.message || '删除失败')
   }
 }

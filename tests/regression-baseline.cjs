@@ -52,9 +52,9 @@ function request(method, path, data = null, cookies = []) {
 async function login(username, password = '123456') {
   const res = await request('POST', '/api/auth/login', { username, password });
   return {
-    success: res.statusCode === 200 && Boolean(res.body?.success),
+    success: res.statusCode === 200 && Boolean(res.body?.id),
     cookies: res.cookies,
-    user: res.body?.user,
+    user: res.body,
   };
 }
 
@@ -75,18 +75,15 @@ function assertStatus(name, response, expectedStatus) {
 function responseSummary(response) {
   return JSON.stringify({
     statusCode: response.statusCode,
-    success: response.body?.success,
-    status: response.body?.status,
-    error: response.body?.error,
-    workItemStatus: response.body?.workItem?.status,
-    currentApproverRole: response.body?.currentApproverRole ?? response.body?.workItem?.currentApproverRole,
+    body: response.body,
   });
 }
 
-function workflowWorkResponse(response) {
+async function workflowWorkResponse(response, workId, cookies) {
+  const work = await getWork(workId, cookies);
   return {
     statusCode: response.statusCode,
-    body: response.body?.workItem,
+    body: work.body,
   };
 }
 
@@ -210,16 +207,16 @@ async function main() {
       nodes: [{ title: `${RUN_ID} node`, responsiblePerson: 'owner', planCompleteTime: '2026-12-31' }],
       comment: 'decomposed',
     });
-    assert('department manager submits decomposition', decomposeSubmit.statusCode === 200 && decomposeSubmit.body?.success, responseSummary(decomposeSubmit));
-    companyTodoState = workflowWorkResponse(decomposeSubmit);
+    assert('department manager submits decomposition', decomposeSubmit.statusCode === 204, responseSummary(decomposeSubmit));
+    companyTodoState = await workflowWorkResponse(decomposeSubmit, companyTodo.body.id, deptManager.cookies);
     assertStatus('decompose enters PROPOSING', companyTodoState, 'PROPOSING');
     assert('decompose beforeApprovalStatus is PENDING_DECOMPOSE', companyTodoState.body?.beforeApprovalStatus === 'PENDING_DECOMPOSE');
 
     const decomposeReject = await workflow(companyTodo.body.id, deptLeader.cookies, 'reject', {
       rejectReason: `${RUN_ID} decompose rejected`,
     });
-    assert('department leader rejects decomposition', decomposeReject.statusCode === 200 && decomposeReject.body?.success, responseSummary(decomposeReject));
-    companyTodoState = workflowWorkResponse(decomposeReject);
+    assert('department leader rejects decomposition', decomposeReject.statusCode === 204, responseSummary(decomposeReject));
+    companyTodoState = await workflowWorkResponse(decomposeReject, companyTodo.body.id, deptLeader.cookies);
     assertStatus('decompose reject returns to PENDING_DECOMPOSE', companyTodoState, 'PENDING_DECOMPOSE');
 
     const priority = await createWork(deptManager.cookies, {

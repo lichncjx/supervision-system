@@ -1,6 +1,5 @@
 import { isReturnedDraftWork } from '@/features/works/domain/work-status.rules'
-import type { Work } from '@/features/works/client/work-view.types'
-import type { WorkflowStep } from '@/features/workflow/domain/workflow-client.types'
+import type { Work } from '@/features/works/client/work-client.types'
 import { isCompanyLevel } from '@/features/users/domain/role.rules'
 
 function statusToStepIndex(work: Work): number | undefined {
@@ -40,7 +39,9 @@ function approverRoleLabel(
   return ''
 }
 
-export function getWorkflowSteps(work: Work): WorkflowStep[] {
+type StepStatus = 'done' | 'current' | 'pending' | 'returned'
+
+export function getWorkflowSteps(work: Work): Array<{ label: string; status: StepStatus }> {
   let labels: string[] = []
 
   if (work.type === '待办') {

@@ -1,4 +1,4 @@
-export type ResultError = {
+export type ErrResult = {
   ok: false
   status: number
   message: string
@@ -6,18 +6,18 @@ export type ResultError = {
   details?: unknown
 }
 
-export type ResultOk<T = void> = T extends void
+export type OkResult<T = void> = T extends void
   ? { ok: true }
   : { ok: true; data: T }
 
-export type Result<T = void> = ResultOk<T> | ResultError
+export type Result<T = void> = OkResult<T> | ErrResult
 
-export function ok(): ResultOk<void>
-export function ok<T>(data: T): ResultOk<T>
-export function ok<T>(data?: T): ResultOk<T> | ResultOk<void> {
-  return (data !== undefined ? { ok: true, data } : { ok: true }) as ResultOk<T> | ResultOk<void>
+export function ok(): OkResult<void>
+export function ok<T>(data: T): OkResult<T>
+export function ok<T>(data?: T): OkResult<T> | OkResult<void> {
+  return (data !== undefined ? { ok: true, data } : { ok: true }) as OkResult<T> | OkResult<void>
 }
 
-export function err(status: number, message: string, code?: string): ResultError {
-  return { ok: false, status, message, code }
+export function err(status: number, message: string, code?: string, details?: unknown): ErrResult {
+  return { ok: false, status, message, code, details }
 }

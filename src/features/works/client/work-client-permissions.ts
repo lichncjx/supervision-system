@@ -1,5 +1,5 @@
 import type { User } from '@/features/users/client/user-client.types'
-import type { Work } from '@/features/works/client/work-view.types'
+import type { Work } from '@/features/works/client/work-client.types'
 import type { WorkStatus } from '@/features/works/domain/work-status'
 import { isReturnedDraftWork, isReturnedInProgressWork } from '@/features/works/domain/work-status.rules'
 import { isCompanyLevel, isDeptLeader } from '@/features/users/domain/role.rules'

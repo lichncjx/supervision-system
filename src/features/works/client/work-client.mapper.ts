@@ -1,14 +1,12 @@
 import { normalizeWorkStatus } from '@/features/works/domain/work-status.rules'
 import type { WorkType, ActionType, Cooperator } from '@/features/works/client/work-client.types'
-import type {
-  CreateWorkRequest,
-  UpdateWorkRequest,
-  WorkApiDto,
-  WorkPersonApiDto,
-} from '@/features/works/contract/work-api.types'
-import type { AttachmentApiDto } from '@/features/attachments/contract/attachment-api.types'
-import type { AttachmentApiDto as Attachment } from '@/features/attachments/contract/attachment-api.types'
-import type { Work, WorkEditablePatch } from './work-view.types'
+import type { CreateWorkBody } from '@/features/works/application/create-work.usecase'
+import type { UpdateWorkBody } from '@/features/works/application/update-work.usecase'
+import type { WorkDto } from '../application/work.dto'
+import type { WorkPersonDto } from '../application/work.dto'
+import type { AttachmentDto } from '@/features/attachments/application/attachment.dto'
+import type { AttachmentDto as Attachment } from '@/features/attachments/application/attachment.dto'
+import type { Work, WorkEditablePatch } from './work-client.types'
 
 function normalizeAction(action: unknown): ActionType {
   const normalized = typeof action === 'string' ? action.toLowerCase() : ''
@@ -48,7 +46,7 @@ function parseCooperators(value: unknown): Cooperator[] {
     .filter((c) => c.departmentId > 0)
 }
 
-function parseAttachments(value: AttachmentApiDto[] | undefined): Attachment[] {
+function parseAttachments(value: AttachmentDto[] | undefined): Attachment[] {
   return (value || []).map((attachment) => ({
     id: attachment.id,
     fileName: attachment.fileName,
@@ -61,13 +59,13 @@ function parseAttachments(value: AttachmentApiDto[] | undefined): Attachment[] {
   }))
 }
 
-function extractName(obj: WorkPersonApiDto | undefined): string | undefined {
+function extractName(obj: WorkPersonDto | undefined): string | undefined {
   if (!obj) return ''
   if (typeof obj === 'string') return obj
   return typeof obj.name === 'string' ? obj.name : undefined
 }
 
-export function transformWorkFromAPI(work: WorkApiDto): Work {
+export function transformWorkFromAPI(work: WorkDto): Work {
   return {
     id: work.id,
     title: work.title,
@@ -115,9 +113,9 @@ export function transformWorkFromAPI(work: WorkApiDto): Work {
   }
 }
 
-export function buildCreateWorkRequest(
+export function buildCreateWorkBody(
   work: Omit<Work, 'createdAt' | 'updatedAt'>,
-): CreateWorkRequest {
+): CreateWorkBody {
   return {
     type: work.type,
     title: work.title,
@@ -144,8 +142,8 @@ export function buildCreateWorkRequest(
   }
 }
 
-export function buildUpdateWorkRequest(patch: WorkEditablePatch): UpdateWorkRequest {
-  const data: UpdateWorkRequest = {}
+export function buildUpdateWorkBody(patch: WorkEditablePatch): UpdateWorkBody {
+  const data: UpdateWorkBody = {}
 
   if ('title' in patch) data.title = patch.title ?? null
   if ('departmentId' in patch && patch.departmentId != null) data.departmentId = patch.departmentId

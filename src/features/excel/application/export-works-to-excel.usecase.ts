@@ -1,10 +1,10 @@
-import type { CurrentUser } from '@/shared/auth/current-user'
+import type { BaseCurrentUser } from '@/shared/auth/current-user'
 import { WorkItemStatus, WorkItemType } from '@prisma/client'
 import { err, ok, type Result } from '@/shared/result'
 import type { ExcelExportFile } from '@/features/excel/application/excel-export.types'
 
 export interface ExportWorksToExcelInput {
-  currentUser: CurrentUser
+  currentUser: BaseCurrentUser
   type: string | null
   status: string | null
   departmentId: string | null

@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx'
-import type { CompletionRateStat } from '@/shared/completion-rate.rules'
+import type { CompletionRateStat } from '@/features/works/domain/completion-rate.calculator'
 
 const HEADERS = [
   '序号',

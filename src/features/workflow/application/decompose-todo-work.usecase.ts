@@ -1,6 +1,5 @@
 import { ActionType, ApprovalType, WorkItemStatus, WorkItemType } from '@prisma/client'
-import type { CurrentUser } from '@/shared/auth/current-user'
-import type { WorkflowResult } from '@/features/workflow/domain/workflow.types'
+import type { BaseCurrentUser } from '@/shared/auth/current-user'
 import {
   canUserHandle,
   ensureMainResponsibleDepartment,
@@ -12,42 +11,43 @@ import {
   createWorkflowRecord,
   createOperationLog,
 } from '@/features/workflow/infrastructure/workflow.repository'
+import { type Result, err, ok } from '@/shared/result'
 
 export async function decomposeTodoWork(
   workItemId: number,
-  user: CurrentUser,
+  user: BaseCurrentUser,
   nodes: unknown[],
   comment?: string,
-): Promise<WorkflowResult> {
+): Promise<Result> {
   const permUser = toPermissionUser(user)
   const workItem = await findWorkForUpdateById(workItemId)
   if (!workItem) {
-    return { success: false, error: '事项不存在' }
+    return err(404, '事项不存在')
   }
 
   if (workItem.type !== WorkItemType.TODO) {
-    return { success: false, error: '只有待办事项可以分解' }
+    return err(400, '只有待办事项可以分解')
   }
 
   if (workItem.status !== WorkItemStatus.PENDING_DECOMPOSE) {
-    return { success: false, error: '只有待分解事项可以提交分解方案' }
+    return err(400, '只有待分解事项可以提交分解方案')
   }
 
   if (!canUserHandle(user, workItem)) {
-    return { success: false, error: '无权分解该待办事项' }
+    return err(403, '无权分解该待办事项')
   }
 
   if (!ensureMainResponsibleDepartment(user, workItem)) {
-    return { success: false, error: '只有主责部门可以分解该待办事项' }
+    return err(403, '只有主责部门可以分解该待办事项')
   }
 
   const oldStatus = workItem.status
   const approver = getProposalFirstApprover(workItem, user)
   if (!approver) {
-    return { success: false, error: '请先指定公司领导后再提交审批' }
+    return err(400, '请先指定公司领导后再提交审批')
   }
 
-  const updated = await updateWorkItem(workItemId, {
+  await updateWorkItem(workItemId, {
     nodes,
     status: WorkItemStatus.PROPOSING,
     action: ActionType.TODO_DECOMPOSE,
@@ -66,7 +66,7 @@ export async function decomposeTodoWork(
     operatorId: user.id,
     operatorRole: permUser.role,
     statusBefore: oldStatus,
-    statusAfter: updated.status,
+    statusAfter: WorkItemStatus.PROPOSING,
     comment: comment || '提交待办分解方案',
   })
   await createOperationLog({
@@ -79,5 +79,5 @@ export async function decomposeTodoWork(
     targetId: workItemId,
   })
 
-  return { success: true, workItem: updated }
+  return ok()
 }

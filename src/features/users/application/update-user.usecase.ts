@@ -5,10 +5,11 @@ import {
   updateUser,
 } from '@/features/users/infrastructure/user.repository'
 import { findDepartmentById } from '@/features/departments/infrastructure/department.repository'
-import { toUserListItem } from '@/features/users/application/user-api.mapper'
-import type { UserListItem } from '@/features/users/application/user-api.types'
+import { toUserListItemDto } from './user.dto'
+import type { UserListItemDto } from '@/features/users/application/user.dto'
+import { type Result, err, ok } from '@/shared/result'
 
-export interface UpdateUserBody {
+export interface UpdateUserInput {
   name?: string
   role?: string
   departmentId?: number
@@ -17,43 +18,39 @@ export interface UpdateUserBody {
   isActive?: boolean
 }
 
-export type UpdateUserResult =
-  | { kind: 'ok'; data: UserListItem }
-  | { kind: 'error'; status: number; message: string }
-
 export async function updateUserUseCase(
   currentUser: { id: number; role: string },
   userId: number,
-  body: UpdateUserBody,
-): Promise<UpdateUserResult> {
+  input: UpdateUserInput,
+): Promise<Result<UserListItemDto>> {
   if (!isAdmin(currentUser.role)) {
-    return { kind: 'error', status: 403, message: '权限不足' }
+    return err(403, '权限不足')
   }
 
   if (isNaN(userId)) {
-    return { kind: 'error', status: 400, message: '无效的用户ID' }
+    return err(400, '无效的用户ID')
   }
 
   const user = await findUserById(userId)
   if (!user) {
-    return { kind: 'error', status: 404, message: '用户不存在' }
+    return err(404, '用户不存在')
   }
 
-  const { name, role, departmentId, email, phone, isActive } = body
+  const { name, role, departmentId, email, phone, isActive } = input
   const updateData: Record<string, unknown> = {}
 
   if (name !== undefined) updateData.name = name
   if (role !== undefined) {
     const validRoles = Object.values(Role)
     if (!validRoles.includes(role as Role)) {
-      return { kind: 'error', status: 400, message: '无效的角色' }
+      return err(400, '无效的角色')
     }
     updateData.role = role
   }
   if (departmentId !== undefined) {
     const department = await findDepartmentById(departmentId)
     if (!department) {
-      return { kind: 'error', status: 400, message: '部门不存在' }
+      return err(400, '部门不存在')
     }
     updateData.departmentId = departmentId
   }
@@ -62,5 +59,5 @@ export async function updateUserUseCase(
   if (isActive !== undefined) updateData.isActive = isActive
 
   const updatedUser = await updateUser(userId, updateData)
-  return { kind: 'ok', data: toUserListItem(updatedUser) }
+  return ok(toUserListItemDto(updatedUser))
 }

@@ -118,8 +118,8 @@ export default function DashboardPage() {
     try {
       const res = await fetch('/api/excel/completion-rate', { credentials: 'include' });
       if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: '导出失败' }));
-        alert(err.error || '导出失败');
+        const err = await res.json().catch(() => ({ message: '导出失败' }));
+        alert(err.message || '导出失败');
         return;
       }
       const blob = await res.blob();

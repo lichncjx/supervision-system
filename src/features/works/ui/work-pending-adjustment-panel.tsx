@@ -1,6 +1,6 @@
 'use client';
 
-import type { Work } from '@/features/works/client/work-view.types';
+import type { Work } from '@/features/works/client/work-client.types';
 import { PANEL_PADDED } from '@/features/works/ui/visual-tokens';
 
 interface WorkPendingAdjustmentPanelProps {

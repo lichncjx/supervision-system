@@ -1,40 +1,41 @@
-import { isApprovalStatus, rejectableBeforeStatus } from '@/features/workflow/domain/workflow.rules'
+import { rejectableBeforeStatus } from '@/features/workflow/domain/workflow.rules'
+import { isApproving } from '@/features/works/domain/work-status.rules'
 import { toPermissionUser } from '@/features/works/domain/work-permission-user.mapper'
-import type { CurrentUser } from '@/shared/auth/current-user'
-import type { WorkflowResult } from '@/features/workflow/domain/workflow.types'
+import type { BaseCurrentUser } from '@/shared/auth/current-user'
 import { canApproveWorkItem } from '@/features/works/domain/work.permissions'
 import { findWorkForUpdateById, updateWorkItem } from '@/features/works/infrastructure/work.repository'
 import {
   createWorkflowRecord,
   createOperationLog,
 } from '@/features/workflow/infrastructure/workflow.repository'
+import { type Result, err, ok } from '@/shared/result'
 
 export async function rejectWorkflowAction(
   workItemId: number,
-  user: CurrentUser,
+  user: BaseCurrentUser,
   rejectReason: string,
-): Promise<WorkflowResult> {
+): Promise<Result> {
   const permUser = toPermissionUser(user)
   const workItem = await findWorkForUpdateById(workItemId)
   if (!workItem) {
-    return { success: false, error: '事项不存在' }
+    return err(404, '事项不存在')
   }
 
-  if (!isApprovalStatus(workItem.status)) {
-    return { success: false, error: '当前状态不允许退回' }
+  if (!isApproving(workItem.status)) {
+    return err(400, '当前状态不允许退回')
   }
 
   if (!canApproveWorkItem(permUser, workItem)) {
-    return { success: false, error: '无权退回该事项' }
+    return err(403, '无权退回该事项')
   }
 
   const targetStatus = rejectableBeforeStatus(workItem)
   if (!targetStatus) {
-    return { success: false, error: '退回前状态缺失，无法退回' }
+    return err(400, '退回前状态缺失，无法退回')
   }
 
   const oldStatus = workItem.status
-  const updated = await updateWorkItem(workItemId, {
+  await updateWorkItem(workItemId, {
     status: targetStatus,
     beforeApprovalStatus: null,
     approvalType: null,
@@ -50,7 +51,7 @@ export async function rejectWorkflowAction(
     operatorId: user.id,
     operatorRole: permUser.role,
     statusBefore: oldStatus,
-    statusAfter: updated.status,
+    statusAfter: targetStatus,
     comment: rejectReason,
   })
   await createOperationLog({
@@ -63,5 +64,5 @@ export async function rejectWorkflowAction(
     targetId: workItemId,
   })
 
-  return { success: true, workItem: updated }
+  return ok()
 }

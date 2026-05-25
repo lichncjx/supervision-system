@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { CheckCircle, Download, Loader2 } from 'lucide-react';
-import type { AttachmentApiDto as Attachment } from '@/features/attachments/contract/attachment-api.types';
+import type { AttachmentDto as Attachment } from '@/features/attachments/application/attachment.dto';
 import { FIELD_LABEL, PANEL_PADDED } from './visual-tokens';
 
 function formatFileSize(bytes: number): string {

@@ -6,13 +6,13 @@ import { ErrorCode } from '@/shared/errors/error-codes'
 
 export interface BaseCurrentUser {
   id: number
+  name: string
   role: string
   departmentId: number
 }
 
 export interface CurrentUser extends BaseCurrentUser {
   username: string
-  name: string
   departmentName: string
   isActive: boolean
 }

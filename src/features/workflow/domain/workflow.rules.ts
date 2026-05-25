@@ -1,4 +1,4 @@
-import { Role, WorkItemStatus, WorkItemType } from '@prisma/client'
+import { ApprovalType, Role, WorkItemStatus, WorkItemType } from '@prisma/client'
 import {
   shouldHandleWorkItem,
   canOperateWorkItem,
@@ -8,12 +8,7 @@ import {
 import { toPermissionUser } from '@/features/works/domain/work-permission-user.mapper'
 import type { BaseCurrentUser } from '@/shared/auth/current-user'
 import type { ApproverAssignment } from './workflow.types'
-import { APPROVAL_STATUSES } from './workflow.constants'
 import { isCompanyLevel, isDepartmentLevel, isDeptManager, isDeptLeader, isPresident } from '@/features/users/domain/role.rules'
-
-export function isApprovalStatus(status: WorkItemStatus) {
-  return APPROVAL_STATUSES.includes(status)
-}
 
 export function departmentLeaderAssignment(): ApproverAssignment {
   return {
@@ -126,6 +121,75 @@ export function ensureMainResponsibleDepartment(
     isDepartmentLevel(user.role) &&
     isWorkMainResponsibleDepartment(workItem, user.departmentId)
   )
+}
+
+export type NextApprovalAssignmentResult =
+  | { kind: 'next'; approver: ApproverAssignment }
+  | { kind: 'complete' }
+  | { kind: 'missingCompanyLeader' }
+
+export function getNextApprovalAssignment(
+  workItem: {
+    type: WorkItemType
+    currentApproverRole?: Role | string | null
+    currentApproverId?: number | null
+    proposedLeaderId?: number | null
+    approvalLeaderId?: number | null
+  },
+  approvalType: ApprovalType,
+  presidentId: number | null,
+  nextApproverId?: number | null,
+): NextApprovalAssignmentResult {
+  if (approvalType === ApprovalType.PROPOSE) {
+    if (isDepartmentApprovalNode(workItem)) {
+      const approver = companyLeaderAssignment(workItem, 'propose', nextApproverId)
+      return approver ? { kind: 'next', approver } : { kind: 'missingCompanyLeader' }
+    }
+    return { kind: 'complete' }
+  }
+
+  if (
+    approvalType === ApprovalType.ADJUST ||
+    approvalType === ApprovalType.COMPLETE
+  ) {
+    if (isDepartmentApprovalNode(workItem)) {
+      const approver = companyLeaderAssignment(workItem, 'approval', nextApproverId)
+      return approver ? { kind: 'next', approver } : { kind: 'missingCompanyLeader' }
+    }
+    return { kind: 'complete' }
+  }
+
+  if (approvalType === ApprovalType.CANCEL) {
+    if (isDepartmentApprovalNode(workItem)) {
+      const approver = companyLeaderAssignment(workItem, 'approval', nextApproverId)
+      return approver ? { kind: 'next', approver } : { kind: 'missingCompanyLeader' }
+    }
+
+    if (
+      shouldEscalateCancelToPresident(workItem) &&
+      !isPresidentApprovalNode(workItem)
+    ) {
+      if (!presidentId) return { kind: 'missingCompanyLeader' }
+      if (workItem.currentApproverId === presidentId) {
+        return { kind: 'complete' }
+      }
+      return { kind: 'next', approver: { currentApproverId: presidentId, currentApproverRole: Role.PRESIDENT } }
+    }
+
+    return { kind: 'complete' }
+  }
+
+  return { kind: 'complete' }
+}
+
+export function getTargetStatus(approvalType: ApprovalType): WorkItemStatus {
+  const map: Record<ApprovalType, WorkItemStatus> = {
+    [ApprovalType.PROPOSE]: WorkItemStatus.IN_PROGRESS,
+    [ApprovalType.ADJUST]: WorkItemStatus.IN_PROGRESS,
+    [ApprovalType.CANCEL]: WorkItemStatus.CANCELLED,
+    [ApprovalType.COMPLETE]: WorkItemStatus.COMPLETED,
+  }
+  return map[approvalType]
 }
 
 export function rejectableBeforeStatus(workItem: {

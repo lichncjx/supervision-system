@@ -15,7 +15,7 @@ export const GET = withApiHandler(async (request: NextRequest) => {
 
   const targetDeptId = parseInt(departmentId)
   const result = await listDepartmentLeadersUseCase(currentUser, targetDeptId)
-  if (result.kind === 'error') return fromError(result)
+  if (!result.ok) return fromError(result)
 
   return ok(result.data)
 })

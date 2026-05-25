@@ -8,7 +8,7 @@ export const GET = withApiHandler(async (request: NextRequest) => {
   await requireCurrentUser(request)
 
   const result = await listCompanyLeadersUseCase()
-  if (result.kind === 'error') return fromError(result)
+  if (!result.ok) return fromError(result)
 
   return ok(result.data)
 })

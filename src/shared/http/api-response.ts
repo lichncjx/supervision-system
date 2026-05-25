@@ -1,37 +1,25 @@
 import { NextResponse } from 'next/server'
 
-export interface ApiErrorResponse<Code extends string = string> {
-  error: string
-  code?: Code
+export interface ErrorData {
+  message: string
+  code?: string
   details?: unknown
 }
 
-export interface ActionSuccessResponse {
-  success: true
-}
-
-export interface PageResponse<T> {
-  items: T[]
-  total: number
-  page: number
-  pageSize: number
-}
-
-export function ok<T>(data: T, init?: ResponseInit) {
+export function ok<T>(data?: T, init?: ResponseInit) {
+  if (data === undefined) {
+    return new NextResponse(null, { status: 204 })
+  }
   return NextResponse.json(data, init)
 }
 
-export function success(init?: ResponseInit) {
-  return ok<ActionSuccessResponse>({ success: true }, init)
-}
-
-export function fail<Code extends string = string>(
+export function fail(
   message: string,
   status = 400,
-  code?: Code,
+  code?: string,
   details?: unknown,
 ) {
-  const body: ApiErrorResponse<Code> = { error: message }
+  const body: ErrorData = { message }
   if (code) body.code = code
   if (details !== undefined) body.details = details
 

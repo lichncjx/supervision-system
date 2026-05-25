@@ -1,3 +1,6 @@
+import type { WorkStatus } from '@/features/works/domain/work-status'
+import type { AttachmentDto as Attachment } from '@/features/attachments/application/attachment.dto'
+
 export type WorkType = '重点' | '主要' | '待办'
 
 export type WorkStatusFilter =
@@ -59,3 +62,135 @@ export interface Cooperator {
   personMemberId?: number
   person?: string
 }
+
+export interface Work {
+  id: number
+  title: string
+  description?: string
+  type: WorkType
+
+  // ---- 部门关联 ----
+  departmentId?: number
+  departmentName?: string
+  cooperators?: Cooperator[]
+
+  // ---- 业务人员 ID 字段 ----
+  creatorRole: string
+  creatorId: number
+  creatorName?: string
+  firstSubmitterId?: number
+  firstSubmitterName?: string
+  proposedLeaderId?: number
+  approvalLeaderId?: number
+  currentApproverId?: number
+  currentApproverRole?: string
+
+  // ---- 业务人员姓名快照字段（仅展示用）----
+  proposedLeader?: string
+  proposedLeaderRole?: string
+  approvalLeader?: string
+  approvalLeaderRole?: string
+  responsibleLeader?: string
+  responsiblePerson?: string
+  responsibleLeaderMemberId?: number
+  responsiblePersonMemberId?: number
+
+  // ---- 事项基本信息 ----
+  status: WorkStatus
+  action: ActionType
+  needCeo: boolean
+  isInnovation?: boolean
+  nodes?: WorkNode[]
+  businessCategory?: string
+  workItem?: string
+  workNode?: string
+  completeTime?: string
+  completeForm?: string
+  proposedScene?: string
+  formedTime?: string
+  workPlan?: string
+  planCompleteTime?: string
+  progress?: string
+
+  // ---- 证明材料 / 调整 / 取消 / 退回 / 附件 ----
+  proof?: string
+  adjustReason?: string
+  cancelReason?: string
+  adjustNewTime?: string
+  adjustTimeType?: 'planCompleteTime'
+  rejectReason?: string
+  rejectedAt?: string
+  rejectedFrom?: WorkStatus
+  rejectedFromStatus?: WorkStatus
+  rejectedBy?: string
+  adjustHistory?: AdjustHistory[]
+  pendingAdjustment?: WorkEditablePatch
+  pendingAdjustmentReason?: string
+  pendingAdjustmentFromTime?: string
+  pendingAdjustmentToTime?: string
+  attachments?: Attachment[]
+
+  // ---- 时间戳 ----
+  createdAt: string
+  updatedAt: string
+}
+
+type WorkEditablePatchBase = Pick<
+  Work,
+  | 'title'
+  | 'description'
+  | 'businessCategory'
+  | 'workItem'
+  | 'workNode'
+  | 'nodes'
+  | 'isInnovation'
+  | 'completeForm'
+  | 'departmentId'
+  | 'cooperators'
+  | 'responsibleLeader'
+  | 'responsibleLeaderMemberId'
+  | 'proposedLeader'
+  | 'proposedLeaderId'
+  | 'proposedLeaderRole'
+  | 'proposedScene'
+  | 'formedTime'
+  | 'responsiblePerson'
+  | 'responsiblePersonMemberId'
+  | 'workPlan'
+  | 'planCompleteTime'
+  | 'progress'
+  | 'approvalLeader'
+  | 'approvalLeaderId'
+  | 'approvalLeaderRole'
+>
+
+type NullableWorkTextField =
+  | 'description'
+  | 'businessCategory'
+  | 'workItem'
+  | 'workNode'
+  | 'completeForm'
+  | 'responsibleLeader'
+  | 'proposedLeader'
+  | 'proposedLeaderRole'
+  | 'proposedScene'
+  | 'formedTime'
+  | 'responsiblePerson'
+  | 'workPlan'
+  | 'planCompleteTime'
+  | 'progress'
+  | 'approvalLeader'
+  | 'approvalLeaderRole'
+
+type NullableWorkNumberField =
+  | 'departmentId'
+  | 'responsibleLeaderMemberId'
+  | 'responsiblePersonMemberId'
+  | 'proposedLeaderId'
+  | 'approvalLeaderId'
+
+export type WorkEditablePatch = Partial<
+  Omit<WorkEditablePatchBase, NullableWorkTextField | NullableWorkNumberField>
+> &
+  Partial<Record<NullableWorkTextField, string | null>> &
+  Partial<Record<NullableWorkNumberField, number | null>>

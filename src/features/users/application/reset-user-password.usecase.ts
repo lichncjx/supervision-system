@@ -6,14 +6,14 @@ import {
 import { hashPassword } from '@/shared/auth/password'
 import { type Result, err, ok } from '@/shared/result'
 
-export interface ResetPasswordBody {
+export interface ResetPasswordInput {
   password: string
 }
 
 export async function resetUserPasswordUseCase(
   currentUser: { id: number; role: string },
   userId: number,
-  body: ResetPasswordBody,
+  input: ResetPasswordInput,
 ): Promise<Result> {
   if (!isAdmin(currentUser.role)) {
     return err(403, '权限不足')
@@ -28,7 +28,7 @@ export async function resetUserPasswordUseCase(
     return err(404, '用户不存在')
   }
 
-  const { password } = body
+  const { password } = input
   if (!password || password.length < 6) {
     return err(400, '密码长度不能少于6位')
   }

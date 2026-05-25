@@ -1,5 +1,6 @@
-import type { CurrentUser } from '@/shared/auth/current-user'
+import type { BaseCurrentUser } from '@/shared/auth/current-user'
 import { Prisma, WorkItemStatus, WorkItemType } from '@prisma/client'
+import { err, ok, type Result } from '@/shared/result'
 import { validateAndParseExcel } from '@/features/excel/infrastructure/work-import-parser'
 import { findDepartmentsForImport } from '@/features/departments/infrastructure/department.repository'
 import { findCompanyLeaders } from '@/features/excel/infrastructure/work-import.repository'
@@ -7,27 +8,13 @@ import {
   createImportedWorkItems,
 } from '@/features/excel/infrastructure/work-import.repository'
 import { validateImportScope } from '@/features/excel/domain/excel-import.rules'
-import type { ValidationError as ImportValidationError } from '@/features/excel/domain/excel-import.rules'
 
 export interface ImportWorksFromExcelInput {
-  currentUser: CurrentUser
+  currentUser: BaseCurrentUser
   type: string
   fileBuffer: Buffer
   fileName: string
 }
-
-export type ImportWorksFromExcelResult =
-  | {
-      kind: 'success'
-      imported: number
-      message: string
-    }
-  | {
-      kind: 'validation-error'
-      error: string
-      details: ImportValidationError[]
-    }
-  | { kind: 'error'; status: number; message: string }
 
 function toInputJsonValue(value: unknown): Prisma.InputJsonValue {
   return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue
@@ -35,7 +22,7 @@ function toInputJsonValue(value: unknown): Prisma.InputJsonValue {
 
 export async function importWorksFromExcelUseCase(
   input: ImportWorksFromExcelInput,
-): Promise<ImportWorksFromExcelResult> {
+): Promise<Result<number>> {
   const { currentUser, type, fileBuffer } = input
 
   const departments = await findDepartmentsForImport()
@@ -49,26 +36,13 @@ export async function importWorksFromExcelUseCase(
   )
 
   if (errors.length > 0) {
-    return {
-      kind: 'validation-error',
-      error: '导入失败，请修正以下错误',
-      details: errors,
-    }
+    return err(400, '导入失败，请修正以下错误', undefined, errors)
   }
 
   if (rows.length === 0) {
-    return {
-      kind: 'validation-error',
-      error: '导入失败',
-      details: [
-        {
-          row: 0,
-          field: 'file',
-          value: '',
-          reason: 'Excel 文件中没有有效数据行',
-        },
-      ],
-    }
+    return err(400, '导入失败', undefined, [
+      { row: 0, field: 'file', value: '', reason: 'Excel 文件中没有有效数据行' },
+    ])
   }
 
   const scopeErrors = rows
@@ -76,11 +50,7 @@ export async function importWorksFromExcelUseCase(
     .filter((error): error is NonNullable<typeof error> => Boolean(error))
 
   if (scopeErrors.length > 0) {
-    return {
-      kind: 'validation-error',
-      error: '导入失败',
-      details: scopeErrors,
-    }
+    return err(400, '导入失败', undefined, scopeErrors)
   }
 
   const now = new Date()
@@ -153,9 +123,5 @@ export async function importWorksFromExcelUseCase(
     typeLabel: type.toUpperCase(),
   })
 
-  return {
-    kind: 'success',
-    imported: result.count,
-    message: `成功导入 ${result.count} 条事项，导入后状态为草稿，请确认后手动提交审批`,
-  }
+  return ok(result.count)
 }

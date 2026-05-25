@@ -1,35 +1,29 @@
 import { isAdmin } from '@/features/users/domain/role.rules'
 import { PROTECTED_USERNAMES } from '@/features/users/domain/protected-usernames'
-import {
-  findUserById,
-  deleteUser,
-} from '@/features/users/infrastructure/user.repository'
-
-export type DeleteUserResult =
-  | { kind: 'ok' }
-  | { kind: 'error'; status: number; message: string }
+import { findUserById, deleteUser } from '@/features/users/infrastructure/user.repository'
+import { type Result, err, ok } from '@/shared/result'
 
 export async function deleteUserUseCase(
   currentUser: { id: number; role: string },
   userId: number,
-): Promise<DeleteUserResult> {
+): Promise<Result> {
   if (!isAdmin(currentUser.role)) {
-    return { kind: 'error', status: 403, message: '权限不足' }
+    return err(403, '权限不足')
   }
 
   if (isNaN(userId)) {
-    return { kind: 'error', status: 400, message: '无效的用户ID' }
+    return err(400, '无效的用户ID')
   }
 
   const user = await findUserById(userId)
   if (!user) {
-    return { kind: 'error', status: 404, message: '用户不存在' }
+    return err(404, '用户不存在')
   }
 
   if (PROTECTED_USERNAMES.includes(user.username)) {
-    return { kind: 'error', status: 403, message: '内置账号不允许删除' }
+    return err(403, '内置账号不允许删除')
   }
 
   await deleteUser(userId)
-  return { kind: 'ok' }
+  return ok()
 }

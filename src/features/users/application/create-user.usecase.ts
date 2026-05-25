@@ -7,10 +7,11 @@ import {
 } from '@/features/users/infrastructure/user.repository'
 import { findDepartmentById } from '@/features/departments/infrastructure/department.repository'
 import { hashPassword } from '@/shared/auth/password'
-import { toUserListItem } from '@/features/users/application/user-api.mapper'
-import type { UserListItem } from '@/features/users/application/user-api.types'
+import { toUserListItemDto } from './user.dto'
+import type { UserListItemDto } from '@/features/users/application/user.dto'
+import { type Result, err, ok } from '@/shared/result'
 
-export interface CreateUserBody {
+export interface CreateUserInput {
   username: string
   password: string
   name: string
@@ -20,41 +21,37 @@ export interface CreateUserBody {
   phone?: string | null
 }
 
-export type CreateUserResult =
-  | { kind: 'ok'; data: UserListItem }
-  | { kind: 'error'; status: number; message: string }
-
 export async function createUserUseCase(
   currentUser: { id: number; role: string },
-  body: CreateUserBody,
-): Promise<CreateUserResult> {
+  input: CreateUserInput,
+): Promise<Result<UserListItemDto>> {
   if (!isAdmin(currentUser.role)) {
-    return { kind: 'error', status: 403, message: '权限不足' }
+    return err(403, '权限不足')
   }
 
-  const { username, password, name, role, departmentId, email, phone } = body
+  const { username, password, name, role, departmentId, email, phone } = input
 
   if (!username || !password || !name || !role || !departmentId) {
-    return { kind: 'error', status: 400, message: '必填字段不能为空' }
+    return err(400, '必填字段不能为空')
   }
 
   if (PROTECTED_USERNAMES.includes(username)) {
-    return { kind: 'error', status: 400, message: '用户名已存在' }
+    return err(400, '用户名已存在')
   }
 
   const existingUser = await findUserByUsername(username)
   if (existingUser) {
-    return { kind: 'error', status: 400, message: '用户名已存在' }
+    return err(400, '用户名已存在')
   }
 
   const department = await findDepartmentById(departmentId)
   if (!department) {
-    return { kind: 'error', status: 400, message: '部门不存在' }
+    return err(400, '部门不存在')
   }
 
   const validRoles = Object.values(Role)
   if (!validRoles.includes(role as Role)) {
-    return { kind: 'error', status: 400, message: '无效的角色' }
+    return err(400, '无效的角色')
   }
 
   const passwordHash = await hashPassword(password)
@@ -69,5 +66,5 @@ export async function createUserUseCase(
     phone: phone ?? null,
   })
 
-  return { kind: 'ok', data: toUserListItem(newUser) }
+  return ok(toUserListItemDto(newUser))
 }

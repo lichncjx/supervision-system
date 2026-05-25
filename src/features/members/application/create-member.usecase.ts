@@ -1,22 +1,23 @@
 import { prisma } from '@/shared/db/prisma'
-import { toMemberResponse } from '@/features/members/application/member.dto'
+import { toMemberDto } from '@/features/members/application/member.dto'
+import { createMemberWithRelations } from '@/features/members/infrastructure/member.repository'
 import { findDepartmentById } from '@/features/departments/infrastructure/department.repository'
 import { type Result, ok, err } from '@/shared/result'
-import type { MemberMutationResponse } from '@/features/members/contract/member-api.types'
+import type { MemberMutation } from '@/features/members/application/member.dto'
 
 export interface CreateMemberInput {
   name: string
   departmentId: number
   phone?: string | null
-  isLeader: boolean
-  sortOrder: number
+  isLeader?: boolean
+  sortOrder?: number
   userId?: number | null
   importFromUserId?: number
 }
 
 export async function createMemberUseCase(
   input: CreateMemberInput,
-): Promise<Result<MemberMutationResponse>> {
+): Promise<Result<MemberMutation>> {
   let resolvedName = input.name
   let resolvedDepartmentId = input.departmentId
   let resolvedPhone = input.phone ?? null
@@ -73,22 +74,16 @@ export async function createMemberUseCase(
     }
   }
 
-  const member = await prisma.member.create({
-    data: {
-      name: resolvedName,
-      departmentId: resolvedDepartmentId,
-      phone: resolvedPhone,
-      isLeader: input.isLeader,
-      sortOrder: input.sortOrder,
-      isActive: true,
-      userId: resolvedUserId,
-    },
-    include: {
-      user: { select: { id: true, username: true, name: true, isActive: true } },
-      department: { select: { id: true, name: true } },
-    },
+  const member = await createMemberWithRelations({
+    name: resolvedName,
+    phone: resolvedPhone,
+    isLeader: input.isLeader ?? false,
+    sortOrder: input.sortOrder ?? 0,
+    isActive: true,
+    department: { connect: { id: resolvedDepartmentId } },
+    ...(resolvedUserId ? { user: { connect: { id: resolvedUserId } } } : {}),
   })
 
-  const memberData = toMemberResponse(member)
+  const memberData = toMemberDto(member)
   return ok(warnings.length > 0 ? { ...memberData, warnings } : memberData)
 }

@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { requireCurrentUser } from '@/shared/auth/current-user'
 import { withApiHandler } from '@/shared/http/with-api-handler'
-import { fail } from '@/shared/http/api-response'
+import { ok, fail } from '@/shared/http/api-response'
 import { getFileExtension } from '@/features/attachments/infrastructure/local-file-storage'
 import {
   isAllowedExtension,
@@ -65,12 +65,9 @@ export const POST = withApiHandler(async (request: NextRequest) => {
     category: categoryRaw,
   })
 
-  if (result.kind === 'error') {
+  if (!result.ok) {
     return fail(result.message, result.status)
   }
 
-  return NextResponse.json({
-    success: true,
-    attachment: result.attachment,
-  })
+  return ok(result.data)
 })

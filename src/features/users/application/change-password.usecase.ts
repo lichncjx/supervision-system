@@ -5,16 +5,16 @@ import {
 import { verifyPassword, hashPassword } from '@/shared/auth/password'
 import { type Result, err, ok } from '@/shared/result'
 
-export interface ChangePasswordBody {
+export interface ChangePasswordInput {
   oldPassword: string
   newPassword: string
 }
 
 export async function changePasswordUseCase(
   userId: number,
-  body: ChangePasswordBody,
+  input: ChangePasswordInput,
 ): Promise<Result> {
-  const { oldPassword, newPassword } = body
+  const { oldPassword, newPassword } = input
 
   if (!oldPassword || !newPassword) {
     return err(400, '旧密码和新密码不能为空')

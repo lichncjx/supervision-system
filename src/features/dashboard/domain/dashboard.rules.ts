@@ -1,4 +1,4 @@
-import { WorkItemType } from '@prisma/client'
+import { WorkItemType, WorkItemStatus } from '@prisma/client'
 import {
   canApproveWorkItem,
   shouldHandleWorkItem,
@@ -11,14 +11,8 @@ import {
   isOverdueWorkItem,
   normalizeWorkStatus,
 } from '@/features/works/domain/work-status.rules'
-import {
-  DEFAULT_LIST_LIMIT,
-  MAX_LIST_LIMIT,
-  IN_PROGRESS_STATUSES,
-  COMPLETING_STATUSES,
-  COMPLETED_STATUSES,
-  CANCELLED_STATUSES,
-} from './dashboard.constants'
+const DEFAULT_LIST_LIMIT = 5
+const MAX_LIST_LIMIT = 100
 import type { DashboardSummary, DashboardWorkLike, WorkDashboardItem } from './dashboard.types'
 
 export function normalizeLimit(limit?: number): number {
@@ -147,7 +141,7 @@ export function buildSummary(
   const priorityWorks = visibleWorks.filter((w) => w.type === WorkItemType.PRIORITY)
   const mainWorks = visibleWorks.filter((w) => w.type === WorkItemType.MAIN)
   const todoWorks = visibleWorks.filter((w) => w.type === WorkItemType.TODO)
-  const completedWorks = visibleWorks.filter((w) => COMPLETED_STATUSES.includes(w.status))
+  const completedWorks = visibleWorks.filter((w) => w.status === WorkItemStatus.COMPLETED)
   const pendingApprovalWorks = visibleWorks.filter((w) => canApproveWorkItem(user, w))
   const pendingHandlingWorks = visibleWorks.filter((w) => shouldHandleWorkItem(user, w))
   const expiringWorks = visibleWorks.filter((w) => isExpiringWorkItem(w, now))
@@ -155,10 +149,10 @@ export function buildSummary(
 
   const pendingApprovalCount = pendingApprovalWorks.length
   const pendingHandlingCount = pendingHandlingWorks.length
-  const inProgressCount = visibleWorks.filter((w) => IN_PROGRESS_STATUSES.includes(w.status)).length
-  const completingCount = visibleWorks.filter((w) => COMPLETING_STATUSES.includes(w.status)).length
+  const inProgressCount = visibleWorks.filter((w) => w.status === WorkItemStatus.IN_PROGRESS).length
+  const completingCount = visibleWorks.filter((w) => w.status === WorkItemStatus.COMPLETING).length
   const completedCount = completedWorks.length
-  const cancelledCount = visibleWorks.filter((w) => CANCELLED_STATUSES.includes(w.status)).length
+  const cancelledCount = visibleWorks.filter((w) => w.status === WorkItemStatus.CANCELLED).length
   const expiringCount = expiringWorks.length
   const overdueCount = overdueWorks.length
 

@@ -29,11 +29,9 @@ export type GetDashboardDataInput = {
   options?: DashboardDataOptions
 }
 
-export type GetDashboardDataResult = DashboardData
-
 export async function getDashboardDataUseCase(
   input: GetDashboardDataInput,
-): Promise<GetDashboardDataResult> {
+): Promise<DashboardData> {
   const { currentUser, options = {} } = input
   const limit = normalizeLimit(options.limit)
 

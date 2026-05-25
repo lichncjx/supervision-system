@@ -1,22 +1,6 @@
-import type { CurrentUser } from '@/shared/auth/current-user'
-import type { AttachmentApiDto } from '@/features/attachments/contract/attachment-api.types'
-
-export interface UploadAttachmentInput {
-  currentUser: CurrentUser
-  workItemId: number
-  fileName: string
-  fileBuffer: Buffer
-  fileSize: number
-  ext: string
-  category: string
-}
-
-export type UploadAttachmentResult =
-  | {
-    kind: 'ok'
-    attachment: AttachmentApiDto
-  }
-  | { kind: 'error'; status: number; message: string }
+import type { BaseCurrentUser } from '@/shared/auth/current-user'
+import type { AttachmentDto } from '@/features/attachments/application/attachment.dto'
+import { type Result, ok, err } from '@/shared/result'
 import {
   canViewAttachment,
   canUploadAttachment,
@@ -29,26 +13,36 @@ import {
 import { saveUploadedFile } from '@/features/attachments/infrastructure/local-file-storage'
 import { toPermissionUser } from '@/features/works/domain/work-permission-user.mapper'
 
+export interface UploadAttachmentInput {
+  currentUser: BaseCurrentUser
+  workItemId: number
+  fileName: string
+  fileBuffer: Buffer
+  fileSize: number
+  ext: string
+  category: string
+}
+
 export async function uploadAttachmentUseCase(
   input: UploadAttachmentInput,
-): Promise<UploadAttachmentResult> {
+): Promise<Result<AttachmentDto>> {
   const { currentUser, workItemId, fileName, fileBuffer, fileSize, ext, category } = input
 
   const workItem = await findWorkItemForUpload(workItemId)
 
   if (!workItem) {
-    return { kind: 'error', status: 404, message: '事项不存在' }
+    return err(404, '事项不存在')
   }
 
   // The repository selects exactly the work fields required by permission rules.
   const permUser = toPermissionUser(currentUser)
 
   if (!canViewAttachment(permUser, workItem)) {
-    return { kind: 'error', status: 403, message: '无权查看该事项' }
+    return err(403, '无权查看该事项')
   }
 
   if (!canUploadAttachment(permUser, workItem)) {
-    return { kind: 'error', status: 403, message: '无权上传该事项的附件' }
+    return err(403, '无权上传该事项的附件')
   }
 
   // Permission checks must complete before writing the file to disk.
@@ -76,17 +70,14 @@ export async function uploadAttachmentUseCase(
     fileName,
   })
 
-  return {
-    kind: 'ok',
-    attachment: {
-      id: attachment.id,
-      fileName: attachment.fileName,
-      fileSize: attachment.fileSize,
-      fileType: attachment.fileType,
-      category: attachment.category,
-      uploadedAt: attachment.uploadedAt.toISOString(),
-      userId: currentUser.id,
-      userName: currentUser.name,
-    },
-  }
+  return ok({
+    id: attachment.id,
+    fileName: attachment.fileName,
+    fileSize: attachment.fileSize,
+    fileType: attachment.fileType,
+    category: attachment.category,
+    uploadedAt: attachment.uploadedAt.toISOString(),
+    userId: currentUser.id,
+    userName: currentUser.name,
+  })
 }

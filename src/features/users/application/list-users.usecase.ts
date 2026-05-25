@@ -1,20 +1,17 @@
 import { isAdmin } from '@/features/users/domain/role.rules'
 import { findAllUsers } from '@/features/users/infrastructure/user.repository'
-import { toUserListItem } from '@/features/users/application/user-api.mapper'
-import type { UserListItem } from '@/features/users/application/user-api.types'
-
-export type ListUsersResult =
-  | { kind: 'ok'; data: UserListItem[] }
-  | { kind: 'error'; status: number; message: string }
+import { toUserListItemDto } from './user.dto'
+import type { UserListItemDto } from '@/features/users/application/user.dto'
+import { type Result, err, ok } from '@/shared/result'
 
 export async function listUsersUseCase(currentUser: {
   id: number
   role: string
-}): Promise<ListUsersResult> {
+}): Promise<Result<UserListItemDto[]>> {
   if (!isAdmin(currentUser.role)) {
-    return { kind: 'error', status: 403, message: '权限不足' }
+    return err(403, '权限不足')
   }
 
   const users = await findAllUsers()
-  return { kind: 'ok', data: users.map(toUserListItem) }
+  return ok(users.map(toUserListItemDto))
 }

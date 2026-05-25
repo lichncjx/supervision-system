@@ -6,15 +6,10 @@ import { Building2, Settings, Users, UserCog, Plus, Trash2, Power, KeyRound, Eye
 import { useAuth } from '@/components/providers/auth-provider';
 import { getRoleName } from '@/features/users/domain/role.rules';
 import type { Role } from '@/features/users/client/user-client.types';
-import type {
-  UserListItemApiDto,
-  UserListResponse,
-} from '@/features/users/contract/user-api.types';
-import type { ApiErrorResponse } from '@/shared/http/api-response';
-import type {
-  DepartmentApiDto,
-} from '@/features/departments/contract/department-api.types';
-import type { MemberListResponse } from '@/features/members/contract/member-api.types';
+import type { UserListItemDto } from "@/features/users/application/user.dto";
+import type { ErrorData } from '@/shared/http/api-response';
+import type { Department } from '@/features/departments/client/department-api';
+import type { MemberDto } from '@/features/members/application/member.dto';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -27,8 +22,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 
-type User = UserListItemApiDto;
-type Department = DepartmentApiDto;
+type User = UserListItemDto;
 
 export default function AdminPage() {
   const { user } = useAuth();
@@ -71,7 +65,7 @@ export default function AdminPage() {
   const fetchDepartments = async () => {
     try {
       const response = await fetch('/api/departments', { credentials: 'include' });
-      if (response.ok) setDepartments((await response.json()) as DepartmentApiDto[]);
+      if (response.ok) setDepartments((await response.json()) as Department[]);
     } catch (error) {
       console.error('Fetch departments error:', error);
     }
@@ -80,7 +74,7 @@ export default function AdminPage() {
   const fetchMemberCount = async () => {
     try {
       const res = await fetch('/api/members?includeInactive=true', { credentials: 'include' });
-      if (res.ok) setMemberCount(((await res.json()) as MemberListResponse).length);
+      if (res.ok) setMemberCount(((await res.json()) as MemberDto[]).length);
     } catch { /* ignore */ }
   };
 
@@ -90,7 +84,7 @@ export default function AdminPage() {
         credentials: 'include',
       });
       if (response.ok) {
-        const data = (await response.json()) as UserListResponse;
+        const data = (await response.json()) as UserListItemDto[];
         setUserList(data);
       }
     } catch (error) {
@@ -146,10 +140,10 @@ export default function AdminPage() {
         credentials: 'include',
       });
 
-      const data = (await response.json()) as UserListItemApiDto & ApiErrorResponse;
+      const data = (await response.json()) as UserListItemDto & ErrorData;
 
       if (!response.ok) {
-        alert(data.error || '创建失败');
+        alert(data.message || '创建失败');
         return;
       }
 
@@ -169,25 +163,26 @@ export default function AdminPage() {
   };
 
   const handleToggleActive = async (u: User) => {
+    setUserList(prev => prev.map(item => item.id === u.id ? { ...item, isActive: !item.isActive } : item))
+
     try {
       const response = await fetch(`/api/users/${u.id}/status`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ isActive: !u.isActive }),
         credentials: 'include',
       });
 
       if (!response.ok) {
-        const data = (await response.json()) as ApiErrorResponse;
-        alert(data.error || '操作失败');
-        return;
+        const data = (await response.json()) as ErrorData;
+        alert(data.message || '操作失败');
+        setUserList(prev => prev.map(item => item.id === u.id ? { ...item, isActive: u.isActive } : item))
+        return
       }
 
-      fetchUsers();
+      const newIsActive = (await response.json()) as boolean
+      setUserList(prev => prev.map(item => item.id === u.id ? { ...item, isActive: newIsActive } : item))
     } catch (e) {
       alert((e as Error).message || '操作失败');
+      setUserList(prev => prev.map(item => item.id === u.id ? { ...item, isActive: u.isActive } : item))
     }
   };
 
@@ -201,8 +196,8 @@ export default function AdminPage() {
       });
 
       if (!response.ok) {
-        const data = (await response.json()) as ApiErrorResponse;
-        alert(data.error || '删除失败');
+        const data = (await response.json()) as ErrorData;
+        alert(data.message || '删除失败');
         return;
       }
 
@@ -244,8 +239,8 @@ export default function AdminPage() {
       });
 
       if (!response.ok) {
-        const data = (await response.json()) as ApiErrorResponse;
-        alert(data.error || '修改失败');
+        const data = (await response.json()) as ErrorData;
+        alert(data.message || '修改失败');
         return;
       }
 
@@ -285,8 +280,8 @@ export default function AdminPage() {
       });
 
       if (!response.ok) {
-        const data = (await response.json()) as ApiErrorResponse;
-        alert(data.error || '修改失败');
+        const data = (await response.json()) as ErrorData;
+        alert(data.message || '修改失败');
         return;
       }
 
@@ -412,33 +407,33 @@ export default function AdminPage() {
                   ))}
                 </SelectContent>
               </Select>
-          </div>
+            </div>
 
-          <div className="w-[150px]">
-            <label className="block text-xs font-medium text-slate-400 mb-1">所属部门</label>
-            <Select
-              value={String(form.departmentId)}
-              disabled={isCompanyRole}
-              onValueChange={(v) => setForm({ ...form, departmentId: Number(v) })}
-            >
-              <SelectTrigger className="rounded-full border-slate-200 bg-slate-50 h-10 px-4 w-full text-sm text-slate-600">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {departments
-                  .filter((d) => (isCompanyRole ? d.id === 1 : d.id !== 1))
-                  .map((d) => (
-                    <SelectItem key={d.id} value={String(d.id)}>{d.name}</SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-          </div>
+            <div className="w-[150px]">
+              <label className="block text-xs font-medium text-slate-400 mb-1">所属部门</label>
+              <Select
+                value={String(form.departmentId)}
+                disabled={isCompanyRole}
+                onValueChange={(v) => setForm({ ...form, departmentId: Number(v) })}
+              >
+                <SelectTrigger className="rounded-full border-slate-200 bg-slate-50 h-10 px-4 w-full text-sm text-slate-600">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {departments
+                    .filter((d) => (isCompanyRole ? d.id === 1 : d.id !== 1))
+                    .map((d) => (
+                      <SelectItem key={d.id} value={String(d.id)}>{d.name}</SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-          <button onClick={handleAddUser} className="inline-flex items-center gap-1.5 rounded-full bg-slate-800 px-5 py-2.5 text-sm font-medium text-white hover:bg-slate-900 transition-colors">
-            <Plus className="h-4 w-4" />
-            新增
-          </button>
-        </div>
+            <button onClick={handleAddUser} className="inline-flex items-center gap-1.5 rounded-full bg-slate-800 px-5 py-2.5 text-sm font-medium text-white hover:bg-slate-900 transition-colors">
+              <Plus className="h-4 w-4" />
+              新增
+            </button>
+          </div>
         </div>
       </div>
 
@@ -535,11 +530,10 @@ export default function AdminPage() {
                 </span>
                 <span className="text-sm font-medium text-slate-700">{dept.name}</span>
                 <span
-                  className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                    dept.isBusiness
-                      ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.3)]'
-                      : 'bg-slate-300'
-                  }`}
+                  className={`w-1.5 h-1.5 rounded-full shrink-0 ${dept.isBusiness
+                    ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.3)]'
+                    : 'bg-slate-300'
+                    }`}
                 />
               </div>
             ))}

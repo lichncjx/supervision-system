@@ -3,8 +3,8 @@ import {
   processAdjustHistory,
   processNodesForDisplay,
 } from '@/features/works/application/work-display.utils'
-import type { AttachmentApiDto } from '@/features/attachments/contract/attachment-api.types'
-import type { WorkApiDto } from '@/features/works/contract/work-api.types'
+import type { AttachmentDto } from '@/features/attachments/application/attachment.dto'
+import type { WorkDto } from './work.dto'
 
 const TYPE_LABEL: Record<string, string> = {
   PRIORITY: '重点',
@@ -12,7 +12,7 @@ const TYPE_LABEL: Record<string, string> = {
   TODO: '待办',
 }
 
-interface WorkApiSource {
+interface WorkSource {
   id: number
   title: string
   type: string
@@ -76,8 +76,8 @@ function parseJsonField<T>(value: unknown, fallback: T): T {
 }
 
 function toWorkAttachments(
-  attachments: WorkApiSource['attachments'],
-): AttachmentApiDto[] | undefined {
+  attachments: WorkSource['attachments'],
+): AttachmentDto[] | undefined {
   return attachments?.map((attachment) => ({
     id: attachment.id,
     fileName: attachment.fileName,
@@ -90,7 +90,7 @@ function toWorkAttachments(
   }))
 }
 
-export function toWorkApiDto(work: WorkApiSource): WorkApiDto {
+export function toWorkDto(work: WorkSource): WorkDto {
   return {
     id: work.id,
     title: work.title,

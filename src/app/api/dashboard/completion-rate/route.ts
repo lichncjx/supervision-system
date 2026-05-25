@@ -3,7 +3,6 @@ import { requireCurrentUser } from '@/shared/auth/current-user'
 import { withApiHandler } from '@/shared/http/with-api-handler'
 import { ok, fromError } from '@/shared/http/api-response'
 import { getCompletionRateUseCase } from '@/features/dashboard/application/get-completion-rate.usecase'
-import type { DashboardCompletionRateResponse } from '@/features/dashboard/contract/dashboard-api.types'
 
 export const GET = withApiHandler(async (request: NextRequest) => {
   const currentUser = await requireCurrentUser(request)
@@ -20,12 +19,7 @@ export const GET = withApiHandler(async (request: NextRequest) => {
     endDate,
   })
 
-  if (result.kind === 'error') return fromError(result)
+  if (!result.ok) return fromError(result)
 
-  const response: DashboardCompletionRateResponse = {
-    items: result.items,
-    total: result.total,
-  }
-
-  return ok(response)
+  return ok(result.data)
 })

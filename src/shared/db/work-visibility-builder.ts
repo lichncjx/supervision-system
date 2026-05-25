@@ -1,6 +1,5 @@
 import { Prisma, Role } from '@prisma/client'
 import { prisma } from '@/shared/db/prisma'
-import type { BaseCurrentUser } from '@/shared/auth/current-user'
 
 async function findCooperatorWorkItemIds(departmentId: number): Promise<number[]> {
   const rows = await prisma.$queryRaw<{ id: number }[]>`
@@ -15,7 +14,7 @@ function roleIs(role: string, ...targets: Role[]): boolean {
 }
 
 export async function buildWorkVisibilityWhere(
-  user: BaseCurrentUser,
+  user: { id: number; role: string; departmentId: number },
   includeCooperators = true,
 ): Promise<Prisma.WorkItemWhereInput> {
   if (roleIs(user.role, Role.ADMIN, Role.SUPERVISOR)) {

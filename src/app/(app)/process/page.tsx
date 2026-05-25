@@ -12,13 +12,13 @@ import { canApproveWork, canHandleWork } from '@/features/works/client/work-clie
 import { getWorkDueDate } from '@/features/works/client/work-date.utils';
 import { queryWorks } from '@/features/works/client/work-api';
 import { approveWork, rejectWork } from '@/features/workflow/client/workflow-api';
-import type { Work } from '@/features/works/client/work-view.types';
+import type { Work } from '@/features/works/client/work-client.types';
 import { StatusBadge } from '@/features/works/ui/badges';
 import { WorkListPagination } from '@/features/works/ui/work-list-pagination';
 import { WorkSearchBar } from '@/features/works/ui/work-search-bar';
 import { ApproveDialog } from '@/features/workflow/ui/approve-dialog';
 import type { User } from '@/features/users/client/user-client.types';
-import type { DepartmentApiDto as Department } from '@/features/departments/contract/department-api.types';
+import type { Department } from '@/features/departments/client/department-api';
 
 export default function ApprovalPage() {
   const { user } = useAuth();
@@ -84,7 +84,7 @@ export default function ApprovalPage() {
   const handleApproveConfirm = async (comment?: string, nextApproverId?: number | null) => {
     if (!user || !selectedWork) return;
     try {
-      await approveWork(user, selectedWork, comment, nextApproverId);
+      await approveWork(selectedWork, comment, nextApproverId);
       await load();
       alert('审批已通过');
     } catch (error) {
@@ -98,7 +98,7 @@ export default function ApprovalPage() {
     if (reason === null) return;
 
     try {
-      await rejectWork(work, user, reason || '审批退回');
+      await rejectWork(work, reason || '审批退回');
       await load();
       alert('已退回');
     } catch (error) {

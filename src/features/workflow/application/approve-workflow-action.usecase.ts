@@ -1,54 +1,56 @@
-import { APPROVAL_TARGET_STATUS } from '@/features/workflow/domain/workflow.constants'
-import { isApprovalStatus } from '@/features/workflow/domain/workflow.rules'
+import { getTargetStatus, getNextApprovalAssignment } from '@/features/workflow/domain/workflow.rules'
+import { isApproving } from '@/features/works/domain/work-status.rules'
 import { toPermissionUser } from '@/features/works/domain/work-permission-user.mapper'
-import type { CurrentUser } from '@/shared/auth/current-user'
-import type { WorkflowResult } from '@/features/workflow/domain/workflow.types'
+import type { BaseCurrentUser } from '@/shared/auth/current-user'
 import { canApproveWorkItem } from '@/features/works/domain/work.permissions'
 import { isCompanyLevel } from '@/features/users/domain/role.rules'
-import { getNextApprovalAssignment } from './workflow-assignment.service'
 import { findWorkForUpdateById, updateWorkItem } from '@/features/works/infrastructure/work.repository'
-import { ensureNextApproverIsActiveCompanyLeader } from './workflow-next-approver.guard'
+import { ensureIsActiveCompanyLeader } from './workflow-next-approver.guard'
 import {
   createWorkflowRecord,
   createOperationLog,
+  findPresident,
 } from '@/features/workflow/infrastructure/workflow.repository'
+import { type Result, err, ok } from '@/shared/result'
 
 export async function approveWorkflowAction(
   workItemId: number,
-  user: CurrentUser,
+  user: BaseCurrentUser,
   comment?: string,
   nextApproverId?: number | null,
-): Promise<WorkflowResult> {
+): Promise<Result> {
   const permUser = toPermissionUser(user)
   const workItem = await findWorkForUpdateById(workItemId)
   if (!workItem) {
-    return { success: false, error: '事项不存在' }
+    return err(404, '事项不存在')
   }
 
-  if (!isApprovalStatus(workItem.status)) {
-    return { success: false, error: '当前状态不允许审批' }
+  if (!isApproving(workItem.status)) {
+    return err(400, '当前状态不允许审批')
   }
 
   if (!canApproveWorkItem(permUser, workItem)) {
-    return { success: false, error: '无权审批该事项' }
+    return err(403, '无权审批该事项')
   }
 
   if (!workItem.approvalType) {
-    return { success: false, error: '审批类型缺失，无法继续流转' }
+    return err(400, '审批类型缺失，无法继续流转')
   }
 
-  const nextApproverError = await ensureNextApproverIsActiveCompanyLeader(nextApproverId)
+  const nextApproverError = await ensureIsActiveCompanyLeader(nextApproverId)
   if (nextApproverError) return nextApproverError
 
   const oldStatus = workItem.status
-  const nextAssignment = await getNextApprovalAssignment(
+  const president = await findPresident()
+  const nextAssignment = getNextApprovalAssignment(
     workItem,
     workItem.approvalType,
-    nextApproverId,
+    president?.id ?? null,
+    nextApproverId ?? null,
   )
 
   if (nextAssignment.kind === 'missingCompanyLeader') {
-    return { success: false, error: '请先指定公司领导后再提交审批' }
+    return err(400, '请先指定公司领导后再提交审批')
   }
 
   if (nextAssignment.kind === 'next') {
@@ -78,10 +80,10 @@ export async function approveWorkflowAction(
       targetId: workItemId,
     })
 
-    return { success: true, workItem: updated }
+    return ok()
   }
 
-  const targetStatus = APPROVAL_TARGET_STATUS[workItem.approvalType]
+  const targetStatus = getTargetStatus(workItem.approvalType)
   const updated = await updateWorkItem(workItemId, {
     status: targetStatus,
     beforeApprovalStatus: null,
@@ -110,5 +112,5 @@ export async function approveWorkflowAction(
     targetId: workItemId,
   })
 
-  return { success: true, workItem: updated }
+  return ok()
 }

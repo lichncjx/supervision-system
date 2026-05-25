@@ -1,10 +1,6 @@
 import type { User, Role, LoginResult } from '@/features/users/client/user-client.types'
-import type {
-  ChangePasswordResponse,
-  CurrentUserApiDto,
-  LoginResponse,
-} from '@/features/users/contract/user-api.types'
-import type { ApiErrorResponse } from '@/shared/http/api-response'
+import type { CurrentUserDto } from '@/features/users/application/user.dto'
+import type { ErrorData } from '@/shared/http/api-response'
 
 export async function login(
   username: string,
@@ -20,22 +16,22 @@ export async function login(
       credentials: 'include',
     })
 
-    const data = (await response.json()) as LoginResponse & ApiErrorResponse
+    const data = (await response.json()) as CurrentUserDto & ErrorData
 
     if (!response.ok) {
-      return { success: false, error: data.error || '登录失败' }
+      return { success: false, error: data.message || '登录失败' }
     }
 
     return {
       success: true,
       user: {
-        id: data.user.id,
-        username: data.user.username,
-        name: data.user.name,
-        role: data.user.role as Role,
-        departmentId: data.user.departmentId,
-        departmentName: data.user.departmentName,
-        isActive: data.user.isActive,
+        id: data.id,
+        username: data.username,
+        name: data.name,
+        role: data.role as Role,
+        departmentId: data.departmentId,
+        departmentName: data.departmentName,
+        isActive: data.isActive,
       },
     }
   } catch (error) {
@@ -66,7 +62,7 @@ export async function getCurrentUser(): Promise<User | null> {
       return null
     }
 
-    const data = (await response.json()) as CurrentUserApiDto
+    const data = (await response.json()) as CurrentUserDto
 
     return {
       id: data.id,
@@ -97,10 +93,9 @@ export async function changePassword(
       credentials: 'include',
     })
 
-    const data = (await response.json()) as ChangePasswordResponse & ApiErrorResponse
-
     if (!response.ok) {
-      return { success: false, error: data.error || '修改密码失败' }
+      const data = await response.json() as ErrorData
+      return { success: false, error: data.message || '修改密码失败' }
     }
 
     return { success: true }

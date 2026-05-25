@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { Work } from '@/features/works/client/work-view.types';
+import type { Work } from '@/features/works/client/work-client.types';
 
 const SEARCH_FIELDS: (keyof Work)[] = [
   'title',

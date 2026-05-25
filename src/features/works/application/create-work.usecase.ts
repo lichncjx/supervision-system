@@ -1,21 +1,39 @@
-import type { CurrentUser } from '@/shared/auth/current-user'
+import type { BaseCurrentUser } from '@/shared/auth/current-user'
 import { Role, WorkItemType, WorkItemStatus } from '@prisma/client'
-import {
-  createWorkItem,
-  createWorkOperationLog,
-} from '@/features/works/infrastructure/work.repository'
+import { createWorkItem, createWorkOperationLog } from '@/features/works/infrastructure/work.repository'
 import { findDepartmentById } from '@/features/departments/infrastructure/department.repository'
-import {
-  validateMemberAssignments,
-  type MemberAssignment,
-} from '@/features/members/domain/member.rules'
-import { toWorkApiDto } from '@/features/works/application/work-api.mapper'
-import type { CreateWorkRequest, WorkApiDto } from '@/features/works/contract/work-api.types'
+import { validateMemberAssignments, type MemberAssignment } from '@/features/members/domain/member.rules'
+import { toWorkDto } from '@/features/works/application/work.mapper'
+import type { WorkDto } from './work.dto'
+import { type Result, err, ok } from '@/shared/result'
 
-export type CreateWorkBody = CreateWorkRequest
+export interface CreateWorkBody {
+  type: string
+  departmentId: number | null
+  title?: string | null
+  workItem?: string | null
+  workNode?: string | null
+  businessCategory?: string | null
+  completeForm?: string | null
+  isInnovation?: boolean | null
+  responsibleLeader?: string | null
+  responsiblePerson?: string | null
+  responsibleLeaderMemberId?: number | null
+  responsiblePersonMemberId?: number | null
+  proposedLeader?: string | null
+  proposedLeaderId?: number | null
+  proposedScene?: string | null
+  formedTime?: string | null
+  cooperators?: unknown
+  workPlan?: string | null
+  planCompleteTime?: string | null
+  progress?: string | null
+  approvalLeaderId?: number | null
+  nodes?: unknown
+}
 
 export interface CreateWorkInput {
-  currentUser: CurrentUser
+  currentUser: BaseCurrentUser
   body: CreateWorkBody
 }
 
@@ -36,20 +54,16 @@ function processNodes(nodes: any[]) {
       : null,
     children: node.children
       ? node.children.map((child: any) => ({
-          ...child,
-          completeTime: child.completeTime
-            ? new Date(child.completeTime + 'T00:00:00.000Z').toISOString()
-            : null,
-        }))
+        ...child,
+        completeTime: child.completeTime
+          ? new Date(child.completeTime + 'T00:00:00.000Z').toISOString()
+          : null,
+      }))
       : [],
   }))
 }
 
-export type CreateWorkResult =
-  | { kind: 'ok'; data: WorkApiDto }
-  | { kind: 'error'; status: number; message: string }
-
-export async function createWorkUseCase(input: CreateWorkInput): Promise<CreateWorkResult> {
+export async function createWorkUseCase(input: CreateWorkInput): Promise<Result<WorkDto>> {
   const { currentUser, body } = input
   const departmentId = body.departmentId
   const rest = body
@@ -62,7 +76,7 @@ export async function createWorkUseCase(input: CreateWorkInput): Promise<CreateW
   } else if (body.type === '待办' || body.type === 'TODO' || body.type === 'todo') {
     workType = WorkItemType.TODO
   } else {
-    return { kind: 'error', status: 400, message: '无效的事项类型' }
+    return err(400, '无效的事项类型')
   }
 
   if (!ROLES_CAN_CREATE_ALL.includes(currentUser.role as Role)) {
@@ -70,24 +84,24 @@ export async function createWorkUseCase(input: CreateWorkInput): Promise<CreateW
       ROLES_CAN_CREATE_TODO_ONLY.includes(currentUser.role as Role) &&
       workType !== WorkItemType.TODO
     ) {
-      return { kind: 'error', status: 403, message: '公司领导只能创建待办事项' }
+      return err(403, '公司领导只能创建待办事项')
     }
 
     if (ROLES_CAN_CREATE_DEPT.includes(currentUser.role as Role)) {
       if (departmentId !== currentUser.departmentId) {
-        return { kind: 'error', status: 403, message: '只能创建本部门事项' }
+        return err(403, '只能创建本部门事项')
       }
     }
   }
 
   if (!departmentId) {
-    return { kind: 'error', status: 400, message: '请指定责任部门' }
+    return err(400, '请指定责任部门')
   }
 
   const department = await findDepartmentById(departmentId)
 
   if (!department) {
-    return { kind: 'error', status: 400, message: '责任部门不存在' }
+    return err(400, '责任部门不存在')
   }
 
   // Validate member IDs if provided
@@ -101,7 +115,7 @@ export async function createWorkUseCase(input: CreateWorkInput): Promise<CreateW
     }
     const errors = await validateMemberAssignments(assignments)
     if (errors.length > 0) {
-      return { kind: 'error', status: 400, message: errors[0].message }
+      return err(400, errors[0].message)
     }
   }
 
@@ -127,7 +141,7 @@ export async function createWorkUseCase(input: CreateWorkInput): Promise<CreateW
     }
     const coopErrors = await validateMemberAssignments(coopAssignments)
     if (coopErrors.length > 0) {
-      return { kind: 'error', status: 400, message: `配合方: ${coopErrors[0].message}` }
+      return err(400, `配合方: ${coopErrors[0].message}`)
     }
   }
 
@@ -173,5 +187,5 @@ export async function createWorkUseCase(input: CreateWorkInput): Promise<CreateW
     workTitle: work.title,
   })
 
-  return { kind: 'ok', data: toWorkApiDto(work) }
+  return ok(toWorkDto(work))
 }

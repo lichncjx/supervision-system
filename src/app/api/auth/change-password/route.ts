@@ -1,17 +1,16 @@
 import { NextRequest } from 'next/server'
 import { requireCurrentUser } from '@/shared/auth/current-user'
-import { success, fromError } from '@/shared/http/api-response'
+import { ok, fromError } from '@/shared/http/api-response'
 import { withApiHandler } from '@/shared/http/with-api-handler'
-import { changePasswordUseCase } from '@/features/users/application/change-password.usecase'
-import type { ChangePasswordRequest } from '@/features/users/contract/user-api.types'
+import { changePasswordUseCase, type ChangePasswordInput } from '@/features/users/application/change-password.usecase'
 
 export const POST = withApiHandler(async (request: NextRequest) => {
   const currentUser = await requireCurrentUser(request)
-  const body = (await request.json()) as ChangePasswordRequest
+  const body = (await request.json()) as ChangePasswordInput
 
   const result = await changePasswordUseCase(currentUser.id, body)
   if (!result.ok)
     return fromError(result)
 
-  return success()
+  return ok()
 })
