@@ -5,7 +5,7 @@ import { getCompanyLeaders, getDepartmentLeaders, getDepartmentManagers } from '
 import { getDepartments } from '@/features/departments/client/department-api';
 import { getWorkById } from '@/features/works/client/work-api';
 import { getWorkflowRecords } from '@/features/workflow/client/workflow-api';
-import type { Work } from '@/features/works/client/work-view.types';
+import type { Work } from '@/features/works/client/work-client.types';
 import type { WorkflowRecordDto as WorkflowRecord } from "@/features/workflow/application/get-workflow-records.usecase";
 import type { User } from '@/features/users/client/user-client.types';
 import type { Department } from '@/features/departments/client/department-api';

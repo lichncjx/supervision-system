@@ -12,9 +12,9 @@ import {
   queryWorks,
   getVisibleWorks,
 } from '@/features/works/client/work-api';
-import { sortWorksByDueDate } from '@/features/works/client/work-sort';
+import { sortWorksByDueDate } from '@/features/works/client/work-sort.utils';
 import type { WorkStatusFilter, WorkType } from '@/features/works/client/work-client.types';
-import type { Work } from '@/features/works/client/work-view.types';
+import type { Work } from '@/features/works/client/work-client.types';
 import { getDepartments } from '@/features/departments/client/department-api';
 import type { Department } from '@/features/departments/client/department-api';
 import { isCompanyLevel, isGlobalView } from '@/features/users/domain/role.rules';

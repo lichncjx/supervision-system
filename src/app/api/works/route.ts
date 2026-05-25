@@ -3,8 +3,7 @@ import { requireCurrentUser } from '@/shared/auth/current-user'
 import { withApiHandler } from '@/shared/http/with-api-handler'
 import { ok, fromError } from '@/shared/http/api-response'
 import { queryWorksUseCase } from '@/features/works/application/query-works.usecase'
-import { createWorkUseCase } from '@/features/works/application/create-work.usecase'
-import type { CreateWorkRequest } from '@/features/works/contract/work-api.types'
+import { createWorkUseCase, type CreateWorkBody } from '@/features/works/application/create-work.usecase'
 
 export const GET = withApiHandler(async (request: NextRequest) => {
   const currentUser = await requireCurrentUser(request)
@@ -18,7 +17,7 @@ export const GET = withApiHandler(async (request: NextRequest) => {
   }
 
   const result = await queryWorksUseCase({ currentUser, params })
-  if (result.kind === 'error') return fromError(result)
+  if (!result.ok) return fromError(result)
 
   return ok(result.data)
 })
@@ -26,9 +25,9 @@ export const GET = withApiHandler(async (request: NextRequest) => {
 export const POST = withApiHandler(async (request: NextRequest) => {
   const currentUser = await requireCurrentUser(request)
 
-  const body = (await request.json()) as CreateWorkRequest
+  const body = (await request.json()) as CreateWorkBody
   const result = await createWorkUseCase({ currentUser, body })
-  if (result.kind === 'error') return fromError(result)
+  if (!result.ok) return fromError(result)
 
   return ok(result.data)
 })

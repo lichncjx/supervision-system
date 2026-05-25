@@ -9,7 +9,7 @@ import { isCompanyLevel, isGlobalView } from '@/features/users/domain/role.rules
 import { getDepartments } from '@/features/departments/client/department-api';
 import type { Department } from '@/features/departments/client/department-api';
 import { getVisibleWorks, queryWorks } from '@/features/works/client/work-api';
-import type { Work } from '@/features/works/client/work-view.types';
+import type { Work } from '@/features/works/client/work-client.types';
 import type { WorkType, WorkStatusFilter } from '@/features/works/client/work-client.types';
 import { workTypeColors, getStatusAccent } from '@/features/works/ui/status-colors';
 import { Plus, Download, Upload, FileSpreadsheet, Star, ListTodo, CheckSquare } from 'lucide-react';

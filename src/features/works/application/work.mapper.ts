@@ -4,7 +4,7 @@ import {
   processNodesForDisplay,
 } from '@/features/works/application/work-display.utils'
 import type { AttachmentDto } from '@/features/attachments/application/attachment.dto'
-import type { WorkApiDto } from '@/features/works/contract/work-api.types'
+import type { WorkDto } from './work.dto'
 
 const TYPE_LABEL: Record<string, string> = {
   PRIORITY: '重点',
@@ -90,7 +90,7 @@ function toWorkAttachments(
   }))
 }
 
-export function toWorkApiDto(work: WorkApiSource): WorkApiDto {
+export function toWorkDto(work: WorkApiSource): WorkDto {
   return {
     id: work.id,
     title: work.title,

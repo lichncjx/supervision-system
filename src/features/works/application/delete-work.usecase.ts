@@ -1,36 +1,28 @@
 import type { BaseCurrentUser } from '@/shared/auth/current-user'
 import { Role } from '@prisma/client'
-
-interface DeleteWorkResultData {
-  success: true
-  message: string
-}
 import {
   findWorkForUpdateById,
   deleteWorkItem,
   createWorkDeleteOperationLog,
 } from '@/features/works/infrastructure/work.repository'
+import { type Result, err, ok } from '@/shared/result'
 
 export interface DeleteWorkInput {
   currentUser: BaseCurrentUser
   workId: number
 }
 
-export type DeleteWorkResult =
-  | { kind: 'ok'; data: DeleteWorkResultData }
-  | { kind: 'error'; status: number; message: string }
-
-export async function deleteWorkUseCase(input: DeleteWorkInput): Promise<DeleteWorkResult> {
+export async function deleteWorkUseCase(input: DeleteWorkInput): Promise<Result> {
   const { currentUser, workId } = input
 
   if (currentUser.role !== Role.ADMIN) {
-    return { kind: 'error', status: 403, message: '权限不足' }
+    return err(403, '权限不足')
   }
 
   const work = await findWorkForUpdateById(workId)
 
   if (!work) {
-    return { kind: 'error', status: 404, message: '事项不存在' }
+    return err(404, '事项不存在')
   }
 
   await createWorkDeleteOperationLog({
@@ -44,5 +36,5 @@ export async function deleteWorkUseCase(input: DeleteWorkInput): Promise<DeleteW
 
   await deleteWorkItem(workId)
 
-  return { kind: 'ok', data: { success: true, message: '删除成功' } }
+  return ok()
 }

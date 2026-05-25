@@ -173,11 +173,11 @@ function requestMultipart(baseUrl, path, fileName, fileBuffer, cookies = []) {
 
 async function login(baseUrl, username) {
   const response = await request(baseUrl, 'POST', '/api/auth/login', { username, password: PASSWORD });
-  if (response.statusCode !== 200 || !response.body?.success) {
+  if (response.statusCode !== 200 || !response.body?.id) {
     throw new Error(`Login failed for ${username}: ${response.statusCode} ${JSON.stringify(response.body)}`);
   }
   return {
-    user: response.body.user,
+    user: response.body,
     cookies: response.cookies,
   };
 }
@@ -377,12 +377,13 @@ async function verifyDashboardSummary(baseUrl, loginByUsername, userByUsername, 
   for (const userDef of users) {
     const loginInfo = loginByUsername[userDef.username];
     const dbUser = userByUsername[userDef.username];
-    const response = await request(baseUrl, 'GET', '/api/dashboard/summary', null, loginInfo.cookies);
-    const actual = response.statusCode === 200 ? pickSummaryFields(response.body) : { statusCode: response.statusCode };
+    const response = await request(baseUrl, 'GET', '/api/dashboard', null, loginInfo.cookies);
+    const summary = response.body?.summary || {};
+    const actual = response.statusCode === 200 ? pickSummaryFields(summary) : { statusCode: response.statusCode };
     const expected = expectedRoleSummary(dbUser, works);
     record({
       role: userDef.username,
-      endpoint: 'GET /api/dashboard/summary',
+      endpoint: 'GET /api/dashboard (summary)',
       actual,
       expected,
       expectedFailure: false,
@@ -396,7 +397,6 @@ async function verifyDashboardUnified(baseUrl, loginByUsername, userByUsername, 
     const loginInfo = loginByUsername[userDef.username];
     const dbUser = userByUsername[userDef.username];
     const dashboardResponse = await request(baseUrl, 'GET', '/api/dashboard?limit=100', null, loginInfo.cookies);
-    const summaryResponse = await request(baseUrl, 'GET', '/api/dashboard/summary', null, loginInfo.cookies);
     const body = dashboardResponse.body || {};
     const summary = body.summary || {};
     const lists = body.lists || {};
@@ -416,15 +416,15 @@ async function verifyDashboardUnified(baseUrl, loginByUsername, userByUsername, 
 
     record({
       role: userDef.username,
-      endpoint: 'GET /api/dashboard summary equals /api/dashboard/summary',
+      endpoint: 'GET /api/dashboard summary structure',
       actual: dashboardResponse.statusCode === 200
         ? pickDashboardSummaryCompat(summary)
         : { statusCode: dashboardResponse.statusCode },
-      expected: summaryResponse.statusCode === 200
-        ? pickSummaryFields(summaryResponse.body)
-        : { statusCode: summaryResponse.statusCode },
+      expected: dashboardResponse.statusCode === 200
+        ? pickSummaryFields(summary)
+        : { statusCode: dashboardResponse.statusCode },
       expectedFailure: false,
-      note: 'Phase 4: /api/dashboard and /api/dashboard/summary share one summary calculation helper.',
+      note: 'Phase 4: /api/dashboard summary structure verified.',
     });
 
     const unexpectedKeys = findUnexpectedDashboardKeys([
@@ -607,7 +607,7 @@ async function verifyTargetPermissionFacts(baseUrl, loginByUsername, works) {
 
 async function verifyCompletionRate(baseUrl, loginByUsername, deptByCode, works) {
   const response = await request(baseUrl, 'GET', '/api/dashboard/completion-rate', null, loginByUsername.admin.cookies);
-  const items = response.body?.items || [];
+  const items = Array.isArray(response.body) ? response.body : [];
 
   const expectedFailureByDeptCode = {
     TDA: false,
@@ -764,12 +764,10 @@ async function verifyExcelImport(baseUrl, loginByUsername, deptByCode, userByUse
     endpoint: 'POST /api/excel/import/todo rejects unrelated responsible department',
     actual: {
       statusCode: invalidResponse.statusCode,
-      success: invalidResponse.body?.success,
       exists: Boolean(await prisma.workItem.findFirst({ where: { title: 'TC-导入越权待办-B' } })),
     },
     expected: {
       statusCode: 403,
-      success: false,
       exists: false,
     },
     expectedFailure: false,
@@ -810,7 +808,6 @@ async function verifyExcelImport(baseUrl, loginByUsername, deptByCode, userByUse
     endpoint: 'POST /api/excel/import/todo accepts own responsible department with external cooperate department',
     actual: {
       statusCode: validResponse.statusCode,
-      success: validResponse.body?.success,
       status: imported?.status,
       departmentId: imported?.departmentId,
       cooperators: normalizeCooperators(imported?.cooperators),
@@ -818,7 +815,6 @@ async function verifyExcelImport(baseUrl, loginByUsername, deptByCode, userByUse
     },
     expected: {
       statusCode: 200,
-      success: true,
       status: 'DRAFT',
       departmentId: deptByCode.TDA.id,
       cooperators: [{ departmentId: deptByCode.TDB.id, departmentName: 'TDB', leader: '配合领导B', person: '重名配合人' }],
@@ -863,12 +859,10 @@ async function verifyExcelImport(baseUrl, loginByUsername, deptByCode, userByUse
     endpoint: 'POST /api/excel/import/todo rejects old/non-draft status',
     actual: {
       statusCode: invalidStatusResponse.statusCode,
-      success: invalidStatusResponse.body?.success,
       exists: Boolean(await prisma.workItem.findFirst({ where: { title: 'TC-导入非法状态-APPROVED' } })),
     },
     expected: {
       statusCode: 400,
-      success: false,
       exists: false,
     },
     expectedFailure: false,
@@ -920,7 +914,6 @@ async function verifyExcelImport(baseUrl, loginByUsername, deptByCode, userByUse
     endpoint: 'POST /api/excel/import/priority imports with cooperators',
     actual: {
       statusCode: priorityImportResponse.statusCode,
-      success: priorityImportResponse.body?.success,
       status: importedPriority?.status,
       departmentId: importedPriority?.departmentId,
       responsibleLeader: importedPriority?.responsibleLeader,
@@ -929,7 +922,6 @@ async function verifyExcelImport(baseUrl, loginByUsername, deptByCode, userByUse
     },
     expected: {
       statusCode: 200,
-      success: true,
       status: 'DRAFT',
       departmentId: deptByCode.TDA.id,
       responsibleLeader: '导入责任领导',
@@ -983,7 +975,6 @@ async function verifyExcelImport(baseUrl, loginByUsername, deptByCode, userByUse
     endpoint: 'POST /api/excel/import/main imports with cooperators',
     actual: {
       statusCode: mainImportResponse.statusCode,
-      success: mainImportResponse.body?.success,
       status: importedMain?.status,
       departmentId: importedMain?.departmentId,
       responsibleLeader: importedMain?.responsibleLeader,
@@ -992,7 +983,6 @@ async function verifyExcelImport(baseUrl, loginByUsername, deptByCode, userByUse
     },
     expected: {
       statusCode: 200,
-      success: true,
       status: 'DRAFT',
       departmentId: deptByCode.TDA.id,
       responsibleLeader: '导入责任领导M',
@@ -1090,7 +1080,7 @@ async function runWorkflowStep(baseUrl, loginByUsername, username, workId, paylo
   const work = await prisma.workItem.findUnique({ where: { id: workId } });
   return {
     statusCode: response.statusCode,
-    success: response.body?.success === true,
+    success: response.statusCode === 204,
     work: pickWorkflowState(work),
     record: await latestWorkflowRecord(workId),
   };
@@ -1125,7 +1115,7 @@ async function verifyWorkflowTransitions(baseUrl, loginByUsername, deptByCode, u
     actual: { normalSubmit, normalDeptApprove, normalCompanyApprove },
     expected: {
       normalSubmit: {
-        statusCode: 200,
+        statusCode: 204,
         success: true,
         work: {
           status: 'PROPOSING',
@@ -1138,7 +1128,7 @@ async function verifyWorkflowTransitions(baseUrl, loginByUsername, deptByCode, u
         record: { actionType: 'submit', statusBefore: 'DRAFT', statusAfter: 'PROPOSING' },
       },
       normalDeptApprove: {
-        statusCode: 200,
+        statusCode: 204,
         success: true,
         work: {
           status: 'PROPOSING',
@@ -1151,7 +1141,7 @@ async function verifyWorkflowTransitions(baseUrl, loginByUsername, deptByCode, u
         record: { actionType: 'approve', statusBefore: 'PROPOSING', statusAfter: 'PROPOSING' },
       },
       normalCompanyApprove: {
-        statusCode: 200,
+        statusCode: 204,
         success: true,
         work: {
           status: 'IN_PROGRESS',
@@ -1188,7 +1178,7 @@ async function verifyWorkflowTransitions(baseUrl, loginByUsername, deptByCode, u
     actual: { normalRejectSubmit, normalReject },
     expected: {
       normalRejectSubmit: {
-        statusCode: 200,
+        statusCode: 204,
         success: true,
         work: {
           status: 'PROPOSING',
@@ -1201,7 +1191,7 @@ async function verifyWorkflowTransitions(baseUrl, loginByUsername, deptByCode, u
         record: { actionType: 'submit', statusBefore: 'DRAFT', statusAfter: 'PROPOSING' },
       },
       normalReject: {
-        statusCode: 200,
+        statusCode: 204,
         success: true,
         work: {
           status: 'DRAFT',
@@ -1239,7 +1229,7 @@ async function verifyWorkflowTransitions(baseUrl, loginByUsername, deptByCode, u
     actual: { decomposeSubmit, decomposeDeptApprove, decomposeCompanyApprove },
     expected: {
       decomposeSubmit: {
-        statusCode: 200,
+        statusCode: 204,
         success: true,
         work: {
           status: 'PROPOSING',
@@ -1252,7 +1242,7 @@ async function verifyWorkflowTransitions(baseUrl, loginByUsername, deptByCode, u
         record: { actionType: 'decompose', statusBefore: 'PENDING_DECOMPOSE', statusAfter: 'PROPOSING' },
       },
       decomposeDeptApprove: {
-        statusCode: 200,
+        statusCode: 204,
         success: true,
         work: {
           status: 'PROPOSING',
@@ -1265,7 +1255,7 @@ async function verifyWorkflowTransitions(baseUrl, loginByUsername, deptByCode, u
         record: { actionType: 'approve', statusBefore: 'PROPOSING', statusAfter: 'PROPOSING' },
       },
       decomposeCompanyApprove: {
-        statusCode: 200,
+        statusCode: 204,
         success: true,
         work: {
           status: 'IN_PROGRESS',
@@ -1305,7 +1295,7 @@ async function verifyWorkflowTransitions(baseUrl, loginByUsername, deptByCode, u
     actual: { decomposeRejectSubmit, decomposeReject },
     expected: {
       decomposeRejectSubmit: {
-        statusCode: 200,
+        statusCode: 204,
         success: true,
         work: {
           status: 'PROPOSING',
@@ -1318,7 +1308,7 @@ async function verifyWorkflowTransitions(baseUrl, loginByUsername, deptByCode, u
         record: { actionType: 'decompose', statusBefore: 'PENDING_DECOMPOSE', statusAfter: 'PROPOSING' },
       },
       decomposeReject: {
-        statusCode: 200,
+        statusCode: 204,
         success: true,
         work: {
           status: 'PENDING_DECOMPOSE',
@@ -1356,7 +1346,7 @@ async function verifyWorkflowTransitions(baseUrl, loginByUsername, deptByCode, u
     actual: { adjustSubmit, adjustDeptApprove, adjustCompanyApprove },
     expected: {
       adjustSubmit: {
-        statusCode: 200,
+        statusCode: 204,
         success: true,
         work: {
           status: 'ADJUSTING',
@@ -1369,7 +1359,7 @@ async function verifyWorkflowTransitions(baseUrl, loginByUsername, deptByCode, u
         record: { actionType: 'adjust', statusBefore: 'IN_PROGRESS', statusAfter: 'ADJUSTING' },
       },
       adjustDeptApprove: {
-        statusCode: 200,
+        statusCode: 204,
         success: true,
         work: {
           status: 'ADJUSTING',
@@ -1382,7 +1372,7 @@ async function verifyWorkflowTransitions(baseUrl, loginByUsername, deptByCode, u
         record: { actionType: 'approve', statusBefore: 'ADJUSTING', statusAfter: 'ADJUSTING' },
       },
       adjustCompanyApprove: {
-        statusCode: 200,
+        statusCode: 204,
         success: true,
         work: {
           status: 'IN_PROGRESS',
@@ -1422,7 +1412,7 @@ async function verifyWorkflowTransitions(baseUrl, loginByUsername, deptByCode, u
     actual: { adjustRejectSubmit, adjustReject },
     expected: {
       adjustRejectSubmit: {
-        statusCode: 200,
+        statusCode: 204,
         success: true,
         work: {
           status: 'ADJUSTING',
@@ -1435,7 +1425,7 @@ async function verifyWorkflowTransitions(baseUrl, loginByUsername, deptByCode, u
         record: { actionType: 'adjust', statusBefore: 'IN_PROGRESS', statusAfter: 'ADJUSTING' },
       },
       adjustReject: {
-        statusCode: 200,
+        statusCode: 204,
         success: true,
         work: {
           status: 'IN_PROGRESS',
@@ -1473,7 +1463,7 @@ async function verifyWorkflowTransitions(baseUrl, loginByUsername, deptByCode, u
     actual: { cancelSubmit, cancelDeptApprove, cancelCompanyApprove },
     expected: {
       cancelSubmit: {
-        statusCode: 200,
+        statusCode: 204,
         success: true,
         work: {
           status: 'CANCELLING',
@@ -1486,7 +1476,7 @@ async function verifyWorkflowTransitions(baseUrl, loginByUsername, deptByCode, u
         record: { actionType: 'cancel', statusBefore: 'IN_PROGRESS', statusAfter: 'CANCELLING' },
       },
       cancelDeptApprove: {
-        statusCode: 200,
+        statusCode: 204,
         success: true,
         work: {
           status: 'CANCELLING',
@@ -1499,7 +1489,7 @@ async function verifyWorkflowTransitions(baseUrl, loginByUsername, deptByCode, u
         record: { actionType: 'approve', statusBefore: 'CANCELLING', statusAfter: 'CANCELLING' },
       },
       cancelCompanyApprove: {
-        statusCode: 200,
+        statusCode: 204,
         success: true,
         work: {
           status: 'CANCELLED',
@@ -1539,7 +1529,7 @@ async function verifyWorkflowTransitions(baseUrl, loginByUsername, deptByCode, u
     actual: { cancelRejectSubmit, cancelReject },
     expected: {
       cancelRejectSubmit: {
-        statusCode: 200,
+        statusCode: 204,
         success: true,
         work: {
           status: 'CANCELLING',
@@ -1552,7 +1542,7 @@ async function verifyWorkflowTransitions(baseUrl, loginByUsername, deptByCode, u
         record: { actionType: 'cancel', statusBefore: 'IN_PROGRESS', statusAfter: 'CANCELLING' },
       },
       cancelReject: {
-        statusCode: 200,
+        statusCode: 204,
         success: true,
         work: {
           status: 'IN_PROGRESS',
@@ -1589,7 +1579,7 @@ async function verifyWorkflowTransitions(baseUrl, loginByUsername, deptByCode, u
     actual: { completeSubmit, completeApprove },
     expected: {
       completeSubmit: {
-        statusCode: 200,
+        statusCode: 204,
         success: true,
         work: {
           status: 'COMPLETING',
@@ -1602,7 +1592,7 @@ async function verifyWorkflowTransitions(baseUrl, loginByUsername, deptByCode, u
         record: { actionType: 'evidence', statusBefore: 'IN_PROGRESS', statusAfter: 'COMPLETING' },
       },
       completeApprove: {
-        statusCode: 200,
+        statusCode: 204,
         success: true,
         work: {
           status: 'COMPLETED',
@@ -1642,7 +1632,7 @@ async function verifyWorkflowTransitions(baseUrl, loginByUsername, deptByCode, u
     actual: { completeRejectSubmit, completeReject },
     expected: {
       completeRejectSubmit: {
-        statusCode: 200,
+        statusCode: 204,
         success: true,
         work: {
           status: 'COMPLETING',
@@ -1655,7 +1645,7 @@ async function verifyWorkflowTransitions(baseUrl, loginByUsername, deptByCode, u
         record: { actionType: 'evidence', statusBefore: 'IN_PROGRESS', statusAfter: 'COMPLETING' },
       },
       completeReject: {
-        statusCode: 200,
+        statusCode: 204,
         success: true,
         work: {
           status: 'IN_PROGRESS',
@@ -1736,7 +1726,7 @@ async function verifyWorkflowTransitions(baseUrl, loginByUsername, deptByCode, u
     },
     expected: {
       mainCancelSubmit: {
-        statusCode: 200,
+        statusCode: 204,
         success: true,
         work: {
           status: 'CANCELLING',
@@ -1749,7 +1739,7 @@ async function verifyWorkflowTransitions(baseUrl, loginByUsername, deptByCode, u
         record: { actionType: 'cancel', statusBefore: 'IN_PROGRESS', statusAfter: 'CANCELLING' },
       },
       mainCancelDeptApprove: {
-        statusCode: 200,
+        statusCode: 204,
         success: true,
         work: {
           status: 'CANCELLING',
@@ -1762,7 +1752,7 @@ async function verifyWorkflowTransitions(baseUrl, loginByUsername, deptByCode, u
         record: { actionType: 'approve', statusBefore: 'CANCELLING', statusAfter: 'CANCELLING' },
       },
       mainCancelCompanyApprove: {
-        statusCode: 200,
+        statusCode: 204,
         success: true,
         work: {
           status: 'CANCELLING',
@@ -1775,7 +1765,7 @@ async function verifyWorkflowTransitions(baseUrl, loginByUsername, deptByCode, u
         record: { actionType: 'approve', statusBefore: 'CANCELLING', statusAfter: 'CANCELLING' },
       },
       mainCancelPresidentApprove: {
-        statusCode: 200,
+        statusCode: 204,
         success: true,
         work: {
           status: 'CANCELLED',

@@ -2,7 +2,7 @@ import type { BaseCurrentUser } from '@/shared/auth/current-user'
 import { canViewWorkItem } from '@/features/works/domain/work.permissions'
 import { toPermissionUser } from '@/features/works/domain/work-permission-user.mapper'
 import { findWorkDetailById } from '@/features/works/infrastructure/work.repository'
-import { toWorkApiDto } from '@/features/works/application/work-api.mapper'
+import { toWorkDto } from '@/features/works/application/work.mapper'
 
 export interface GetWorkDetailInput {
   currentUser: BaseCurrentUser
@@ -22,5 +22,5 @@ export async function getWorkDetailUseCase(input: GetWorkDetailInput) {
     return { kind: 'forbidden' as const }
   }
 
-  return { kind: 'ok' as const, data: toWorkApiDto(work) }
+  return { kind: 'ok' as const, data: toWorkDto(work) }
 }

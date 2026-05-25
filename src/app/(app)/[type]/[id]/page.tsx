@@ -47,7 +47,7 @@ import {
   approveWork,
   rejectWork,
 } from '@/features/workflow/client/workflow-api';
-import type { WorkEditablePatch } from '@/features/works/client/work-view.types';
+import type { WorkEditablePatch } from '@/features/works/client/work-client.types';
 
 export default function WorkDetailPage() {
   const params = useParams<{ type: string; id: string }>();

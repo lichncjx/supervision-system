@@ -3,7 +3,7 @@
 import React from 'react';
 import { Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import type { Work } from '@/features/works/client/work-view.types';
+import type { Work } from '@/features/works/client/work-client.types';
 import { DISPLAY_LABEL, DETAIL_THEME, type DetailThemeKey } from './visual-tokens';
 
 interface WorkDisplayInfoProps {

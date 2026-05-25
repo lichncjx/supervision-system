@@ -1,4 +1,4 @@
-import type { Work, WorkEditablePatch } from '@/features/works/client/work-view.types'
+import type { Work, WorkEditablePatch } from '@/features/works/client/work-client.types'
 import type { WorkflowRecordDto as WorkflowRecord } from "../application/get-workflow-records.usecase"
 import type { ErrorData } from '@/shared/http/api-response'
 import { getWorkById } from '@/features/works/client/work-api'

@@ -1,4 +1,4 @@
-import type { Work } from '@/features/works/client/work-view.types'
+import type { Work } from '@/features/works/client/work-client.types'
 import { getWorkDueDate } from './work-date.utils'
 
 export function sortWorksByDueDate<T extends Work>(list: T[]) {

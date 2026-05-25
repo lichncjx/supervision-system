@@ -7,9 +7,10 @@ export interface ErrorData {
 }
 
 export function ok<T>(data?: T, init?: ResponseInit) {
-  return data === undefined
-    ? NextResponse.json(null, { status: 204 })
-    : NextResponse.json(data, init)
+  if (data === undefined) {
+    return new NextResponse(null, { status: 204 })
+  }
+  return NextResponse.json(data, init)
 }
 
 export function fail(

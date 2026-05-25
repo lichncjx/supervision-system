@@ -1,5 +1,5 @@
 import { isReturnedDraftWork } from '@/features/works/domain/work-status.rules'
-import type { Work } from '@/features/works/client/work-view.types'
+import type { Work } from '@/features/works/client/work-client.types'
 import { isCompanyLevel } from '@/features/users/domain/role.rules'
 
 function statusToStepIndex(work: Work): number | undefined {

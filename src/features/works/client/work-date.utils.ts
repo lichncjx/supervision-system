@@ -1,5 +1,5 @@
 import { shouldCountForDeadline } from '@/features/works/domain/work-status.rules'
-import type { Work } from '@/features/works/client/work-view.types'
+import type { Work } from '@/features/works/client/work-client.types'
 
 export function getWorkDueDate(work: Work) {
   return work.planCompleteTime || ''
