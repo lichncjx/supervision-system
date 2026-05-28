@@ -133,24 +133,25 @@ body {
 
 /* ============================================================
    弹窗/浮层 z-index 修复：兼容旧版 Chrome 的层叠上下文问题
+   层级：overlay(9998) < dialog(9999) < popper(10000)
+   select/dropdown/popover 通过 Portal 挂到 body，必须高于 dialog
    ============================================================ */
-[data-radix-popper-content-wrapper] {
-  z-index: 9999 !important;
-}
-[role="dialog"] {
-  position: fixed !important;
-  z-index: 9999 !important;
-}
-[data-radix-dialog-overlay],
-[data-radix-alert-dialog-overlay] {
-  position: fixed !important;
-  inset: 0 !important;
+[data-slot="dialog-overlay"],
+[data-slot="alert-dialog-overlay"] {
   z-index: 9998 !important;
 }
-[data-radix-select-content],
-[data-radix-dropdown-menu-content],
-[data-radix-popover-content] {
+[data-slot="dialog-content"],
+[data-slot="alert-dialog-content"] {
   z-index: 9999 !important;
+}
+[data-radix-popper-content-wrapper] {
+  z-index: 10000 !important;
+}
+[data-slot="select-content"],
+[data-slot="dropdown-menu-content"],
+[data-slot="dropdown-menu-sub-content"],
+[data-slot="popover-content"] {
+  z-index: 10000 !important;
 }
 
 input[type="date"]::-webkit-calendar-picker-indicator {
