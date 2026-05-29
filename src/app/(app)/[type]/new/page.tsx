@@ -24,7 +24,7 @@ import {
   PlanCompleteTimeField,
   TodoSpecificFields,
 } from '@/features/works/ui/work-form-fields';
-import { validateCreateWorkFormFields, type CreateWorkFormField } from '@/features/works/ui/work-form-validations';
+import { validateCreateWorkFormFields, type CreateWorkFormField } from '@/features/works/client/work-form-validation';
 import { buildCreateWorkPayload } from '@/features/works/client/build-create-work-payload';
 import type { User } from '@/features/users/client/user-client.types';
 import type { Department } from '@/features/departments/client/department-api';
