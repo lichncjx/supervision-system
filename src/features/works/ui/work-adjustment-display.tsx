@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+export { getChangedAdjustmentFields } from '@/features/works/domain/work-adjustment-diff';
 
 export const ADJUSTMENT_FIELD_LABELS: Record<string, string> = {
   title: '标题',
@@ -111,17 +112,4 @@ export function adjustmentValueToDisplay(
     );
   }
   return String(normalized);
-}
-
-export function hasAdjustmentValueChanged(before: unknown, after: unknown) {
-  return JSON.stringify(normalizeAdjustmentValue(before)) !== JSON.stringify(normalizeAdjustmentValue(after));
-}
-
-export function getChangedAdjustmentFields(
-  beforeSnapshot: Record<string, unknown>,
-  patch: Record<string, unknown>,
-) {
-  return Object.keys(patch).filter((field) =>
-    hasAdjustmentValueChanged(beforeSnapshot[field], patch[field]),
-  );
 }

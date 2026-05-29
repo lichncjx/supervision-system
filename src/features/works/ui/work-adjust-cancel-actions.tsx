@@ -5,13 +5,11 @@ import { Button } from '@/components/ui/button';
 import { PANEL_PADDED } from './visual-tokens';
 
 interface WorkAdjustCancelActionsProps {
-  visible?: boolean;
   onAdjust: () => void;
   onCancel: () => void;
 }
 
-export function WorkAdjustCancelActions({ visible = true, onAdjust, onCancel }: WorkAdjustCancelActionsProps) {
-  if (!visible) return null;
+export function WorkAdjustCancelActions({ onAdjust, onCancel }: WorkAdjustCancelActionsProps) {
   return (
     <div className={PANEL_PADDED}>
       <h3 className="text-sm font-semibold text-slate-500 tracking-wide mb-3">操作</h3>

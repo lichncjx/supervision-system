@@ -25,6 +25,7 @@ import {
   validateAdjustWorkFormFields,
 } from '@/features/works/client/work-form-validation';
 import { submitAdjust } from '@/features/workflow/client/workflow-api';
+import { getChangedAdjustmentFields } from '@/features/works/domain/work-adjustment-diff';
 import { isInProgress } from '@/features/works/domain/work-status.rules';
 import { isOwnedBy } from '@/features/works/client/work-client-permissions';
 import type { Cooperator, Work, WorkEditablePatch, WorkNode, WorkType } from '@/features/works/client/work-client.types';
@@ -75,6 +76,29 @@ function filterValidNodes(nodes: WorkNode[]) {
       ...node,
       children: (node.children || []).filter((child) => child.title?.trim()),
     }));
+}
+
+function buildAdjustmentBeforeSnapshot(work: Work): Record<string, unknown> {
+  return {
+    title: work.title,
+    workItem: work.workItem,
+    businessCategory: work.businessCategory,
+    workNode: work.workNode,
+    completeForm: work.completeForm,
+    isInnovation: work.isInnovation,
+    departmentId: work.departmentId,
+    responsibleLeader: work.responsibleLeader,
+    responsiblePerson: work.responsiblePerson,
+    responsibleLeaderMemberId: work.responsibleLeaderMemberId,
+    responsiblePersonMemberId: work.responsiblePersonMemberId,
+    cooperators: work.cooperators || [],
+    workPlan: work.workPlan,
+    planCompleteTime: work.planCompleteTime,
+    progress: work.progress,
+    nodes: work.nodes || [],
+    proposedScene: work.proposedScene,
+    formedTime: work.formedTime,
+  };
 }
 
 function ReadonlyInfo({
@@ -202,9 +226,19 @@ export default function AdjustWorkPage() {
       return;
     }
 
+    const patch = buildPatch();
+    const changedFields = getChangedAdjustmentFields(
+      buildAdjustmentBeforeSnapshot(work),
+      patch as Record<string, unknown>,
+    );
+    if (changedFields.length === 0) {
+      alert('调整内容没有变更，无需提交调整申请');
+      return;
+    }
+
     setSubmitting(true);
     try {
-      await submitAdjust(work, reason.trim(), buildPatch());
+      await submitAdjust(work, reason.trim(), patch);
       alert('已提交调整申请，等待审批');
       router.push(`/${routeType}/${work.id}`);
     } finally {

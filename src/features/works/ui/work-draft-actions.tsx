@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { PANEL_PADDED } from './visual-tokens';
 
 interface WorkDraftActionsProps {
-  visible?: boolean;
   isDraft: boolean;
   rejectReason?: string;
   editHref: string;
@@ -14,13 +13,11 @@ interface WorkDraftActionsProps {
 }
 
 export function WorkDraftActions({
-  visible = true,
   isDraft,
   rejectReason,
   editHref,
   onDelete,
 }: WorkDraftActionsProps) {
-  if (!visible) return null;
   return (
     <div className={PANEL_PADDED}>
       <h3 className="text-sm font-semibold text-slate-500 tracking-wide mb-3">

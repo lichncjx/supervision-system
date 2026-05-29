@@ -12,6 +12,7 @@ import {
   buildAdjustmentBeforeSnapshot,
   sanitizeAdjustmentPatch,
 } from '@/features/workflow/application/adjustment-patch'
+import { getChangedAdjustmentFields } from '@/features/works/domain/work-adjustment-diff'
 import {
   createPendingAdjustmentRequest,
   createWorkflowRecord,
@@ -111,6 +112,14 @@ export async function submitAdjustment(
   }
 
   const beforeSnapshot = buildAdjustmentBeforeSnapshot(workItem)
+  const changedFields = getChangedAdjustmentFields(
+    beforeSnapshot as Record<string, unknown>,
+    patch as Record<string, unknown>,
+  )
+  if (changedFields.length === 0) {
+    return err(400, '调整内容没有变更，无需提交调整申请')
+  }
+
   await createPendingAdjustmentRequest({
     workItemId,
     reason: adjustReason,

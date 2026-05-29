@@ -7,7 +7,6 @@ import { ApproveDialog } from '@/features/workflow/ui/approve-dialog';
 import { PANEL_PADDED } from '@/features/works/ui/visual-tokens';
 
 interface WorkflowApprovalPanelProps {
-  visible: boolean;
   onApprove: (comment?: string, nextApproverId?: number | null) => void;
   onReject: () => void;
   companyLeaders?: Array<{ id: number; name: string; role: string }>;
@@ -16,7 +15,6 @@ interface WorkflowApprovalPanelProps {
 }
 
 export function WorkflowApprovalPanel({
-  visible,
   onApprove,
   onReject,
   companyLeaders = [],
@@ -24,8 +22,6 @@ export function WorkflowApprovalPanel({
   leaderName,
 }: WorkflowApprovalPanelProps) {
   const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
-
-  if (!visible) return null;
 
   return (
     <>

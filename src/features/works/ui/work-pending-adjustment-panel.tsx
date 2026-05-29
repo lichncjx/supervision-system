@@ -37,26 +37,32 @@ export function WorkPendingAdjustmentPanel({
         <div>
           公司审批领导：{work.approvalLeader || '-'}
         </div>
-        <div className="mt-4 overflow-hidden rounded-lg border border-slate-200">
-          <div className="grid grid-cols-[7rem_1fr_1fr] bg-slate-50 text-xs font-medium text-slate-500">
-            <div className="border-r border-slate-200 px-3 py-2">字段</div>
-            <div className="border-r border-slate-200 px-3 py-2">调整前</div>
-            <div className="px-3 py-2">调整后</div>
-          </div>
-          {(changedFields.length > 0 ? changedFields : Object.keys(work.pendingAdjustment)).map((field) => (
-            <div key={field} className="grid grid-cols-[7rem_1fr_1fr] border-t border-slate-200 text-sm">
-              <div className="border-r border-slate-200 px-3 py-2 font-medium text-slate-600">
-                {ADJUSTMENT_FIELD_LABELS[field] || field}
-              </div>
-              <div className="border-r border-slate-200 px-3 py-2 whitespace-pre-wrap break-words text-slate-600">
-                {adjustmentValueToDisplay(field, (beforeSnapshot as any)[field], departments)}
-              </div>
-              <div className="px-3 py-2 whitespace-pre-wrap break-words text-slate-900">
-                {adjustmentValueToDisplay(field, (work.pendingAdjustment as any)[field], departments)}
-              </div>
+        {changedFields.length > 0 ? (
+          <div className="mt-4 overflow-hidden rounded-lg border border-slate-200">
+            <div className="grid grid-cols-[7rem_1fr_1fr] bg-slate-50 text-xs font-medium text-slate-500">
+              <div className="border-r border-slate-200 px-3 py-2">字段</div>
+              <div className="border-r border-slate-200 px-3 py-2">调整前</div>
+              <div className="px-3 py-2">调整后</div>
             </div>
-          ))}
-        </div>
+            {changedFields.map((field) => (
+              <div key={field} className="grid grid-cols-[7rem_1fr_1fr] border-t border-slate-200 text-sm">
+                <div className="border-r border-slate-200 px-3 py-2 font-medium text-slate-600">
+                  {ADJUSTMENT_FIELD_LABELS[field] || field}
+                </div>
+                <div className="border-r border-slate-200 px-3 py-2 whitespace-pre-wrap break-words text-slate-600">
+                  {adjustmentValueToDisplay(field, (beforeSnapshot as any)[field], departments)}
+                </div>
+                <div className="px-3 py-2 whitespace-pre-wrap break-words text-slate-900">
+                  {adjustmentValueToDisplay(field, (work.pendingAdjustment as any)[field], departments)}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500">
+            没有检测到字段变化
+          </div>
+        )}
       </div>
     </div>
   );

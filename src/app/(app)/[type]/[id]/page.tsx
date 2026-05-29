@@ -36,9 +36,10 @@ import {
   canHandleReturnedDraftWork,
   canDecomposeTodoWork,
   canApproveWork,
+  isOwnedBy,
+  isWorkRelatedToDepartment,
 } from '@/features/works/client/work-client-permissions';
 import { isTerminal, isReturnedDraftWork, isInProgress } from '@/features/works/domain/work-status.rules';
-import { isWorkRelatedToDepartment } from '@/features/works/client/work-client-permissions';
 import { deleteWork } from '@/features/works/client/work-api';
 import {
   submitPropose,
@@ -121,6 +122,7 @@ export default function WorkDetailPage() {
   const canHandleReturnedCreate = isAdmin || canHandleReturnedDraftWork(user, work);
   const canDecomposeTodo = canDecomposeTodoWork(user, work);
   const canApprove = user ? canApproveWork(user, work) : false;
+  const canOperate = !!user && (isAdmin || isSupervisor || (isOwnedBy(user, work) && isInProgress(work.status)));
 
   const isRelatedDept = user ? isWorkRelatedToDepartment(work, user.departmentId) : false;
   const canEdit = user && (
@@ -456,24 +458,26 @@ export default function WorkDetailPage() {
             />
           )}
 
-          <WorkDraftActions
-            visible={!!canHandleReturnedCreate || !!canEditDraft}
-            isDraft={!!canEditDraft}
-            rejectReason={work.rejectReason || undefined}
-            editHref={`/${type}/${work.id}/edit`}
-            onDelete={handleDelete}
-          />
+          {(!!canHandleReturnedCreate || !!canEditDraft) && (
+            <WorkDraftActions
+              isDraft={!!canEditDraft}
+              rejectReason={work.rejectReason || undefined}
+              editHref={`/${type}/${work.id}/edit`}
+              onDelete={handleDelete}
+            />
+          )}
 
-          <WorkDecomposePanel
-            visible={!!canDecomposeTodo}
-            editForm={editForm}
-            setEditForm={setEditForm}
-            rejectReason={work.rejectReason || ''}
-            isReturned={!!(work.status === 'pending_decompose' && (work.rejectReason || work.rejectedFromStatus))}
-            onSubmitDecomposition={handleDecompose}
-          />
+          {!!canDecomposeTodo && (
+            <WorkDecomposePanel
+              editForm={editForm}
+              setEditForm={setEditForm}
+              rejectReason={work.rejectReason || ''}
+              isReturned={!!(work.status === 'pending_decompose' && (work.rejectReason || work.rejectedFromStatus))}
+              onSubmitDecomposition={handleDecompose}
+            />
+          )}
 
-          {isInProgress(work.status) && (
+          {canOperate && (
             <WorkCompletePanel
               proof={proof}
               onProofChange={setProof}
@@ -485,20 +489,21 @@ export default function WorkDetailPage() {
             />
           )}
 
-          <WorkAdjustCancelActions
-            visible={isInProgress(work.status)}
-            onAdjust={() => {
-              router.push(`/${type}/${work.id}/adjust`);
-            }}
-            onCancel={() => {
-              setCancelReason('');
-              setIsCancelDialogOpen(true);
-            }}
-          />
+          {canOperate && (
+            <WorkAdjustCancelActions
+              onAdjust={() => {
+                router.push(`/${type}/${work.id}/adjust`);
+              }}
+              onCancel={() => {
+                setCancelReason('');
+                setIsCancelDialogOpen(true);
+              }}
+            />
+          )}
 
-          <WorkflowApprovalPanel
-            visible={canApprove}
-            onApprove={handleApprove}
+          {canApprove && (
+            <WorkflowApprovalPanel
+              onApprove={handleApprove}
             onReject={handleReject}
             companyLeaders={companyLeaders}
             needsLeaderSelection={
@@ -508,7 +513,8 @@ export default function WorkDetailPage() {
               !work?.approvalLeaderId
             }
             leaderName={work?.approvalLeader || work?.proposedLeader}
-          />
+            />
+          )}
         </aside>
       </div>
 
