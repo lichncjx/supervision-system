@@ -195,9 +195,6 @@ export default function EditWorkPage() {
     const validationMessage = firstWorkFormValidationMessage(validateEditWorkFormFields({
       isPriorityOrMain,
       isTodo,
-      requiresReason: isReturned,
-      reason,
-      reasonMessage: '请填写修改说明',
       priorityMainWorkItem: priorityMainForm.workItem,
       priorityMainDepartmentId: priorityMainForm.departmentId,
       todoWorkItem: todoForm.workItem,
@@ -281,12 +278,12 @@ export default function EditWorkPage() {
             </div>
           )}
           <div>
-            <label className={FIELD_LABEL + ' mb-1 block'}>修改说明 / 重新提交原因</label>
+            <label className={FIELD_LABEL + ' mb-1 block'}>修改说明 / 重新提交原因（可选）</label>
             <Textarea
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               rows={3}
-              placeholder="请填写修改说明"
+              placeholder="可填写修改说明"
             />
           </div>
         </WorkFormSectionCard>
