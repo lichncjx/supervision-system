@@ -9,16 +9,16 @@ import { WorkFormShell } from '@/features/works/ui/work-form-shell';
 import { WorkFormSectionCard } from '@/features/works/ui/work-form-section-card';
 import { WorkFormNodes } from '@/features/works/ui/work-form-nodes';
 import { WorkFormCooperators } from '@/features/works/ui/work-form-cooperators';
-import { WorkFormContent } from '@/features/works/ui/work-form-content';
+import { WorkFormMainContent } from '@/features/works/ui/work-form-main-content';
 import type { Cooperator, Work, WorkEditablePatch, WorkNode, WorkType } from '@/features/works/client/work-client.types';
 import type { Department } from '@/features/departments/client/department-api';
 import type { User } from '@/features/users/client/user-client.types';
 import { FIELD_LABEL, HINT_BOX, STICKY_ACTION_BAR } from '@/features/works/ui/visual-tokens';
 
-export type WorkFullPageFormMode = 'edit' | 'adjust';
+export type EditWorkFormMode = 'edit' | 'adjust';
 
-interface WorkFullPageFormProps {
-  mode: WorkFullPageFormMode;
+interface EditWorkFormProps {
+  mode: EditWorkFormMode;
   routeType: string;
   work: Work;
   user: User;
@@ -76,7 +76,7 @@ function filterValidNodes(nodes: WorkNode[]) {
     }));
 }
 
-export function WorkFullPageForm({
+export function EditWorkForm({
   mode,
   routeType,
   work,
@@ -85,7 +85,7 @@ export function WorkFullPageForm({
   companyLeaders,
   rejectReason,
   onSubmit,
-}: WorkFullPageFormProps) {
+}: EditWorkFormProps) {
   const type = work.type;
   const isPriorityOrMain = type === '重点' || type === '主要';
   const isTodo = type === '待办';
@@ -243,7 +243,7 @@ export function WorkFullPageForm({
         </WorkFormSectionCard>
       )}
 
-      <WorkFormContent
+      <WorkFormMainContent
         type={type}
         user={user}
         isPriorityOrMain={isPriorityOrMain}

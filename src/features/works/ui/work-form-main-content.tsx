@@ -47,7 +47,7 @@ export interface TodoFormState {
   progress: string;
 }
 
-interface WorkFormContentProps {
+interface WorkFormMainContentProps {
   type: WorkType;
   user?: User | null;
   isPriorityOrMain: boolean;
@@ -86,7 +86,7 @@ function ReadonlyInfo({
   );
 }
 
-export function WorkFormContent({
+export function WorkFormMainContent({
   type,
   user,
   isPriorityOrMain,
@@ -106,7 +106,7 @@ export function WorkFormContent({
   onWorkItemBlur,
   onDepartmentBlur,
   onProposedLeaderBlur,
-}: WorkFormContentProps) {
+}: WorkFormMainContentProps) {
   if (isPriorityOrMain) {
     return (
       <>

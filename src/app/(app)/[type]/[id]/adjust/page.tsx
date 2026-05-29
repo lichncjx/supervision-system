@@ -2,7 +2,7 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/components/providers/auth-provider';
-import { WorkFullPageForm } from '@/features/works/ui/work-full-page-form';
+import { EditWorkForm } from '@/features/works/ui/edit-work-form';
 import { useWorkDetailData } from '@/features/works/client/use-work-detail-data';
 import { submitAdjust } from '@/features/workflow/client/workflow-api';
 import { isInProgress } from '@/features/works/domain/work-status.rules';
@@ -38,7 +38,7 @@ export default function AdjustWorkPage() {
   };
 
   return (
-    <WorkFullPageForm
+    <EditWorkForm
       mode="adjust"
       routeType={routeType}
       work={work}
