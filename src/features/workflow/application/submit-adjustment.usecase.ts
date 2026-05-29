@@ -44,7 +44,7 @@ export async function submitAdjustment(
   const oldStatus = workItem.status
   const approver = getProcessFirstApprover(workItem, user)
   if (!approver) {
-    return err(400, '请先指定公司领导后再提交审批')
+    return err(400, '该事项没有指定审批领导')
   }
 
   const patchResult = sanitizeAdjustmentPatch(pendingAdjustment)
@@ -52,14 +52,6 @@ export async function submitAdjustment(
     return err(400, patchResult.message)
   }
   const patch = patchResult.patch
-
-  if (
-    patch.departmentId != null &&
-    user.departmentId &&
-    Number(patch.departmentId) !== user.departmentId
-  ) {
-    return err(403, '只能提交本部门事项的调整申请')
-  }
 
   const effectiveDeptId = Number(patch.departmentId ?? workItem.departmentId)
   if (!effectiveDeptId) {

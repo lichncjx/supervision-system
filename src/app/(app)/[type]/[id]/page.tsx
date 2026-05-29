@@ -23,7 +23,10 @@ import { WorkDisplayInfo } from '@/features/works/ui/work-display-info';
 import { WorkDecomposePanel } from '@/features/works/ui/work-decompose-panel';
 import { WorkActionDialogs } from '@/features/works/ui/work-action-dialogs';
 import { WorkPendingAdjustmentPanel } from '@/features/works/ui/work-pending-adjustment-panel';
-import { WorkSidebarActions } from '@/features/works/ui/work-sidebar-actions';
+import { WorkAdjustCancelActions } from '@/features/works/ui/work-adjust-cancel-actions';
+import { WorkDraftActions } from '@/features/works/ui/work-draft-actions';
+import { WorkAdjustmentHistoryPanel } from '@/features/works/ui/work-adjustment-history-panel';
+import { WorkEvidencePanel } from '@/features/works/ui/work-evidence-panel';
 import { WorkflowProgress } from '@/features/workflow/ui/workflow-progress';
 import { useWorkDetailData } from '@/features/works/client/use-work-detail-data';
 import { uploadFiles, deleteAttachment } from '@/features/attachments/client/attachment-api';
@@ -353,7 +356,11 @@ export default function WorkDetailPage() {
             {work.pendingAdjustment && (
               <h3 className="font-semibold text-slate-800 mb-4">当前生效内容</h3>
             )}
-            <WorkDisplayInfo work={work} departments={departments} hideNodes={true} />
+            <WorkDisplayInfo
+              work={work}
+              departments={departments}
+              hideNodes={true}
+            />
           </div>
 
           {work.nodes && work.nodes.length > 0 && (
@@ -418,19 +425,6 @@ export default function WorkDetailPage() {
             </div>
           )}
 
-          <WorkflowApprovalPanel
-            visible={canApprove}
-            onApprove={handleApprove}
-            onReject={handleReject}
-            companyLeaders={companyLeaders}
-            needsLeaderSelection={
-              !!user &&
-              user.role === 'DEPARTMENT_LEADER' &&
-              !work?.proposedLeaderId &&
-              !work?.approvalLeaderId
-            }
-            leaderName={work?.approvalLeader || work?.proposedLeader}
-          />
           <ApproveDialog
             open={isSubmitDialogOpen}
             onOpenChange={setIsSubmitDialogOpen}
@@ -442,6 +436,7 @@ export default function WorkDetailPage() {
             confirmLabel="提交审批"
           />
           <WorkflowRecords records={workflowRecords} />
+          <WorkAdjustmentHistoryPanel work={work} departments={departments} />
         </div>
 
         {/* Sidebar */}
@@ -454,33 +449,20 @@ export default function WorkDetailPage() {
             onDelete={handleDeleteAttachment}
           />
 
-          {(!!canHandleReturnedCreate || !!canEditDraft) && (
-            <div className={PANEL_PADDED}>
-              <h3 className="font-semibold text-slate-800 mb-4">
-                {canEditDraft ? '完善草稿' : '退回事项处理'}
-              </h3>
-              {canEditDraft && (
-                <p className="text-sm text-slate-500 mb-4">
-                  可进入完整编辑页继续完善事项信息、上传附件后提交审批。
-                </p>
-              )}
-              {canHandleReturnedCreate && work.rejectReason && (
-                <div className="p-3 bg-rose-50 border border-red-200 rounded text-sm text-red-700 break-words whitespace-pre-wrap mb-4">
-                  退回原因：{work.rejectReason}
-                </div>
-              )}
-              <div className="flex flex-col gap-2">
-                <Link href={`/${type}/${work.id}/edit`}>
-                  <Button className="rounded-full w-full">
-                    {canEditDraft ? '编辑草稿' : '修改后重新提交'}
-                  </Button>
-                </Link>
-                <Button variant="destructive" onClick={handleDelete} className="rounded-full w-full">
-                  {canEditDraft ? '删除草稿' : '删除退回事项'}
-                </Button>
-              </div>
-            </div>
+          {!isInProgress(work.status) && (
+            <WorkEvidencePanel
+              proof={work.proof}
+              evidenceAttachments={(work.attachments || []).filter(a => a.category === 'evidence')}
+            />
           )}
+
+          <WorkDraftActions
+            visible={!!canHandleReturnedCreate || !!canEditDraft}
+            isDraft={!!canEditDraft}
+            rejectReason={work.rejectReason || undefined}
+            editHref={`/${type}/${work.id}/edit`}
+            onDelete={handleDelete}
+          />
 
           <WorkDecomposePanel
             visible={!!canDecomposeTodo}
@@ -503,7 +485,7 @@ export default function WorkDetailPage() {
             />
           )}
 
-          <WorkSidebarActions
+          <WorkAdjustCancelActions
             visible={isInProgress(work.status)}
             onAdjust={() => {
               router.push(`/${type}/${work.id}/adjust`);
@@ -512,6 +494,20 @@ export default function WorkDetailPage() {
               setCancelReason('');
               setIsCancelDialogOpen(true);
             }}
+          />
+
+          <WorkflowApprovalPanel
+            visible={canApprove}
+            onApprove={handleApprove}
+            onReject={handleReject}
+            companyLeaders={companyLeaders}
+            needsLeaderSelection={
+              !!user &&
+              user.role === 'DEPARTMENT_LEADER' &&
+              !work?.proposedLeaderId &&
+              !work?.approvalLeaderId
+            }
+            leaderName={work?.approvalLeader || work?.proposedLeader}
           />
         </aside>
       </div>

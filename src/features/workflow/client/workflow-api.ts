@@ -60,7 +60,7 @@ export async function submitAdjust(
       action: 'adjust',
       adjustReason: reason,
       pendingAdjustment,
-      comment: '申请调整',
+      comment: reason,
     }),
   })
   await throwOnError(response)
@@ -72,7 +72,7 @@ export async function submitCancel(work: Work, reason: string) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
-    body: JSON.stringify({ action: 'cancel', cancelReason: reason, comment: '申请取消' }),
+    body: JSON.stringify({ action: 'cancel', cancelReason: reason, comment: reason }),
   })
   await throwOnError(response)
   return getWorkById(work.id)

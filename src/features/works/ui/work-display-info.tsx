@@ -1,8 +1,6 @@
 'use client';
 
 import React from 'react';
-import { Download } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import type { Work } from '@/features/works/client/work-client.types';
 import { DISPLAY_LABEL, DETAIL_THEME, type DetailThemeKey } from './visual-tokens';
 
@@ -75,7 +73,44 @@ function DetailLongText({
   );
 }
 
-function PriorityMainWorkDisplayInfo({ work, departments, hideNodes }: WorkDisplayInfoProps) {
+function ProcessReasonBlock({
+  tone,
+  title,
+  meta,
+  reason,
+}: {
+  tone: 'danger' | 'muted';
+  title: string;
+  meta?: string;
+  reason: string;
+}) {
+  const classes =
+    tone === 'danger'
+      ? 'border-rose-200 bg-rose-50 text-rose-700'
+      : 'border-slate-200 bg-slate-50 text-slate-700';
+
+  return (
+    <div className={`rounded-lg border px-4 py-3 text-sm ${classes}`}>
+      <div className="text-[11px] font-semibold text-current opacity-70 mb-1">
+        {title}
+      </div>
+      {meta && (
+        <div className="mb-1 text-xs opacity-80 break-words">
+          {meta}
+        </div>
+      )}
+      <div className="whitespace-pre-wrap break-words leading-relaxed">
+        {reason || '-'}
+      </div>
+    </div>
+  );
+}
+
+function PriorityMainWorkDisplayInfo({
+  work,
+  departments,
+  hideNodes,
+}: WorkDisplayInfoProps) {
   const themeKey = getDetailThemeKey(work.type);
   const theme = DETAIL_THEME[themeKey];
   const firstSubmitterName = work.firstSubmitterName || work.creatorName || '-';
@@ -129,10 +164,12 @@ function PriorityMainWorkDisplayInfo({ work, departments, hideNodes }: WorkDispl
       </DetailSection>
 
       {work.rejectReason && (
-        <div className="p-3 bg-rose-50 border border-red-200 rounded text-sm text-red-700 break-words whitespace-pre-wrap">
-          <div>退回人：{work.rejectedBy || '-'}</div>
-          <div>退回原因：{work.rejectReason}</div>
-        </div>
+        <ProcessReasonBlock
+          tone="danger"
+          title="退回原因"
+          meta={`退回人：${work.rejectedBy || '-'}`}
+          reason={work.rejectReason}
+        />
       )}
 
       {!hideNodes && work.nodes && work.nodes.length > 0 && (
@@ -161,80 +198,29 @@ function PriorityMainWorkDisplayInfo({ work, departments, hideNodes }: WorkDispl
         </div>
       )}
 
-      {work.proof && (
-        <div>
-          <span className={DISPLAY_LABEL}>见证材料说明：</span>
-          <p className="mt-1 p-2 bg-slate-50 rounded break-words whitespace-pre-wrap overflow-hidden">{work.proof}</p>
-        </div>
-      )}
-      {(() => {
-        const evidenceAttachments = (work.attachments || []).filter((a: any) => a.category === 'evidence');
-        if (evidenceAttachments.length === 0) return null;
-        return (
-          <div>
-            <span className={DISPLAY_LABEL}>见证材料附件：</span>
-            <div className="mt-2 space-y-2">
-              {evidenceAttachments.map((att: any, i: number) => (
-                <div key={att.id ?? i} className="flex items-center justify-between rounded-lg border border-slate-200 p-2 text-sm">
-                  <div className="min-w-0">
-                    <div className="font-medium break-words">{att.fileName}</div>
-                    <div className="text-xs text-slate-500">
-                      上传人：{att.userName || '-'}
-                      上传时间：{att.uploadedAt ? new Date(att.uploadedAt).toLocaleString() : '-'}
-                    </div>
-                  </div>
-                  <a href={`/api/attachments/${att.id}/download`} target="_blank" rel="noopener noreferrer">
-                    <Button variant="outline" size="sm" className="rounded-full">
-                      <Download className="h-4 w-4 mr-1" />
-                      下载
-                    </Button>
-                  </a>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-      })()}
-
-      {work.adjustReason && (
-        <div>
-          <p className="break-words whitespace-pre-wrap overflow-hidden">
-            调整原因：{work.adjustReason}
-          </p>
-        </div>
-      )}
-      {work.adjustNewTime && (
-        <p>
-          调整后时间：{work.adjustNewTime}
-        </p>
-      )}
-      {work.adjustHistory && work.adjustHistory.length > 0 && (
-        <div className="p-3 bg-purple-50 border border-purple-200 rounded text-sm text-purple-700 space-y-2">
-          <div className="font-medium">调整记录</div>
-          {(work.adjustHistory as any[]).map((item, i: number) => (
-            <div key={item.id ?? i} className="border-t border-purple-100 pt-2 first:border-t-0 first:pt-0">
-              <div>调整原因：{item.reason || '-'}</div>
-              <div>原完成时间：{item.fromTime || '-'}</div>
-              <div>现完成时间：{item.toTime || '-'}</div>
-              <div>审批人：{item.approvedBy || '-'}</div>
-              <div>审批时间：{item.approvedAt ? new Date(item.approvedAt).toLocaleString() : '-'}</div>
-            </div>
-          ))}
-        </div>
-      )}
       {work.cancelReason && (
-        <div>
-          <span className={DISPLAY_LABEL}>取消原因：</span>
-          <p className="mt-1 p-2 bg-slate-50 rounded break-words whitespace-pre-wrap overflow-hidden">{work.cancelReason}</p>
-        </div>
+        <ProcessReasonBlock
+          tone="muted"
+          title="取消原因"
+          reason={work.cancelReason}
+        />
       )}
     </div>
   );
 }
 
-function TodoWorkDisplayInfo({ work, departments, hideNodes, hideCooperators }: WorkDisplayInfoProps) {
+function TodoWorkDisplayInfo({
+  work,
+  departments,
+  hideNodes,
+  hideCooperators,
+}: WorkDisplayInfoProps) {
   const theme = DETAIL_THEME.todo;
   const firstSubmitterName = work.firstSubmitterName || work.creatorName || '-';
+  const cooperatorRows = (work.cooperators || []).map((c: any) => ({
+    departmentName: departments.find((d) => d.id === c.departmentId)?.name || c.departmentName || '-',
+    people: [c.leader, c.person].filter(Boolean).join(' · ') || '-',
+  }));
 
   return (
     <div className="space-y-3">
@@ -270,19 +256,27 @@ function TodoWorkDisplayInfo({ work, departments, hideNodes, hideCooperators }: 
             </div>
           </div>
         </div>
-        {!hideCooperators && work.cooperators && work.cooperators.length > 0 && (
+        {!hideCooperators && cooperatorRows.length > 0 && (
           <div className="mt-2 pt-2 border-t border-slate-200">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
               <div>
                 <span className={DISPLAY_LABEL}>配合部门</span>
-                <div className="mt-0.5 text-[13px] font-semibold text-slate-900">
-                  {work.cooperators.map((c: any) => departments.find((d) => d.id === c.departmentId)?.name || c.departmentName || '-').join('、')}
+                <div className="mt-0.5 space-y-1 text-[13px] font-semibold text-slate-900">
+                  {cooperatorRows.map((row, index) => (
+                    <div key={`${row.departmentName}-${index}`} className="break-words">
+                      {row.departmentName}
+                    </div>
+                  ))}
                 </div>
               </div>
               <div>
                 <span className={DISPLAY_LABEL}>配合人员</span>
-                <div className="mt-0.5 text-[13px] font-semibold text-slate-900">
-                  {work.cooperators.map((c: any) => [c.leader, c.person].filter(Boolean).join(' · ')).filter(Boolean).join('、')}
+                <div className="mt-0.5 space-y-1 text-[13px] font-semibold text-slate-900">
+                  {cooperatorRows.map((row, index) => (
+                    <div key={`${row.departmentName}-people-${index}`} className="break-words">
+                      {row.people}
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -326,74 +320,48 @@ function TodoWorkDisplayInfo({ work, departments, hideNodes, hideCooperators }: 
       )}
 
       {work.rejectReason && (
-        <div className="p-3 bg-rose-50 border border-red-200 rounded text-sm text-red-700 break-words whitespace-pre-wrap">
-          <div>退回人：{work.rejectedBy || '-'}</div>
-          <div>退回原因：{work.rejectReason}</div>
-        </div>
+        <ProcessReasonBlock
+          tone="danger"
+          title="退回原因"
+          meta={`退回人：${work.rejectedBy || '-'}`}
+          reason={work.rejectReason}
+        />
       )}
 
-      {work.proof && (
-        <div>
-          <span className={DISPLAY_LABEL}>见证材料说明：</span>
-          <p className="mt-1 p-2 bg-slate-50 rounded break-words whitespace-pre-wrap overflow-hidden">{work.proof}</p>
-        </div>
-      )}
-      {(() => {
-        const evidenceAttachments = (work.attachments || []).filter((a: any) => a.category === 'evidence');
-        if (evidenceAttachments.length === 0) return null;
-        return (
-          <div>
-            <span className={DISPLAY_LABEL}>见证材料附件：</span>
-            <div className="mt-2 space-y-2">
-              {evidenceAttachments.map((att: any, i: number) => (
-                <div key={att.id ?? i} className="flex items-center justify-between rounded-lg border border-slate-200 p-2 text-sm">
-                  <div className="min-w-0">
-                    <div className="font-medium break-words">{att.fileName}</div>
-                    <div className="text-xs text-slate-500">
-                      上传人：{att.userName || '-'}
-                      上传时间：{att.uploadedAt ? new Date(att.uploadedAt).toLocaleString() : '-'}
-                    </div>
-                  </div>
-                  <a href={`/api/attachments/${att.id}/download`} target="_blank" rel="noopener noreferrer">
-                    <Button variant="outline" size="sm" className="rounded-full">
-                      <Download className="h-4 w-4 mr-1" />
-                      下载
-                    </Button>
-                  </a>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-      })()}
-
-      {work.adjustReason && (
-        <div>
-          <p className="break-words whitespace-pre-wrap overflow-hidden">
-            调整原因：{work.adjustReason}
-          </p>
-        </div>
-      )}
-      {work.adjustNewTime && (
-        <p>
-          调整后时间：{work.adjustNewTime}
-        </p>
-      )}
       {work.cancelReason && (
-        <div>
-          <span className={DISPLAY_LABEL}>取消原因：</span>
-          <p className="mt-1 p-2 bg-slate-50 rounded break-words whitespace-pre-wrap overflow-hidden">{work.cancelReason}</p>
-        </div>
+        <ProcessReasonBlock
+          tone="muted"
+          title="取消原因"
+          reason={work.cancelReason}
+        />
       )}
     </div>
   );
 }
 
-export function WorkDisplayInfo({ work, departments, hideNodes, hideCooperators }: WorkDisplayInfoProps) {
+export function WorkDisplayInfo({
+  work,
+  departments,
+  hideNodes,
+  hideCooperators,
+}: WorkDisplayInfoProps) {
   const isTodo = work.type === '待办';
 
   if (isTodo) {
-    return <TodoWorkDisplayInfo work={work} departments={departments} hideNodes={hideNodes} hideCooperators={hideCooperators} />;
+    return (
+      <TodoWorkDisplayInfo
+        work={work}
+        departments={departments}
+        hideNodes={hideNodes}
+        hideCooperators={hideCooperators}
+      />
+    );
   }
-  return <PriorityMainWorkDisplayInfo work={work} departments={departments} hideNodes={hideNodes} />;
+  return (
+    <PriorityMainWorkDisplayInfo
+      work={work}
+      departments={departments}
+      hideNodes={hideNodes}
+    />
+  );
 }
