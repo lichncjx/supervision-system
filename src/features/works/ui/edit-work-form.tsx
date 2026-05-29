@@ -7,9 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { WorkFormShell } from '@/features/works/ui/work-form-shell';
 import { WorkFormSectionCard } from '@/features/works/ui/work-form-section-card';
-import { WorkFormNodes } from '@/features/works/ui/work-form-nodes';
-import { WorkFormCooperators } from '@/features/works/ui/work-form-cooperators';
 import { WorkFormMainContent } from '@/features/works/ui/work-form-main-content';
+import { WorkFormSideContent } from '@/features/works/ui/work-form-side-content';
 import type { Cooperator, Work, WorkEditablePatch, WorkNode, WorkType } from '@/features/works/client/work-client.types';
 import type { Department } from '@/features/departments/client/department-api';
 import type { User } from '@/features/users/client/user-client.types';
@@ -196,22 +195,15 @@ export function EditWorkForm({
   );
 
   const sidebar = (
-    <>
-      <WorkFormNodes
-        nodes={nodes}
-        onChange={setNodes}
-        nodeLabel={isTodo ? '任务节点（可选）' : '工作节点（可选）'}
-        nodePlaceholderPrefix={isTodo ? '任务节点' : '工作节点'}
-      />
-      {isTodo && (
-        <WorkFormCooperators
-          cooperators={todoForm.cooperators}
-          onChange={(cooperators) => setTodoForm((prev) => ({ ...prev, cooperators }))}
-          departments={cooperatorOptions}
-        />
-      )}
-      {auxiliary}
-    </>
+    <WorkFormSideContent
+      isTodo={isTodo}
+      nodes={nodes}
+      onNodesChange={setNodes}
+      cooperators={todoForm.cooperators}
+      onCooperatorsChange={(cooperators) => setTodoForm((prev) => ({ ...prev, cooperators }))}
+      cooperatorDepartments={cooperatorOptions}
+      footer={auxiliary}
+    />
   );
 
   return (

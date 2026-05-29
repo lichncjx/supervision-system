@@ -11,9 +11,8 @@ import { addWork } from '@/features/works/client/work-api';
 import type { WorkType, WorkNode } from '@/features/works/client/work-client.types';
 import { Button } from '@/components/ui/button';
 import { WorkFormShell } from '@/features/works/ui/work-form-shell';
-import { WorkFormNodes } from '@/features/works/ui/work-form-nodes';
-import { WorkFormCooperators } from '@/features/works/ui/work-form-cooperators';
 import { WorkFormMainContent } from '@/features/works/ui/work-form-main-content';
+import { WorkFormSideContent } from '@/features/works/ui/work-form-side-content';
 import { validateCreateWorkFormFields, type CreateWorkFormField } from '@/features/works/ui/work-form-validations';
 import { buildCreateWorkPayload } from '@/features/works/client/build-create-work-payload';
 import type { User } from '@/features/users/client/user-client.types';
@@ -285,30 +284,20 @@ export function CreateWorkForm({ routeType, user }: CreateWorkFormProps) {
     ) : null;
 
   const sidebar = (
-    <>
-      {showNodes && (
-        <>
-          <WorkFormNodes
-            nodes={nodes}
-            onChange={setNodes}
-            nodeLabel={isPriorityOrMain ? '工作节点（可选）' : '任务节点（可选）'}
-            nodePlaceholderPrefix={isPriorityOrMain ? '工作节点' : '任务节点'}
-            error={fieldError('nodes')}
-            onTouched={() => handleBlur('nodes')}
-            fieldId="field-nodes"
-          />
-          <p className="text-xs text-gray-400">如需拆解阶段任务，可添加节点；未添加节点不影响提交。</p>
-        </>
-      )}
-      {isTodo && (
-        <WorkFormCooperators
-          cooperators={todoForm.cooperators}
-          onChange={(cooperators) => setTodoForm({ ...todoForm, cooperators })}
-          departments={businessDepts.filter((d) => d.id !== todoForm.departmentId)}
-        />
-      )}
-      {draftHint}
-    </>
+    <WorkFormSideContent
+      isTodo={isTodo}
+      showNodes={showNodes}
+      nodes={nodes}
+      onNodesChange={setNodes}
+      nodesError={fieldError('nodes')}
+      onNodesTouched={() => handleBlur('nodes')}
+      nodesFieldId="field-nodes"
+      showNodeHint
+      cooperators={todoForm.cooperators}
+      onCooperatorsChange={(cooperators) => setTodoForm({ ...todoForm, cooperators })}
+      cooperatorDepartments={businessDepts.filter((d) => d.id !== todoForm.departmentId)}
+      footer={draftHint}
+    />
   );
 
   return (
