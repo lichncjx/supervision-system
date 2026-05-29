@@ -24,6 +24,10 @@ import {
 import { useWorkDetailData } from '@/features/works/client/use-work-detail-data';
 import { updateWork, resubmitRejectedWork } from '@/features/works/client/work-api';
 import {
+  firstWorkFormValidationMessage,
+  validateEditWorkFormFields,
+} from '@/features/works/client/work-form-validation';
+import {
   canEditRegularDraftWork,
   canHandleReturnedDraftWork,
 } from '@/features/works/client/work-client-permissions';
@@ -175,16 +179,22 @@ export default function EditWorkPage() {
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (isReturned && !reason.trim()) {
-      alert('请填写修改说明');
-      return;
-    }
-    if (isTodo && !todoForm.workItem.trim()) {
-      alert('请填写待办事项');
-      return;
-    }
-    if (isPriorityOrMain && !priorityMainForm.workItem.trim()) {
-      alert('请填写工作事项');
+    const validationMessage = firstWorkFormValidationMessage(validateEditWorkFormFields({
+      isPriorityOrMain,
+      isTodo,
+      requiresReason: isReturned,
+      reason,
+      reasonMessage: '请填写修改说明',
+      priorityMainWorkItem: priorityMainForm.workItem,
+      priorityMainDepartmentId: priorityMainForm.departmentId,
+      todoWorkItem: todoForm.workItem,
+      todoDepartmentId: todoForm.departmentId,
+      todoProposedLeaderId: todoForm.proposedLeaderId,
+      companyLeaders,
+      cooperators: todoForm.cooperators,
+    }));
+    if (validationMessage) {
+      alert(validationMessage);
       return;
     }
 

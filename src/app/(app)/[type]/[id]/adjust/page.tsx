@@ -20,6 +20,10 @@ import {
   WorkItemField,
 } from '@/features/works/ui/work-form-fields';
 import { useWorkDetailData } from '@/features/works/client/use-work-detail-data';
+import {
+  firstWorkFormValidationMessage,
+  validateAdjustWorkFormFields,
+} from '@/features/works/client/work-form-validation';
 import { submitAdjust } from '@/features/workflow/client/workflow-api';
 import { isInProgress } from '@/features/works/domain/work-status.rules';
 import { isOwnedBy } from '@/features/works/client/work-client-permissions';
@@ -183,16 +187,18 @@ export default function AdjustWorkPage() {
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!reason.trim()) {
-      alert('请填写调整原因');
-      return;
-    }
-    if (isTodo && !todoForm.workItem.trim()) {
-      alert('请填写待办事项');
-      return;
-    }
-    if (isPriorityOrMain && !priorityMainForm.workItem.trim()) {
-      alert('请填写工作事项');
+    const validationMessage = firstWorkFormValidationMessage(validateAdjustWorkFormFields({
+      isPriorityOrMain,
+      isTodo,
+      reason,
+      priorityMainWorkItem: priorityMainForm.workItem,
+      priorityMainDepartmentId: priorityMainForm.departmentId,
+      todoWorkItem: todoForm.workItem,
+      todoDepartmentId: todoForm.departmentId,
+      cooperators: todoForm.cooperators,
+    }));
+    if (validationMessage) {
+      alert(validationMessage);
       return;
     }
 
