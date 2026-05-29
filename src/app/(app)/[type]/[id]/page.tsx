@@ -19,7 +19,6 @@ import { WorkCompletePanel } from '@/features/works/ui/work-complete-panel';
 import { WorkflowRecords } from '@/features/workflow/ui/workflow-records';
 import { WorkflowApprovalPanel } from '@/features/workflow/ui/workflow-approval-panel';
 import { ApproveDialog } from '@/features/workflow/ui/approve-dialog';
-import { WorkDraftEditPanel } from '@/features/works/ui/work-draft-edit-panel';
 import { WorkDisplayInfo } from '@/features/works/ui/work-display-info';
 import { WorkDecomposePanel } from '@/features/works/ui/work-decompose-panel';
 import { WorkActionDialogs } from '@/features/works/ui/work-action-dialogs';
@@ -37,7 +36,7 @@ import {
 } from '@/features/works/client/work-client-permissions';
 import { isTerminal, isReturnedDraftWork, isInProgress } from '@/features/works/domain/work-status.rules';
 import { isWorkRelatedToDepartment } from '@/features/works/client/work-client-permissions';
-import { updateWork, deleteWork, resubmitRejectedWork } from '@/features/works/client/work-api';
+import { deleteWork } from '@/features/works/client/work-api';
 import {
   submitPropose,
   submitComplete,
@@ -59,19 +58,15 @@ export default function WorkDetailPage() {
   const [adjustReason, setAdjustReason] = useState('');
   const [cancelReason, setCancelReason] = useState('');
   const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState(false);
-  const [editMode, setEditMode] = useState(false);
   const [isAdjustDialogOpen, setIsAdjustDialogOpen] = useState(false);
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
   const [editForm, setEditForm] = useState<any>({});
-  const [editReason, setEditReason] = useState('');
 
   const {
     work,
     workflowRecords,
     companyLeaders,
     departments,
-    departmentLeaders,
-    departmentManagers,
     refresh,
     onRefresh,
   } = useWorkDetailData(id);
@@ -180,19 +175,6 @@ export default function WorkDetailPage() {
     onRefresh();
   };
 
-  const handleSaveDraft = async () => {
-    if (!user) return;
-    try {
-      await updateWork(work.id, editForm);
-      setEditMode(false);
-      alert('草稿已保存');
-      onRefresh();
-    } catch (error) {
-      console.error(error);
-      alert('保存草稿失败');
-    }
-  };
-
   const handleDelete = async () => {
     if (!confirm('确认删除该退回事项？')) return;
     try {
@@ -227,40 +209,6 @@ export default function WorkDetailPage() {
     } catch (error) {
       console.error(error);
       alert('提交审批失败，请查看控制台错误');
-    }
-  };
-
-  const handleResubmit = async () => {
-    if (!user) return;
-    if (!editReason.trim()) {
-      alert('请填写修改说明或重新提交原因');
-      return;
-    }
-    const selectedProposedLeader =
-      work.type === '待办'
-        ? companyLeaders.find((l) => l.id === Number(editForm.proposedLeaderId))
-        : null;
-    if (work.type === '待办' && !selectedProposedLeader) {
-      alert('请选择事项提出领导');
-      return;
-    }
-    const patch: WorkEditablePatch = {
-      ...editForm,
-      title: editForm.workItem || editForm.title || work.title,
-    };
-    if (work.type === '待办' && selectedProposedLeader) {
-      patch.proposedLeader = selectedProposedLeader.name;
-      patch.proposedLeaderId = selectedProposedLeader.id;
-      patch.proposedLeaderRole = selectedProposedLeader.role;
-    }
-    try {
-      await resubmitRejectedWork(work, user, patch);
-      setEditMode(false);
-      onRefresh();
-      alert('已修改并重新提交审批');
-    } catch (error) {
-      console.error(error);
-      alert('提交失败，请查看控制台错误');
     }
   };
 
@@ -399,22 +347,6 @@ export default function WorkDetailPage() {
 
   const theme = TYPE_THEME[typeColorKey];
   const detailTheme = DETAIL_THEME[typeColorKey];
-
-  const buildEditFormFromWork = () => ({
-    title: work.title || '', workItem: work.workItem || work.title || '',
-    businessCategory: work.businessCategory || '', isInnovation: !!work.isInnovation,
-    completeForm: work.completeForm || '',
-    departmentId: work.departmentId, responsibleLeader: work.responsibleLeader || '',
-    responsiblePerson: work.responsiblePerson || '',
-    responsibleLeaderMemberId: work.responsibleLeaderMemberId,
-    responsiblePersonMemberId: work.responsiblePersonMemberId,
-    proposedLeader: work.proposedLeader || '',
-    proposedLeaderId: work.proposedLeaderId ? String(work.proposedLeaderId) : '',
-    proposedLeaderRole: work.proposedLeaderRole || '', proposedScene: work.proposedScene || '',
-    formedTime: work.formedTime || '', cooperators: work.cooperators || [],
-    workPlan: work.workPlan || '', planCompleteTime: work.planCompleteTime || '',
-    progress: work.progress || '', nodes: work.nodes || [],
-  });
 
   return (
     <div className="space-y-6">
@@ -569,27 +501,33 @@ export default function WorkDetailPage() {
             onDelete={handleDeleteAttachment}
           />
 
-          <WorkDraftEditPanel
-            visible={!!canHandleReturnedCreate || !!canEditDraft}
-            rejectReason={work.rejectReason || ''}
-            editMode={editMode}
-            setEditMode={setEditMode}
-            editForm={editForm}
-            setEditForm={setEditForm}
-            editReason={editReason}
-            setEditReason={setEditReason}
-            isPriorityOrMain={isPriorityOrMain}
-            isTodo={isTodo}
-            departments={deptOptions}
-            cooperatorDepts={cooperatorDepts}
-            companyLeaders={companyLeaders}
-            departmentLeaders={departmentLeaders}
-            departmentManagers={departmentManagers}
-            onResubmit={handleResubmit}
-            onSaveDraft={handleSaveDraft}
-            isRegularDraft={canEditDraft}
-            onDelete={handleDelete}
-          />
+          {(!!canHandleReturnedCreate || !!canEditDraft) && (
+            <div className={PANEL_PADDED}>
+              <h3 className="font-semibold text-slate-800 mb-4">
+                {canEditDraft ? '完善草稿' : '退回事项处理'}
+              </h3>
+              {canEditDraft && (
+                <p className="text-sm text-slate-500 mb-4">
+                  可进入完整编辑页继续完善事项信息、上传附件后提交审批。
+                </p>
+              )}
+              {canHandleReturnedCreate && work.rejectReason && (
+                <div className="p-3 bg-rose-50 border border-red-200 rounded text-sm text-red-700 break-words whitespace-pre-wrap mb-4">
+                  退回原因：{work.rejectReason}
+                </div>
+              )}
+              <div className="flex flex-col gap-2">
+                <Link href={`/${type}/${work.id}/edit`}>
+                  <Button className="rounded-full w-full">
+                    {canEditDraft ? '编辑草稿' : '修改后重新提交'}
+                  </Button>
+                </Link>
+                <Button variant="destructive" onClick={handleDelete} className="rounded-full w-full">
+                  {canEditDraft ? '删除草稿' : '删除退回事项'}
+                </Button>
+              </div>
+            </div>
+          )}
 
           <WorkDecomposePanel
             visible={!!canDecomposeTodo}
@@ -615,9 +553,7 @@ export default function WorkDetailPage() {
           <WorkSidebarActions
             visible={isInProgress(work.status)}
             onAdjust={() => {
-              setEditForm(buildEditFormFromWork());
-              setAdjustReason('');
-              setIsAdjustDialogOpen(true);
+              router.push(`/${type}/${work.id}/adjust`);
             }}
             onCancel={() => {
               setCancelReason('');
