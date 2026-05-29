@@ -30,6 +30,7 @@ import {
 import {
   canEditRegularDraftWork,
   canHandleReturnedDraftWork,
+  isOwnedBy,
 } from '@/features/works/client/work-client-permissions';
 import type { Cooperator, Work, WorkEditablePatch, WorkNode, WorkType } from '@/features/works/client/work-client.types';
 import { FIELD_LABEL, HINT_BOX, STICKY_ACTION_BAR } from '@/features/works/ui/visual-tokens';
@@ -114,16 +115,28 @@ export default function EditWorkPage() {
     return <div className="p-8 text-center text-slate-500">加载中...</div>;
   }
 
+  const hasReturnedWorkflowMarker = Boolean(work.rejectedFromStatus || work.rejectedAt);
+  const shouldResubmitReturnedWork =
+    user.role !== 'ADMIN' &&
+    user.role !== 'SUPERVISOR' &&
+    hasReturnedWorkflowMarker &&
+    canHandleReturnedDraftWork(user, work);
+  const canEditDraftDirectly =
+    work.status === 'draft' &&
+    isOwnedBy(user, work) &&
+    !hasReturnedWorkflowMarker;
+
   const canEdit =
     user.role === 'ADMIN' ||
     canEditRegularDraftWork(user, work) ||
-    canHandleReturnedDraftWork(user, work);
+    canEditDraftDirectly ||
+    shouldResubmitReturnedWork;
 
   if (!canEdit) {
     return <div className="p-8 text-center text-red-600">无权编辑该事项</div>;
   }
 
-  const isReturned = canHandleReturnedDraftWork(user, work);
+  const isReturned = shouldResubmitReturnedWork;
   const type = work.type;
   const isPriorityOrMain = type === '重点' || type === '主要';
   const isTodo = type === '待办';
