@@ -112,6 +112,7 @@ export function WorkFullPageForm({
   const TitleIcon = routeType === 'priority' ? Star : routeType === 'main' ? ListTodo : CheckSquare;
   const themeKey = routeType === 'priority' ? 'priority' : routeType === 'main' ? 'main' : 'todo';
   const titlePrefix = isAdjust ? '申请调整' : '编辑';
+  const requiresReason = isAdjust || !!rejectReason;
   const reasonLabel = isAdjust ? '调整原因' : (rejectReason ? '修改说明 / 重新提交原因' : '修改说明');
 
   const buildPatch = (): WorkEditablePatch => {
@@ -162,7 +163,7 @@ export function WorkFullPageForm({
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!reason.trim()) {
+    if (requiresReason && !reason.trim()) {
       alert(isAdjust ? '请填写调整原因' : '请填写修改说明');
       return;
     }
@@ -223,7 +224,7 @@ export function WorkFullPageForm({
       sidebar={sidebar}
       onSubmit={handleSubmit}
     >
-      {(rejectReason || isAdjust) && (
+      {requiresReason && (
         <WorkFormSectionCard title={isAdjust ? '调整申请' : '退回处理'}>
           {rejectReason && (
             <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 whitespace-pre-wrap break-words">
