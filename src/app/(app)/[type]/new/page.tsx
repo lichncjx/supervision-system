@@ -12,18 +12,9 @@ import { addWork } from '@/features/works/client/work-api';
 import type { WorkType, WorkNode } from '@/features/works/client/work-client.types';
 import { Button } from '@/components/ui/button';
 import { WorkFormShell } from '@/features/works/ui/work-form-shell';
-import { WorkFormSectionCard } from '@/features/works/ui/work-form-section-card';
 import { WorkFormNodes } from '@/features/works/ui/work-form-nodes';
 import { WorkFormCooperators } from '@/features/works/ui/work-form-cooperators';
-import {
-  WorkItemField,
-  IsInnovationField,
-  ProposedLeaderField,
-  DepartmentField,
-  ResponsibleFields,
-  PlanCompleteTimeField,
-  TodoSpecificFields,
-} from '@/features/works/ui/work-form-fields';
+import { WorkFormContent } from '@/features/works/ui/work-form-content';
 import { validateCreateWorkFormFields, type CreateWorkFormField } from '@/features/works/ui/work-form-validations';
 import { buildCreateWorkPayload } from '@/features/works/client/build-create-work-payload';
 import type { User } from '@/features/users/client/user-client.types';
@@ -331,161 +322,26 @@ export default function NewWorkPage() {
     >
       {errorSummary}
 
-      {isPriorityOrMain && (
-        <>
-          <WorkFormSectionCard title="基本信息">
-            <WorkItemField
-              label="业务类别"
-              value={priorityMainForm.businessCategory}
-              onChange={(v) => setPriorityMainForm({ ...priorityMainForm, businessCategory: v })}
-              placeholder="请输入业务类别"
-            />
-
-            <WorkItemField
-              label="工作事项"
-              value={priorityMainForm.workItem}
-              onChange={(v) => setPriorityMainForm({ ...priorityMainForm, workItem: v })}
-              placeholder="请输入工作事项"
-              error={fieldError('workItem')}
-              onBlur={() => handleBlur('workItem')}
-              fieldId="field-workItem"
-            />
-
-            {type === '重点' && (
-              <IsInnovationField
-                isInnovation={isInnovation}
-                onChange={setIsInnovation}
-              />
-            )}
-
-            <PlanCompleteTimeField
-              label="完成时间"
-              value={priorityMainForm.planCompleteTime}
-              onChange={(v) => setPriorityMainForm({ ...priorityMainForm, planCompleteTime: v })}
-            />
-
-            <WorkItemField
-              label="完成形式"
-              value={priorityMainForm.completeForm}
-              onChange={(v) => setPriorityMainForm({ ...priorityMainForm, completeForm: v })}
-              placeholder="请输入完成形式"
-            />
-          </WorkFormSectionCard>
-
-          <WorkFormSectionCard title="责任分工">
-            <div className="flex gap-4 [&>div]:flex-1">
-              <DepartmentField
-                label="责任部门"
-                value={priorityMainForm.departmentId}
-                onChange={(v) => setPriorityMainForm({
-                  ...priorityMainForm,
-                  departmentId: v,
-                  responsibleLeader: '',
-                  responsiblePerson: '',
-                  responsibleLeaderMemberId: undefined,
-                  responsiblePersonMemberId: undefined,
-                })}
-                departments={deptOptions}
-                placeholder="请选择责任部门"
-                error={fieldError('departmentId')}
-                onBlur={() => handleBlur('departmentId')}
-                fieldId="field-departmentId"
-              />
-              <ResponsibleFields
-                leaderValue={priorityMainForm.responsibleLeader}
-                onLeaderChange={(v) => setPriorityMainForm((prev) => ({ ...prev, responsibleLeader: v }))}
-                personValue={priorityMainForm.responsiblePerson}
-                onPersonChange={(v) => setPriorityMainForm((prev) => ({ ...prev, responsiblePerson: v }))}
-                departmentId={Number(priorityMainForm.departmentId) || undefined}
-                leaderMemberId={priorityMainForm.responsibleLeaderMemberId}
-                onLeaderMemberIdChange={(id) => setPriorityMainForm((prev) => ({ ...prev, responsibleLeaderMemberId: id }))}
-                personMemberId={priorityMainForm.responsiblePersonMemberId}
-                onPersonMemberIdChange={(id) => setPriorityMainForm((prev) => ({ ...prev, responsiblePersonMemberId: id }))}
-              />
-            </div>
-          </WorkFormSectionCard>
-        </>
-      )}
-
-      {isTodo && (
-        <>
-          <WorkFormSectionCard title="基本信息">
-            <ProposedLeaderField
-              value={todoForm.proposedLeaderId}
-              onChange={(v) => setTodoForm({ ...todoForm, proposedLeaderId: v })}
-              leaders={companyLeaders}
-              disabled={isCompanyLevel(user?.role)}
-              error={fieldError('proposedLeaderId')}
-              onBlur={() => handleBlur('proposedLeaderId')}
-              fieldId="field-proposedLeaderId"
-            />
-
-            <TodoSpecificFields
-              proposedScene={todoForm.proposedScene}
-              onProposedSceneChange={(v) => setTodoForm({ ...todoForm, proposedScene: v })}
-              formedTime={todoForm.formedTime}
-              onFormedTimeChange={(v) => setTodoForm({ ...todoForm, formedTime: v })}
-              workPlan={todoForm.workPlan}
-              onWorkPlanChange={(v) => setTodoForm({ ...todoForm, workPlan: v })}
-              progress={todoForm.progress}
-              onProgressChange={(v) => setTodoForm({ ...todoForm, progress: v })}
-            />
-
-            <WorkItemField
-              label="待办事项"
-              value={todoForm.workItem}
-              onChange={(v) => setTodoForm({ ...todoForm, workItem: v })}
-              placeholder="请输入待办事项"
-              error={fieldError('workItem')}
-              onBlur={() => handleBlur('workItem')}
-              fieldId="field-workItem"
-            />
-
-            <PlanCompleteTimeField
-              label="完成时间"
-              value={todoForm.planCompleteTime}
-              onChange={(v) => setTodoForm({ ...todoForm, planCompleteTime: v })}
-            />
-          </WorkFormSectionCard>
-
-          <WorkFormSectionCard title="责任分工">
-            <div className="flex gap-4 [&>div]:flex-1">
-              <DepartmentField
-                label="主责部门"
-                value={todoForm.departmentId ? String(todoForm.departmentId) : ''}
-                onChange={(v) => {
-                  const newDeptId = v ? Number(v) : 0
-                  setTodoForm({
-                    ...todoForm,
-                    departmentId: newDeptId,
-                    // Clear memberId and name snapshots when department changes.
-                    responsibleLeader: '',
-                    responsiblePerson: '',
-                    responsibleLeaderMemberId: undefined,
-                    responsiblePersonMemberId: undefined,
-                  })
-                }}
-                departments={deptOptions}
-                placeholder="请选择主责部门"
-                error={fieldError('departmentId')}
-                onBlur={() => handleBlur('departmentId')}
-                fieldId="field-departmentId"
-              />
-              <ResponsibleFields
-                leaderValue={todoForm.responsibleLeader}
-                onLeaderChange={(v) => setTodoForm((prev) => ({ ...prev, responsibleLeader: v }))}
-                personValue={todoForm.responsiblePerson}
-                onPersonChange={(v) => setTodoForm((prev) => ({ ...prev, responsiblePerson: v }))}
-                departmentId={todoForm.departmentId || undefined}
-                leaderMemberId={todoForm.responsibleLeaderMemberId}
-                onLeaderMemberIdChange={(id) => setTodoForm((prev) => ({ ...prev, responsibleLeaderMemberId: id }))}
-                personMemberId={todoForm.responsiblePersonMemberId}
-                onPersonMemberIdChange={(id) => setTodoForm((prev) => ({ ...prev, responsiblePersonMemberId: id }))}
-              />
-            </div>
-          </WorkFormSectionCard>
-        </>
-      )}
+      <WorkFormContent
+        type={type}
+        user={user}
+        isPriorityOrMain={isPriorityOrMain}
+        isTodo={isTodo}
+        priorityMainForm={priorityMainForm}
+        setPriorityMainForm={setPriorityMainForm}
+        todoForm={todoForm}
+        setTodoForm={setTodoForm}
+        isInnovation={isInnovation}
+        setIsInnovation={setIsInnovation}
+        departments={deptOptions}
+        companyLeaders={companyLeaders}
+        workItemError={fieldError('workItem')}
+        departmentError={fieldError('departmentId')}
+        proposedLeaderError={fieldError('proposedLeaderId')}
+        onWorkItemBlur={() => handleBlur('workItem')}
+        onDepartmentBlur={() => handleBlur('departmentId')}
+        onProposedLeaderBlur={() => handleBlur('proposedLeaderId')}
+      />
 
       <div className={STICKY_ACTION_BAR}>
         <Link href={`/${routeType}`}>
