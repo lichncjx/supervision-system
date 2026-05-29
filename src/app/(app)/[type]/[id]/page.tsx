@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
@@ -58,7 +58,6 @@ export default function WorkDetailPage() {
   const [proof, setProof] = useState('');
   const [adjustReason, setAdjustReason] = useState('');
   const [cancelReason, setCancelReason] = useState('');
-  const [approvalLeaderId, setApprovalLeaderId] = useState('');
   const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [isAdjustDialogOpen, setIsAdjustDialogOpen] = useState(false);
@@ -76,12 +75,6 @@ export default function WorkDetailPage() {
     refresh,
     onRefresh,
   } = useWorkDetailData(id);
-
-  useEffect(() => {
-    if (companyLeaders.length > 0 && !approvalLeaderId) {
-      setApprovalLeaderId(String(companyLeaders[0].id));
-    }
-  }, [companyLeaders, approvalLeaderId]);
 
   React.useEffect(() => {
     if (work) {
@@ -287,21 +280,33 @@ export default function WorkDetailPage() {
     }
   };
 
+  const buildAdjustmentPatch = (): WorkEditablePatch => ({
+    title: editForm.workItem || editForm.title || work.title,
+    workItem: editForm.workItem || '',
+    businessCategory: editForm.businessCategory || '',
+    completeForm: editForm.completeForm || '',
+    isInnovation: !!editForm.isInnovation,
+    departmentId: editForm.departmentId ? Number(editForm.departmentId) : null,
+    responsibleLeader: editForm.responsibleLeader || '',
+    responsiblePerson: editForm.responsiblePerson || '',
+    responsibleLeaderMemberId: editForm.responsibleLeaderMemberId ?? null,
+    responsiblePersonMemberId: editForm.responsiblePersonMemberId ?? null,
+    cooperators: editForm.cooperators || [],
+    workPlan: editForm.workPlan || '',
+    planCompleteTime: editForm.planCompleteTime || '',
+    progress: editForm.progress || '',
+    nodes: editForm.nodes || [],
+    proposedScene: editForm.proposedScene || '',
+    formedTime: editForm.formedTime || '',
+  });
+
   const handleAdjust = async () => {
     if (!user) return;
     if (!adjustReason.trim()) {
       alert('请填写调整原因');
       return;
     }
-    const leader = companyLeaders.find((l) => l.id === Number(approvalLeaderId));
-    if (!leader) {
-      alert('请选择公司审批领导');
-      return;
-    }
-    const pendingAdjustment: WorkEditablePatch = {
-      ...editForm,
-      title: editForm.workItem || editForm.title || work.title,
-    };
+    const pendingAdjustment = buildAdjustmentPatch();
     try {
       await submitAdjust(work, adjustReason, pendingAdjustment);
       onRefresh();
@@ -316,11 +321,6 @@ export default function WorkDetailPage() {
     if (!user) return;
     if (!cancelReason.trim()) {
       alert('请填写取消原因');
-      return;
-    }
-    const leader = companyLeaders.find((l) => l.id === Number(approvalLeaderId));
-    if (!leader) {
-      alert('请选择公司审批领导');
       return;
     }
     try {
@@ -462,7 +462,12 @@ export default function WorkDetailPage() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
         {/* Main Area */}
         <div className="lg:col-span-3 space-y-6">
+          <WorkPendingAdjustmentPanel work={work} departments={departments} />
+
           <div className={`${PANEL_PADDED}`}>
+            {work.pendingAdjustment && (
+              <h3 className="font-semibold text-slate-800 mb-4">当前生效内容</h3>
+            )}
             <WorkDisplayInfo work={work} departments={departments} hideNodes={true} />
           </div>
 
@@ -551,7 +556,6 @@ export default function WorkDetailPage() {
             commentLabel="提交说明（可选）"
             confirmLabel="提交审批"
           />
-          <WorkPendingAdjustmentPanel work={work} />
           <WorkflowRecords records={workflowRecords} />
         </div>
 
@@ -632,11 +636,10 @@ export default function WorkDetailPage() {
         setAdjustReason={setAdjustReason}
         cancelReason={cancelReason}
         setCancelReason={setCancelReason}
-        approvalLeaderId={approvalLeaderId}
-        setApprovalLeaderId={setApprovalLeaderId}
+        approvalLeaderName={work.approvalLeader}
+        proposedLeaderName={work.proposedLeader}
         editForm={editForm}
         setEditForm={setEditForm}
-        companyLeaders={companyLeaders}
         departments={deptOptions}
         cooperatorDepts={cooperatorDepts}
         isPriorityOrMain={isPriorityOrMain}

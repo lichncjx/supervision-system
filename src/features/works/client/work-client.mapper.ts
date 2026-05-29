@@ -21,6 +21,11 @@ function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' ? (value as Record<string, unknown>) : {}
 }
 
+function optionalRecord<T>(value: unknown): T | undefined {
+  const record = asRecord(value)
+  return Object.keys(record).length > 0 ? (record as T) : undefined
+}
+
 function optionalString(value: unknown): string | undefined {
   return typeof value === 'string' && value ? value : undefined
 }
@@ -81,7 +86,9 @@ export function transformWorkFromAPI(work: WorkDto): Work {
     proposedLeader: extractName(work.proposedLeader),
     proposedLeaderId: work.proposedLeaderId ?? undefined,
     proposedLeaderRole: work.proposedLeaderRole ?? undefined,
+    approvalLeader: extractName(work.approvalLeader),
     approvalLeaderId: work.approvalLeaderId ?? undefined,
+    approvalLeaderRole: work.approvalLeaderRole ?? undefined,
     currentApproverId: work.currentApproverId ?? undefined,
     currentApproverRole: work.currentApproverRole ?? undefined,
     responsibleLeader: work.responsibleLeader ?? undefined,
@@ -103,6 +110,8 @@ export function transformWorkFromAPI(work: WorkDto): Work {
     workPlan: work.workPlan ?? undefined,
     planCompleteTime: work.planCompleteTime ?? undefined,
     progress: work.progress ?? undefined,
+    adjustReason: work.adjustReason || undefined,
+    cancelReason: work.cancelReason || undefined,
     rejectReason: work.rejectReason || undefined,
     rejectedAt: work.rejectedAt || undefined,
     rejectedFrom: normalizeWorkStatus(work.rejectedFrom || work.rejectedFromStatus) || undefined,
@@ -110,6 +119,12 @@ export function transformWorkFromAPI(work: WorkDto): Work {
     createdAt: work.createdAt ?? work.updatedAt,
     updatedAt: work.updatedAt,
     attachments: parseAttachments(work.attachments),
+    adjustHistory: (Array.isArray(work.adjustHistory) ? work.adjustHistory : []) as Work['adjustHistory'],
+    pendingAdjustment: optionalRecord<WorkEditablePatch>(work.pendingAdjustment),
+    pendingAdjustmentReason: work.pendingAdjustmentReason ?? undefined,
+    pendingAdjustmentBeforeSnapshot: optionalRecord<WorkEditablePatch>(work.pendingAdjustmentBeforeSnapshot),
+    pendingAdjustmentFromTime: work.pendingAdjustmentFromTime ?? undefined,
+    pendingAdjustmentToTime: work.pendingAdjustmentToTime ?? undefined,
   }
 }
 

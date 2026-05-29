@@ -1,4 +1,9 @@
-import { Prisma, Role, WorkItemStatus } from '@prisma/client'
+import {
+  Prisma,
+  Role,
+  WorkAdjustmentRequestStatus,
+  WorkItemStatus,
+} from '@prisma/client'
 import { prisma } from '@/shared/db/prisma'
 
 export async function findPresident() {
@@ -81,6 +86,67 @@ export async function findWorkflowRecordsByWorkItemId(
       },
     },
     orderBy: { createdAt: 'asc' },
+  })
+}
+
+export async function findPendingAdjustmentRequest(workItemId: number) {
+  return prisma.workAdjustmentRequest.findFirst({
+    where: {
+      workItemId,
+      status: WorkAdjustmentRequestStatus.PENDING,
+    },
+    orderBy: { requestedAt: 'desc' },
+  })
+}
+
+export async function createPendingAdjustmentRequest(params: {
+  workItemId: number
+  reason: string
+  patch: Prisma.InputJsonValue
+  beforeSnapshot: Prisma.InputJsonValue
+  requestedById: number
+}) {
+  return prisma.workAdjustmentRequest.create({
+    data: {
+      workItemId: params.workItemId,
+      reason: params.reason,
+      patch: params.patch,
+      beforeSnapshot: params.beforeSnapshot,
+      requestedById: params.requestedById,
+    },
+  })
+}
+
+export async function markAdjustmentRequestApproved(params: {
+  requestId: number
+  approvedById: number
+}) {
+  return prisma.workAdjustmentRequest.update({
+    where: { id: params.requestId },
+    data: {
+      status: WorkAdjustmentRequestStatus.APPROVED,
+      approvedById: params.approvedById,
+      approvedAt: new Date(),
+    },
+  })
+}
+
+export async function rejectPendingAdjustmentRequest(params: {
+  workItemId: number
+  rejectedById: number
+  rejectReason: string
+}) {
+  return prisma.workAdjustmentRequest.updateMany({
+    where: {
+      workItemId: params.workItemId,
+      status: WorkAdjustmentRequestStatus.PENDING,
+    },
+    data: {
+      status: WorkAdjustmentRequestStatus.REJECTED,
+      rejectedById: params.rejectedById,
+      rejectedAt: new Date(),
+      rejectReason: params.rejectReason,
+    },
   })
 }
 

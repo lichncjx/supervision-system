@@ -126,6 +126,7 @@ export interface Work {
   adjustHistory?: AdjustHistory[]
   pendingAdjustment?: WorkEditablePatch
   pendingAdjustmentReason?: string
+  pendingAdjustmentBeforeSnapshot?: WorkEditablePatch
   pendingAdjustmentFromTime?: string
   pendingAdjustmentToTime?: string
   attachments?: Attachment[]

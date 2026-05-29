@@ -40,6 +40,8 @@ export interface WorkDto {
     progress?: string | null
     action?: string | null
     rejectReason?: string | null
+    adjustReason?: string | null
+    cancelReason?: string | null
     rejectedAt?: string | null
     rejectedFrom?: string | null
     rejectedFromStatus?: string | null
@@ -47,6 +49,11 @@ export interface WorkDto {
     approvalType?: string | null
     nodes?: unknown
     adjustHistory?: unknown
+    pendingAdjustment?: unknown
+    pendingAdjustmentReason?: string | null
+    pendingAdjustmentBeforeSnapshot?: unknown
+    pendingAdjustmentFromTime?: string | null
+    pendingAdjustmentToTime?: string | null
     attachments?: AttachmentDto[]
     createdAt?: string
     updatedAt: string

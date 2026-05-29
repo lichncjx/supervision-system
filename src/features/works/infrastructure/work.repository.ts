@@ -1,10 +1,16 @@
-import { Prisma, Role } from '@prisma/client'
+import { Prisma, Role, WorkAdjustmentRequestStatus } from '@prisma/client'
 import { prisma } from '@/shared/db/prisma'
 
 const WORK_LIST_INCLUDE = {
   department: true,
   creator: { select: { name: true, role: true } },
-  proposedLeader: { select: { id: true, name: true } },
+  proposedLeader: { select: { id: true, name: true, role: true } },
+  approvalLeader: { select: { id: true, name: true, role: true } },
+  adjustmentRequests: {
+    where: { status: WorkAdjustmentRequestStatus.PENDING },
+    orderBy: { requestedAt: 'desc' as const },
+    take: 1,
+  },
 } as const
 
 export type WorkListRow = Prisma.WorkItemGetPayload<{
@@ -25,7 +31,13 @@ const WORK_DETAIL_INCLUDE = {
   department: true,
   creator: { select: { name: true, role: true } },
   firstSubmitter: { select: { name: true } },
-  proposedLeader: { select: { id: true, name: true } },
+  proposedLeader: { select: { id: true, name: true, role: true } },
+  approvalLeader: { select: { id: true, name: true, role: true } },
+  adjustmentRequests: {
+    where: { status: WorkAdjustmentRequestStatus.PENDING },
+    orderBy: { requestedAt: 'desc' as const },
+    take: 1,
+  },
   attachments: {
     include: {
       user: { select: { name: true } },

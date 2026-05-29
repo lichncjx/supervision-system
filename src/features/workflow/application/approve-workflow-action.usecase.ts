@@ -1,3 +1,4 @@
+import { ApprovalType } from '@prisma/client'
 import { getTargetStatus, getNextApprovalAssignment } from '@/features/workflow/domain/workflow.rules'
 import { isApproving } from '@/features/works/domain/work-status.rules'
 import { toPermissionUser } from '@/features/works/domain/work-permission-user.mapper'
@@ -7,11 +8,28 @@ import { isCompanyLevel } from '@/features/users/domain/role.rules'
 import { findWorkForUpdateById, updateWorkItem } from '@/features/works/infrastructure/work.repository'
 import { ensureIsActiveCompanyLeader } from './workflow-next-approver.guard'
 import {
+  buildAdjustHistoryEntry,
+  buildAdjustmentWorkUpdateData,
+  type AdjustmentPatch,
+} from '@/features/workflow/application/adjustment-patch'
+import {
   createWorkflowRecord,
   createOperationLog,
   findPresident,
+  findPendingAdjustmentRequest,
+  markAdjustmentRequestApproved,
 } from '@/features/workflow/infrastructure/workflow.repository'
 import { type Result, err, ok } from '@/shared/result'
+
+function parseJsonField<T>(value: unknown, fallback: T): T {
+  if (!value) return fallback
+  if (typeof value !== 'string') return value as T
+  try {
+    return JSON.parse(value) as T
+  } catch {
+    return fallback
+  }
+}
 
 export async function approveWorkflowAction(
   workItemId: number,
@@ -84,14 +102,49 @@ export async function approveWorkflowAction(
   }
 
   const targetStatus = getTargetStatus(workItem.approvalType)
+  let adjustmentUpdateData: Record<string, unknown> = {}
+  let approvedAdjustmentRequestId: number | null = null
+
+  if (workItem.approvalType === ApprovalType.ADJUST) {
+    const adjustmentRequest = await findPendingAdjustmentRequest(workItemId)
+    if (!adjustmentRequest) {
+      return err(400, '调整申请内容缺失，无法审批通过')
+    }
+
+    const patch = adjustmentRequest.patch as AdjustmentPatch
+    const beforeSnapshot = adjustmentRequest.beforeSnapshot as AdjustmentPatch
+    const currentHistory = parseJsonField<unknown[]>(workItem.adjustHistory, [])
+    adjustmentUpdateData = {
+      ...buildAdjustmentWorkUpdateData(patch),
+      adjustHistory: [
+        ...currentHistory,
+        buildAdjustHistoryEntry({
+          beforeSnapshot,
+          patch,
+          reason: adjustmentRequest.reason,
+          approvedBy: user.name,
+        }),
+      ],
+    }
+    approvedAdjustmentRequestId = adjustmentRequest.id
+  }
+
   const updated = await updateWorkItem(workItemId, {
+    ...adjustmentUpdateData,
     status: targetStatus,
     beforeApprovalStatus: null,
     approvalType: null,
     currentApproverId: null,
     currentApproverRole: null,
-    ...(isCompanyLevel(user.role) && workItem.approvalType === 'PROPOSE' ? { approvalLeaderId: user.id } : {}),
+    ...(isCompanyLevel(user.role) && workItem.approvalType === ApprovalType.PROPOSE ? { approvalLeaderId: user.id } : {}),
   })
+
+  if (approvedAdjustmentRequestId) {
+    await markAdjustmentRequestApproved({
+      requestId: approvedAdjustmentRequestId,
+      approvedById: user.id,
+    })
+  }
 
   await createWorkflowRecord({
     workItemId,

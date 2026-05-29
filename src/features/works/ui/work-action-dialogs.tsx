@@ -4,12 +4,10 @@ import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { WorkFormNodes } from '@/features/works/ui/work-form-nodes';
 import { WorkFormCooperators } from '@/features/works/ui/work-form-cooperators';
 import {
   WorkItemField,
-  ProposedLeaderField,
   DepartmentField,
   ResponsibleFields,
   PlanCompleteTimeField,
@@ -28,11 +26,10 @@ interface WorkActionDialogsProps {
   setAdjustReason: (reason: string) => void;
   cancelReason: string;
   setCancelReason: (reason: string) => void;
-  approvalLeaderId: string;
-  setApprovalLeaderId: (value: string) => void;
+  approvalLeaderName?: string | null;
+  proposedLeaderName?: string | null;
   editForm: any;
   setEditForm: (form: any) => void;
-  companyLeaders: Array<{ id: number; name: string; role: string }>;
   departments: Array<{ id: number; name: string; code: string; isBusiness: boolean }>;
   cooperatorDepts?: Array<{ id: number; name: string; code: string; isBusiness: boolean }>;
   isPriorityOrMain: boolean;
@@ -50,11 +47,10 @@ export function WorkActionDialogs({
   setAdjustReason,
   cancelReason,
   setCancelReason,
-  approvalLeaderId,
-  setApprovalLeaderId,
+  approvalLeaderName,
+  proposedLeaderName,
   editForm,
   setEditForm,
-  companyLeaders,
   departments,
   cooperatorDepts,
   isPriorityOrMain,
@@ -66,6 +62,7 @@ export function WorkActionDialogs({
   const cooperators: Cooperator[] = Array.isArray(editForm.cooperators) ? editForm.cooperators : [];
   const businessDepts = departments.filter((d) => (d as any).isBusiness !== false);
   const availableCooperatorDepts = cooperatorDepts ?? businessDepts;
+  const readonlyApprovalLeader = approvalLeaderName || proposedLeaderName || '-';
 
   return (
     <>
@@ -84,16 +81,9 @@ export function WorkActionDialogs({
                 公司审批领导
                 <span className="text-xs text-slate-400 ml-1">（负责本次调整审批的公司领导）</span>
               </label>
-              <Select value={approvalLeaderId} onValueChange={setApprovalLeaderId}>
-                <SelectTrigger className="w-full rounded-lg">
-                  <SelectValue placeholder="请选择公司审批领导" />
-                </SelectTrigger>
-                <SelectContent>
-                  {companyLeaders.map((leader) => (
-                    <SelectItem key={leader.id} value={String(leader.id)}>{leader.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                {readonlyApprovalLeader}
+              </div>
             </div>
 
             <div>
@@ -183,20 +173,12 @@ export function WorkActionDialogs({
                     onChange={(v) => setEditForm((prev: any) => ({ ...prev, workItem: v }))}
                     placeholder="请输入待办事项"
                   />
-                  <ProposedLeaderField
-                    value={editForm.proposedLeaderId || ''}
-                    onChange={(v) => {
-                      const selected = companyLeaders.find((leader) => leader.id === Number(v));
-                      setEditForm((prev: any) => ({
-                        ...prev,
-                        proposedLeaderId: v,
-                        proposedLeader: selected?.name || '',
-                        proposedLeaderRole: selected?.role || '',
-                      }));
-                    }}
-                    leaders={companyLeaders}
-                    disabled={false}
-                  />
+                  <div>
+                    <label className={FIELD_LABEL + ' mb-1 block'}>事项提出领导</label>
+                    <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                      {proposedLeaderName || '-'}
+                    </div>
+                  </div>
                   <TodoSpecificFields
                     proposedScene={editForm.proposedScene || ''}
                     onProposedSceneChange={(v) => setEditForm((prev: any) => ({ ...prev, proposedScene: v }))}
@@ -242,6 +224,12 @@ export function WorkActionDialogs({
                     onChange={(value) => setEditForm((prev: any) => ({ ...prev, cooperators: value }))}
                     departments={availableCooperatorDepts.filter((d) => d.id !== editForm.departmentId)}
                   />
+                  <WorkFormNodes
+                    nodes={nodes}
+                    onChange={(value) => setEditForm((prev: any) => ({ ...prev, nodes: value }))}
+                    nodeLabel="任务节点（可选）"
+                    nodePlaceholderPrefix="任务节点"
+                  />
                 </div>
               )}
             </div>
@@ -284,16 +272,9 @@ export function WorkActionDialogs({
                 公司审批领导
                 <span className="text-xs text-slate-400 ml-1">（负责本次取消审批的公司领导）</span>
               </label>
-              <Select value={approvalLeaderId} onValueChange={setApprovalLeaderId}>
-                <SelectTrigger className="w-full rounded-lg">
-                  <SelectValue placeholder="请选择公司审批领导" />
-                </SelectTrigger>
-                <SelectContent>
-                  {companyLeaders.map((leader) => (
-                    <SelectItem key={leader.id} value={String(leader.id)}>{leader.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                {readonlyApprovalLeader}
+              </div>
             </div>
 
             <div>

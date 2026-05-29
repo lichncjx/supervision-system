@@ -1,4 +1,5 @@
 import { rejectableBeforeStatus } from '@/features/workflow/domain/workflow.rules'
+import { ApprovalType } from '@prisma/client'
 import { isApproving } from '@/features/works/domain/work-status.rules'
 import { toPermissionUser } from '@/features/works/domain/work-permission-user.mapper'
 import type { BaseCurrentUser } from '@/shared/auth/current-user'
@@ -7,6 +8,7 @@ import { findWorkForUpdateById, updateWorkItem } from '@/features/works/infrastr
 import {
   createWorkflowRecord,
   createOperationLog,
+  rejectPendingAdjustmentRequest,
 } from '@/features/workflow/infrastructure/workflow.repository'
 import { type Result, err, ok } from '@/shared/result'
 
@@ -44,6 +46,14 @@ export async function rejectWorkflowAction(
     rejectReason,
     rejectedFromStatus: oldStatus,
   })
+
+  if (workItem.approvalType === ApprovalType.ADJUST) {
+    await rejectPendingAdjustmentRequest({
+      workItemId,
+      rejectedById: user.id,
+      rejectReason,
+    })
+  }
 
   await createWorkflowRecord({
     workItemId,

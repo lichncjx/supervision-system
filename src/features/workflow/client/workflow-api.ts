@@ -50,13 +50,18 @@ export async function submitComplete(work: Work, proof: string) {
 export async function submitAdjust(
   work: Work,
   reason: string,
-  _pendingAdjustment?: WorkEditablePatch,
+  pendingAdjustment?: WorkEditablePatch,
 ) {
   const response = await fetch(`/api/works/${work.id}/workflow`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
-    body: JSON.stringify({ action: 'adjust', adjustReason: reason, comment: '申请调整' }),
+    body: JSON.stringify({
+      action: 'adjust',
+      adjustReason: reason,
+      pendingAdjustment,
+      comment: '申请调整',
+    }),
   })
   await throwOnError(response)
   return getWorkById(work.id)

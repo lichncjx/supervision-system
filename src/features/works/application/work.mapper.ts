@@ -34,23 +34,31 @@ interface WorkSource {
   responsiblePerson?: string | null
   responsibleLeaderMemberId?: number | null
   responsiblePersonMemberId?: number | null
-  proposedLeader?: { name?: string | null } | null
+  proposedLeader?: { name?: string | null; role?: string | null } | null
   proposedLeaderId?: number | null
+  approvalLeader?: { name?: string | null; role?: string | null } | null
+  approvalLeaderId?: number | null
   proposedScene?: string | null
   formedTime?: Date | null
   workPlan?: string | null
   planCompleteTime?: Date | null
   progress?: string | null
   action?: string | null
-  approvalLeaderId?: number | null
   currentApproverId?: number | null
   currentApproverRole?: string | null
+  adjustReason?: string | null
+  cancelReason?: string | null
   rejectReason?: string | null
   rejectedFromStatus?: string | null
   beforeApprovalStatus?: string | null
   approvalType?: string | null
   nodes?: unknown
   adjustHistory?: unknown
+  adjustmentRequests?: Array<{
+    reason: string
+    patch: unknown
+    beforeSnapshot: unknown
+  }>
   attachments?: Array<{
     id: number
     fileName: string
@@ -90,7 +98,29 @@ function toWorkAttachments(
   }))
 }
 
+function getPendingAdjustment(work: WorkSource) {
+  const request = work.adjustmentRequests?.[0]
+  if (!request) return null
+
+  const patch = parseJsonField<Record<string, unknown>>(request.patch, {})
+  const beforeSnapshot = parseJsonField<Record<string, unknown>>(request.beforeSnapshot, {})
+
+  return {
+    patch,
+    beforeSnapshot,
+    reason: request.reason,
+    fromTime: typeof beforeSnapshot.planCompleteTime === 'string'
+      ? beforeSnapshot.planCompleteTime
+      : null,
+    toTime: typeof patch.planCompleteTime === 'string'
+      ? patch.planCompleteTime
+      : null,
+  }
+}
+
 export function toWorkDto(work: WorkSource): WorkDto {
+  const pendingAdjustment = getPendingAdjustment(work)
+
   return {
     id: work.id,
     title: work.title,
@@ -116,21 +146,31 @@ export function toWorkDto(work: WorkSource): WorkDto {
     responsiblePersonMemberId: work.responsiblePersonMemberId,
     proposedLeader: work.proposedLeader?.name || null,
     proposedLeaderId: work.proposedLeaderId,
+    proposedLeaderRole: work.proposedLeader?.role || null,
+    approvalLeader: work.approvalLeader?.name || null,
+    approvalLeaderId: work.approvalLeaderId,
+    approvalLeaderRole: work.approvalLeader?.role || null,
     proposedScene: work.proposedScene,
     formedTime: formatDate(work.formedTime),
     workPlan: work.workPlan,
     planCompleteTime: formatDate(work.planCompleteTime),
     progress: work.progress,
     action: work.action,
-    approvalLeaderId: work.approvalLeaderId,
     currentApproverId: work.currentApproverId,
     currentApproverRole: work.currentApproverRole,
+    adjustReason: work.adjustReason,
+    cancelReason: work.cancelReason,
     rejectReason: work.rejectReason,
     rejectedFromStatus: work.rejectedFromStatus,
     beforeApprovalStatus: work.beforeApprovalStatus,
     approvalType: work.approvalType,
     nodes: processNodesForDisplay(parseJsonField(work.nodes, [])),
     adjustHistory: processAdjustHistory(parseJsonField(work.adjustHistory, [])),
+    pendingAdjustment: pendingAdjustment?.patch,
+    pendingAdjustmentReason: pendingAdjustment?.reason,
+    pendingAdjustmentBeforeSnapshot: pendingAdjustment?.beforeSnapshot,
+    pendingAdjustmentFromTime: pendingAdjustment?.fromTime,
+    pendingAdjustmentToTime: pendingAdjustment?.toTime,
     attachments: toWorkAttachments(work.attachments),
     createdAt: work.createdAt.toISOString(),
     updatedAt: work.updatedAt.toISOString(),

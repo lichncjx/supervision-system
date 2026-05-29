@@ -162,11 +162,7 @@ export async function createWorkUseCase(input: CreateWorkInput): Promise<Result<
     responsibleLeaderMemberId: rest.responsibleLeaderMemberId,
     responsiblePersonMemberId: rest.responsiblePersonMemberId,
     proposedLeaderId: rest.proposedLeaderId ? Number(rest.proposedLeaderId) : null,
-    approvalLeaderId: rest.approvalLeaderId
-      ? Number(rest.approvalLeaderId)
-      : rest.proposedLeaderId
-        ? Number(rest.proposedLeaderId)
-        : null,
+    approvalLeaderId: rest.approvalLeaderId ? Number(rest.approvalLeaderId) : null,
     proposedScene: rest.proposedScene,
     formedTime: convertToDateTime(rest.formedTime),
     cooperators: rest.cooperators || undefined,
