@@ -119,7 +119,6 @@ export interface Work {
   adjustNewTime?: string
   adjustTimeType?: 'planCompleteTime'
   rejectReason?: string
-  rejectedAt?: string
   rejectedFrom?: WorkStatus
   rejectedFromStatus?: WorkStatus
   rejectedBy?: string

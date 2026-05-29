@@ -42,7 +42,6 @@ export interface WorkDto {
     rejectReason?: string | null
     adjustReason?: string | null
     cancelReason?: string | null
-    rejectedAt?: string | null
     rejectedFrom?: string | null
     rejectedFromStatus?: string | null
     beforeApprovalStatus?: string | null

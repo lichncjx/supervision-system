@@ -113,7 +113,6 @@ export function transformWorkFromAPI(work: WorkDto): Work {
     adjustReason: work.adjustReason || undefined,
     cancelReason: work.cancelReason || undefined,
     rejectReason: work.rejectReason || undefined,
-    rejectedAt: work.rejectedAt || undefined,
     rejectedFrom: normalizeWorkStatus(work.rejectedFrom || work.rejectedFromStatus) || undefined,
     rejectedFromStatus: normalizeWorkStatus(work.rejectedFromStatus) || undefined,
     createdAt: work.createdAt ?? work.updatedAt,

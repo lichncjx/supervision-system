@@ -26,7 +26,6 @@ export interface PermissionWorkItem {
   approvalType?: ApprovalType | string | null
   rejectReason?: string | null
   rejectedFromStatus?: WorkItemStatus | string | null
-  rejectedAt?: Date | string | null
 }
 
 /** 去重 + 过滤非正数 ID */

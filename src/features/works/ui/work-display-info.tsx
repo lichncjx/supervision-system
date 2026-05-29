@@ -132,9 +132,6 @@ function PriorityMainWorkDisplayInfo({ work, departments, hideNodes }: WorkDispl
         <div className="p-3 bg-rose-50 border border-red-200 rounded text-sm text-red-700 break-words whitespace-pre-wrap">
           <div>退回人：{work.rejectedBy || '-'}</div>
           <div>退回原因：{work.rejectReason}</div>
-          {work.rejectedAt && (
-            <div>退回时间：{new Date(work.rejectedAt).toLocaleString()}</div>
-          )}
         </div>
       )}
 
@@ -332,9 +329,6 @@ function TodoWorkDisplayInfo({ work, departments, hideNodes, hideCooperators }: 
         <div className="p-3 bg-rose-50 border border-red-200 rounded text-sm text-red-700 break-words whitespace-pre-wrap">
           <div>退回人：{work.rejectedBy || '-'}</div>
           <div>退回原因：{work.rejectReason}</div>
-          {work.rejectedAt && (
-            <div>退回时间：{new Date(work.rejectedAt).toLocaleString()}</div>
-          )}
         </div>
       )}
 
