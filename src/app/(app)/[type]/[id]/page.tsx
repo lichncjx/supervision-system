@@ -40,13 +40,11 @@ import { deleteWork } from '@/features/works/client/work-api';
 import {
   submitPropose,
   submitComplete,
-  submitAdjust,
   submitCancel,
   submitTodoDecomposition,
   approveWork,
   rejectWork,
 } from '@/features/workflow/client/workflow-api';
-import type { WorkEditablePatch } from '@/features/works/client/work-client.types';
 
 export default function WorkDetailPage() {
   const params = useParams<{ type: string; id: string }>();
@@ -55,10 +53,8 @@ export default function WorkDetailPage() {
   const { user } = useAuth();
   const router = useRouter();
   const [proof, setProof] = useState('');
-  const [adjustReason, setAdjustReason] = useState('');
   const [cancelReason, setCancelReason] = useState('');
   const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState(false);
-  const [isAdjustDialogOpen, setIsAdjustDialogOpen] = useState(false);
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
   const [editForm, setEditForm] = useState<any>({});
 
@@ -228,43 +224,6 @@ export default function WorkDetailPage() {
     }
   };
 
-  const buildAdjustmentPatch = (): WorkEditablePatch => ({
-    title: editForm.workItem || editForm.title || work.title,
-    workItem: editForm.workItem || '',
-    businessCategory: editForm.businessCategory || '',
-    completeForm: editForm.completeForm || '',
-    isInnovation: !!editForm.isInnovation,
-    departmentId: editForm.departmentId ? Number(editForm.departmentId) : null,
-    responsibleLeader: editForm.responsibleLeader || '',
-    responsiblePerson: editForm.responsiblePerson || '',
-    responsibleLeaderMemberId: editForm.responsibleLeaderMemberId ?? null,
-    responsiblePersonMemberId: editForm.responsiblePersonMemberId ?? null,
-    cooperators: editForm.cooperators || [],
-    workPlan: editForm.workPlan || '',
-    planCompleteTime: editForm.planCompleteTime || '',
-    progress: editForm.progress || '',
-    nodes: editForm.nodes || [],
-    proposedScene: editForm.proposedScene || '',
-    formedTime: editForm.formedTime || '',
-  });
-
-  const handleAdjust = async () => {
-    if (!user) return;
-    if (!adjustReason.trim()) {
-      alert('请填写调整原因');
-      return;
-    }
-    const pendingAdjustment = buildAdjustmentPatch();
-    try {
-      await submitAdjust(work, adjustReason, pendingAdjustment);
-      onRefresh();
-      alert('已提交调整申请，等待审批');
-    } catch (error) {
-      console.error(error);
-      alert('提交失败，请查看控制台错误');
-    }
-  };
-
   const handleCancel = async () => {
     if (!user) return;
     if (!cancelReason.trim()) {
@@ -336,13 +295,7 @@ export default function WorkDetailPage() {
     }
   };
 
-  const isPriorityOrMain = work.type === '重点' || work.type === '主要';
   const isTodo = work.type === '待办';
-  const isDepartmentUser = user?.role === 'DEPARTMENT_MANAGER' || user?.role === 'DEPARTMENT_LEADER';
-  const deptOptions = isDepartmentUser
-    ? departments.filter((d) => d.id === user?.departmentId)
-    : departments;
-  const cooperatorDepts = departments.filter((d: any) => d.isBusiness !== false);
   const typeColorKey = work.type === '重点' ? 'priority' : work.type === '主要' ? 'main' : 'todo';
 
   const theme = TYPE_THEME[typeColorKey];
@@ -564,23 +517,12 @@ export default function WorkDetailPage() {
       </div>
 
       <WorkActionDialogs
-        isAdjustDialogOpen={isAdjustDialogOpen}
-        setIsAdjustDialogOpen={setIsAdjustDialogOpen}
         isCancelDialogOpen={isCancelDialogOpen}
         setIsCancelDialogOpen={setIsCancelDialogOpen}
-        adjustReason={adjustReason}
-        setAdjustReason={setAdjustReason}
         cancelReason={cancelReason}
         setCancelReason={setCancelReason}
         approvalLeaderName={work.approvalLeader}
         proposedLeaderName={work.proposedLeader}
-        editForm={editForm}
-        setEditForm={setEditForm}
-        departments={deptOptions}
-        cooperatorDepts={cooperatorDepts}
-        isPriorityOrMain={isPriorityOrMain}
-        isTodo={isTodo}
-        onSubmitAdjust={handleAdjust}
         onSubmitCancel={handleCancel}
       />
     </div>
