@@ -4,20 +4,10 @@ import { canUserOperate, getProcessFirstApprover } from '@/features/workflow/dom
 import { toPermissionUser } from '@/features/works/domain/work-permission-user.mapper'
 import { findWorkForUpdateById, updateWorkItem } from '@/features/works/infrastructure/work.repository'
 import { findDepartmentById } from '@/features/departments/infrastructure/department.repository'
-import {
-  validateMemberAssignments,
-  type MemberAssignment,
-} from '@/features/members/domain/member.rules'
-import {
-  buildAdjustmentBeforeSnapshot,
-  sanitizeAdjustmentPatch,
-} from '@/features/workflow/application/adjustment-patch'
+import { validateMemberAssignments, type MemberAssignment } from '@/features/members/domain/member.rules'
+import { buildAdjustmentBeforeSnapshot, sanitizeAdjustmentPatch } from '@/features/workflow/application/adjustment-patch'
 import { getChangedAdjustmentFields } from '@/features/works/domain/work-adjustment-diff'
-import {
-  createPendingAdjustmentRequest,
-  createWorkflowRecord,
-  createOperationLog,
-} from '@/features/workflow/infrastructure/workflow.repository'
+import { createAdjustment, createWorkflowRecord, createOperationLog } from '@/features/workflow/infrastructure/workflow.repository'
 import { type Result, err, ok } from '@/shared/result'
 
 export async function submitAdjustment(
@@ -120,7 +110,7 @@ export async function submitAdjustment(
     return err(400, '调整内容没有变更，无需提交调整申请')
   }
 
-  await createPendingAdjustmentRequest({
+  await createAdjustment({
     workItemId,
     reason: adjustReason,
     patch: patch as Prisma.InputJsonObject,

@@ -16,8 +16,8 @@ import {
   createWorkflowRecord,
   createOperationLog,
   findPresident,
-  findPendingAdjustmentRequest,
-  markAdjustmentRequestApproved,
+  findAdjustment,
+  approveAdjustment,
 } from '@/features/workflow/infrastructure/workflow.repository'
 import { type Result, err, ok } from '@/shared/result'
 
@@ -106,7 +106,7 @@ export async function approveWorkflowAction(
   let approvedAdjustmentRequestId: number | null = null
 
   if (workItem.approvalType === ApprovalType.ADJUST) {
-    const adjustmentRequest = await findPendingAdjustmentRequest(workItemId)
+    const adjustmentRequest = await findAdjustment(workItemId)
     if (!adjustmentRequest) {
       return err(400, '调整申请内容缺失，无法审批通过')
     }
@@ -140,7 +140,7 @@ export async function approveWorkflowAction(
   })
 
   if (approvedAdjustmentRequestId) {
-    await markAdjustmentRequestApproved({
+    await approveAdjustment({
       requestId: approvedAdjustmentRequestId,
       approvedById: user.id,
     })

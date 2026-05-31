@@ -504,15 +504,15 @@ export default function WorkDetailPage() {
           {canApprove && (
             <WorkflowApprovalPanel
               onApprove={handleApprove}
-            onReject={handleReject}
-            companyLeaders={companyLeaders}
-            needsLeaderSelection={
-              !!user &&
-              user.role === 'DEPARTMENT_LEADER' &&
-              !work?.proposedLeaderId &&
-              !work?.approvalLeaderId
-            }
-            leaderName={work?.approvalLeader || work?.proposedLeader}
+              onReject={handleReject}
+              companyLeaders={companyLeaders}
+              needsLeaderSelection={
+                !!user &&
+                user.role === 'DEPARTMENT_LEADER' &&
+                !work?.proposedLeaderId &&
+                !work?.approvalLeaderId
+              }
+              leaderName={work?.approvalLeader || work?.proposedLeader}
             />
           )}
         </aside>

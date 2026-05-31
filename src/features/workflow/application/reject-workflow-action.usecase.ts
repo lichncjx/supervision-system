@@ -8,7 +8,7 @@ import { findWorkForUpdateById, updateWorkItem } from '@/features/works/infrastr
 import {
   createWorkflowRecord,
   createOperationLog,
-  rejectPendingAdjustmentRequest,
+  rejectAdjustment,
 } from '@/features/workflow/infrastructure/workflow.repository'
 import { type Result, err, ok } from '@/shared/result'
 
@@ -48,7 +48,7 @@ export async function rejectWorkflowAction(
   })
 
   if (workItem.approvalType === ApprovalType.ADJUST) {
-    await rejectPendingAdjustmentRequest({
+    await rejectAdjustment({
       workItemId,
       rejectedById: user.id,
       rejectReason,

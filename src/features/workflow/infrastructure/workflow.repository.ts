@@ -89,7 +89,7 @@ export async function findWorkflowRecordsByWorkItemId(
   })
 }
 
-export async function findPendingAdjustmentRequest(workItemId: number) {
+export async function findAdjustment(workItemId: number) {
   return prisma.workAdjustmentRequest.findFirst({
     where: {
       workItemId,
@@ -99,7 +99,7 @@ export async function findPendingAdjustmentRequest(workItemId: number) {
   })
 }
 
-export async function createPendingAdjustmentRequest(params: {
+export async function createAdjustment(params: {
   workItemId: number
   reason: string
   patch: Prisma.InputJsonValue
@@ -117,7 +117,7 @@ export async function createPendingAdjustmentRequest(params: {
   })
 }
 
-export async function markAdjustmentRequestApproved(params: {
+export async function approveAdjustment(params: {
   requestId: number
   approvedById: number
 }) {
@@ -131,7 +131,7 @@ export async function markAdjustmentRequestApproved(params: {
   })
 }
 
-export async function rejectPendingAdjustmentRequest(params: {
+export async function rejectAdjustment(params: {
   workItemId: number
   rejectedById: number
   rejectReason: string
