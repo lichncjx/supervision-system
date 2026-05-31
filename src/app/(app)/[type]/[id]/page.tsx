@@ -451,7 +451,7 @@ export default function WorkDetailPage() {
             onDelete={handleDeleteAttachment}
           />
 
-          {!isInProgress(work.status) && (
+          {(!isInProgress(work.status) || !canOperate) && (
             <WorkEvidencePanel
               proof={work.proof}
               evidenceAttachments={(work.attachments || []).filter(a => a.category === 'evidence')}

@@ -7,11 +7,7 @@ import { findDepartmentById } from '@/features/departments/infrastructure/depart
 import { validateMemberAssignments, type MemberAssignment } from '@/features/members/domain/member.rules'
 import { buildAdjustmentBeforeSnapshot, sanitizeAdjustmentPatch } from '@/features/workflow/application/adjustment-patch'
 import { getChangedAdjustmentFields } from '@/features/works/domain/work-adjustment-diff'
-import {
-  createAdjustmentTransitional,
-  createWorkflowRecord,
-  createOperationLog,
-} from '@/features/workflow/infrastructure/workflow.repository'
+import { createAdjustmentTransitional, createWorkflowRecord, createOperationLog } from '@/features/workflow/infrastructure/workflow.repository'
 import { type Result, err, ok } from '@/shared/result'
 
 export async function submitAdjustment(

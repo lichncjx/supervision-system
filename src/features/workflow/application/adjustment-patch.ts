@@ -99,6 +99,9 @@ export function sanitizeAdjustmentPatch(input: unknown):
   for (const [field, value] of Object.entries(input)) {
     if (!ADJUSTMENT_PATCH_FIELD_SET.has(field)) continue
     const patchField = field as AdjustmentPatchField
+    if (patchField === 'departmentId' && (value == null || value === '')) {
+      return { ok: false, message: '责任部门不能为空' }
+    }
     patch[patchField] = normalizePatchValue(patchField, value)
   }
 

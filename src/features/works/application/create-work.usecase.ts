@@ -66,7 +66,6 @@ function processNodes(nodes: any[]) {
 export async function createWorkUseCase(input: CreateWorkInput): Promise<Result<WorkDto>> {
   const { currentUser, body } = input
   const departmentId = body.departmentId
-  const rest = body
 
   let workType: WorkItemType
   if (body.type === '重点' || body.type === 'PRIORITY' || body.type === 'priority') {
@@ -105,13 +104,13 @@ export async function createWorkUseCase(input: CreateWorkInput): Promise<Result<
   }
 
   // Validate member IDs if provided
-  if (rest.responsibleLeaderMemberId != null || rest.responsiblePersonMemberId != null) {
+  if (body.responsibleLeaderMemberId != null || body.responsiblePersonMemberId != null) {
     const assignments: MemberAssignment[] = []
-    if (rest.responsibleLeaderMemberId != null) {
-      assignments.push({ memberId: rest.responsibleLeaderMemberId, role: 'leader', departmentId })
+    if (body.responsibleLeaderMemberId != null) {
+      assignments.push({ memberId: body.responsibleLeaderMemberId, role: 'leader', departmentId })
     }
-    if (rest.responsiblePersonMemberId != null) {
-      assignments.push({ memberId: rest.responsiblePersonMemberId, role: 'person', departmentId })
+    if (body.responsiblePersonMemberId != null) {
+      assignments.push({ memberId: body.responsiblePersonMemberId, role: 'person', departmentId })
     }
     const errors = await validateMemberAssignments(assignments)
     if (errors.length > 0) {
@@ -120,7 +119,7 @@ export async function createWorkUseCase(input: CreateWorkInput): Promise<Result<
   }
 
   // Validate cooperator member IDs
-  const cooperators = Array.isArray(rest.cooperators) ? rest.cooperators : []
+  const cooperators = Array.isArray(body.cooperators) ? body.cooperators : []
   if (cooperators.some((c: any) => c.leaderMemberId != null || c.personMemberId != null)) {
     const coopAssignments: MemberAssignment[] = []
     for (const c of cooperators) {
@@ -147,29 +146,33 @@ export async function createWorkUseCase(input: CreateWorkInput): Promise<Result<
 
   const workData = {
     type: workType,
-    title: rest.title || rest.workItem || '未命名事项',
+    title: body.title || body.workItem || '未命名事项',
     departmentId,
     creatorId: currentUser.id,
     status: WorkItemStatus.DRAFT,
-    workItem: rest.workItem,
-    workNode: rest.workNode,
-    businessCategory: rest.businessCategory,
+    workItem: body.workItem,
+    workNode: body.workNode,
+    businessCategory: body.businessCategory,
     completeTime: null,
-    completeForm: rest.completeForm,
-    isInnovation: rest.isInnovation || false,
-    responsibleLeader: rest.responsibleLeader,
-    responsiblePerson: rest.responsiblePerson,
-    responsibleLeaderMemberId: rest.responsibleLeaderMemberId,
-    responsiblePersonMemberId: rest.responsiblePersonMemberId,
-    proposedLeaderId: rest.proposedLeaderId ? Number(rest.proposedLeaderId) : null,
-    approvalLeaderId: rest.approvalLeaderId ? Number(rest.approvalLeaderId) : null,
-    proposedScene: rest.proposedScene,
-    formedTime: convertToDateTime(rest.formedTime),
-    cooperators: rest.cooperators || undefined,
-    workPlan: rest.workPlan,
-    planCompleteTime: convertToDateTime(rest.planCompleteTime),
-    progress: rest.progress,
-    nodes: rest.nodes ? JSON.stringify(processNodes(rest.nodes as any[])) : null,
+    completeForm: body.completeForm,
+    isInnovation: body.isInnovation || false,
+    responsibleLeader: body.responsibleLeader,
+    responsiblePerson: body.responsiblePerson,
+    responsibleLeaderMemberId: body.responsibleLeaderMemberId,
+    responsiblePersonMemberId: body.responsiblePersonMemberId,
+    proposedLeaderId: body.proposedLeaderId ? Number(body.proposedLeaderId) : null,
+    approvalLeaderId: body.approvalLeaderId ? Number(body.approvalLeaderId) : null,
+    proposedScene: body.proposedScene,
+    formedTime: convertToDateTime(body.formedTime),
+    cooperators: body.cooperators || undefined,
+    workPlan: body.workPlan,
+    planCompleteTime: convertToDateTime(body.planCompleteTime),
+    progress: body.progress,
+    nodes: body.nodes ? JSON.stringify(processNodes(body.nodes as any[])) : null,
+  }
+
+  if (workData.proposedLeaderId && !workData.approvalLeaderId) {
+    workData.approvalLeaderId = workData.proposedLeaderId
   }
 
   const work = await createWorkItem(workData as any)
