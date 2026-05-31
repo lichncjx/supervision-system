@@ -117,6 +117,44 @@ export async function createAdjustment(params: {
   })
 }
 
+export async function createAdjustmentAndTransitionWorkItem(params: {
+  workItemId: number
+  reason: string
+  patch: Prisma.InputJsonValue
+  beforeSnapshot: Prisma.InputJsonValue
+  requestedById: number
+  updateData: Prisma.WorkItemUncheckedUpdateInput
+}) {
+  return prisma.$transaction(async (tx) => {
+    const updated = await tx.workItem.updateMany({
+      where: {
+        id: params.workItemId,
+        status: WorkItemStatus.IN_PROGRESS,
+      },
+      data: {
+        status: WorkItemStatus.ADJUSTING,
+      },
+    })
+
+    if (updated.count !== 1) return null
+
+    await tx.workItem.update({
+      where: { id: params.workItemId },
+      data: params.updateData,
+    })
+
+    return tx.workAdjustmentRequest.create({
+      data: {
+        workItemId: params.workItemId,
+        reason: params.reason,
+        patch: params.patch,
+        beforeSnapshot: params.beforeSnapshot,
+        requestedById: params.requestedById,
+      },
+    })
+  })
+}
+
 export async function approveAdjustment(params: {
   requestId: number
   approvedById: number

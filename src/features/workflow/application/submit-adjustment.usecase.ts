@@ -2,12 +2,16 @@ import { ActionType, ApprovalType, Prisma, WorkItemStatus } from '@prisma/client
 import type { BaseCurrentUser } from '@/shared/auth/current-user'
 import { canUserOperate, getProcessFirstApprover } from '@/features/workflow/domain/workflow.rules'
 import { toPermissionUser } from '@/features/works/domain/work-permission-user.mapper'
-import { findWorkForUpdateById, updateWorkItem } from '@/features/works/infrastructure/work.repository'
+import { findWorkForUpdateById } from '@/features/works/infrastructure/work.repository'
 import { findDepartmentById } from '@/features/departments/infrastructure/department.repository'
 import { validateMemberAssignments, type MemberAssignment } from '@/features/members/domain/member.rules'
 import { buildAdjustmentBeforeSnapshot, sanitizeAdjustmentPatch } from '@/features/workflow/application/adjustment-patch'
 import { getChangedAdjustmentFields } from '@/features/works/domain/work-adjustment-diff'
-import { createAdjustment, createWorkflowRecord, createOperationLog } from '@/features/workflow/infrastructure/workflow.repository'
+import {
+  createAdjustmentAndTransitionWorkItem,
+  createWorkflowRecord,
+  createOperationLog,
+} from '@/features/workflow/infrastructure/workflow.repository'
 import { type Result, err, ok } from '@/shared/result'
 
 export async function submitAdjustment(
@@ -110,25 +114,27 @@ export async function submitAdjustment(
     return err(400, '调整内容没有变更，无需提交调整申请')
   }
 
-  await createAdjustment({
+  const adjustmentRequest = await createAdjustmentAndTransitionWorkItem({
     workItemId,
     reason: adjustReason,
     patch: patch as Prisma.InputJsonObject,
     beforeSnapshot: beforeSnapshot as Prisma.InputJsonObject,
     requestedById: user.id,
+    updateData: {
+      status: WorkItemStatus.ADJUSTING,
+      action: ActionType.ADJUST,
+      adjustReason,
+      beforeApprovalStatus: oldStatus,
+      approvalType: ApprovalType.ADJUST,
+      currentApproverId: approver.currentApproverId,
+      currentApproverRole: approver.currentApproverRole,
+      rejectReason: null,
+      rejectedFromStatus: null,
+    },
   })
-
-  await updateWorkItem(workItemId, {
-    status: WorkItemStatus.ADJUSTING,
-    action: ActionType.ADJUST,
-    adjustReason,
-    beforeApprovalStatus: oldStatus,
-    approvalType: ApprovalType.ADJUST,
-    currentApproverId: approver.currentApproverId,
-    currentApproverRole: approver.currentApproverRole,
-    rejectReason: null,
-    rejectedFromStatus: null,
-  })
+  if (!adjustmentRequest) {
+    return err(409, '该事项当前状态已变化，请刷新后重试')
+  }
 
   await createWorkflowRecord({
     workItemId,

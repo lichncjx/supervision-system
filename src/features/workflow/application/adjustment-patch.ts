@@ -4,6 +4,7 @@ export const ADJUSTMENT_PATCH_FIELDS = [
   'title',
   'workItem',
   'businessCategory',
+  'workNode',
   'completeForm',
   'isInnovation',
   'departmentId',
@@ -28,6 +29,7 @@ const TEXT_FIELDS = new Set<AdjustmentPatchField>([
   'title',
   'workItem',
   'businessCategory',
+  'workNode',
   'completeForm',
   'responsibleLeader',
   'responsiblePerson',
@@ -112,6 +114,7 @@ export function buildAdjustmentBeforeSnapshot(workItem: Pick<
   | 'title'
   | 'workItem'
   | 'businessCategory'
+  | 'workNode'
   | 'completeForm'
   | 'isInnovation'
   | 'departmentId'
@@ -131,6 +134,7 @@ export function buildAdjustmentBeforeSnapshot(workItem: Pick<
     title: workItem.title,
     workItem: workItem.workItem,
     businessCategory: workItem.businessCategory,
+    workNode: workItem.workNode,
     completeForm: workItem.completeForm,
     isInnovation: workItem.isInnovation,
     departmentId: workItem.departmentId,
