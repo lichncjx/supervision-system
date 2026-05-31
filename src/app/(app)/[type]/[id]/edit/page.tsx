@@ -115,16 +115,14 @@ export default function EditWorkPage() {
     return <div className="p-8 text-center text-slate-500">加载中...</div>;
   }
 
-  const hasReturnedWorkflowMarker = Boolean(work.rejectedFromStatus);
   const shouldResubmitReturnedWork =
     user.role !== 'ADMIN' &&
     user.role !== 'SUPERVISOR' &&
-    hasReturnedWorkflowMarker &&
     canHandleReturnedDraftWork(user, work);
   const canEditDraftDirectly =
     work.status === 'draft' &&
     isOwnedBy(user, work) &&
-    !hasReturnedWorkflowMarker;
+    !canHandleReturnedDraftWork(user, work);
 
   const canEdit =
     user.role === 'ADMIN' ||
