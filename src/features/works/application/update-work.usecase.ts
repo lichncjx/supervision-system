@@ -122,30 +122,44 @@ export async function updateWorkUseCase(input: UpdateWorkInput): Promise<Result<
     }
     updateData.departmentId = body.departmentId
   }
-  if (body.title !== undefined) updateData.title = body.title
-  if (body.workItem !== undefined) updateData.workItem = body.workItem
-  if (body.workNode !== undefined) updateData.workNode = body.workNode
-  if (body.businessCategory !== undefined) updateData.businessCategory = body.businessCategory
-  if (body.completeForm !== undefined) updateData.completeForm = body.completeForm
-  if (body.isInnovation !== undefined) updateData.isInnovation = body.isInnovation
-  if (body.responsibleLeader !== undefined) updateData.responsibleLeader = body.responsibleLeader
+  if (body.title !== undefined)
+    updateData.title = body.title
+  if (body.workItem !== undefined)
+    updateData.workItem = body.workItem
+  if (body.workNode !== undefined)
+    updateData.workNode = body.workNode
+  if (body.businessCategory !== undefined)
+    updateData.businessCategory = body.businessCategory
+  if (body.completeForm !== undefined)
+    updateData.completeForm = body.completeForm
+  if (body.isInnovation !== undefined)
+    updateData.isInnovation = body.isInnovation
   if (body.proposedLeaderId !== undefined)
     updateData.proposedLeaderId = body.proposedLeaderId ? Number(body.proposedLeaderId) : null
-  if (body.proposedScene !== undefined) updateData.proposedScene = body.proposedScene
-  if (body.formedTime !== undefined) updateData.formedTime = convertToDateTime(body.formedTime)
-  if (body.responsiblePerson !== undefined) updateData.responsiblePerson = body.responsiblePerson
+  if (body.approvalLeaderId !== undefined)
+    updateData.approvalLeaderId = body.approvalLeaderId ? Number(body.approvalLeaderId) : null
+  if (body.proposedScene !== undefined)
+    updateData.proposedScene = body.proposedScene
+  if (body.formedTime !== undefined)
+    updateData.formedTime = convertToDateTime(body.formedTime)
+  if (body.responsibleLeader !== undefined)
+    updateData.responsibleLeader = body.responsibleLeader
+  if (body.responsiblePerson !== undefined)
+    updateData.responsiblePerson = body.responsiblePerson
   if (body.responsibleLeaderMemberId !== undefined)
     updateData.responsibleLeaderMemberId = body.responsibleLeaderMemberId
   if (body.responsiblePersonMemberId !== undefined)
     updateData.responsiblePersonMemberId = body.responsiblePersonMemberId
-  if (body.cooperators !== undefined) updateData.cooperators = body.cooperators
-  if (body.workPlan !== undefined) updateData.workPlan = body.workPlan
+  if (body.cooperators !== undefined)
+    updateData.cooperators = body.cooperators
+  if (body.workPlan !== undefined)
+    updateData.workPlan = body.workPlan
   if (body.planCompleteTime !== undefined)
     updateData.planCompleteTime = convertToDateTime(body.planCompleteTime)
-  if (body.progress !== undefined) updateData.progress = body.progress
-  if (body.approvalLeaderId !== undefined)
-    updateData.approvalLeaderId = body.approvalLeaderId ? Number(body.approvalLeaderId) : null
-  if (body.nodes !== undefined) updateData.nodes = JSON.stringify(body.nodes)
+  if (body.progress !== undefined)
+    updateData.progress = body.progress
+  if (body.nodes !== undefined)
+    updateData.nodes = JSON.stringify(body.nodes)
 
   const updatedWork = await updateWorkItem(workId, updateData)
 

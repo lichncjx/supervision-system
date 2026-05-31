@@ -41,6 +41,12 @@ enum ActionType {
   TODO_DECOMPOSE   @map("todo_decompose")
 }
 
+enum WorkAdjustmentRequestStatus {
+  PENDING   @map("pending")
+  APPROVED  @map("approved")
+  REJECTED  @map("rejected")
+}
+
 enum Role {
   ADMIN                  @map("admin")
   SUPERVISOR             @map("supervisor")
@@ -178,11 +184,35 @@ model WorkItem {
 
   workflowRecords       WorkflowRecord[]
   attachments           Attachment[]
+  adjustmentRequests    WorkAdjustmentRequest[]
 
   responsibleLeaderMember Member?  @relation("ResponsibleLeaderMember", fields: [responsibleLeaderMemberId], references: [id])
   responsiblePersonMember Member?  @relation("ResponsiblePersonMember", fields: [responsiblePersonMemberId], references: [id])
 
   @@map("work_items")
+}
+
+model WorkAdjustmentRequest {
+  id             Int                         @id @default(autoincrement())
+  workItemId     Int
+  status         WorkAdjustmentRequestStatus @default(PENDING)
+  reason         String                      @db.Text
+  patch          Json
+  beforeSnapshot Json
+  requestedById  Int
+  requestedAt    DateTime                    @default(now())
+  approvedById   Int?
+  approvedAt     DateTime?
+  rejectedById   Int?
+  rejectedAt     DateTime?
+  rejectReason   String?                     @db.Text
+  createdAt      DateTime                    @default(now())
+  updatedAt      DateTime                    @updatedAt
+
+  workItem       WorkItem                    @relation(fields: [workItemId], references: [id], onDelete: Cascade)
+
+  @@index([workItemId, status])
+  @@map("work_adjustment_requests")
 }
 
 model WorkflowRecord {

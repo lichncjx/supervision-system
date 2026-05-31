@@ -2,15 +2,30 @@
 
 import type { Work } from '@/features/works/client/work-client.types';
 import { PANEL_PADDED } from '@/features/works/ui/visual-tokens';
+import {
+  ADJUSTMENT_FIELD_LABELS,
+  adjustmentValueToDisplay,
+  getChangedAdjustmentFields,
+} from '@/features/works/ui/work-adjustment-display';
 
 interface WorkPendingAdjustmentPanelProps {
   work: Work;
+  departments?: Array<{ id: number; name: string }>;
 }
 
-export function WorkPendingAdjustmentPanel({ work }: WorkPendingAdjustmentPanelProps) {
+export function WorkPendingAdjustmentPanel({
+  work,
+  departments,
+}: WorkPendingAdjustmentPanelProps) {
   if (!work.pendingAdjustment) {
     return null;
   }
+
+  const beforeSnapshot = work.pendingAdjustmentBeforeSnapshot || {};
+  const changedFields = getChangedAdjustmentFields(
+    beforeSnapshot as Record<string, unknown>,
+    work.pendingAdjustment as Record<string, unknown>,
+  );
 
   return (
     <div className={PANEL_PADDED}>
@@ -20,45 +35,32 @@ export function WorkPendingAdjustmentPanel({ work }: WorkPendingAdjustmentPanelP
           调整原因：{work.pendingAdjustmentReason || '-'}
         </div>
         <div>
-          原完成时间：{work.pendingAdjustmentFromTime || '-'}
-        </div>
-        <div>
-          现完成时间：{work.pendingAdjustmentToTime || '-'}
-        </div>
-        <div>
           公司审批领导：{work.approvalLeader || '-'}
         </div>
-        <div className="break-words whitespace-pre-wrap">
-          调整后事项：{work.pendingAdjustment.workItem || work.pendingAdjustment.title || '-'}
-        </div>
-        <div>
-          调整后完成时间：{work.pendingAdjustment.planCompleteTime || '-'}
-        </div>
-        <div>
-          调整后完成形式：{work.pendingAdjustment.completeForm || '-'}
-        </div>
-        {work.pendingAdjustment.nodes && work.pendingAdjustment.nodes.length > 0 && (
-          <div>
-            <p className="font-medium mt-2">调整后节点：</p>
-            <div className="space-y-2">
-              {work.pendingAdjustment.nodes.map((node: any, index: number) => (
-                <div key={node.id ?? index} className="border border-slate-200 bg-slate-50/70 rounded-lg p-3">
-                  <div className="font-medium break-words">
-                    {index + 1}. {node.title}
-                  </div>
-                  {node.children && node.children.length > 0 && (
-                    <div className="pl-4 mt-1 space-y-1 text-sm text-slate-600">
-                      {node.children.map((child: any, childIndex: number) => (
-                        <div key={child.id ?? `${index}-${childIndex}`} className="break-words">
-                          {index + 1}.{childIndex + 1} {child.title}
-                          {child.completeTime ? `（完成日期：${child.completeTime}）` : ''}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
+        {changedFields.length > 0 ? (
+          <div className="mt-4 overflow-hidden rounded-lg border border-slate-200">
+            <div className="grid grid-cols-[7rem_1fr_1fr] bg-slate-50 text-xs font-medium text-slate-500">
+              <div className="border-r border-slate-200 px-3 py-2">字段</div>
+              <div className="border-r border-slate-200 px-3 py-2">调整前</div>
+              <div className="px-3 py-2">调整后</div>
             </div>
+            {changedFields.map((field) => (
+              <div key={field} className="grid grid-cols-[7rem_1fr_1fr] border-t border-slate-200 text-sm">
+                <div className="border-r border-slate-200 px-3 py-2 font-medium text-slate-600">
+                  {ADJUSTMENT_FIELD_LABELS[field] || field}
+                </div>
+                <div className="border-r border-slate-200 px-3 py-2 whitespace-pre-wrap break-words text-slate-600">
+                  {adjustmentValueToDisplay(field, (beforeSnapshot as any)[field], departments)}
+                </div>
+                <div className="px-3 py-2 whitespace-pre-wrap break-words text-slate-900">
+                  {adjustmentValueToDisplay(field, (work.pendingAdjustment as any)[field], departments)}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500">
+            没有检测到字段变化
           </div>
         )}
       </div>

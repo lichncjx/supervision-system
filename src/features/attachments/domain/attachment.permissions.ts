@@ -1,6 +1,7 @@
 import {
   canViewWorkItem,
   canOperateWorkItem,
+  isWorkMainResponsibleDepartment,
   type PermissionUser,
   type PermissionWorkItem,
 } from '@/features/works/domain/work.permissions'
@@ -20,7 +21,7 @@ export function canUploadAttachment(
 ): boolean {
   if (isGlobalView(user.role)) return true
   if (isTerminal(workItem.status)) return false
-  return canOperateWorkItem(user, workItem)
+  return canOperateWorkItem(user, workItem) || isWorkMainResponsibleDepartment(workItem, user.departmentId)
 }
 
 export function canDeleteAttachment(

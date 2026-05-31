@@ -1,4 +1,9 @@
-import { Prisma, Role, WorkItemStatus } from '@prisma/client'
+import {
+  Prisma,
+  Role,
+  WorkAdjustmentRequestStatus,
+  WorkItemStatus,
+} from '@prisma/client'
 import { prisma } from '@/shared/db/prisma'
 
 export async function findPresident() {
@@ -81,6 +86,111 @@ export async function findWorkflowRecordsByWorkItemId(
       },
     },
     orderBy: { createdAt: 'asc' },
+  })
+}
+
+export async function findAdjustment(workItemId: number) {
+  return prisma.workAdjustmentRequest.findFirst({
+    where: {
+      workItemId,
+      status: WorkAdjustmentRequestStatus.PENDING,
+    },
+    orderBy: { requestedAt: 'desc' },
+  })
+}
+
+// export async function createAdjustment(params: {
+//   workItemId: number
+//   reason: string
+//   patch: Prisma.InputJsonValue
+//   beforeSnapshot: Prisma.InputJsonValue
+//   requestedById: number
+// }) {
+//   return prisma.workAdjustmentRequest.create({
+//     data: {
+//       workItemId: params.workItemId,
+//       reason: params.reason,
+//       patch: params.patch,
+//       beforeSnapshot: params.beforeSnapshot,
+//       requestedById: params.requestedById,
+//     },
+//   })
+// }
+
+export async function createAdjustmentTransitional(params: {
+  workItemId: number
+  reason: string
+  patch: Prisma.InputJsonValue
+  beforeSnapshot: Prisma.InputJsonValue
+  requestedById: number
+  updateData: Prisma.WorkItemUncheckedUpdateInput
+}) {
+  return prisma.$transaction(async (tx) => {
+    // Concurrency guard: this conditional UPDATE is the single-flight gate for
+    // adjustment submission. PostgreSQL locks the work item row during UPDATE;
+    // concurrent submitters re-check `status = IN_PROGRESS` after the first
+    // transaction commits, so only one request can transition the item and
+    // create a PENDING adjustment. Do not replace this with read-then-write
+    // unless workflow usecases get an explicit locking/unique-constraint design.
+    const updated = await tx.workItem.updateMany({
+      where: {
+        id: params.workItemId,
+        status: WorkItemStatus.IN_PROGRESS,
+      },
+      data: {
+        status: WorkItemStatus.ADJUSTING,
+      },
+    })
+
+    if (updated.count !== 1) return null
+
+    await tx.workItem.update({
+      where: { id: params.workItemId },
+      data: params.updateData,
+    })
+
+    return tx.workAdjustmentRequest.create({
+      data: {
+        workItemId: params.workItemId,
+        reason: params.reason,
+        patch: params.patch,
+        beforeSnapshot: params.beforeSnapshot,
+        requestedById: params.requestedById,
+      },
+    })
+  })
+}
+
+export async function approveAdjustment(params: {
+  requestId: number
+  approvedById: number
+}) {
+  return prisma.workAdjustmentRequest.update({
+    where: { id: params.requestId },
+    data: {
+      status: WorkAdjustmentRequestStatus.APPROVED,
+      approvedById: params.approvedById,
+      approvedAt: new Date(),
+    },
+  })
+}
+
+export async function rejectAdjustment(params: {
+  workItemId: number
+  rejectedById: number
+  rejectReason: string
+}) {
+  return prisma.workAdjustmentRequest.updateMany({
+    where: {
+      workItemId: params.workItemId,
+      status: WorkAdjustmentRequestStatus.PENDING,
+    },
+    data: {
+      status: WorkAdjustmentRequestStatus.REJECTED,
+      rejectedById: params.rejectedById,
+      rejectedAt: new Date(),
+      rejectReason: params.rejectReason,
+    },
   })
 }
 

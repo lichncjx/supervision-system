@@ -119,13 +119,13 @@ export interface Work {
   adjustNewTime?: string
   adjustTimeType?: 'planCompleteTime'
   rejectReason?: string
-  rejectedAt?: string
   rejectedFrom?: WorkStatus
   rejectedFromStatus?: WorkStatus
   rejectedBy?: string
   adjustHistory?: AdjustHistory[]
   pendingAdjustment?: WorkEditablePatch
   pendingAdjustmentReason?: string
+  pendingAdjustmentBeforeSnapshot?: WorkEditablePatch
   pendingAdjustmentFromTime?: string
   pendingAdjustmentToTime?: string
   attachments?: Attachment[]

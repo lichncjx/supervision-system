@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
@@ -19,12 +19,14 @@ import { WorkCompletePanel } from '@/features/works/ui/work-complete-panel';
 import { WorkflowRecords } from '@/features/workflow/ui/workflow-records';
 import { WorkflowApprovalPanel } from '@/features/workflow/ui/workflow-approval-panel';
 import { ApproveDialog } from '@/features/workflow/ui/approve-dialog';
-import { WorkDraftEditPanel } from '@/features/works/ui/work-draft-edit-panel';
 import { WorkDisplayInfo } from '@/features/works/ui/work-display-info';
 import { WorkDecomposePanel } from '@/features/works/ui/work-decompose-panel';
 import { WorkActionDialogs } from '@/features/works/ui/work-action-dialogs';
 import { WorkPendingAdjustmentPanel } from '@/features/works/ui/work-pending-adjustment-panel';
-import { WorkSidebarActions } from '@/features/works/ui/work-sidebar-actions';
+import { WorkAdjustCancelActions } from '@/features/works/ui/work-adjust-cancel-actions';
+import { WorkDraftActions } from '@/features/works/ui/work-draft-actions';
+import { WorkAdjustmentHistoryPanel } from '@/features/works/ui/work-adjustment-history-panel';
+import { WorkEvidencePanel } from '@/features/works/ui/work-evidence-panel';
 import { WorkflowProgress } from '@/features/workflow/ui/workflow-progress';
 import { useWorkDetailData } from '@/features/works/client/use-work-detail-data';
 import { uploadFiles, deleteAttachment } from '@/features/attachments/client/attachment-api';
@@ -34,20 +36,19 @@ import {
   canHandleReturnedDraftWork,
   canDecomposeTodoWork,
   canApproveWork,
+  isOwnedBy,
+  isWorkRelatedToDepartment,
 } from '@/features/works/client/work-client-permissions';
 import { isTerminal, isReturnedDraftWork, isInProgress } from '@/features/works/domain/work-status.rules';
-import { isWorkRelatedToDepartment } from '@/features/works/client/work-client-permissions';
-import { updateWork, deleteWork, resubmitRejectedWork } from '@/features/works/client/work-api';
+import { deleteWork } from '@/features/works/client/work-api';
 import {
   submitPropose,
   submitComplete,
-  submitAdjust,
   submitCancel,
   submitTodoDecomposition,
   approveWork,
   rejectWork,
 } from '@/features/workflow/client/workflow-api';
-import type { WorkEditablePatch } from '@/features/works/client/work-client.types';
 
 export default function WorkDetailPage() {
   const params = useParams<{ type: string; id: string }>();
@@ -56,32 +57,19 @@ export default function WorkDetailPage() {
   const { user } = useAuth();
   const router = useRouter();
   const [proof, setProof] = useState('');
-  const [adjustReason, setAdjustReason] = useState('');
   const [cancelReason, setCancelReason] = useState('');
-  const [approvalLeaderId, setApprovalLeaderId] = useState('');
   const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState(false);
-  const [editMode, setEditMode] = useState(false);
-  const [isAdjustDialogOpen, setIsAdjustDialogOpen] = useState(false);
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
   const [editForm, setEditForm] = useState<any>({});
-  const [editReason, setEditReason] = useState('');
 
   const {
     work,
     workflowRecords,
     companyLeaders,
     departments,
-    departmentLeaders,
-    departmentManagers,
     refresh,
     onRefresh,
   } = useWorkDetailData(id);
-
-  useEffect(() => {
-    if (companyLeaders.length > 0 && !approvalLeaderId) {
-      setApprovalLeaderId(String(companyLeaders[0].id));
-    }
-  }, [companyLeaders, approvalLeaderId]);
 
   React.useEffect(() => {
     if (work) {
@@ -134,6 +122,7 @@ export default function WorkDetailPage() {
   const canHandleReturnedCreate = isAdmin || canHandleReturnedDraftWork(user, work);
   const canDecomposeTodo = canDecomposeTodoWork(user, work);
   const canApprove = user ? canApproveWork(user, work) : false;
+  const canOperate = !!user && (isAdmin || isSupervisor || (isOwnedBy(user, work) && isInProgress(work.status)));
 
   const isRelatedDept = user ? isWorkRelatedToDepartment(work, user.departmentId) : false;
   const canEdit = user && (
@@ -187,19 +176,6 @@ export default function WorkDetailPage() {
     onRefresh();
   };
 
-  const handleSaveDraft = async () => {
-    if (!user) return;
-    try {
-      await updateWork(work.id, editForm);
-      setEditMode(false);
-      alert('草稿已保存');
-      onRefresh();
-    } catch (error) {
-      console.error(error);
-      alert('保存草稿失败');
-    }
-  };
-
   const handleDelete = async () => {
     if (!confirm('确认删除该退回事项？')) return;
     try {
@@ -237,40 +213,6 @@ export default function WorkDetailPage() {
     }
   };
 
-  const handleResubmit = async () => {
-    if (!user) return;
-    if (!editReason.trim()) {
-      alert('请填写修改说明或重新提交原因');
-      return;
-    }
-    const selectedProposedLeader =
-      work.type === '待办'
-        ? companyLeaders.find((l) => l.id === Number(editForm.proposedLeaderId))
-        : null;
-    if (work.type === '待办' && !selectedProposedLeader) {
-      alert('请选择事项提出领导');
-      return;
-    }
-    const patch: WorkEditablePatch = {
-      ...editForm,
-      title: editForm.workItem || editForm.title || work.title,
-    };
-    if (work.type === '待办' && selectedProposedLeader) {
-      patch.proposedLeader = selectedProposedLeader.name;
-      patch.proposedLeaderId = selectedProposedLeader.id;
-      patch.proposedLeaderRole = selectedProposedLeader.role;
-    }
-    try {
-      await resubmitRejectedWork(work, user, patch);
-      setEditMode(false);
-      onRefresh();
-      alert('已修改并重新提交审批');
-    } catch (error) {
-      console.error(error);
-      alert('提交失败，请查看控制台错误');
-    }
-  };
-
   const handleComplete = async () => {
     if (!user) return;
     if (!proof.trim()) {
@@ -287,40 +229,10 @@ export default function WorkDetailPage() {
     }
   };
 
-  const handleAdjust = async () => {
-    if (!user) return;
-    if (!adjustReason.trim()) {
-      alert('请填写调整原因');
-      return;
-    }
-    const leader = companyLeaders.find((l) => l.id === Number(approvalLeaderId));
-    if (!leader) {
-      alert('请选择公司审批领导');
-      return;
-    }
-    const pendingAdjustment: WorkEditablePatch = {
-      ...editForm,
-      title: editForm.workItem || editForm.title || work.title,
-    };
-    try {
-      await submitAdjust(work, adjustReason, pendingAdjustment);
-      onRefresh();
-      alert('已提交调整申请，等待审批');
-    } catch (error) {
-      console.error(error);
-      alert('提交失败，请查看控制台错误');
-    }
-  };
-
   const handleCancel = async () => {
     if (!user) return;
     if (!cancelReason.trim()) {
       alert('请填写取消原因');
-      return;
-    }
-    const leader = companyLeaders.find((l) => l.id === Number(approvalLeaderId));
-    if (!leader) {
-      alert('请选择公司审批领导');
       return;
     }
     try {
@@ -388,33 +300,11 @@ export default function WorkDetailPage() {
     }
   };
 
-  const isPriorityOrMain = work.type === '重点' || work.type === '主要';
   const isTodo = work.type === '待办';
-  const isDepartmentUser = user?.role === 'DEPARTMENT_MANAGER' || user?.role === 'DEPARTMENT_LEADER';
-  const deptOptions = isDepartmentUser
-    ? departments.filter((d) => d.id === user?.departmentId)
-    : departments;
-  const cooperatorDepts = departments.filter((d: any) => d.isBusiness !== false);
   const typeColorKey = work.type === '重点' ? 'priority' : work.type === '主要' ? 'main' : 'todo';
 
   const theme = TYPE_THEME[typeColorKey];
   const detailTheme = DETAIL_THEME[typeColorKey];
-
-  const buildEditFormFromWork = () => ({
-    title: work.title || '', workItem: work.workItem || work.title || '',
-    businessCategory: work.businessCategory || '', isInnovation: !!work.isInnovation,
-    completeForm: work.completeForm || '',
-    departmentId: work.departmentId, responsibleLeader: work.responsibleLeader || '',
-    responsiblePerson: work.responsiblePerson || '',
-    responsibleLeaderMemberId: work.responsibleLeaderMemberId,
-    responsiblePersonMemberId: work.responsiblePersonMemberId,
-    proposedLeader: work.proposedLeader || '',
-    proposedLeaderId: work.proposedLeaderId ? String(work.proposedLeaderId) : '',
-    proposedLeaderRole: work.proposedLeaderRole || '', proposedScene: work.proposedScene || '',
-    formedTime: work.formedTime || '', cooperators: work.cooperators || [],
-    workPlan: work.workPlan || '', planCompleteTime: work.planCompleteTime || '',
-    progress: work.progress || '', nodes: work.nodes || [],
-  });
 
   return (
     <div className="space-y-6">
@@ -462,8 +352,17 @@ export default function WorkDetailPage() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
         {/* Main Area */}
         <div className="lg:col-span-3 space-y-6">
+          <WorkPendingAdjustmentPanel work={work} departments={departments} />
+
           <div className={`${PANEL_PADDED}`}>
-            <WorkDisplayInfo work={work} departments={departments} hideNodes={true} />
+            {work.pendingAdjustment && (
+              <h3 className="font-semibold text-slate-800 mb-4">当前生效内容</h3>
+            )}
+            <WorkDisplayInfo
+              work={work}
+              departments={departments}
+              hideNodes={true}
+            />
           </div>
 
           {work.nodes && work.nodes.length > 0 && (
@@ -528,19 +427,6 @@ export default function WorkDetailPage() {
             </div>
           )}
 
-          <WorkflowApprovalPanel
-            visible={canApprove}
-            onApprove={handleApprove}
-            onReject={handleReject}
-            companyLeaders={companyLeaders}
-            needsLeaderSelection={
-              !!user &&
-              user.role === 'DEPARTMENT_LEADER' &&
-              !work?.proposedLeaderId &&
-              !work?.approvalLeaderId
-            }
-            leaderName={work?.approvalLeader || work?.proposedLeader}
-          />
           <ApproveDialog
             open={isSubmitDialogOpen}
             onOpenChange={setIsSubmitDialogOpen}
@@ -551,8 +437,8 @@ export default function WorkDetailPage() {
             commentLabel="提交说明（可选）"
             confirmLabel="提交审批"
           />
-          <WorkPendingAdjustmentPanel work={work} />
           <WorkflowRecords records={workflowRecords} />
+          <WorkAdjustmentHistoryPanel work={work} departments={departments} />
         </div>
 
         {/* Sidebar */}
@@ -565,38 +451,33 @@ export default function WorkDetailPage() {
             onDelete={handleDeleteAttachment}
           />
 
-          <WorkDraftEditPanel
-            visible={!!canHandleReturnedCreate || !!canEditDraft}
-            rejectReason={work.rejectReason || ''}
-            editMode={editMode}
-            setEditMode={setEditMode}
-            editForm={editForm}
-            setEditForm={setEditForm}
-            editReason={editReason}
-            setEditReason={setEditReason}
-            isPriorityOrMain={isPriorityOrMain}
-            isTodo={isTodo}
-            departments={deptOptions}
-            cooperatorDepts={cooperatorDepts}
-            companyLeaders={companyLeaders}
-            departmentLeaders={departmentLeaders}
-            departmentManagers={departmentManagers}
-            onResubmit={handleResubmit}
-            onSaveDraft={handleSaveDraft}
-            isRegularDraft={canEditDraft}
-            onDelete={handleDelete}
-          />
+          {(!isInProgress(work.status) || !canOperate) && (
+            <WorkEvidencePanel
+              proof={work.proof}
+              evidenceAttachments={(work.attachments || []).filter(a => a.category === 'evidence')}
+            />
+          )}
 
-          <WorkDecomposePanel
-            visible={!!canDecomposeTodo}
-            editForm={editForm}
-            setEditForm={setEditForm}
-            rejectReason={work.rejectReason || ''}
-            isReturned={!!(work.status === 'pending_decompose' && (work.rejectReason || work.rejectedFromStatus))}
-            onSubmitDecomposition={handleDecompose}
-          />
+          {(!!canHandleReturnedCreate || !!canEditDraft) && (
+            <WorkDraftActions
+              isDraft={!!canEditDraft}
+              rejectReason={work.rejectReason || undefined}
+              editHref={`/${type}/${work.id}/edit`}
+              onDelete={handleDelete}
+            />
+          )}
 
-          {isInProgress(work.status) && (
+          {!!canDecomposeTodo && (
+            <WorkDecomposePanel
+              editForm={editForm}
+              setEditForm={setEditForm}
+              rejectReason={work.rejectReason || ''}
+              isReturned={!!(work.status === 'pending_decompose' && (work.rejectReason || work.rejectedFromStatus))}
+              onSubmitDecomposition={handleDecompose}
+            />
+          )}
+
+          {canOperate && (
             <WorkCompletePanel
               proof={proof}
               onProofChange={setProof}
@@ -608,40 +489,42 @@ export default function WorkDetailPage() {
             />
           )}
 
-          <WorkSidebarActions
-            visible={isInProgress(work.status)}
-            onAdjust={() => {
-              setEditForm(buildEditFormFromWork());
-              setAdjustReason('');
-              setIsAdjustDialogOpen(true);
-            }}
-            onCancel={() => {
-              setCancelReason('');
-              setIsCancelDialogOpen(true);
-            }}
-          />
+          {canOperate && (
+            <WorkAdjustCancelActions
+              onAdjust={() => {
+                router.push(`/${type}/${work.id}/adjust`);
+              }}
+              onCancel={() => {
+                setCancelReason('');
+                setIsCancelDialogOpen(true);
+              }}
+            />
+          )}
+
+          {canApprove && (
+            <WorkflowApprovalPanel
+              onApprove={handleApprove}
+              onReject={handleReject}
+              companyLeaders={companyLeaders}
+              needsLeaderSelection={
+                !!user &&
+                user.role === 'DEPARTMENT_LEADER' &&
+                !work?.proposedLeaderId &&
+                !work?.approvalLeaderId
+              }
+              leaderName={work?.approvalLeader || work?.proposedLeader}
+            />
+          )}
         </aside>
       </div>
 
       <WorkActionDialogs
-        isAdjustDialogOpen={isAdjustDialogOpen}
-        setIsAdjustDialogOpen={setIsAdjustDialogOpen}
         isCancelDialogOpen={isCancelDialogOpen}
         setIsCancelDialogOpen={setIsCancelDialogOpen}
-        adjustReason={adjustReason}
-        setAdjustReason={setAdjustReason}
         cancelReason={cancelReason}
         setCancelReason={setCancelReason}
-        approvalLeaderId={approvalLeaderId}
-        setApprovalLeaderId={setApprovalLeaderId}
-        editForm={editForm}
-        setEditForm={setEditForm}
-        companyLeaders={companyLeaders}
-        departments={deptOptions}
-        cooperatorDepts={cooperatorDepts}
-        isPriorityOrMain={isPriorityOrMain}
-        isTodo={isTodo}
-        onSubmitAdjust={handleAdjust}
+        approvalLeaderName={work.approvalLeader}
+        proposedLeaderName={work.proposedLeader}
         onSubmitCancel={handleCancel}
       />
     </div>

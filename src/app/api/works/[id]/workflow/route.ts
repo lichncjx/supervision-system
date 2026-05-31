@@ -54,7 +54,16 @@ export const POST = withApiHandler(
         if (!body.adjustReason) {
           return fail('请提供调整原因', 400)
         }
-        result = await submitAdjustment(workItemId, currentUser, body.adjustReason, body.comment)
+        if (!body.pendingAdjustment || typeof body.pendingAdjustment !== 'object') {
+          return fail('请提供拟调整内容', 400)
+        }
+        result = await submitAdjustment(
+          workItemId,
+          currentUser,
+          body.adjustReason,
+          body.pendingAdjustment,
+          body.comment,
+        )
         break
       case 'cancel':
         if (!body.cancelReason) {

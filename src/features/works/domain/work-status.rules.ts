@@ -8,7 +8,6 @@ export interface ReturnedDraftLike {
   status?: unknown
   rejectReason?: unknown
   rejectedFromStatus?: unknown
-  rejectedAt?: unknown
   workflowRecords?: Array<{
     action?: unknown
     actionType?: unknown
@@ -83,8 +82,7 @@ export function isReturnedDraftWork(
 
   if (
     hasValue(work.rejectReason) ||
-    hasValue(work.rejectedFromStatus) ||
-    hasValue(work.rejectedAt)
+    hasValue(work.rejectedFromStatus)
   ) {
     return true
   }
@@ -105,8 +103,7 @@ export function isReturnedInProgressWork(
 
   if (
     hasValue(work.rejectReason) ||
-    hasValue(work.rejectedFromStatus) ||
-    hasValue(work.rejectedAt)
+    hasValue(work.rejectedFromStatus)
   ) {
     return true
   }

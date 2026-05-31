@@ -8,7 +8,6 @@ import type { WorkNode } from '@/features/works/client/work-client.types';
 import { FIELD_LABEL, PANEL_PADDED } from '@/features/works/ui/visual-tokens';
 
 interface WorkDecomposePanelProps {
-  visible: boolean;
   editForm: any;
   setEditForm: (form: any) => void;
   onSubmitDecomposition: () => void;
@@ -17,7 +16,6 @@ interface WorkDecomposePanelProps {
 }
 
 export function WorkDecomposePanel({
-  visible,
   editForm,
   setEditForm,
   onSubmitDecomposition,
@@ -25,10 +23,6 @@ export function WorkDecomposePanel({
   isReturned,
 }: WorkDecomposePanelProps) {
   const nodes: WorkNode[] = Array.isArray(editForm.nodes) ? editForm.nodes : [];
-
-  if (!visible) {
-    return null;
-  }
 
   return (
     <div className={PANEL_PADDED}>

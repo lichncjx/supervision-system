@@ -24,7 +24,7 @@ import {
   PlanCompleteTimeField,
   TodoSpecificFields,
 } from '@/features/works/ui/work-form-fields';
-import { validateCreateWorkFormFields, type CreateWorkFormField } from '@/features/works/ui/work-form-validations';
+import { validateCreateWorkFormFields, type CreateWorkFormField } from '@/features/works/client/work-form-validation';
 import { buildCreateWorkPayload } from '@/features/works/client/build-create-work-payload';
 import type { User } from '@/features/users/client/user-client.types';
 import type { Department } from '@/features/departments/client/department-api';
@@ -138,6 +138,7 @@ export default function NewWorkPage() {
       todoWorkItem: s.todoForm.workItem,
       todoDepartmentId: s.todoForm.departmentId,
       todoProposedLeaderId: s.todoForm.proposedLeaderId,
+      todoCooperators: s.todoForm.cooperators,
       companyLeaders: s.companyLeaders,
       nodes: s.nodes,
     });
@@ -205,26 +206,6 @@ export default function NewWorkPage() {
         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
       return;
-    }
-
-    // Validate no department appears twice (main dept vs cooperators)
-    if (isTodo && todoForm.departmentId) {
-      const coopIds = todoForm.cooperators
-        .map((c) => c.departmentId)
-        .filter((id) => id > 0)
-      const dupIds = coopIds.filter((id) => id === todoForm.departmentId)
-      if (dupIds.length > 0) {
-        alert('主责部门不能同时作为配合部门，请修改')
-        return
-      }
-      const seen = new Set<number>()
-      for (const id of coopIds) {
-        if (seen.has(id)) {
-          alert('同一部门不能重复添加为配合方，请修改')
-          return
-        }
-        seen.add(id)
-      }
     }
 
     if (!user) return;
