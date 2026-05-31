@@ -5,11 +5,7 @@ import { toPermissionUser } from '@/features/works/domain/work-permission-user.m
 import type { BaseCurrentUser } from '@/shared/auth/current-user'
 import { canApproveWorkItem } from '@/features/works/domain/work.permissions'
 import { findWorkForUpdateById, updateWorkItem } from '@/features/works/infrastructure/work.repository'
-import {
-  createWorkflowRecord,
-  createOperationLog,
-  rejectAdjustment,
-} from '@/features/workflow/infrastructure/workflow.repository'
+import { createWorkflowRecord, createOperationLog, rejectAdjustment } from '@/features/workflow/infrastructure/workflow.repository'
 import { type Result, err, ok } from '@/shared/result'
 
 export async function rejectWorkflowAction(

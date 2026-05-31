@@ -99,25 +99,25 @@ export async function findAdjustment(workItemId: number) {
   })
 }
 
-export async function createAdjustment(params: {
-  workItemId: number
-  reason: string
-  patch: Prisma.InputJsonValue
-  beforeSnapshot: Prisma.InputJsonValue
-  requestedById: number
-}) {
-  return prisma.workAdjustmentRequest.create({
-    data: {
-      workItemId: params.workItemId,
-      reason: params.reason,
-      patch: params.patch,
-      beforeSnapshot: params.beforeSnapshot,
-      requestedById: params.requestedById,
-    },
-  })
-}
+// export async function createAdjustment(params: {
+//   workItemId: number
+//   reason: string
+//   patch: Prisma.InputJsonValue
+//   beforeSnapshot: Prisma.InputJsonValue
+//   requestedById: number
+// }) {
+//   return prisma.workAdjustmentRequest.create({
+//     data: {
+//       workItemId: params.workItemId,
+//       reason: params.reason,
+//       patch: params.patch,
+//       beforeSnapshot: params.beforeSnapshot,
+//       requestedById: params.requestedById,
+//     },
+//   })
+// }
 
-export async function createAdjustmentAndTransitionWorkItem(params: {
+export async function createAdjustmentTransitional(params: {
   workItemId: number
   reason: string
   patch: Prisma.InputJsonValue
@@ -126,6 +126,12 @@ export async function createAdjustmentAndTransitionWorkItem(params: {
   updateData: Prisma.WorkItemUncheckedUpdateInput
 }) {
   return prisma.$transaction(async (tx) => {
+    // Concurrency guard: this conditional UPDATE is the single-flight gate for
+    // adjustment submission. PostgreSQL locks the work item row during UPDATE;
+    // concurrent submitters re-check `status = IN_PROGRESS` after the first
+    // transaction commits, so only one request can transition the item and
+    // create a PENDING adjustment. Do not replace this with read-then-write
+    // unless workflow usecases get an explicit locking/unique-constraint design.
     const updated = await tx.workItem.updateMany({
       where: {
         id: params.workItemId,

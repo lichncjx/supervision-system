@@ -8,7 +8,7 @@ import { validateMemberAssignments, type MemberAssignment } from '@/features/mem
 import { buildAdjustmentBeforeSnapshot, sanitizeAdjustmentPatch } from '@/features/workflow/application/adjustment-patch'
 import { getChangedAdjustmentFields } from '@/features/works/domain/work-adjustment-diff'
 import {
-  createAdjustmentAndTransitionWorkItem,
+  createAdjustmentTransitional,
   createWorkflowRecord,
   createOperationLog,
 } from '@/features/workflow/infrastructure/workflow.repository'
@@ -114,7 +114,7 @@ export async function submitAdjustment(
     return err(400, '调整内容没有变更，无需提交调整申请')
   }
 
-  const adjustmentRequest = await createAdjustmentAndTransitionWorkItem({
+  const adjustmentRequest = await createAdjustmentTransitional({
     workItemId,
     reason: adjustReason,
     patch: patch as Prisma.InputJsonObject,
