@@ -115,6 +115,8 @@ model User {
   approvedWorkflowRecords  WorkflowRecord[]    @relation("WorkflowApprover")
   operationLogs        OperationLog[]
   attachments          Attachment[]
+  responsibleLeaderWorkItems WorkItem[] @relation("ResponsibleLeaderUserWorkItems")
+  responsiblePersonWorkItems WorkItem[] @relation("ResponsiblePersonUserWorkItems")
   member               Member?
 
   @@map("users")
@@ -157,6 +159,11 @@ model WorkItem {
   responsibleLeaderMemberId   Int?
   responsiblePersonMemberId   Int?
 
+  // Direct User references for permission checks.
+  // responsiblePersonUserId drives operation permission after PROPOSE approval completes.
+  responsibleLeaderUserId   Int?
+  responsiblePersonUserId   Int?
+
   proposedScene         String?         @db.VarChar(200)
   formedTime            DateTime?
   workPlan              String?         @db.Text
@@ -181,6 +188,8 @@ model WorkItem {
   currentApprover       User?           @relation("ApproverWorkItems", fields: [currentApproverId], references: [id])
   approvalLeader        User?           @relation("ApprovalLeaderWorkItems", fields: [approvalLeaderId], references: [id])
   proposedLeader        User?           @relation("ProposedLeaderWorkItems", fields: [proposedLeaderId], references: [id])
+  responsibleLeaderUser User?           @relation("ResponsibleLeaderUserWorkItems", fields: [responsibleLeaderUserId], references: [id])
+  responsiblePersonUser User?           @relation("ResponsiblePersonUserWorkItems", fields: [responsiblePersonUserId], references: [id])
 
   workflowRecords       WorkflowRecord[]
   attachments           Attachment[]
@@ -188,6 +197,9 @@ model WorkItem {
 
   responsibleLeaderMember Member?  @relation("ResponsibleLeaderMember", fields: [responsibleLeaderMemberId], references: [id])
   responsiblePersonMember Member?  @relation("ResponsiblePersonMember", fields: [responsiblePersonMemberId], references: [id])
+
+  @@index([responsibleLeaderUserId])
+  @@index([responsiblePersonUserId])
 
   @@map("work_items")
 }
