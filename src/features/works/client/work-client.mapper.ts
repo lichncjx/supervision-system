@@ -93,8 +93,8 @@ export function transformWorkFromAPI(work: WorkDto): Work {
     currentApproverRole: work.currentApproverRole ?? undefined,
     responsibleLeader: work.responsibleLeader ?? undefined,
     responsiblePerson: work.responsiblePerson ?? undefined,
-    responsibleLeaderMemberId: work.responsibleLeaderMemberId ?? undefined,
-    responsiblePersonMemberId: work.responsiblePersonMemberId ?? undefined,
+    responsibleLeaderUserId: work.responsibleLeaderUserId ?? undefined,
+    responsiblePersonUserId: work.responsiblePersonUserId ?? undefined,
     status: normalizeWorkStatus(work.status) || 'draft',
     action: normalizeAction(work.action),
     needCeo: work.type === '重点',
@@ -141,8 +141,8 @@ export function buildCreateWorkBody(
     isInnovation: work.isInnovation ?? null,
     responsibleLeader: work.responsibleLeader ?? null,
     responsiblePerson: work.responsiblePerson ?? null,
-    responsibleLeaderMemberId: work.responsibleLeaderMemberId ?? null,
-    responsiblePersonMemberId: work.responsiblePersonMemberId ?? null,
+    responsibleLeaderUserId: work.responsibleLeaderUserId ?? null,
+    responsiblePersonUserId: work.responsiblePersonUserId ?? null,
     proposedLeader: work.proposedLeader ?? null,
     proposedLeaderId: work.proposedLeaderId ?? null,
     proposedScene: work.proposedScene ?? null,
@@ -168,10 +168,10 @@ export function buildUpdateWorkBody(patch: WorkEditablePatch): UpdateWorkBody {
   if ('isInnovation' in patch) data.isInnovation = patch.isInnovation ?? null
   if ('responsibleLeader' in patch) data.responsibleLeader = patch.responsibleLeader ?? null
   if ('responsiblePerson' in patch) data.responsiblePerson = patch.responsiblePerson ?? null
-  if ('responsibleLeaderMemberId' in patch)
-    data.responsibleLeaderMemberId = patch.responsibleLeaderMemberId ?? null
-  if ('responsiblePersonMemberId' in patch)
-    data.responsiblePersonMemberId = patch.responsiblePersonMemberId ?? null
+  if ('responsibleLeaderUserId' in patch)
+    data.responsibleLeaderUserId = patch.responsibleLeaderUserId ?? null
+  if ('responsiblePersonUserId' in patch)
+    data.responsiblePersonUserId = patch.responsiblePersonUserId ?? null
   if ('proposedLeader' in patch) data.proposedLeader = patch.proposedLeader ?? null
   if ('proposedLeaderId' in patch) data.proposedLeaderId = patch.proposedLeaderId ?? null
   if ('proposedScene' in patch) data.proposedScene = patch.proposedScene ?? null

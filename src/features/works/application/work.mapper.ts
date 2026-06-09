@@ -32,8 +32,10 @@ interface WorkSource {
   isInnovation?: boolean | null
   responsibleLeader?: string | null
   responsiblePerson?: string | null
-  responsibleLeaderMemberId?: number | null
-  responsiblePersonMemberId?: number | null
+  responsibleLeaderUserId?: number | null
+  responsiblePersonUserId?: number | null
+  responsibleLeaderUser?: { id: number; name: string } | null
+  responsiblePersonUser?: { id: number; name: string } | null
   proposedLeader?: { name?: string | null; role?: string | null } | null
   proposedLeaderId?: number | null
   approvalLeader?: { name?: string | null; role?: string | null } | null
@@ -142,8 +144,8 @@ export function toWorkDto(work: WorkSource): WorkDto {
     isInnovation: work.isInnovation,
     responsibleLeader: work.responsibleLeader,
     responsiblePerson: work.responsiblePerson,
-    responsibleLeaderMemberId: work.responsibleLeaderMemberId,
-    responsiblePersonMemberId: work.responsiblePersonMemberId,
+    responsibleLeaderUserId: work.responsibleLeaderUserId,
+    responsiblePersonUserId: work.responsiblePersonUserId,
     proposedLeader: work.proposedLeader?.name || null,
     proposedLeaderId: work.proposedLeaderId,
     proposedLeaderRole: work.proposedLeader?.role || null,

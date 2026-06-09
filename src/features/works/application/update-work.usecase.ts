@@ -1,5 +1,5 @@
 import type { BaseCurrentUser } from '@/shared/auth/current-user'
-import { Role } from '@prisma/client'
+import { Role, WorkItemStatus } from '@prisma/client'
 import { canEditWorkItem } from '@/features/works/domain/work.permissions'
 import { toPermissionUser } from '@/features/works/domain/work-permission-user.mapper'
 import {
@@ -8,10 +8,8 @@ import {
   createWorkUpdateOperationLog,
 } from '@/features/works/infrastructure/work.repository'
 import { findDepartmentById } from '@/features/departments/infrastructure/department.repository'
-import {
-  validateMemberAssignments,
-  type MemberAssignment,
-} from '@/features/members/domain/member.rules'
+import { findUserById as prismaFindUserById } from '@/features/users/infrastructure/user.repository'
+import { validateMemberAssignments, type MemberAssignment } from '@/features/members/domain/member.rules'
 import { toWorkDto } from '@/features/works/application/work.mapper'
 import type { WorkDto } from './work.dto'
 import { type Result, err, ok } from '@/shared/result'
@@ -26,8 +24,8 @@ export interface UpdateWorkBody {
   isInnovation?: boolean | null
   responsibleLeader?: string | null
   responsiblePerson?: string | null
-  responsibleLeaderMemberId?: number | null
-  responsiblePersonMemberId?: number | null
+  responsibleLeaderUserId?: number | null
+  responsiblePersonUserId?: number | null
   proposedLeader?: string | null
   proposedLeaderId?: number | null
   proposedScene?: string | null
@@ -64,27 +62,38 @@ export async function updateWorkUseCase(input: UpdateWorkInput): Promise<Result<
     return err(403, '只能修改草稿或已退回状态的本权限事项')
   }
 
-  // Validate member IDs if provided
-  const effectiveDeptId = (body.departmentId ?? work.departmentId)!
-  if (body.responsibleLeaderMemberId != null || body.responsiblePersonMemberId != null) {
-    const assignments: MemberAssignment[] = []
-    if (body.responsibleLeaderMemberId != null) {
-      assignments.push({
-        memberId: body.responsibleLeaderMemberId,
-        role: 'leader',
-        departmentId: effectiveDeptId,
-      })
+  // Guard: IN_PROGRESS 及审批态下，普通更新接口不允许修改责任人
+  // 责任人调整必须走 ADJUSTING 审批
+  const terminalOrApproving =
+    work.status === WorkItemStatus.IN_PROGRESS ||
+    work.status === WorkItemStatus.PROPOSING ||
+    work.status === WorkItemStatus.ADJUSTING ||
+    work.status === WorkItemStatus.CANCELLING ||
+    work.status === WorkItemStatus.COMPLETING ||
+    work.status === WorkItemStatus.COMPLETED ||
+    work.status === WorkItemStatus.CANCELLED
+
+  if (
+    terminalOrApproving &&
+    (body.responsibleLeaderUserId !== undefined ||
+     body.responsiblePersonUserId !== undefined)
+  ) {
+    return err(403, '进行中或审批中的事项不能通过编辑接口修改责任人，请使用调整审批')
+  }
+
+  // Validate responsibleLeaderUserId
+  if (body.responsibleLeaderUserId != null) {
+    const leaderUser = await prismaFindUserById(body.responsibleLeaderUserId)
+    if (!leaderUser || !leaderUser.isActive) {
+      return err(400, '责任领导用户不存在或已禁用')
     }
-    if (body.responsiblePersonMemberId != null) {
-      assignments.push({
-        memberId: body.responsiblePersonMemberId,
-        role: 'person',
-        departmentId: effectiveDeptId,
-      })
-    }
-    const errors = await validateMemberAssignments(assignments)
-    if (errors.length > 0) {
-      return err(400, errors[0].message)
+  }
+
+  // Validate responsiblePersonUserId
+  if (body.responsiblePersonUserId != null) {
+    const personUser = await prismaFindUserById(body.responsiblePersonUserId)
+    if (!personUser || !personUser.isActive) {
+      return err(400, '责任人用户不存在或已禁用')
     }
   }
 
@@ -146,10 +155,10 @@ export async function updateWorkUseCase(input: UpdateWorkInput): Promise<Result<
     updateData.responsibleLeader = body.responsibleLeader
   if (body.responsiblePerson !== undefined)
     updateData.responsiblePerson = body.responsiblePerson
-  if (body.responsibleLeaderMemberId !== undefined)
-    updateData.responsibleLeaderMemberId = body.responsibleLeaderMemberId
-  if (body.responsiblePersonMemberId !== undefined)
-    updateData.responsiblePersonMemberId = body.responsiblePersonMemberId
+  if (body.responsibleLeaderUserId !== undefined)
+    updateData.responsibleLeaderUserId = body.responsibleLeaderUserId
+  if (body.responsiblePersonUserId !== undefined)
+    updateData.responsiblePersonUserId = body.responsiblePersonUserId
   if (body.cooperators !== undefined)
     updateData.cooperators = body.cooperators
   if (body.workPlan !== undefined)

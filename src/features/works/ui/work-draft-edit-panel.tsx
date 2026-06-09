@@ -131,10 +131,10 @@ export function WorkDraftEditPanel({
                     personValue={editForm.responsiblePerson || ''}
                     onPersonChange={(v) => setEditForm((prev: any) => ({ ...prev, responsiblePerson: v }))}
                     departmentId={Number(editForm.departmentId) || undefined}
-                    leaderMemberId={editForm.responsibleLeaderMemberId}
-                    onLeaderMemberIdChange={(id) => setEditForm((prev: any) => ({ ...prev, responsibleLeaderMemberId: id }))}
-                    personMemberId={editForm.responsiblePersonMemberId}
-                    onPersonMemberIdChange={(id) => setEditForm((prev: any) => ({ ...prev, responsiblePersonMemberId: id }))}
+                    leaderUserId={editForm.responsibleLeaderUserId}
+                    onLeaderUserIdChange={(id) => setEditForm((prev: any) => ({ ...prev, responsibleLeaderUserId: id }))}
+                    personUserId={editForm.responsiblePersonUserId}
+                    onPersonUserIdChange={(id) => setEditForm((prev: any) => ({ ...prev, responsiblePersonUserId: id }))}
                   />
                 </WorkFormSectionCard>
               </>
@@ -182,8 +182,8 @@ export function WorkDraftEditPanel({
                         departmentId: newDeptId,
                         responsibleLeader: '',
                         responsiblePerson: '',
-                        responsibleLeaderMemberId: undefined,
-                        responsiblePersonMemberId: undefined,
+                        responsibleLeaderUserId: undefined,
+                        responsiblePersonUserId: undefined,
                       }))
                     }}
                     departments={businessDepts}
@@ -195,10 +195,10 @@ export function WorkDraftEditPanel({
                     personValue={editForm.responsiblePerson || ''}
                     onPersonChange={(v) => setEditForm((prev: any) => ({ ...prev, responsiblePerson: v }))}
                     departmentId={editForm.departmentId || undefined}
-                    leaderMemberId={editForm.responsibleLeaderMemberId}
-                    onLeaderMemberIdChange={(id) => setEditForm((prev: any) => ({ ...prev, responsibleLeaderMemberId: id }))}
-                    personMemberId={editForm.responsiblePersonMemberId}
-                    onPersonMemberIdChange={(id) => setEditForm((prev: any) => ({ ...prev, responsiblePersonMemberId: id }))}
+                    leaderUserId={editForm.responsibleLeaderUserId}
+                    onLeaderUserIdChange={(id) => setEditForm((prev: any) => ({ ...prev, responsibleLeaderUserId: id }))}
+                    personUserId={editForm.responsiblePersonUserId}
+                    onPersonUserIdChange={(id) => setEditForm((prev: any) => ({ ...prev, responsiblePersonUserId: id }))}
                   />
                   <WorkFormCooperators
                     cooperators={cooperators}

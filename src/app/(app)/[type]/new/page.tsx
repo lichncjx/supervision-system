@@ -77,8 +77,8 @@ export default function NewWorkPage() {
     departmentId: String(user?.departmentId || 2),
     responsibleLeader: '',
     responsiblePerson: '',
-    responsibleLeaderMemberId: undefined as number | undefined,
-    responsiblePersonMemberId: undefined as number | undefined,
+    responsibleLeaderUserId: undefined as number | undefined,
+    responsiblePersonUserId: undefined as number | undefined,
   });
 
   // 待办事项表单
@@ -93,8 +93,8 @@ export default function NewWorkPage() {
     departmentId: user?.departmentId && user.departmentId !== 1 ? user.departmentId : 0,
     responsibleLeader: '',
     responsiblePerson: '',
-    responsibleLeaderMemberId: undefined as number | undefined,
-    responsiblePersonMemberId: undefined as number | undefined,
+    responsibleLeaderUserId: undefined as number | undefined,
+    responsiblePersonUserId: undefined as number | undefined,
     cooperators: [] as Array<{ departmentId: number; departmentName?: string; leaderMemberId?: number; leader?: string; personMemberId?: number; person?: string }>,
     workPlan: '',
     planCompleteTime: '',
@@ -363,8 +363,8 @@ export default function NewWorkPage() {
                   departmentId: v,
                   responsibleLeader: '',
                   responsiblePerson: '',
-                  responsibleLeaderMemberId: undefined,
-                  responsiblePersonMemberId: undefined,
+                  responsibleLeaderUserId: undefined,
+                  responsiblePersonUserId: undefined,
                 })}
                 departments={deptOptions}
                 placeholder="请选择责任部门"
@@ -378,10 +378,10 @@ export default function NewWorkPage() {
                 personValue={priorityMainForm.responsiblePerson}
                 onPersonChange={(v) => setPriorityMainForm((prev) => ({ ...prev, responsiblePerson: v }))}
                 departmentId={Number(priorityMainForm.departmentId) || undefined}
-                leaderMemberId={priorityMainForm.responsibleLeaderMemberId}
-                onLeaderMemberIdChange={(id) => setPriorityMainForm((prev) => ({ ...prev, responsibleLeaderMemberId: id }))}
-                personMemberId={priorityMainForm.responsiblePersonMemberId}
-                onPersonMemberIdChange={(id) => setPriorityMainForm((prev) => ({ ...prev, responsiblePersonMemberId: id }))}
+                leaderUserId={priorityMainForm.responsibleLeaderUserId}
+                onLeaderUserIdChange={(id) => setPriorityMainForm((prev) => ({ ...prev, responsibleLeaderUserId: id }))}
+                personUserId={priorityMainForm.responsiblePersonUserId}
+                onPersonUserIdChange={(id) => setPriorityMainForm((prev) => ({ ...prev, responsiblePersonUserId: id }))}
               />
             </div>
           </WorkFormSectionCard>
@@ -442,8 +442,8 @@ export default function NewWorkPage() {
                     // Clear memberId and name snapshots when department changes.
                     responsibleLeader: '',
                     responsiblePerson: '',
-                    responsibleLeaderMemberId: undefined,
-                    responsiblePersonMemberId: undefined,
+                    responsibleLeaderUserId: undefined,
+                    responsiblePersonUserId: undefined,
                   })
                 }}
                 departments={deptOptions}
@@ -458,10 +458,10 @@ export default function NewWorkPage() {
                 personValue={todoForm.responsiblePerson}
                 onPersonChange={(v) => setTodoForm((prev) => ({ ...prev, responsiblePerson: v }))}
                 departmentId={todoForm.departmentId || undefined}
-                leaderMemberId={todoForm.responsibleLeaderMemberId}
-                onLeaderMemberIdChange={(id) => setTodoForm((prev) => ({ ...prev, responsibleLeaderMemberId: id }))}
-                personMemberId={todoForm.responsiblePersonMemberId}
-                onPersonMemberIdChange={(id) => setTodoForm((prev) => ({ ...prev, responsiblePersonMemberId: id }))}
+                leaderUserId={todoForm.responsibleLeaderUserId}
+                onLeaderUserIdChange={(id) => setTodoForm((prev) => ({ ...prev, responsibleLeaderUserId: id }))}
+                personUserId={todoForm.responsiblePersonUserId}
+                onPersonUserIdChange={(id) => setTodoForm((prev) => ({ ...prev, responsiblePersonUserId: id }))}
               />
             </div>
           </WorkFormSectionCard>
