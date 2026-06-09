@@ -26,6 +26,8 @@ export interface PermissionWorkItem {
   approvalType?: ApprovalType | string | null
   rejectReason?: string | null
   rejectedFromStatus?: WorkItemStatus | string | null
+  responsiblePersonUserId?: number | null
+  responsibleLeaderUserId?: number | null
 }
 
 /** 去重 + 过滤非正数 ID */
@@ -140,23 +142,33 @@ export function canOperateWorkItem(
   workItem: PermissionWorkItem,
 ): boolean {
   // ADMIN/SUPERVISOR do not initiate workflow state changes.
-  // Attachment uploads are handled by canUploadAttachment's own bypass.
   if (isGlobalView(user.role)) return false
 
   const status = normalizeStatus(workItem.status)
-  const ownerId = workItem.firstSubmitterId ?? workItem.creatorId
-  const isOwner = ownerId === user.id
 
   // Only allows DRAFT/IN_PROGRESS/PENDING_DECOMPOSE, excluding terminal states and approving states.
   if (!isHandling(status)) return false
 
-  if (isCompanyLevel(user.role))
-    return isOwner && status === WorkItemStatus.DRAFT
+  // Pre-approval (DRAFT / PENDING_DECOMPOSE): maintain existing owner logic
+  const isPreApproval =
+    status === WorkItemStatus.DRAFT ||
+    status === WorkItemStatus.PENDING_DECOMPOSE
 
-  const pendingMainDepartmentDecompose =
-    status === WorkItemStatus.PENDING_DECOMPOSE &&
-    isWorkMainResponsibleDepartment(workItem, user.departmentId)
-  return isOwner || pendingMainDepartmentDecompose
+  if (isPreApproval) {
+    const ownerId = workItem.firstSubmitterId ?? workItem.creatorId
+    const isOwner = ownerId === user.id
+
+    if (isCompanyLevel(user.role))
+      return isOwner && status === WorkItemStatus.DRAFT
+
+    const pendingMainDepartmentDecompose =
+      status === WorkItemStatus.PENDING_DECOMPOSE &&
+      isWorkMainResponsibleDepartment(workItem, user.departmentId)
+    return isOwner || pendingMainDepartmentDecompose
+  }
+
+  // Post-approval (IN_PROGRESS): responsiblePersonUserId is the only handler
+  return workItem.responsiblePersonUserId === user.id
 }
 
 /**
