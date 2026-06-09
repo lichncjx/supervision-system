@@ -31,6 +31,16 @@ export async function submitProposal(
     return err(403, '无权提交该事项')
   }
 
+  // Guard: PRIORITY/MAIN must have a valid responsible person before PROPOSING
+  if (
+    workItem.type === WorkItemType.PRIORITY ||
+    workItem.type === WorkItemType.MAIN
+  ) {
+    if (!workItem.responsiblePersonUserId) {
+      return err(400, '请先指定责任人后再提交审批')
+    }
+  }
+
   const nextApproverError = await ensureIsActiveCompanyLeader(nextApproverId)
   if (nextApproverError) return nextApproverError
 

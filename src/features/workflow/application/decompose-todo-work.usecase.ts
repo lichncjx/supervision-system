@@ -18,6 +18,10 @@ export async function decomposeTodoWork(
   user: BaseCurrentUser,
   nodes: unknown[],
   comment?: string,
+  responsibleLeaderUserId?: number | null,
+  responsiblePersonUserId?: number | null,
+  responsibleLeader?: string | null,
+  responsiblePerson?: string | null,
 ): Promise<Result> {
   const permUser = toPermissionUser(user)
   const workItem = await findWorkForUpdateById(workItemId)
@@ -41,6 +45,10 @@ export async function decomposeTodoWork(
     return err(403, '只有主责部门可以分解该待办事项')
   }
 
+  if (!responsiblePersonUserId) {
+    return err(400, '请先指定责任人后再提交分解方案')
+  }
+
   const oldStatus = workItem.status
   const approver = getProposalFirstApprover(workItem, user)
   if (!approver) {
@@ -58,6 +66,10 @@ export async function decomposeTodoWork(
     firstSubmitterId: workItem.firstSubmitterId ?? user.id,
     rejectReason: null,
     rejectedFromStatus: null,
+    responsibleLeaderUserId: responsibleLeaderUserId ?? null,
+    responsiblePersonUserId: responsiblePersonUserId ?? null,
+    responsibleLeader: responsibleLeader ?? null,
+    responsiblePerson: responsiblePerson ?? null,
   })
 
   await createWorkflowRecord({

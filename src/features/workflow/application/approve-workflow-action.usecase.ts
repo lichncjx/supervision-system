@@ -1,4 +1,4 @@
-import { ApprovalType } from '@prisma/client'
+import { ApprovalType, WorkItemStatus } from '@prisma/client'
 import { getTargetStatus, getNextApprovalAssignment } from '@/features/workflow/domain/workflow.rules'
 import { isApproving } from '@/features/works/domain/work-status.rules'
 import { toPermissionUser } from '@/features/works/domain/work-permission-user.mapper'
@@ -102,6 +102,16 @@ export async function approveWorkflowAction(
   }
 
   const targetStatus = getTargetStatus(workItem.approvalType)
+
+  // Guard: prevent entering IN_PROGRESS without a responsible person
+  if (
+    workItem.approvalType === ApprovalType.PROPOSE &&
+    targetStatus === WorkItemStatus.IN_PROGRESS &&
+    !workItem.responsiblePersonUserId
+  ) {
+    return err(400, '事项缺少责任人，无法审批通过。请先补充责任人信息。')
+  }
+
   let adjustmentUpdateData: Record<string, unknown> = {}
   let approvedAdjustmentRequestId: number | null = null
 
