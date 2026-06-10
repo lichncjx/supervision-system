@@ -110,6 +110,9 @@ export async function createWorkUseCase(input: CreateWorkInput): Promise<Result<
     if (!leaderUser || !leaderUser.isActive) {
       return err(400, '责任领导用户不存在或已禁用')
     }
+    if (leaderUser.departmentId !== departmentId) {
+      return err(400, '责任领导不属于该责任部门')
+    }
   }
 
   // Validate responsiblePersonUserId
@@ -117,6 +120,9 @@ export async function createWorkUseCase(input: CreateWorkInput): Promise<Result<
     const personUser = await prismaFindUserById(body.responsiblePersonUserId)
     if (!personUser || !personUser.isActive) {
       return err(400, '责任人用户不存在或已禁用')
+    }
+    if (personUser.departmentId !== departmentId) {
+      return err(400, '责任人不属于该责任部门')
     }
   }
 

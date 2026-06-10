@@ -1006,7 +1006,7 @@ async function cleanupWorkflowContractWorks() {
   });
 }
 
-function workflowBaseData({ title, type, status, creator, dept, vp, needMainLeaderCancel = false }) {
+function workflowBaseData({ title, type, status, creator, dept, vp, needMainLeaderCancel = false, responsiblePersonUserId, responsibleLeaderUserId }) {
   const dueDate = new Date();
   dueDate.setHours(12, 0, 0, 0);
   dueDate.setDate(dueDate.getDate() + 30);
@@ -1028,6 +1028,8 @@ function workflowBaseData({ title, type, status, creator, dept, vp, needMainLead
     nodes: JSON.stringify([{ title: 'workflow-node', completeTime: dueDate.toISOString() }]),
     responsibleLeader: '测试责任领导',
     responsiblePerson: '测试责任人',
+    responsibleLeaderUserId: responsibleLeaderUserId ?? null,
+    responsiblePersonUserId: responsiblePersonUserId ?? creator.id,
     action: status === 'PENDING_DECOMPOSE' ? 'TODO_DECOMPOSE' : 'CREATE',
     currentApproverId: null,
     currentApproverRole: null,
@@ -1219,6 +1221,10 @@ async function verifyWorkflowTransitions(baseUrl, loginByUsername, deptByCode, u
   const decomposeSubmit = await runWorkflowStep(baseUrl, loginByUsername, 'dept_manager_a1', decomposeApproveId, {
     action: 'decompose',
     nodes: submitNodes,
+    responsiblePersonUserId: manager.id,
+    responsibleLeaderUserId: userByUsername.dept_leader_a.id,
+    responsiblePerson: manager.name,
+    responsibleLeader: userByUsername.dept_leader_a.name,
   });
   const decomposeDeptApprove = await runWorkflowStep(baseUrl, loginByUsername, 'dept_leader_a', decomposeApproveId, { action: 'approve' });
   const decomposeCompanyApprove = await runWorkflowStep(baseUrl, loginByUsername, 'vp_a', decomposeApproveId, { action: 'approve' });
@@ -1283,6 +1289,10 @@ async function verifyWorkflowTransitions(baseUrl, loginByUsername, deptByCode, u
   const decomposeRejectSubmit = await runWorkflowStep(baseUrl, loginByUsername, 'dept_manager_a1', decomposeRejectId, {
     action: 'decompose',
     nodes: submitNodes,
+    responsiblePersonUserId: manager.id,
+    responsibleLeaderUserId: userByUsername.dept_leader_a.id,
+    responsiblePerson: manager.name,
+    responsibleLeader: userByUsername.dept_leader_a.name,
   });
   const decomposeReject = await runWorkflowStep(baseUrl, loginByUsername, 'dept_leader_a', decomposeRejectId, {
     action: 'reject',
@@ -1336,6 +1346,7 @@ async function verifyWorkflowTransitions(baseUrl, loginByUsername, deptByCode, u
   const adjustSubmit = await runWorkflowStep(baseUrl, loginByUsername, 'dept_manager_a1', adjustApproveId, {
     action: 'adjust',
     adjustReason: 'target-contract adjust',
+    pendingAdjustment: { planCompleteTime: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] },
   });
   const adjustDeptApprove = await runWorkflowStep(baseUrl, loginByUsername, 'dept_leader_a', adjustApproveId, { action: 'approve' });
   const adjustCompanyApprove = await runWorkflowStep(baseUrl, loginByUsername, 'vp_a', adjustApproveId, { action: 'approve' });
@@ -1400,6 +1411,7 @@ async function verifyWorkflowTransitions(baseUrl, loginByUsername, deptByCode, u
   const adjustRejectSubmit = await runWorkflowStep(baseUrl, loginByUsername, 'dept_manager_a1', adjustRejectId, {
     action: 'adjust',
     adjustReason: 'target-contract adjust reject',
+    pendingAdjustment: { planCompleteTime: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] },
   });
   const adjustReject = await runWorkflowStep(baseUrl, loginByUsername, 'dept_leader_a', adjustRejectId, {
     action: 'reject',
@@ -1898,8 +1910,11 @@ async function verifyStateFilters(baseUrl, loginByUsername, deptByCode, userByUs
 }
 
 async function verifyMemberEndpoints(baseUrl, loginByUsername, deptByCode, _works) {
-  const adminCookies = loginByUsername.admin.cookies;
+  // Clean up leftover members from previous test runs to ensure idempotency
+  await prisma.member.deleteMany({ where: { name: 'TC-新成员' } });
+  // Unbind any user already bound to existing members (from prior import tests)
   const deptAId = deptByCode.TDA.id;
+  const adminCookies = loginByUsername.admin.cookies;
 
   // 1. GET /api/members?departmentId=xxx — list all active members
   const listResponse = await request(baseUrl, 'GET', `/api/members?departmentId=${deptAId}`, null, adminCookies);
@@ -2057,25 +2072,25 @@ async function verifyMemberEndpoints(baseUrl, loginByUsername, deptByCode, _work
     note: 'Issue #56: importFromUserId auto-fills name and binds userId.',
   });
 
-  // 10. Work item memberId persistence in GET /api/works
+  // 10. Work item userId persistence in GET /api/works
   const worksResponse = await request(baseUrl, 'GET', '/api/works', null, adminCookies);
   const worksBody = Array.isArray(worksResponse.body) ? worksResponse.body : [];
-  const workWithMember = worksBody.find((w) => w.responsibleLeaderMemberId != null || w.responsiblePersonMemberId != null);
+  const workWithUser = worksBody.find((w) => w.responsibleLeaderUserId != null || w.responsiblePersonUserId != null);
   record({
     role: 'admin',
-    endpoint: 'GET /api/works memberId fields present',
+    endpoint: 'GET /api/works responsibleXxxUserId fields present',
     actual: {
-      hasMemberIdWork: Boolean(workWithMember),
-      responsibleLeaderMemberId: workWithMember?.responsibleLeaderMemberId,
-      responsiblePersonMemberId: workWithMember?.responsiblePersonMemberId,
+      hasUserIdWork: Boolean(workWithUser),
+      responsibleLeaderUserId: workWithUser?.responsibleLeaderUserId,
+      responsiblePersonUserId: workWithUser?.responsiblePersonUserId,
     },
     expected: {
-      hasMemberIdWork: true,
-      responsibleLeaderMemberId: workWithMember?.responsibleLeaderMemberId,
-      responsiblePersonMemberId: workWithMember?.responsiblePersonMemberId,
+      hasUserIdWork: true,
+      responsibleLeaderUserId: workWithUser?.responsibleLeaderUserId,
+      responsiblePersonUserId: workWithUser?.responsiblePersonUserId,
     },
     expectedFailure: false,
-    note: 'Issue #56 phase 3: new work items carry responsibleLeaderMemberId/responsiblePersonMemberId.',
+    note: 'Issue #XXX: work items carry responsibleLeaderUserId/responsiblePersonUserId for permission checks.',
   });
 
   // 11. Cooperator memberId persistence
@@ -2106,6 +2121,8 @@ async function main() {
   assertSafeDatabaseUrl();
   assertSafeBaseUrl(baseUrl);
   console.log(`[target-contract-verify] baseUrl=${baseUrl}`);
+  console.log('[target-contract-verify] cleaning up leftover workflow contract data...');
+  await cleanupWorkflowContractWorks();
   console.log('[target-contract-verify] loading fixture from database...');
   const { userByUsername, works, deptByCode } = await loadTargetFixture();
 

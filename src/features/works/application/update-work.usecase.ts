@@ -81,11 +81,16 @@ export async function updateWorkUseCase(input: UpdateWorkInput): Promise<Result<
     return err(403, '进行中或审批中的事项不能通过编辑接口修改责任人，请使用调整审批')
   }
 
+  const effectiveDeptId = body.departmentId ?? work.departmentId
+
   // Validate responsibleLeaderUserId
   if (body.responsibleLeaderUserId != null) {
     const leaderUser = await prismaFindUserById(body.responsibleLeaderUserId)
     if (!leaderUser || !leaderUser.isActive) {
       return err(400, '责任领导用户不存在或已禁用')
+    }
+    if (leaderUser.departmentId !== effectiveDeptId) {
+      return err(400, '责任领导不属于该责任部门')
     }
   }
 
@@ -94,6 +99,9 @@ export async function updateWorkUseCase(input: UpdateWorkInput): Promise<Result<
     const personUser = await prismaFindUserById(body.responsiblePersonUserId)
     if (!personUser || !personUser.isActive) {
       return err(400, '责任人用户不存在或已禁用')
+    }
+    if (personUser.departmentId !== effectiveDeptId) {
+      return err(400, '责任人不属于该责任部门')
     }
   }
 

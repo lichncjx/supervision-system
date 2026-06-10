@@ -71,6 +71,8 @@ function buildWorkItems(ctx) {
         approvalLeaderId: user.vpA.id,
         responsibleLeader: '业务责任领导A',
         responsiblePerson: '事项实际责任人A',
+        responsibleLeaderUserId: user.deptLeaderA.id,
+        responsiblePersonUserId: user.deptManagerA1.id,
         planCompleteTime: farFuture,
       },
     },
@@ -91,6 +93,8 @@ function buildWorkItems(ctx) {
         approvalLeaderId: user.vpA.id,
         responsibleLeader: '业务责任领导A2',
         responsiblePerson: '事项实际责任人A2',
+        responsibleLeaderUserId: user.deptLeaderA.id,
+        responsiblePersonUserId: user.deptManagerA1.id,
         planCompleteTime: farFuture,
       },
     },
@@ -109,6 +113,7 @@ function buildWorkItems(ctx) {
         proposedLeaderId: user.vpA.id,
         approvalLeaderId: user.vpA.id,
         responsiblePerson: '业务主责人A',
+        responsiblePersonUserId: user.deptManagerA1.id,
         planCompleteTime: farFuture,
       },
     },
@@ -131,6 +136,7 @@ function buildWorkItems(ctx) {
         proposedLeaderId: user.vpA.id,
         approvalLeaderId: user.vpA.id,
         responsiblePerson: '业务主责人A',
+        responsiblePersonUserId: user.deptManagerA1.id,
         planCompleteTime: farFuture,
       },
     },
@@ -154,6 +160,7 @@ function buildWorkItems(ctx) {
         proposedLeaderId: user.vpA.id,
         approvalLeaderId: user.vpA.id,
         responsiblePerson: '业务主责人A',
+        responsiblePersonUserId: user.deptManagerA1.id,
         planCompleteTime: farFuture,
       },
     },
@@ -478,9 +485,7 @@ function canViewWork(user, work) {
     return (
       work.proposedLeaderId === user.id ||
       work.approvalLeaderId === user.id ||
-      work.currentApproverId === user.id ||
-      work.currentApproverRole === 'PRESIDENT' ||
-      work.needMainLeaderCancel === true
+      work.currentApproverId === user.id
     );
   }
   return false;
@@ -520,22 +525,30 @@ function canOperate(user, work) {
   const targetStatus = getTargetStatus(work);
   if (targetStatus === 'COMPLETED' || targetStatus === 'CANCELLED') return false;
 
-  const ownerId = work.firstSubmitterId ?? work.creatorId;
+  // Pre-approval (DRAFT / PENDING_DECOMPOSE): maintain existing owner/dept logic
+  const isPreApproval = targetStatus === 'DRAFT' || targetStatus === 'PENDING_DECOMPOSE';
 
-  if (user.role === 'DEPARTMENT_MANAGER' || user.role === 'DEPARTMENT_LEADER') {
-    if (isMainResponsibleDept(work, user.departmentId)) {
-      if (targetStatus === 'IN_PROGRESS' || targetStatus === 'PENDING_DECOMPOSE') return true;
-      if (targetStatus === 'DRAFT' && ownerId === user.id) return true;
-      return false;
+  if (isPreApproval) {
+    const ownerId = work.firstSubmitterId ?? work.creatorId;
+
+    if (user.role === 'DEPARTMENT_MANAGER' || user.role === 'DEPARTMENT_LEADER') {
+      if (isMainResponsibleDept(work, user.departmentId)) {
+        if (targetStatus === 'PENDING_DECOMPOSE') return true;
+        if (targetStatus === 'DRAFT' && ownerId === user.id) return true;
+        return false;
+      }
+      if (ownerId !== user.id) return false;
+      return targetStatus !== 'COMPLETED' && targetStatus !== 'CANCELLED';
     }
+
     if (ownerId !== user.id) return false;
+    if (user.role === 'VICE_PRESIDENT' || user.role === 'PRESIDENT')
+      return targetStatus === 'DRAFT';
     return targetStatus !== 'COMPLETED' && targetStatus !== 'CANCELLED';
   }
 
-  if (ownerId !== user.id) return false;
-  if (user.role === 'VICE_PRESIDENT' || user.role === 'PRESIDENT')
-    return targetStatus === 'DRAFT';
-  return targetStatus !== 'COMPLETED' && targetStatus !== 'CANCELLED';
+  // Post-approval (IN_PROGRESS): responsiblePersonUserId is the only handler
+  return work.responsiblePersonUserId === user.id;
 }
 
 function canHandle(user, work) {

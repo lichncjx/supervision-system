@@ -15,11 +15,16 @@ interface CompanyLeaderInfo {
   id: number; name: string
 }
 
+interface DepartmentUserInfo {
+  id: number; name: string; departmentId: number
+}
+
 export async function validateAndParseExcel(
   fileBuffer: Buffer,
   type: string,
   departments: DepartmentInfo[],
   companyLeaders: CompanyLeaderInfo[],
+  allUsers: DepartmentUserInfo[] = [],
 ): Promise<{ rows: ImportRow[]; errors: ImportValidationError[] }> {
   const errors: ImportValidationError[] = []
   const rows: ImportRow[] = []
@@ -62,6 +67,33 @@ export async function validateAndParseExcel(
     companyLeaders.map((u) => [u.name, u.id]),
   )
 
+  // Group users by name to detect duplicates (prevents ambiguous matching)
+  const nameToUsers = new Map<string, DepartmentUserInfo[]>()
+  for (const u of allUsers) {
+    const existing = nameToUsers.get(u.name)
+    if (existing) { existing.push(u) }
+    else { nameToUsers.set(u.name, [u]) }
+  }
+
+  // Only names with exactly one active user can be auto-matched
+  const uniqueNameToUserId = new Map<string, number>()
+  for (const [name, users] of nameToUsers) {
+    if (users.length === 1) uniqueNameToUserId.set(name, users[0].id)
+  }
+
+  function resolveUserName(field: string, name: string, rowNum: number) {
+    const matches = nameToUsers.get(name)
+    if (!matches) return null
+    if (matches.length === 1) return matches[0].id
+    errors.push({
+      row: rowNum,
+      field,
+      value: name,
+      reason: `姓名"${name}"匹配到 ${matches.length} 个系统用户，无法自动关联，请在系统中手动指定`,
+    })
+    return null
+  }
+
   for (let i = 0; i < jsonData.length; i++) {
     const row = jsonData[i]
     const rowNum = i + 2
@@ -101,6 +133,10 @@ export async function validateAndParseExcel(
       const responsibleLeader = getCell('责任领导')
       const responsiblePerson = getCell('责任人')
       const cooperatorsStr = getCell('配合方')
+
+      // Resolve userId from name (only when name is unique among active users)
+      const responsibleLeaderUserId = responsibleLeader ? resolveUserName('责任领导', responsibleLeader, rowNum) : null
+      const responsiblePersonUserId = responsiblePerson ? resolveUserName('责任人', responsiblePerson, rowNum) : null
 
       if (!workItem) {
         errors.push({
@@ -204,6 +240,8 @@ export async function validateAndParseExcel(
                 ?.code || departmentName,
             responsibleLeader,
             responsiblePerson: responsiblePerson || null,
+            responsibleLeaderUserId,
+            responsiblePersonUserId,
             cooperators,
           },
         })
@@ -218,6 +256,9 @@ export async function validateAndParseExcel(
       const responsibleLeader = getCell('责任领导')
       const responsiblePerson = getCell('责任人')
       const cooperatorsStr = getCell('配合方')
+
+      const responsibleLeaderUserId = responsibleLeader ? resolveUserName('责任领导', responsibleLeader, rowNum) : null
+      const responsiblePersonUserId = responsiblePerson ? resolveUserName('责任人', responsiblePerson, rowNum) : null
 
       if (!workItem) {
         errors.push({
@@ -309,6 +350,8 @@ export async function validateAndParseExcel(
                 ?.code || departmentName,
             responsibleLeader,
             responsiblePerson: responsiblePerson || null,
+            responsibleLeaderUserId,
+            responsiblePersonUserId,
             cooperators,
           },
         })
@@ -323,6 +366,10 @@ export async function validateAndParseExcel(
       const responsibleLeader = getCell('责任领导')
       const responsiblePerson = getCell('责任人')
       const cooperatorsStr = getCell('配合方')
+
+      const responsibleLeaderUserId = responsibleLeader ? resolveUserName('责任领导', responsibleLeader, rowNum) : null
+      const responsiblePersonUserId = responsiblePerson ? resolveUserName('责任人', responsiblePerson, rowNum) : null
+
       const workPlan = getCell('工作计划')
       const planCompleteTimeStr = getCell('完成时间')
       const progress = getCell('进展情况')
@@ -438,6 +485,8 @@ export async function validateAndParseExcel(
             departmentId: resolvedDeptId,
             responsibleLeader: responsibleLeader || null,
             responsiblePerson: responsiblePerson || null,
+            responsibleLeaderUserId,
+            responsiblePersonUserId,
             cooperators,
             workPlan,
             planCompleteTime: parseExcelDate(planCompleteTimeStr),

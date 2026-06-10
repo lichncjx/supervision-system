@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { WorkFormNodes } from '@/features/works/ui/work-form-nodes';
+import { ResponsibleFields } from '@/features/works/ui/work-form-fields';
 import type { WorkNode } from '@/features/works/client/work-client.types';
 import { FIELD_LABEL, PANEL_PADDED } from '@/features/works/ui/visual-tokens';
 
@@ -38,6 +39,20 @@ export function WorkDecomposePanel({
         )}
         <div className="p-3 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">
           该事项由公司领导提出，请责任部门进行任务分解，补充工作计划、节点、子节点和计划完成时间后提交审批。
+        </div>
+
+        <div className="flex gap-4 [&>div]:flex-1">
+          <ResponsibleFields
+            leaderValue={editForm.responsibleLeader || ''}
+            onLeaderChange={(v) => setEditForm((prev: any) => ({ ...prev, responsibleLeader: v }))}
+            personValue={editForm.responsiblePerson || ''}
+            onPersonChange={(v) => setEditForm((prev: any) => ({ ...prev, responsiblePerson: v }))}
+            departmentId={editForm.departmentId || undefined}
+            leaderUserId={editForm.responsibleLeaderUserId}
+            onLeaderUserIdChange={(id) => setEditForm((prev: any) => ({ ...prev, responsibleLeaderUserId: id }))}
+            personUserId={editForm.responsiblePersonUserId}
+            onPersonUserIdChange={(id) => setEditForm((prev: any) => ({ ...prev, responsiblePersonUserId: id }))}
+          />
         </div>
 
         <div>

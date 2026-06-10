@@ -149,25 +149,20 @@ export function canOperateWorkItem(
   // Only allows DRAFT/IN_PROGRESS/PENDING_DECOMPOSE, excluding terminal states and approving states.
   if (!isHandling(status)) return false
 
-  // Pre-approval (DRAFT / PENDING_DECOMPOSE): maintain existing owner logic
-  const isPreApproval =
-    status === WorkItemStatus.DRAFT ||
-    status === WorkItemStatus.PENDING_DECOMPOSE
-
-  if (isPreApproval) {
+  if (status === WorkItemStatus.DRAFT) {
     const ownerId = workItem.firstSubmitterId ?? workItem.creatorId
-    const isOwner = ownerId === user.id
-
-    if (isCompanyLevel(user.role))
-      return isOwner && status === WorkItemStatus.DRAFT
-
-    const pendingMainDepartmentDecompose =
-      status === WorkItemStatus.PENDING_DECOMPOSE &&
-      isWorkMainResponsibleDepartment(workItem, user.departmentId)
-    return isOwner || pendingMainDepartmentDecompose
+    if (ownerId !== user.id) return false
+    if (isCompanyLevel(user.role)) return true
+    return true
   }
 
-  // Post-approval (IN_PROGRESS): responsiblePersonUserId is the only handler
+  if (status === WorkItemStatus.PENDING_DECOMPOSE) {
+    const ownerId = workItem.firstSubmitterId ?? workItem.creatorId
+    if (ownerId === user.id) return true
+    return isWorkMainResponsibleDepartment(workItem, user.departmentId)
+  }
+
+  // IN_PROGRESS: responsiblePersonUserId is the only handler
   return workItem.responsiblePersonUserId === user.id
 }
 

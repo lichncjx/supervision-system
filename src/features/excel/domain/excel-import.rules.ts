@@ -24,6 +24,8 @@ export interface ImportWorkRowData {
   departmentCode?: string
   responsibleLeader?: string | null
   responsiblePerson?: string | null
+  responsibleLeaderUserId?: number | null
+  responsiblePersonUserId?: number | null
   cooperators: ImportCooperator[]
   proposedLeaderId?: number | null
   proposedLeaderName?: string

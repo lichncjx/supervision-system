@@ -11,6 +11,13 @@ export async function findCompanyLeaders() {
   })
 }
 
+export async function findAllActiveUsers() {
+  return prisma.user.findMany({
+    where: { isActive: true },
+    select: { id: true, name: true, departmentId: true },
+  })
+}
+
 export async function createImportedWorkItems(params: {
   workItems: Prisma.WorkItemCreateManyInput[]
   logUserId: number

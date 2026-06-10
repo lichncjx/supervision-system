@@ -4,6 +4,7 @@ import { canUserOperate, getProcessFirstApprover } from '@/features/workflow/dom
 import { toPermissionUser } from '@/features/works/domain/work-permission-user.mapper'
 import { findWorkForUpdateById } from '@/features/works/infrastructure/work.repository'
 import { findDepartmentById } from '@/features/departments/infrastructure/department.repository'
+import { findUserById as prismaFindUserById } from '@/features/users/infrastructure/user.repository'
 import { validateMemberAssignments, type MemberAssignment } from '@/features/members/domain/member.rules'
 import { buildAdjustmentBeforeSnapshot, sanitizeAdjustmentPatch } from '@/features/workflow/application/adjustment-patch'
 import { getChangedAdjustmentFields } from '@/features/works/domain/work-adjustment-diff'
@@ -54,25 +55,19 @@ export async function submitAdjustment(
     return err(400, '责任部门不存在')
   }
 
-  if (patch.responsibleLeaderMemberId != null || patch.responsiblePersonMemberId != null) {
-    const assignments: MemberAssignment[] = []
-    if (patch.responsibleLeaderMemberId != null) {
-      assignments.push({
-        memberId: Number(patch.responsibleLeaderMemberId),
-        role: 'leader',
-        departmentId: effectiveDeptId,
-      })
+  // Validate responsibleLeaderUserId if present in patch
+  if (patch.responsibleLeaderUserId != null) {
+    const leaderUser = await prismaFindUserById(Number(patch.responsibleLeaderUserId))
+    if (!leaderUser || !leaderUser.isActive) {
+      return err(400, '责任领导用户不存在或已禁用')
     }
-    if (patch.responsiblePersonMemberId != null) {
-      assignments.push({
-        memberId: Number(patch.responsiblePersonMemberId),
-        role: 'person',
-        departmentId: effectiveDeptId,
-      })
-    }
-    const errors = await validateMemberAssignments(assignments)
-    if (errors.length > 0) {
-      return err(400, errors[0].message)
+  }
+
+  // Validate responsiblePersonUserId if present in patch
+  if (patch.responsiblePersonUserId != null) {
+    const personUser = await prismaFindUserById(Number(patch.responsiblePersonUserId))
+    if (!personUser || !personUser.isActive) {
+      return err(400, '责任人用户不存在或已禁用')
     }
   }
 

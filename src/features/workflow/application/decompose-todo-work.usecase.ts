@@ -7,6 +7,7 @@ import {
 } from '@/features/workflow/domain/workflow.rules'
 import { toPermissionUser } from '@/features/works/domain/work-permission-user.mapper'
 import { findWorkForUpdateById, updateWorkItem } from '@/features/works/infrastructure/work.repository'
+import { findUserById } from '@/features/users/infrastructure/user.repository'
 import {
   createWorkflowRecord,
   createOperationLog,
@@ -47,6 +48,26 @@ export async function decomposeTodoWork(
 
   if (!responsiblePersonUserId) {
     return err(400, '请先指定责任人后再提交分解方案')
+  }
+
+  // Validate responsiblePersonUserId belongs to the work item's department
+  const personUser = await findUserById(responsiblePersonUserId)
+  if (!personUser || !personUser.isActive) {
+    return err(400, '责任人用户不存在或已禁用')
+  }
+  if (personUser.departmentId !== workItem.departmentId) {
+    return err(400, '责任人不属于该责任部门')
+  }
+
+  // Validate responsibleLeaderUserId if provided
+  if (responsibleLeaderUserId) {
+    const leaderUser = await findUserById(responsibleLeaderUserId)
+    if (!leaderUser || !leaderUser.isActive) {
+      return err(400, '责任领导用户不存在或已禁用')
+    }
+    if (leaderUser.departmentId !== workItem.departmentId) {
+      return err(400, '责任领导不属于该责任部门')
+    }
   }
 
   const oldStatus = workItem.status
