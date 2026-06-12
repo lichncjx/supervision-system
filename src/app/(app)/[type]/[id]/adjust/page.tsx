@@ -27,7 +27,7 @@ import {
 import { submitAdjust } from '@/features/workflow/client/workflow-api';
 import { getChangedAdjustmentFields } from '@/features/works/domain/work-adjustment-diff';
 import { isInProgress } from '@/features/works/domain/work-status.rules';
-import { isOwnedBy } from '@/features/works/client/work-client-permissions';
+import { isResponsiblePerson } from '@/features/works/client/work-client-permissions';
 import type { Cooperator, Work, WorkEditablePatch, WorkNode, WorkType } from '@/features/works/client/work-client.types';
 import { FIELD_LABEL, HINT_BOX, STICKY_ACTION_BAR } from '@/features/works/ui/visual-tokens';
 
@@ -154,7 +154,7 @@ export default function AdjustWorkPage() {
     isInProgress(work.status) &&
     user.role !== 'ADMIN' &&
     user.role !== 'SUPERVISOR' &&
-    isOwnedBy(user, work);
+    isResponsiblePerson(user, work);
 
   if (!canAdjust) {
     return <div className="p-8 text-center text-red-600">无权申请调整该事项</div>;

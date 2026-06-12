@@ -121,16 +121,26 @@ export async function approveWorkflowAction(
       return err(400, '调整申请内容缺失，无法审批通过')
     }
 
-    const patch = adjustmentRequest.patch as AdjustmentPatch
+    // Guard: ADJUST must not clear responsiblePersonUserId when returning to IN_PROGRESS
+    const patch = adjustmentRequest.patch as Record<string, unknown>
+    const newPersonId =
+      patch.responsiblePersonUserId !== undefined
+        ? patch.responsiblePersonUserId
+        : workItem.responsiblePersonUserId
+    if (!newPersonId) {
+      return err(400, '调整后事项缺少责任人，无法审批通过')
+    }
+
     const beforeSnapshot = adjustmentRequest.beforeSnapshot as AdjustmentPatch
     const currentHistory = parseJsonField<unknown[]>(workItem.adjustHistory, [])
+    const adjustmentPatch = adjustmentRequest.patch as AdjustmentPatch
     adjustmentUpdateData = {
-      ...buildAdjustmentWorkUpdateData(patch),
+      ...buildAdjustmentWorkUpdateData(adjustmentPatch),
       adjustHistory: [
         ...currentHistory,
         buildAdjustHistoryEntry({
           beforeSnapshot,
-          patch,
+          patch: adjustmentPatch,
           reason: adjustmentRequest.reason,
           approvedBy: user.name,
         }),

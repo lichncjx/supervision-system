@@ -61,6 +61,9 @@ export async function submitAdjustment(
     if (!leaderUser || !leaderUser.isActive) {
       return err(400, '责任领导用户不存在或已禁用')
     }
+    if (leaderUser.departmentId !== effectiveDeptId) {
+      return err(400, '责任领导不属于该责任部门')
+    }
   }
 
   // Validate responsiblePersonUserId if present in patch
@@ -68,6 +71,9 @@ export async function submitAdjustment(
     const personUser = await prismaFindUserById(Number(patch.responsiblePersonUserId))
     if (!personUser || !personUser.isActive) {
       return err(400, '责任人用户不存在或已禁用')
+    }
+    if (personUser.departmentId !== effectiveDeptId) {
+      return err(400, '责任人不属于该责任部门')
     }
   }
 

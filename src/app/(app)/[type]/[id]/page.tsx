@@ -37,6 +37,7 @@ import {
   canDecomposeTodoWork,
   canApproveWork,
   isOwnedBy,
+  isResponsiblePerson,
   isWorkRelatedToDepartment,
 } from '@/features/works/client/work-client-permissions';
 import { isTerminal, isReturnedDraftWork, isInProgress } from '@/features/works/domain/work-status.rules';
@@ -122,7 +123,7 @@ export default function WorkDetailPage() {
   const canHandleReturnedCreate = isAdmin || canHandleReturnedDraftWork(user, work);
   const canDecomposeTodo = canDecomposeTodoWork(user, work);
   const canApprove = user ? canApproveWork(user, work) : false;
-  const canOperate = !!user && (isAdmin || isSupervisor || (isOwnedBy(user, work) && isInProgress(work.status)));
+  const canOperate = !!user && (isAdmin || isSupervisor || (isResponsiblePerson(user, work) && isInProgress(work.status)));
 
   const isRelatedDept = user ? isWorkRelatedToDepartment(work, user.departmentId) : false;
   const canEdit = user && (

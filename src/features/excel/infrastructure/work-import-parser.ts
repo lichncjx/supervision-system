@@ -81,17 +81,21 @@ export async function validateAndParseExcel(
     if (users.length === 1) uniqueNameToUserId.set(name, users[0].id)
   }
 
-  function resolveUserName(field: string, name: string, rowNum: number) {
+  function resolveUserName(field: string, name: string, rowNum: number, expectedDeptId?: number | null) {
     const matches = nameToUsers.get(name)
     if (!matches) return null
-    if (matches.length === 1) return matches[0].id
-    errors.push({
-      row: rowNum,
-      field,
-      value: name,
-      reason: `姓名"${name}"匹配到 ${matches.length} 个系统用户，无法自动关联，请在系统中手动指定`,
-    })
-    return null
+    if (matches.length > 1) {
+      errors.push({ row: rowNum, field, value: name,
+        reason: `姓名"${name}"匹配到 ${matches.length} 个系统用户，无法自动关联，请在系统中手动指定` })
+      return null
+    }
+    const user = matches[0]
+    if (expectedDeptId != null && user.departmentId !== expectedDeptId) {
+      errors.push({ row: rowNum, field, value: name,
+        reason: `用户"${name}"不属于该事项的责任部门，无法自动关联` })
+      return null
+    }
+    return user.id
   }
 
   for (let i = 0; i < jsonData.length; i++) {
@@ -133,10 +137,6 @@ export async function validateAndParseExcel(
       const responsibleLeader = getCell('责任领导')
       const responsiblePerson = getCell('责任人')
       const cooperatorsStr = getCell('配合方')
-
-      // Resolve userId from name (only when name is unique among active users)
-      const responsibleLeaderUserId = responsibleLeader ? resolveUserName('责任领导', responsibleLeader, rowNum) : null
-      const responsiblePersonUserId = responsiblePerson ? resolveUserName('责任人', responsiblePerson, rowNum) : null
 
       if (!workItem) {
         errors.push({
@@ -223,6 +223,12 @@ export async function validateAndParseExcel(
       }
 
       if (errors.filter((e) => e.row === rowNum).length === 0) {
+        const responsibleLeaderUserId = responsibleLeader
+          ? resolveUserName('责任领导', responsibleLeader, rowNum, resolvedDeptId)
+          : null
+        const responsiblePersonUserId = responsiblePerson
+          ? resolveUserName('责任人', responsiblePerson, rowNum, resolvedDeptId)
+          : null
         rows.push({
           row: rowNum,
           data: {
@@ -256,9 +262,6 @@ export async function validateAndParseExcel(
       const responsibleLeader = getCell('责任领导')
       const responsiblePerson = getCell('责任人')
       const cooperatorsStr = getCell('配合方')
-
-      const responsibleLeaderUserId = responsibleLeader ? resolveUserName('责任领导', responsibleLeader, rowNum) : null
-      const responsiblePersonUserId = responsiblePerson ? resolveUserName('责任人', responsiblePerson, rowNum) : null
 
       if (!workItem) {
         errors.push({
@@ -334,6 +337,12 @@ export async function validateAndParseExcel(
       }
 
       if (errors.filter((e) => e.row === rowNum).length === 0) {
+        const responsibleLeaderUserId = responsibleLeader
+          ? resolveUserName('责任领导', responsibleLeader, rowNum, resolvedDeptId)
+          : null
+        const responsiblePersonUserId = responsiblePerson
+          ? resolveUserName('责任人', responsiblePerson, rowNum, resolvedDeptId)
+          : null
         rows.push({
           row: rowNum,
           data: {
@@ -366,9 +375,6 @@ export async function validateAndParseExcel(
       const responsibleLeader = getCell('责任领导')
       const responsiblePerson = getCell('责任人')
       const cooperatorsStr = getCell('配合方')
-
-      const responsibleLeaderUserId = responsibleLeader ? resolveUserName('责任领导', responsibleLeader, rowNum) : null
-      const responsiblePersonUserId = responsiblePerson ? resolveUserName('责任人', responsiblePerson, rowNum) : null
 
       const workPlan = getCell('工作计划')
       const planCompleteTimeStr = getCell('完成时间')
@@ -467,6 +473,12 @@ export async function validateAndParseExcel(
       }
 
       if (errors.filter((e) => e.row === rowNum).length === 0) {
+        const responsibleLeaderUserId = responsibleLeader
+          ? resolveUserName('责任领导', responsibleLeader, rowNum, resolvedDeptId)
+          : null
+        const responsiblePersonUserId = responsiblePerson
+          ? resolveUserName('责任人', responsiblePerson, rowNum, resolvedDeptId)
+          : null
         rows.push({
           row: rowNum,
           data: {

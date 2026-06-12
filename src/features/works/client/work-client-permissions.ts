@@ -8,6 +8,11 @@ export function isOwnedBy(user: { id: number }, work: Work): boolean {
   return (work.firstSubmitterId ?? work.creatorId) === user.id
 }
 
+/** IN_PROGRESS 后操作权归属：responsiblePersonUserId */
+export function isResponsiblePerson(user: { id: number }, work: Work): boolean {
+  return work.responsiblePersonUserId === user.id
+}
+
 // 原子权限函数 —— 不含 ADMIN/SUPERVISOR，只判断普通业务角色能否办理
 
 export function canEditRegularDraftWork(
