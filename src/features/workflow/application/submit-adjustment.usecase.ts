@@ -64,6 +64,15 @@ export async function submitAdjustment(
     if (leaderUser.departmentId !== effectiveDeptId) {
       return err(400, '责任领导不属于该责任部门')
     }
+  } else if (
+    patch.departmentId != null &&
+    workItem.responsibleLeaderUserId != null
+  ) {
+    // Department changed but leader stays — revalidate existing leader against new dept
+    const leaderUser = await prismaFindUserById(workItem.responsibleLeaderUserId)
+    if (leaderUser && leaderUser.departmentId !== effectiveDeptId) {
+      return err(400, '当前责任领导不属于新的责任部门，请同时调整责任领导')
+    }
   }
 
   // Validate responsiblePersonUserId if present in patch
@@ -74,6 +83,15 @@ export async function submitAdjustment(
     }
     if (personUser.departmentId !== effectiveDeptId) {
       return err(400, '责任人不属于该责任部门')
+    }
+  } else if (
+    patch.departmentId != null &&
+    workItem.responsiblePersonUserId != null
+  ) {
+    // Department changed but person stays — revalidate existing person against new dept
+    const personUser = await prismaFindUserById(workItem.responsiblePersonUserId)
+    if (personUser && personUser.departmentId !== effectiveDeptId) {
+      return err(400, '当前责任人不属于新的责任部门，请同时调整责任人')
     }
   }
 
