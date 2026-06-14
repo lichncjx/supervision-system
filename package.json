@@ -12,6 +12,7 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
+    "db:backfill:responsible-users": "tsx docs/superpowers/scripts/backfill-responsible-users.ts",
     "prisma:seed": "pnpm seed:demo",
     "seed:admin": "tsx prisma/seed-admin.ts",
     "seed:demo": "tsx prisma/seed-demo.ts",

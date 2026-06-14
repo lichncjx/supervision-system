@@ -12,7 +12,7 @@ import { findUserById as prismaFindUserById } from '@/features/users/infrastruct
 import { validateMemberAssignments, type MemberAssignment } from '@/features/members/domain/member.rules'
 import { toWorkDto } from '@/features/works/application/work.mapper'
 import type { WorkDto } from './work.dto'
-import { type Result, err, ok } from '@/shared/result'
+import { type ErrResult, type Result, err, ok } from '@/shared/result'
 
 export interface UpdateWorkBody {
   title?: string | null
@@ -82,28 +82,41 @@ export async function updateWorkUseCase(input: UpdateWorkInput): Promise<Result<
   }
 
   const effectiveDeptId = body.departmentId ?? work.departmentId
+  const departmentChanged =
+    body.departmentId !== undefined &&
+    body.departmentId !== work.departmentId
+  const effectiveLeaderUserId =
+    body.responsibleLeaderUserId !== undefined
+      ? body.responsibleLeaderUserId
+      : departmentChanged
+        ? work.responsibleLeaderUserId
+        : undefined
+  const effectivePersonUserId =
+    body.responsiblePersonUserId !== undefined
+      ? body.responsiblePersonUserId
+      : departmentChanged
+        ? work.responsiblePersonUserId
+        : undefined
 
-  // Validate responsibleLeaderUserId
-  if (body.responsibleLeaderUserId != null) {
-    const leaderUser = await prismaFindUserById(body.responsibleLeaderUserId)
-    if (!leaderUser || !leaderUser.isActive) {
-      return err(400, '责任领导用户不存在或已禁用')
+  async function validateResponsibleUser(
+    userId: number | null | undefined,
+    label: '责任领导' | '责任人',
+  ): Promise<ErrResult | null> {
+    if (userId == null) return null
+    const responsibleUser = await prismaFindUserById(userId)
+    if (!responsibleUser || !responsibleUser.isActive) {
+      return err(400, `${label}用户不存在或已禁用`)
     }
-    if (leaderUser.departmentId !== effectiveDeptId) {
-      return err(400, '责任领导不属于该责任部门')
+    if (responsibleUser.departmentId !== effectiveDeptId) {
+      return err(400, `${label}不属于该责任部门`)
     }
+    return null
   }
 
-  // Validate responsiblePersonUserId
-  if (body.responsiblePersonUserId != null) {
-    const personUser = await prismaFindUserById(body.responsiblePersonUserId)
-    if (!personUser || !personUser.isActive) {
-      return err(400, '责任人用户不存在或已禁用')
-    }
-    if (personUser.departmentId !== effectiveDeptId) {
-      return err(400, '责任人不属于该责任部门')
-    }
-  }
+  const leaderError = await validateResponsibleUser(effectiveLeaderUserId, '责任领导')
+  if (leaderError) return leaderError
+  const personError = await validateResponsibleUser(effectivePersonUserId, '责任人')
+  if (personError) return personError
 
   // Validate cooperator member IDs
   const cooperators = Array.isArray(body.cooperators) ? body.cooperators : []

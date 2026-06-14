@@ -210,6 +210,7 @@ cd /opt/supervision-system
 
 docker compose up -d db
 docker compose run --rm migrate
+docker compose run --rm migrate sh -c "node ./scripts/wait-for-db.mjs && ./node_modules/.bin/tsx docs/superpowers/scripts/backfill-responsible-users.ts"
 docker compose run --rm seed-admin
 docker compose up -d app
 ```
@@ -221,6 +222,7 @@ cd /opt/supervision-system
 
 docker-compose up -d db
 docker-compose run --rm migrate
+docker-compose run --rm migrate sh -c "node ./scripts/wait-for-db.mjs && ./node_modules/.bin/tsx docs/superpowers/scripts/backfill-responsible-users.ts"
 docker-compose run --rm seed-admin
 docker-compose up -d app
 ```
@@ -247,6 +249,7 @@ docker-compose up -d app
 cd /opt/supervision-system
 
 docker compose run --rm migrate
+docker compose run --rm migrate sh -c "node ./scripts/wait-for-db.mjs && ./node_modules/.bin/tsx docs/superpowers/scripts/backfill-responsible-users.ts"
 docker compose up -d app
 ```
 
@@ -256,10 +259,13 @@ docker compose up -d app
 cd /opt/supervision-system
 
 docker-compose run --rm migrate
+docker-compose run --rm migrate sh -c "node ./scripts/wait-for-db.mjs && ./node_modules/.bin/tsx docs/superpowers/scripts/backfill-responsible-users.ts"
 docker-compose up -d app
 ```
 
 不要每次升级都运行 `seed-admin`。只有部门基础数据或初始化账号规则变化时，才考虑运行 `seed-admin`，并且运行前必须先备份数据库。
+
+如果本次升级没有新增 `responsibleLeaderUserId` / `responsiblePersonUserId`，或该回填已在当前数据库执行并确认完成，可以跳过 responsible users backfill 命令。执行该命令后必须阅读输出报告；如仍有需要办理的历史进行中事项未回填 `responsiblePersonUserId`，应先人工处理后再启动新应用镜像。
 
 ## 13. 数据库备份
 

@@ -2,7 +2,7 @@
 set -e
 
 echo "======================================"
-echo "Running database migration..."
+echo "Backfilling responsible user fields..."
 echo "======================================"
 
 if [ ! -f ".env" ]; then
@@ -11,21 +11,15 @@ if [ ! -f ".env" ]; then
   exit 1
 fi
 
-echo "Pulling latest migrate image..."
-docker-compose pull migrate
-
 echo "Starting database..."
 docker-compose up -d db
 
-echo "Running database migration..."
-docker-compose run --rm migrate
+echo "Running responsible user backfill..."
+docker-compose run --rm migrate sh -c "node ./scripts/wait-for-db.mjs && ./node_modules/.bin/tsx docs/superpowers/scripts/backfill-responsible-users.ts"
 
-echo "Migration completed."
+echo "Backfill completed. Review the report above before deploying the app."
 
 echo "======================================"
-echo "After migration:"
-echo "  - If this release adds responsible user fields, run:"
-echo "      ./backfill-responsible-users.sh"
-echo "  - Then run deploy.sh to restart the app:"
+echo "After backfill, run deploy.sh to restart the app:"
 echo "  ./deploy.sh"
 echo "======================================"
