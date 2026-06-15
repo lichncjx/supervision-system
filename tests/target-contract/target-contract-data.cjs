@@ -556,10 +556,9 @@ function canHandle(user, work) {
   if (!canOperate(user, work)) return false;
 
   const targetStatus = getTargetStatus(work);
-  const ownerId = work.firstSubmitterId ?? work.creatorId;
 
   if (targetStatus === 'IN_PROGRESS')
-    return isReturnedInProgress(work) && ownerId === user.id;
+    return isReturnedInProgress(work);
 
   if (
     targetStatus === 'DRAFT' &&
