@@ -5,10 +5,7 @@ import { toPermissionUser } from '@/features/works/domain/work-permission-user.m
 import { findWorkForUpdateById } from '@/features/works/infrastructure/work.repository'
 import { findDepartmentById } from '@/features/departments/infrastructure/department.repository'
 import { findUserById as prismaFindUserById } from '@/features/users/infrastructure/user.repository'
-import {
-  isValidResponsibleLeaderUser,
-  isValidResponsiblePersonUser,
-} from '@/features/users/domain/responsible-user.rules'
+import { isDeptLeader, isDeptManager } from '@/features/users/domain/role.rules'
 import { validateMemberAssignments, type MemberAssignment } from '@/features/members/domain/member.rules'
 import { buildAdjustmentBeforeSnapshot, sanitizeAdjustmentPatch } from '@/features/workflow/application/adjustment-patch'
 import { getChangedAdjustmentFields } from '@/features/works/domain/work-adjustment-diff'
@@ -75,7 +72,7 @@ export async function submitAdjustment(
     if (leaderUser.departmentId !== effectiveDeptId) {
       return err(400, '责任领导不属于该责任部门')
     }
-    if (!isValidResponsibleLeaderUser(leaderUser)) {
+    if (!isDeptLeader(leaderUser.role)) {
       return err(400, '责任领导必须是部门领导')
     }
   } else if (
@@ -88,7 +85,7 @@ export async function submitAdjustment(
     if (leaderUser && leaderUser.departmentId !== effectiveDeptId) {
       return err(400, '当前责任领导不属于新的责任部门，请同时调整责任领导')
     }
-    if (leaderUser && !isValidResponsibleLeaderUser(leaderUser)) {
+    if (leaderUser && !isDeptLeader(leaderUser.role)) {
       return err(400, '当前责任领导必须是部门领导，请同时调整责任领导')
     }
   }
@@ -102,7 +99,7 @@ export async function submitAdjustment(
     if (personUser.departmentId !== effectiveDeptId) {
       return err(400, '责任人不属于该责任部门')
     }
-    if (!isValidResponsiblePersonUser(personUser)) {
+    if (!isDeptManager(personUser.role)) {
       return err(400, '责任人不能是部门领导')
     }
   } else if (
@@ -115,7 +112,7 @@ export async function submitAdjustment(
     if (personUser && personUser.departmentId !== effectiveDeptId) {
       return err(400, '当前责任人不属于新的责任部门，请同时调整责任人')
     }
-    if (personUser && !isValidResponsiblePersonUser(personUser)) {
+    if (personUser && !isDeptManager(personUser.role)) {
       return err(400, '当前责任人不能是部门领导，请同时调整责任人')
     }
   }

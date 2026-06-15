@@ -9,10 +9,7 @@ import {
 } from '@/features/works/infrastructure/work.repository'
 import { findDepartmentById } from '@/features/departments/infrastructure/department.repository'
 import { findUserById as prismaFindUserById } from '@/features/users/infrastructure/user.repository'
-import {
-  isValidResponsibleLeaderUser,
-  isValidResponsiblePersonUser,
-} from '@/features/users/domain/responsible-user.rules'
+import { isDeptLeader, isDeptManager } from '@/features/users/domain/role.rules'
 import { validateMemberAssignments, type MemberAssignment } from '@/features/members/domain/member.rules'
 import { toWorkDto } from '@/features/works/application/work.mapper'
 import type { WorkDto } from './work.dto'
@@ -114,10 +111,10 @@ export async function updateWorkUseCase(input: UpdateWorkInput): Promise<Result<
     if (responsibleUser.departmentId !== effectiveDeptId) {
       return err(400, `${label}不属于该责任部门`)
     }
-    if (label === '责任领导' && !isValidResponsibleLeaderUser(responsibleUser)) {
+    if (label === '责任领导' && !isDeptLeader(responsibleUser.role)) {
       return err(400, '责任领导必须是部门领导')
     }
-    if (label === '责任人' && !isValidResponsiblePersonUser(responsibleUser)) {
+    if (label === '责任人' && !isDeptManager(responsibleUser.role)) {
       return err(400, '责任人不能是部门领导')
     }
     return null

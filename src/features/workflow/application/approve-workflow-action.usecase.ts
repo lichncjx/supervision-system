@@ -4,10 +4,9 @@ import { isApproving } from '@/features/works/domain/work-status.rules'
 import { toPermissionUser } from '@/features/works/domain/work-permission-user.mapper'
 import type { BaseCurrentUser } from '@/shared/auth/current-user'
 import { canApproveWorkItem } from '@/features/works/domain/work.permissions'
-import { isCompanyLevel } from '@/features/users/domain/role.rules'
+import { isCompanyLevel, isDeptManager } from '@/features/users/domain/role.rules'
 import { findWorkForUpdateById, updateWorkItem } from '@/features/works/infrastructure/work.repository'
 import { findUserById } from '@/features/users/infrastructure/user.repository'
-import { isValidResponsiblePersonUser } from '@/features/users/domain/responsible-user.rules'
 import { ensureIsActiveCompanyLeader } from './workflow-next-approver.guard'
 import {
   buildAdjustHistoryEntry,
@@ -58,7 +57,7 @@ async function validateEffectiveResponsiblePerson(params: {
   if (responsiblePerson.departmentId !== departmentId) {
     return err(400, '责任人不属于责任部门，无法审批通过')
   }
-  if (!isValidResponsiblePersonUser(responsiblePerson)) {
+  if (!isDeptManager(responsiblePerson.role)) {
     return err(400, '责任人必须是部门事项管理岗，无法审批通过')
   }
 
