@@ -12,6 +12,7 @@ import {
   isValidResponsibleLeaderUser,
   isValidResponsiblePersonUser,
 } from '@/features/users/domain/responsible-user.rules'
+import { validateMemberAssignments, type MemberAssignment } from '@/features/members/domain/member.rules'
 import {
   createWorkflowRecord,
   createOperationLog,
@@ -23,6 +24,9 @@ export async function decomposeTodoWork(
   user: BaseCurrentUser,
   nodes: unknown[],
   comment?: string,
+  workPlan?: string | null,
+  planCompleteTime?: string | null,
+  cooperators?: unknown,
   responsibleLeaderUserId?: number | null,
   responsiblePersonUserId?: number | null,
   responsibleLeader?: string | null,
@@ -53,6 +57,12 @@ export async function decomposeTodoWork(
   if (!responsiblePersonUserId) {
     return err(400, '请先指定责任人后再提交分解方案')
   }
+  if (!workPlan?.trim()) {
+    return err(400, '请先填写工作计划后再提交分解方案')
+  }
+  if (!planCompleteTime) {
+    return err(400, '请先填写完成时间后再提交分解方案')
+  }
 
   // Validate responsiblePersonUserId belongs to the work item's department
   const personUser = await findUserById(responsiblePersonUserId)
@@ -80,6 +90,31 @@ export async function decomposeTodoWork(
     }
   }
 
+  const cooperatorList = Array.isArray(cooperators) ? cooperators : []
+  if (cooperatorList.some((c: any) => c.leaderMemberId != null || c.personMemberId != null)) {
+    const coopAssignments: MemberAssignment[] = []
+    for (const c of cooperatorList) {
+      if (c.leaderMemberId != null) {
+        coopAssignments.push({
+          memberId: Number(c.leaderMemberId),
+          role: 'leader',
+          departmentId: Number(c.departmentId),
+        })
+      }
+      if (c.personMemberId != null) {
+        coopAssignments.push({
+          memberId: Number(c.personMemberId),
+          role: 'person',
+          departmentId: Number(c.departmentId),
+        })
+      }
+    }
+    const coopErrors = await validateMemberAssignments(coopAssignments)
+    if (coopErrors.length > 0) {
+      return err(400, `配合方: ${coopErrors[0].message}`)
+    }
+  }
+
   const oldStatus = workItem.status
   const approver = getProposalFirstApprover(workItem, user)
   if (!approver) {
@@ -88,6 +123,9 @@ export async function decomposeTodoWork(
 
   await updateWorkItem(workItemId, {
     nodes,
+    workPlan,
+    planCompleteTime: new Date(`${planCompleteTime}T00:00:00.000Z`),
+    cooperators: cooperators ?? [],
     status: WorkItemStatus.PROPOSING,
     action: ActionType.TODO_DECOMPOSE,
     beforeApprovalStatus: oldStatus,

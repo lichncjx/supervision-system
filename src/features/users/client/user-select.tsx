@@ -53,10 +53,10 @@ export function UserSelect({
         if (!cancelled) setLoading(false)
       })
 
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [departmentId, filterLeaders, excludeLeaders])
-
-  const selectedUser = users.find((u) => u.id === value)
 
   return (
     <Select
@@ -70,9 +70,7 @@ export function UserSelect({
       disabled={disabled || !departmentId || loading}
     >
       <SelectTrigger className={SELECT_CONTROL}>
-        <SelectValue placeholder={loading ? '加载中...' : (placeholder || '请选择用户')}>
-          {selectedUser?.name}
-        </SelectValue>
+        <SelectValue placeholder={loading ? '加载中...' : (placeholder || '请选择用户')} />
       </SelectTrigger>
       <SelectContent>
         {users.map((user) => (

@@ -475,6 +475,7 @@ export default function WorkDetailPage() {
               rejectReason={work.rejectReason || ''}
               isReturned={!!(work.status === 'pending_decompose' && (work.rejectReason || work.rejectedFromStatus))}
               onSubmitDecomposition={handleDecompose}
+              departments={departments}
             />
           )}
 

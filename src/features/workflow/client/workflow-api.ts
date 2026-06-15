@@ -106,6 +106,11 @@ export async function submitTodoDecomposition(
     action: 'decompose',
     nodes,
     comment: '待办分解',
+    workPlan: patch.workPlan ?? null,
+    planCompleteTime: patch.planCompleteTime ?? null,
+  }
+  if (patch.cooperators !== undefined) {
+    body.cooperators = patch.cooperators
   }
   if (patch.responsibleLeaderUserId !== undefined) {
     body.responsibleLeaderUserId = patch.responsibleLeaderUserId
