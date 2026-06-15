@@ -9,6 +9,6 @@ export function isValidResponsibleLeaderUser(user: ResponsibleUserCandidate): bo
 }
 
 export function isValidResponsiblePersonUser(user: ResponsibleUserCandidate): boolean {
-  return user.role !== Role.DEPARTMENT_LEADER
+  return user.role === Role.DEPARTMENT_MANAGER
 }
 

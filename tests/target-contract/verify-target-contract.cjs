@@ -1121,8 +1121,23 @@ async function verifyWorkflowTransitions(baseUrl, loginByUsername, deptByCode, u
   const deptB = deptByCode.TDB;
   const manager = userByUsername.dept_manager_a1;
   const otherManager = userByUsername.dept_manager_a2;
+  const deptBManager = userByUsername.dept_manager_b1;
   const vp = userByUsername.vp_a;
   const president = userByUsername.president;
+
+  await prisma.user.deleteMany({
+    where: { username: { in: ['tc_workflow_admin_dept_a', 'tc_workflow_supervisor_dept_a'] } },
+  });
+  const tempAdmin = await prisma.user.create({
+    data: {
+      username: 'tc_workflow_admin_dept_a',
+      passwordHash: 'target-contract-not-used',
+      name: 'TC流程同部门管理员',
+      role: 'ADMIN',
+      departmentId: deptA.id,
+      isActive: true,
+    },
+  });
 
   const submitNodes = [{ title: '分解节点', completeTime: new Date().toISOString(), children: [] }];
   const decomposePayloadBase = {
@@ -1311,6 +1326,183 @@ async function verifyWorkflowTransitions(baseUrl, loginByUsername, deptByCode, u
       },
     },
     note: 'PR112: workflow API enforces the same responsible leader/person role split as the UI.',
+  });
+
+  const adminPersonCreateResponse = await request(baseUrl, 'POST', '/api/works', {
+    type: 'MAIN',
+    departmentId: deptA.id,
+    title: `${WORKFLOW_TEST_PREFIX}创建责任人为管理员拒绝`,
+    workItem: `${WORKFLOW_TEST_PREFIX}创建责任人为管理员拒绝`,
+    proposedLeaderId: vp.id,
+    approvalLeaderId: vp.id,
+    responsiblePersonUserId: tempAdmin.id,
+    planCompleteTime: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+  }, loginByUsername.dept_manager_a1.cookies);
+  const adminPersonCreated = await prisma.workItem.findFirst({
+    where: { title: `${WORKFLOW_TEST_PREFIX}创建责任人为管理员拒绝` },
+  });
+
+  const adminPersonDecomposeId = await createWorkflowWork({
+    title: `${WORKFLOW_TEST_PREFIX}分解责任人为管理员拒绝`,
+    type: 'TODO',
+    status: 'PENDING_DECOMPOSE',
+    creator: vp,
+    dept: deptA,
+    vp,
+    president,
+    responsiblePersonUserId: null,
+  });
+  const adminPersonDecompose = await runWorkflowStep(baseUrl, loginByUsername, 'dept_manager_a1', adminPersonDecomposeId, {
+    ...decomposePayloadBase,
+    responsiblePersonUserId: tempAdmin.id,
+    responsibleLeaderUserId: userByUsername.dept_leader_a.id,
+    responsiblePerson: tempAdmin.name,
+    responsibleLeader: userByUsername.dept_leader_a.name,
+  });
+
+  record({
+    role: 'workflow',
+    endpoint: 'responsiblePersonUserId rejects same-department global roles',
+    actual: {
+      createStatusCode: adminPersonCreateResponse.statusCode,
+      createPersisted: Boolean(adminPersonCreated),
+      adminPersonDecompose,
+    },
+    expected: {
+      createStatusCode: 400,
+      createPersisted: false,
+      adminPersonDecompose: {
+        statusCode: 400,
+        success: false,
+        work: {
+          status: 'PENDING_DECOMPOSE',
+          beforeApprovalStatus: null,
+          approvalType: null,
+          currentApproverId: null,
+          currentApproverRole: null,
+          rejectedFromStatus: null,
+        },
+        record: null,
+      },
+    },
+    note: 'PR112 review: responsible persons must be operable department manager users, not ADMIN/SUPERVISOR even when departmentId matches.',
+  });
+
+  const clearLeaderAdjustmentId = await createWorkflowWork({
+    title: `${WORKFLOW_TEST_PREFIX}调整换部门清空责任领导`,
+    type: 'MAIN',
+    status: 'IN_PROGRESS',
+    creator: manager,
+    dept: deptA,
+    vp,
+    president,
+    responsibleLeaderUserId: userByUsername.dept_leader_a.id,
+    responsiblePersonUserId: manager.id,
+  });
+  const clearLeaderAdjustment = await runWorkflowStep(baseUrl, loginByUsername, 'dept_manager_a1', clearLeaderAdjustmentId, {
+    action: 'adjust',
+    adjustReason: 'target-contract clear leader while changing department',
+    pendingAdjustment: {
+      departmentId: deptB.id,
+      responsibleLeaderUserId: null,
+      responsiblePersonUserId: deptBManager.id,
+    },
+  });
+
+  record({
+    role: 'workflow',
+    endpoint: 'POST /api/works/[id]/workflow adjustment allows clearing leader while changing department',
+    actual: { clearLeaderAdjustment },
+    expected: {
+      clearLeaderAdjustment: {
+        statusCode: 204,
+        success: true,
+        work: {
+          status: 'ADJUSTING',
+          beforeApprovalStatus: 'IN_PROGRESS',
+          approvalType: 'ADJUST',
+          currentApproverId: null,
+          currentApproverRole: 'DEPARTMENT_LEADER',
+          rejectedFromStatus: null,
+        },
+        record: { actionType: 'adjust', statusBefore: 'IN_PROGRESS', statusAfter: 'ADJUSTING' },
+      },
+    },
+    note: 'PR112 review: explicit responsibleLeaderUserId=null means clear optional leader, not retain and revalidate the old department leader.',
+  });
+
+  const inactiveBeforeFinalApproveId = await createWorkflowWork({
+    title: `${WORKFLOW_TEST_PREFIX}最终审批重校验责任人`,
+    type: 'MAIN',
+    status: 'DRAFT',
+    creator: manager,
+    dept: deptA,
+    vp,
+    president,
+    responsiblePersonUserId: manager.id,
+  });
+  const inactiveBeforeFinalSubmit = await runWorkflowStep(baseUrl, loginByUsername, 'dept_manager_a1', inactiveBeforeFinalApproveId, {
+    action: 'submit',
+  });
+  const inactiveBeforeFinalDeptApprove = await runWorkflowStep(baseUrl, loginByUsername, 'dept_leader_a', inactiveBeforeFinalApproveId, {
+    action: 'approve',
+  });
+  await prisma.user.update({ where: { id: manager.id }, data: { isActive: false } });
+  const inactiveBeforeFinalCompanyApprove = await runWorkflowStep(baseUrl, loginByUsername, 'vp_a', inactiveBeforeFinalApproveId, {
+    action: 'approve',
+  });
+  await prisma.user.update({ where: { id: manager.id }, data: { isActive: true } });
+
+  record({
+    role: 'workflow',
+    endpoint: 'POST /api/works/[id]/workflow final approval revalidates responsible person',
+    actual: {
+      inactiveBeforeFinalSubmit,
+      inactiveBeforeFinalDeptApprove,
+      inactiveBeforeFinalCompanyApprove,
+    },
+    expected: {
+      inactiveBeforeFinalSubmit: {
+        statusCode: 204,
+        success: true,
+        work: {
+          status: 'PROPOSING',
+          beforeApprovalStatus: 'DRAFT',
+          approvalType: 'PROPOSE',
+          currentApproverId: null,
+          currentApproverRole: 'DEPARTMENT_LEADER',
+          rejectedFromStatus: null,
+        },
+        record: { actionType: 'submit', statusBefore: 'DRAFT', statusAfter: 'PROPOSING' },
+      },
+      inactiveBeforeFinalDeptApprove: {
+        statusCode: 204,
+        success: true,
+        work: {
+          status: 'PROPOSING',
+          beforeApprovalStatus: 'DRAFT',
+          approvalType: 'PROPOSE',
+          currentApproverId: vp.id,
+          currentApproverRole: 'VICE_PRESIDENT',
+          rejectedFromStatus: null,
+        },
+        record: { actionType: 'approve', statusBefore: 'PROPOSING', statusAfter: 'PROPOSING' },
+      },
+      inactiveBeforeFinalCompanyApprove: {
+        statusCode: 400,
+        success: false,
+        work: {
+          status: 'PROPOSING',
+          beforeApprovalStatus: 'DRAFT',
+          approvalType: 'PROPOSE',
+          currentApproverId: vp.id,
+          currentApproverRole: 'VICE_PRESIDENT',
+          rejectedFromStatus: null,
+        },
+        record: { actionType: 'approve', statusBefore: 'PROPOSING', statusAfter: 'PROPOSING' },
+      },
+    },
+    note: 'PR112 review: final approval must re-read responsiblePersonUserId and reject inactive or invalid handlers before IN_PROGRESS.',
   });
 
   const responsibleAdjustId = await createWorkflowWork({

@@ -13,6 +13,14 @@ import { PrismaClient, Role } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
+function normalizeRole(value: unknown): string {
+  return String(value || '').trim().toUpperCase()
+}
+
+function isRole(value: unknown, role: Role): boolean {
+  return normalizeRole(value) === role || normalizeRole(value) === role.toUpperCase()
+}
+
 interface UnfilledEntry {
   id: number
   name: string
@@ -106,7 +114,7 @@ async function main() {
       row.leaderUserId &&
       row.leaderName &&
       row.leaderDepartmentId === row.departmentId &&
-      row.leaderRole === Role.DEPARTMENT_LEADER
+      isRole(row.leaderRole, Role.DEPARTMENT_LEADER)
     ) {
       data.responsibleLeaderUserId = row.leaderUserId
       data.responsibleLeader = row.leaderName
@@ -117,7 +125,7 @@ async function main() {
       row.personUserId &&
       row.personName &&
       row.personDepartmentId === row.departmentId &&
-      row.personRole !== Role.DEPARTMENT_LEADER
+      isRole(row.personRole, Role.DEPARTMENT_MANAGER)
     ) {
       data.responsiblePersonUserId = row.personUserId
       data.responsiblePerson = row.personName
@@ -225,7 +233,7 @@ async function main() {
           name: row.responsiblePerson,
           isActive: true,
           departmentId: row.departmentId,
-          role: { not: Role.DEPARTMENT_LEADER },
+          role: Role.DEPARTMENT_MANAGER,
         },
         select: { id: true, name: true },
       })
@@ -247,7 +255,7 @@ async function main() {
             name: row.responsiblePerson,
             isActive: false,
             departmentId: row.departmentId,
-            role: { not: Role.DEPARTMENT_LEADER },
+            role: Role.DEPARTMENT_MANAGER,
           },
           select: { id: true, name: true },
         })

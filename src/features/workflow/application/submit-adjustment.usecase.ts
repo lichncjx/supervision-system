@@ -15,6 +15,10 @@ import { getChangedAdjustmentFields } from '@/features/works/domain/work-adjustm
 import { createAdjustmentTransitional, createWorkflowRecord, createOperationLog } from '@/features/workflow/infrastructure/workflow.repository'
 import { type Result, err, ok } from '@/shared/result'
 
+function hasPatchField(patch: Record<string, unknown>, field: string): boolean {
+  return Object.prototype.hasOwnProperty.call(patch, field)
+}
+
 export async function submitAdjustment(
   workItemId: number,
   user: BaseCurrentUser,
@@ -60,6 +64,9 @@ export async function submitAdjustment(
   }
 
   // Validate responsibleLeaderUserId if present in patch
+  const hasLeaderPatch = hasPatchField(patch, 'responsibleLeaderUserId')
+  const hasPersonPatch = hasPatchField(patch, 'responsiblePersonUserId')
+
   if (patch.responsibleLeaderUserId != null) {
     const leaderUser = await prismaFindUserById(Number(patch.responsibleLeaderUserId))
     if (!leaderUser || !leaderUser.isActive) {
@@ -73,6 +80,7 @@ export async function submitAdjustment(
     }
   } else if (
     patch.departmentId != null &&
+    !hasLeaderPatch &&
     workItem.responsibleLeaderUserId != null
   ) {
     // Department changed but leader stays — revalidate existing leader against new dept
@@ -99,6 +107,7 @@ export async function submitAdjustment(
     }
   } else if (
     patch.departmentId != null &&
+    !hasPersonPatch &&
     workItem.responsiblePersonUserId != null
   ) {
     // Department changed but person stays — revalidate existing person against new dept
