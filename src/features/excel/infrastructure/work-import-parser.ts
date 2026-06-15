@@ -1,4 +1,5 @@
 import * as XLSX from 'xlsx'
+import { Role } from '@prisma/client'
 import {
   parseExcelDate,
   isAllowedImportedStatus,
@@ -16,7 +17,7 @@ interface CompanyLeaderInfo {
 }
 
 interface DepartmentUserInfo {
-  id: number; name: string; departmentId: number
+  id: number; name: string; departmentId: number; role: Role | string
 }
 
 export async function validateAndParseExcel(
@@ -75,24 +76,37 @@ export async function validateAndParseExcel(
     else { nameToUsers.set(u.name, [u]) }
   }
 
-  // Only names with exactly one active user can be auto-matched
-  const uniqueNameToUserId = new Map<string, number>()
-  for (const [name, users] of nameToUsers) {
-    if (users.length === 1) uniqueNameToUserId.set(name, users[0].id)
-  }
-
-  function resolveUserName(field: string, name: string, rowNum: number, expectedDeptId?: number | null) {
+  function resolveUserName(
+    field: string,
+    name: string,
+    rowNum: number,
+    expectedDeptId: number | null | undefined,
+    expectedKind: 'leader' | 'person',
+  ) {
     const matches = nameToUsers.get(name)
     if (!matches) return null
-    if (matches.length > 1) {
-      errors.push({ row: rowNum, field, value: name,
-        reason: `姓名"${name}"匹配到 ${matches.length} 个系统用户，无法自动关联，请在系统中手动指定` })
-      return null
-    }
-    const user = matches[0]
-    if (expectedDeptId != null && user.departmentId !== expectedDeptId) {
+    const scopedMatches = expectedDeptId != null
+      ? matches.filter((user) => user.departmentId === expectedDeptId)
+      : matches
+    if (scopedMatches.length === 0 && expectedDeptId != null) {
       errors.push({ row: rowNum, field, value: name,
         reason: `用户"${name}"不属于该事项的责任部门，无法自动关联` })
+      return null
+    }
+    if (scopedMatches.length > 1) {
+      errors.push({ row: rowNum, field, value: name,
+        reason: `姓名"${name}"在该责任部门匹配到 ${scopedMatches.length} 个系统用户，无法自动关联，请在系统中手动指定` })
+      return null
+    }
+    const user = scopedMatches[0]
+    if (expectedKind === 'leader' && user.role !== Role.DEPARTMENT_LEADER) {
+      errors.push({ row: rowNum, field, value: name,
+        reason: `用户"${name}"不是部门领导，不能作为责任领导` })
+      return null
+    }
+    if (expectedKind === 'person' && user.role === Role.DEPARTMENT_LEADER) {
+      errors.push({ row: rowNum, field, value: name,
+        reason: `用户"${name}"是部门领导，不能作为责任人` })
       return null
     }
     return user.id
@@ -224,10 +238,10 @@ export async function validateAndParseExcel(
 
       if (errors.filter((e) => e.row === rowNum).length === 0) {
         const responsibleLeaderUserId = responsibleLeader
-          ? resolveUserName('责任领导', responsibleLeader, rowNum, resolvedDeptId)
+          ? resolveUserName('责任领导', responsibleLeader, rowNum, resolvedDeptId, 'leader')
           : null
         const responsiblePersonUserId = responsiblePerson
-          ? resolveUserName('责任人', responsiblePerson, rowNum, resolvedDeptId)
+          ? resolveUserName('责任人', responsiblePerson, rowNum, resolvedDeptId, 'person')
           : null
         rows.push({
           row: rowNum,
@@ -338,10 +352,10 @@ export async function validateAndParseExcel(
 
       if (errors.filter((e) => e.row === rowNum).length === 0) {
         const responsibleLeaderUserId = responsibleLeader
-          ? resolveUserName('责任领导', responsibleLeader, rowNum, resolvedDeptId)
+          ? resolveUserName('责任领导', responsibleLeader, rowNum, resolvedDeptId, 'leader')
           : null
         const responsiblePersonUserId = responsiblePerson
-          ? resolveUserName('责任人', responsiblePerson, rowNum, resolvedDeptId)
+          ? resolveUserName('责任人', responsiblePerson, rowNum, resolvedDeptId, 'person')
           : null
         rows.push({
           row: rowNum,
@@ -474,10 +488,10 @@ export async function validateAndParseExcel(
 
       if (errors.filter((e) => e.row === rowNum).length === 0) {
         const responsibleLeaderUserId = responsibleLeader
-          ? resolveUserName('责任领导', responsibleLeader, rowNum, resolvedDeptId)
+          ? resolveUserName('责任领导', responsibleLeader, rowNum, resolvedDeptId, 'leader')
           : null
         const responsiblePersonUserId = responsiblePerson
-          ? resolveUserName('责任人', responsiblePerson, rowNum, resolvedDeptId)
+          ? resolveUserName('责任人', responsiblePerson, rowNum, resolvedDeptId, 'person')
           : null
         rows.push({
           row: rowNum,

@@ -6,10 +6,10 @@
 // 2. responsiblePersonMemberId -> Member.userId -> responsiblePersonUserId
 // 3. responsibleLeader 姓名匹配 User.name -> responsibleLeaderUserId
 // 4. responsiblePerson 姓名匹配 User.name -> responsiblePersonUserId
-// 5. 仅匹配到唯一 isActive=true 的 User 时自动回填
+// 5. 仅匹配到同责任部门、正确角色、唯一 isActive=true 的 User 时自动回填
 // 6. 回填成功后同步姓名快照
 
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient, Role } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
@@ -60,20 +60,34 @@ async function main() {
       id: number
       responsibleLeaderMemberId: number | null
       responsiblePersonMemberId: number | null
+      responsibleLeaderUserId: number | null
+      responsiblePersonUserId: number | null
+      departmentId: number | null
       leaderUserId: number | null
       leaderName: string | null
+      leaderRole: Role | null
+      leaderDepartmentId: number | null
       personUserId: number | null
       personName: string | null
+      personRole: Role | null
+      personDepartmentId: number | null
     }>
   >`
     SELECT
       w.id,
       w."responsibleLeaderMemberId",
       w."responsiblePersonMemberId",
+      w."responsibleLeaderUserId",
+      w."responsiblePersonUserId",
+      w."departmentId",
       lm."userId" AS "leaderUserId",
       lu.name AS "leaderName",
+      lu.role AS "leaderRole",
+      lu."departmentId" AS "leaderDepartmentId",
       pm."userId" AS "personUserId",
-      pu.name AS "personName"
+      pu.name AS "personName",
+      pu.role AS "personRole",
+      pu."departmentId" AS "personDepartmentId"
     FROM "work_items" w
     LEFT JOIN "members" lm ON lm.id = w."responsibleLeaderMemberId"
     LEFT JOIN "users" lu ON lu.id = lm."userId" AND lu."isActive" = true
@@ -87,12 +101,24 @@ async function main() {
 
   for (const row of viaMember) {
     const data: Record<string, unknown> = {}
-    if (row.leaderUserId && row.leaderName) {
+    if (
+      row.responsibleLeaderUserId == null &&
+      row.leaderUserId &&
+      row.leaderName &&
+      row.leaderDepartmentId === row.departmentId &&
+      row.leaderRole === Role.DEPARTMENT_LEADER
+    ) {
       data.responsibleLeaderUserId = row.leaderUserId
       data.responsibleLeader = row.leaderName
       report.autoFilledLeader++
     }
-    if (row.personUserId && row.personName) {
+    if (
+      row.responsiblePersonUserId == null &&
+      row.personUserId &&
+      row.personName &&
+      row.personDepartmentId === row.departmentId &&
+      row.personRole !== Role.DEPARTMENT_LEADER
+    ) {
       data.responsiblePersonUserId = row.personUserId
       data.responsiblePerson = row.personName
       report.autoFilledPerson++
@@ -110,6 +136,7 @@ async function main() {
       responsiblePerson: string | null
       responsibleLeaderUserId: number | null
       responsiblePersonUserId: number | null
+      departmentId: number | null
     }>
   >`
     SELECT
@@ -117,7 +144,8 @@ async function main() {
       "responsibleLeader",
       "responsiblePerson",
       "responsibleLeaderUserId",
-      "responsiblePersonUserId"
+      "responsiblePersonUserId",
+      "departmentId"
     FROM "work_items"
     WHERE ("responsibleLeaderUserId" IS NULL
        AND "responsibleLeader" IS NOT NULL
@@ -130,8 +158,19 @@ async function main() {
   for (const row of viaName) {
     // ── Match leader by name ──
     if (!row.responsibleLeaderUserId && row.responsibleLeader) {
-      const activeMatches = await prisma.user.findMany({
-        where: { name: row.responsibleLeader, isActive: true },
+      if (row.departmentId == null) {
+        report.unfilledLeader.push({
+          id: row.id,
+          name: row.responsibleLeader,
+        })
+      } else {
+        const activeMatches = await prisma.user.findMany({
+        where: {
+          name: row.responsibleLeader,
+          isActive: true,
+          departmentId: row.departmentId,
+          role: Role.DEPARTMENT_LEADER,
+        },
         select: { id: true, name: true },
       })
       if (activeMatches.length === 1) {
@@ -148,7 +187,12 @@ async function main() {
         })
       } else {
         const inactiveMatches = await prisma.user.findMany({
-          where: { name: row.responsibleLeader, isActive: false },
+          where: {
+            name: row.responsibleLeader,
+            isActive: false,
+            departmentId: row.departmentId,
+            role: Role.DEPARTMENT_LEADER,
+          },
           select: { id: true, name: true },
         })
         if (inactiveMatches.length > 0) {
@@ -165,12 +209,24 @@ async function main() {
           })
         }
       }
+      }
     }
 
     // ── Match person by name ──
     if (!row.responsiblePersonUserId && row.responsiblePerson) {
-      const activeMatches = await prisma.user.findMany({
-        where: { name: row.responsiblePerson, isActive: true },
+      if (row.departmentId == null) {
+        report.unfilledPerson.push({
+          id: row.id,
+          name: row.responsiblePerson,
+        })
+      } else {
+        const activeMatches = await prisma.user.findMany({
+        where: {
+          name: row.responsiblePerson,
+          isActive: true,
+          departmentId: row.departmentId,
+          role: { not: Role.DEPARTMENT_LEADER },
+        },
         select: { id: true, name: true },
       })
       if (activeMatches.length === 1) {
@@ -187,7 +243,12 @@ async function main() {
         })
       } else {
         const inactiveMatches = await prisma.user.findMany({
-          where: { name: row.responsiblePerson, isActive: false },
+          where: {
+            name: row.responsiblePerson,
+            isActive: false,
+            departmentId: row.departmentId,
+            role: { not: Role.DEPARTMENT_LEADER },
+          },
           select: { id: true, name: true },
         })
         if (inactiveMatches.length > 0) {
@@ -203,6 +264,7 @@ async function main() {
             name: row.responsiblePerson,
           })
         }
+      }
       }
     }
   }

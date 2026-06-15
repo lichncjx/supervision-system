@@ -14,7 +14,7 @@ export async function findCompanyLeaders() {
 export async function findAllActiveUsers() {
   return prisma.user.findMany({
     where: { isActive: true },
-    select: { id: true, name: true, departmentId: true },
+    select: { id: true, name: true, departmentId: true, role: true },
   })
 }
 

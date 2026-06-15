@@ -9,6 +9,10 @@ import { toPermissionUser } from '@/features/works/domain/work-permission-user.m
 import { findWorkForUpdateById, updateWorkItem } from '@/features/works/infrastructure/work.repository'
 import { findUserById } from '@/features/users/infrastructure/user.repository'
 import {
+  isValidResponsibleLeaderUser,
+  isValidResponsiblePersonUser,
+} from '@/features/users/domain/responsible-user.rules'
+import {
   createWorkflowRecord,
   createOperationLog,
 } from '@/features/workflow/infrastructure/workflow.repository'
@@ -58,6 +62,9 @@ export async function decomposeTodoWork(
   if (personUser.departmentId !== workItem.departmentId) {
     return err(400, '责任人不属于该责任部门')
   }
+  if (!isValidResponsiblePersonUser(personUser)) {
+    return err(400, '责任人不能是部门领导')
+  }
 
   // Validate responsibleLeaderUserId if provided
   if (responsibleLeaderUserId) {
@@ -67,6 +74,9 @@ export async function decomposeTodoWork(
     }
     if (leaderUser.departmentId !== workItem.departmentId) {
       return err(400, '责任领导不属于该责任部门')
+    }
+    if (!isValidResponsibleLeaderUser(leaderUser)) {
+      return err(400, '责任领导必须是部门领导')
     }
   }
 

@@ -3,6 +3,10 @@ import { Role, WorkItemType, WorkItemStatus } from '@prisma/client'
 import { createWorkItem, createWorkOperationLog } from '@/features/works/infrastructure/work.repository'
 import { findDepartmentById } from '@/features/departments/infrastructure/department.repository'
 import { findUserById as prismaFindUserById } from '@/features/users/infrastructure/user.repository'
+import {
+  isValidResponsibleLeaderUser,
+  isValidResponsiblePersonUser,
+} from '@/features/users/domain/responsible-user.rules'
 import { validateMemberAssignments, type MemberAssignment } from '@/features/members/domain/member.rules'
 import { toWorkDto } from '@/features/works/application/work.mapper'
 import type { WorkDto } from './work.dto'
@@ -113,6 +117,9 @@ export async function createWorkUseCase(input: CreateWorkInput): Promise<Result<
     if (leaderUser.departmentId !== departmentId) {
       return err(400, '责任领导不属于该责任部门')
     }
+    if (!isValidResponsibleLeaderUser(leaderUser)) {
+      return err(400, '责任领导必须是部门领导')
+    }
   }
 
   // Validate responsiblePersonUserId
@@ -123,6 +130,9 @@ export async function createWorkUseCase(input: CreateWorkInput): Promise<Result<
     }
     if (personUser.departmentId !== departmentId) {
       return err(400, '责任人不属于该责任部门')
+    }
+    if (!isValidResponsiblePersonUser(personUser)) {
+      return err(400, '责任人不能是部门领导')
     }
   }
 
