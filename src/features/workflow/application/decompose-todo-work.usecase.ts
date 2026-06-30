@@ -122,7 +122,7 @@ export async function decomposeTodoWork(
     nodes,
     workPlan,
     planCompleteTime: new Date(`${planCompleteTime}T00:00:00.000Z`),
-    cooperators: cooperators ?? [],
+    cooperators: cooperators ?? workItem.cooperators,
     status: WorkItemStatus.PROPOSING,
     action: ActionType.TODO_DECOMPOSE,
     beforeApprovalStatus: oldStatus,

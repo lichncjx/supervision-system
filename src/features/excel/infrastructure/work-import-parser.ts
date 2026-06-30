@@ -7,6 +7,7 @@ import {
   type ImportCooperator,
 } from '@/features/excel/domain/excel-import.rules'
 import type { ValidationError as ImportValidationError } from '@/features/excel/domain/excel-import.rules'
+import { isDeptLeader, isDeptManager } from '@/features/users/domain/role.rules'
 
 interface DepartmentInfo {
   id: number; name: string; code: string | null
@@ -84,7 +85,11 @@ export async function validateAndParseExcel(
     expectedKind: 'leader' | 'person',
   ) {
     const matches = nameToUsers.get(name)
-    if (!matches) return null
+    if (!matches || matches.length === 0) {
+      errors.push({ row: rowNum, field, value: name,
+        reason: `系统中未找到启用的用户"${name}"，无法自动关联` })
+      return null
+    }
     const scopedMatches = expectedDeptId != null
       ? matches.filter((user) => user.departmentId === expectedDeptId)
       : matches
@@ -99,18 +104,21 @@ export async function validateAndParseExcel(
       return null
     }
     const user = scopedMatches[0]
-    if (expectedKind === 'leader' && user.role !== Role.DEPARTMENT_LEADER) {
+    if (expectedKind === 'leader' && !isDeptLeader(user.role)) {
       errors.push({ row: rowNum, field, value: name,
         reason: `用户"${name}"不是部门领导，不能作为责任领导` })
       return null
     }
-    if (expectedKind === 'person' && user.role === Role.DEPARTMENT_LEADER) {
+    if (expectedKind === 'person' && !isDeptManager(user.role)) {
       errors.push({ row: rowNum, field, value: name,
-        reason: `用户"${name}"是部门领导，不能作为责任人` })
+        reason: `用户"${name}"不是部门主管，不能作为责任人` })
       return null
     }
     return user.id
   }
+
+  const hasRowErrors = (rowNum: number) =>
+    errors.some((error) => error.row === rowNum)
 
   for (let i = 0; i < jsonData.length; i++) {
     const row = jsonData[i]
@@ -236,13 +244,14 @@ export async function validateAndParseExcel(
         }
       }
 
-      if (errors.filter((e) => e.row === rowNum).length === 0) {
+      if (!hasRowErrors(rowNum)) {
         const responsibleLeaderUserId = responsibleLeader
           ? resolveUserName('责任领导', responsibleLeader, rowNum, resolvedDeptId, 'leader')
           : null
         const responsiblePersonUserId = responsiblePerson
           ? resolveUserName('责任人', responsiblePerson, rowNum, resolvedDeptId, 'person')
           : null
+        if (hasRowErrors(rowNum)) continue
         rows.push({
           row: rowNum,
           data: {
@@ -350,13 +359,14 @@ export async function validateAndParseExcel(
         }
       }
 
-      if (errors.filter((e) => e.row === rowNum).length === 0) {
+      if (!hasRowErrors(rowNum)) {
         const responsibleLeaderUserId = responsibleLeader
           ? resolveUserName('责任领导', responsibleLeader, rowNum, resolvedDeptId, 'leader')
           : null
         const responsiblePersonUserId = responsiblePerson
           ? resolveUserName('责任人', responsiblePerson, rowNum, resolvedDeptId, 'person')
           : null
+        if (hasRowErrors(rowNum)) continue
         rows.push({
           row: rowNum,
           data: {
@@ -486,13 +496,14 @@ export async function validateAndParseExcel(
         }
       }
 
-      if (errors.filter((e) => e.row === rowNum).length === 0) {
+      if (!hasRowErrors(rowNum)) {
         const responsibleLeaderUserId = responsibleLeader
           ? resolveUserName('责任领导', responsibleLeader, rowNum, resolvedDeptId, 'leader')
           : null
         const responsiblePersonUserId = responsiblePerson
           ? resolveUserName('责任人', responsiblePerson, rowNum, resolvedDeptId, 'person')
           : null
+        if (hasRowErrors(rowNum)) continue
         rows.push({
           row: rowNum,
           data: {
