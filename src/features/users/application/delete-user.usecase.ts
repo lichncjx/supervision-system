@@ -1,6 +1,10 @@
 import { isAdmin } from '@/features/users/domain/role.rules'
 import { PROTECTED_USERNAMES } from '@/features/users/domain/protected-usernames'
-import { findUserById, deleteUser } from '@/features/users/infrastructure/user.repository'
+import {
+  countOpenResponsibleWorks,
+  findUserById,
+  deleteUser,
+} from '@/features/users/infrastructure/user.repository'
 import { type Result, err, ok } from '@/shared/result'
 
 export async function deleteUserUseCase(
@@ -22,6 +26,14 @@ export async function deleteUserUseCase(
 
   if (PROTECTED_USERNAMES.includes(user.username)) {
     return err(403, '内置账号不允许删除')
+  }
+
+  const openResponsibleWorks = await countOpenResponsibleWorks(userId)
+  if (openResponsibleWorks > 0) {
+    return err(
+      400,
+      `该用户仍是 ${openResponsibleWorks} 个未完成事项的责任人，请先处理责任人变更后再删除。`,
+    )
   }
 
   await deleteUser(userId)

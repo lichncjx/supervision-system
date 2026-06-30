@@ -1,4 +1,4 @@
-import { Role } from '@prisma/client'
+import { Role, WorkItemStatus } from '@prisma/client'
 import { prisma } from '@/shared/db/prisma'
 
 // ── Company leaders (used by workflow + users routes) ──
@@ -112,6 +112,17 @@ export async function updateUser(
 
 export async function deleteUser(id: number) {
   await prisma.user.delete({ where: { id } })
+}
+
+export async function countOpenResponsibleWorks(userId: number) {
+  return prisma.workItem.count({
+    where: {
+      responsiblePersonUserId: userId,
+      status: {
+        notIn: [WorkItemStatus.COMPLETED, WorkItemStatus.CANCELLED],
+      },
+    },
+  })
 }
 
 // ── Department user queries (used by department-leaders/managers/by-department) ──
