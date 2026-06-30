@@ -57,7 +57,6 @@ ENV NODE_ENV=production
 COPY --from=deps /app/node_modules ./node_modules
 COPY package.json pnpm-lock.yaml ./
 COPY prisma ./prisma
-COPY docs/superpowers/scripts/backfill-responsible-users.ts ./docs/superpowers/scripts/backfill-responsible-users.ts
 COPY scripts/wait-for-db.mjs ./scripts/wait-for-db.mjs
 
 RUN ./node_modules/.bin/prisma generate --schema=./prisma/schema.prisma

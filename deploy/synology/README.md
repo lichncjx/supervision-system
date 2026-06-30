@@ -25,7 +25,6 @@
 |------|------|----------|
 | `deploy.sh` | 日常应用发布 | 普通业务代码、页面、权限、统计修复等更新 |
 | `migrate.sh` | 数据库迁移 | 涉及 `prisma/**`、数据库表结构、字段、迁移文件变化时 |
-| `backfill-responsible-users.sh` | 责任人系统用户回填 | 执行新增 `responsibleLeaderUserId` / `responsiblePersonUserId` 字段后、发布应用前 |
 
 ### 什么时候用哪个脚本
 
@@ -92,12 +91,11 @@ sh deploy.sh
 
 ### 涉及数据库变化时的发布
 
-涉及 `prisma/**` 或数据库结构变化时，先执行 `migrate.sh`，再执行 `deploy.sh`。如果本次 migration 新增了 `responsibleLeaderUserId` / `responsiblePersonUserId`，必须在迁移后、发布前执行责任人回填：
+涉及 `prisma/**` 或数据库结构变化时，先执行 `migrate.sh`，再执行 `deploy.sh`：
 
 ```bash
 cd /volume1/docker/supervision-system
 sh migrate.sh
-sh backfill-responsible-users.sh
 sh deploy.sh
 ```
 
@@ -109,30 +107,6 @@ sh deploy.sh
 > 5. 不使用 `-f` 参数
 > 6. 用户会手动将 compose 文件改名为默认识别文件名
 
-### 数据回填（Data Backfill）
-
-部分 migration 新增字段后，历史数据可能需要回填。回填可能是 SQL，也可能是 TypeScript 脚本；TS 回填通过 `migrate` 镜像执行，内网服务器不需要安装 Node、pnpm 或依赖。
-
-当前仓库中保留的回填参考：
-- `docs/archive/backfill-first-submitter-id.sql`（关联 Issue #8，已执行完毕，仅供回填模式参考）
-- `docs/superpowers/scripts/backfill-responsible-users.ts`（回填 `responsibleLeaderUserId` / `responsiblePersonUserId`，通过 `backfill-responsible-users.sh` 执行）
-
-> **注意**：Phase 2 的 `deptLeaderId` / `deptLeaderName` / `deptManagerId` / `deptManagerName` 字段已在 Phase 7 删除，不再需要执行相关回填。当前字段体系（`departmentId` + `responsibleLeader` + `responsiblePerson` + `cooperators`）见 `docs/core/业务规则.md`。
-
-责任人系统用户回填执行步骤：
-
-```bash
-# 1. 先执行迁移
-sh migrate.sh
-
-# 2. 执行责任人系统用户回填，并检查输出报告
-sh backfill-responsible-users.sh
-
-# 3. 确认回填成功后，再发布应用
-sh deploy.sh
-```
-
-> **注意**：责任人回填会自动匹配唯一且启用的系统用户，并输出未匹配、重名、多匹配、禁用用户清单。发布前必须阅读输出报告；如仍有需要办理的历史进行中事项未回填 `responsiblePersonUserId`，应先人工处理后再发布应用。
 > **执行 migration 后必须执行 `prisma generate`**，确保 Prisma Client 类型与数据库结构一致。部署脚本（deploy.sh / migrate.sh）中已包含此步骤。
 
 ## 查看日志
@@ -269,16 +243,14 @@ sh migrate.sh
 
 以下 migration 已合入 `main`，部署时需确保已执行：
 
-| 阶段 | 内容 | 涉及表 | 是否需要回填 |
-|------|------|--------|-------------|
-| Phase 2 | 新增 `deptLeaderId` / `deptLeaderName` / `deptManagerId` / `deptManagerName` 四列 | `work_items` | **是**（需执行回填 SQL，将旧字段匹配到新 ID/Name 字段） |
-| Phase 3A | 新增 `category` 字段 | `attachments` | 否（DEFAULT 'general' 自动覆盖存量行） |
-| 责任人系统用户 | 新增 `responsibleLeaderUserId` / `responsiblePersonUserId` | `work_items` | **是**（执行 `sh backfill-responsible-users.sh`） |
+| 阶段 | 内容 | 涉及表 |
+|------|------|--------|
+| Phase 2 | 新增 `deptLeaderId` / `deptLeaderName` / `deptManagerId` / `deptManagerName` 四列 | `work_items` |
+| Phase 3A | 新增 `category` 字段 | `attachments` |
 
-**回填执行顺序**：
+**执行顺序**：
 1. 先执行 `sh migrate.sh`（DDL 变更）
-2. 再执行回填 SQL 或 TS 脚本（数据回填）
-3. 最后执行 `sh deploy.sh`（发布应用）
+2. 再执行 `sh deploy.sh`（发布应用）
 
 旧字段 `responsibleLeader` / `supervisor` 未删除，不需要清理历史数据。
 

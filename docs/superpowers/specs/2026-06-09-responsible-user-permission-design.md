@@ -144,32 +144,6 @@ responsiblePersonWorkItems WorkItem[] @relation("ResponsiblePersonUserWorkItems"
 
 不删除 `Member`、`responsibleLeaderMemberId`、`responsiblePersonMemberId`。
 
-## 五、阶段 3：历史数据回填
-
-按优先级执行独立回填脚本。Prisma migration 只负责新增字段和索引；回填脚本负责匹配、写入、输出待人工确认清单。
-
-```
-1. responsibleLeaderMemberId -> Member.userId -> responsibleLeaderUserId
-2. responsiblePersonMemberId -> Member.userId -> responsiblePersonUserId
-3. 如果 Member.userId 为空，用 responsibleLeader 姓名匹配 User.name
-4. 如果 Member.userId 为空，用 responsiblePerson 姓名匹配 User.name
-5. 仅匹配到唯一 isActive=true 的 User 时自动回填
-6. 重名、未匹配、非 active 用户输出清单，不自动处理
-7. 回填成功后同步姓名快照：responsibleLeader = User.name, responsiblePerson = User.name
-```
-
-此阶段必须在阶段 5 权限改造前完成，确保权限判断有数据基础。
-
-脚本输出要求：
-
-```text
-1. 自动回填成功数量
-2. responsibleLeaderUserId 未回填清单
-3. responsiblePersonUserId 未回填清单
-4. 重名/多匹配清单
-5. inactive user 匹配清单
-```
-
 ## 六、阶段 4：创建/编辑/分解表单
 
 ### 6.1 create-work.usecase.ts
@@ -474,7 +448,7 @@ export function canUploadAttachment(user, workItem): boolean {
 7. 调整责任人审批通过后，新责任人可办理，旧责任人失去办理权
 8. 首页待办理数量和点击后列表一致
 9. 普通附件上传保持现有主责部门口径；提交完成材料/证明材料的 workflow 动作由责任人执行
-10. 导入历史姓名能唯一匹配用户时正确回填 UserId
+10. 导入历史姓名能唯一匹配用户时正确迁移 UserId
 
 ### 本地检查
 
@@ -487,7 +461,7 @@ pnpm build
 
 ## 十一、风险点
 
-1. **历史数据回填覆盖率**：不是所有 Member 都有 userId，匹配可能不完整。不完整的保持 NULL，权限判断中 `responsiblePersonUserId === user.id` 自然为 false，不产生错误权限。
+1. **历史数据迁移覆盖率**：不是所有 Member 都有 userId，匹配可能不完整。不完整的保持 NULL，权限判断中 `responsiblePersonUserId === user.id` 自然为 false，不产生错误权限。
 2. **Member 表暂不删除**：`responsibleLeaderMemberId` / `responsiblePersonMemberId` DB 列保留（历史数据可查），但应用层不再读写、不再展示。
 3. **导入匹配准确性**：同名用户可能导致错误匹配，需输出警告清单供人工确认。
 4. **`canOperateWorkItem` 改动影响面**：workflow 全部 POST 操作依赖此函数，测试需全覆盖。普通附件上传默认不收紧；如启用 §7.3 可选项，再补充附件上传回归。
@@ -501,6 +475,6 @@ pnpm build
 | `canViewWorkItem` 新增自引用可见性 | 不修改 | 部门范围已天然覆盖责任人/责任领导，不需要额外自引用条件 |
 | `buildWorkVisibilityWhere` 新增 responsible 条件 | 不修改 | 同上，部门范围 ≥ 自引用可见性 |
 | `canOperateWorkItem` 中 `isGlobalView` 挪后 | 保持最前 | 用户指正 |
-| 历史回填为建议 | 升级为前置必要条件 | 用户要求 |
+| 历史迁移为建议 | 升级为前置必要条件 | 用户要求 |
 | 前端变更未提及 | 补全 9 个前端文件的详细改造 | 用户指正 |
 | 附件权限自动适配 | 改为可选收紧项 | 普通附件上传是否收紧属于独立业务口径，避免默认扩大范围 |

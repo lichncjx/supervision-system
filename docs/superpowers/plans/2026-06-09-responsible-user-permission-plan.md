@@ -17,37 +17,36 @@
 | # | File | Phase | Responsibility |
 |---|------|-------|----------------|
 | 1 | `prisma/schema.prisma` | 2 | New FK fields, relations, indexes |
-| 2 | `docs/superpowers/scripts/backfill-responsible-users.ts` | 3 | Historical data backfill script |
-| 3 | `src/features/works/domain/work.permissions.ts` | 5 | Core: `canOperateWorkItem` restructure |
-| 4 | `src/features/works/application/create-work.usecase.ts` | 4 | Accept userId, drop MemberId, validate User |
-| 5 | `src/features/works/application/update-work.usecase.ts` | 4 | Same; block IN_PROGRESS direct changes |
-| 6 | `src/features/works/application/work.dto.ts` | 4 | Add userId, drop MemberId |
-| 7 | `src/features/works/application/work.mapper.ts` | 4 | Map new fields from Prisma result |
-| 8 | `src/features/works/client/work-client.types.ts` | 4 | Add userId, drop MemberId |
-| 9 | `src/features/works/client/work-client.mapper.ts` | 4 | Transform userId in API → client |
-| 10 | `src/features/works/client/build-create-work-payload.ts` | 4 | Pass userId, drop MemberId |
-| 11 | `src/features/works/ui/work-form-fields.tsx` | 4 | Rewrite `ResponsibleFields` props + render |
-| 12 | `src/features/users/client/user-select.tsx` | 4 | **NEW** User selector component |
-| 13 | `src/features/users/application/list-department-users.usecase.ts` | 4 | Add general list all users usecase |
-| 14 | `src/app/api/users/by-department/route.ts` | 4 | **NEW** API endpoint |
-| 15 | `src/features/users/client/user-api.ts` | 4 | Add `getDepartmentUsers()` |
-| 16 | `src/app/(app)/[type]/new/page.tsx` | 4 | Form state: add userId, drop MemberId |
-| 17 | `src/app/(app)/[type]/[id]/edit/page.tsx` | 4 | Form init: add userId, drop MemberId |
-| 18 | `src/features/works/ui/work-decompose-panel.tsx` | 4 | Add ResponsibleFields |
-| 19 | `src/features/workflow/application/decompose-todo-work.usecase.ts` | 4+6 | Accept + validate userId |
-| 20 | `src/features/workflow/application/submit-proposal.usecase.ts` | 6 | Validate responsiblePersonUserId exists |
-| 21 | `src/features/workflow/application/submit-adjustment.usecase.ts` | 6 | Check responsiblePersonUserId === user.id |
-| 22 | `src/features/workflow/application/submit-cancellation.usecase.ts` | 6 | Same |
-| 23 | `src/features/workflow/application/submit-completion.usecase.ts` | 6 | Same |
-| 24 | `src/features/workflow/application/approve-workflow-action.usecase.ts` | 6 | Guard: PROPOSE→IN_PROGRESS needs responsiblePersonUserId |
-| 25 | `src/features/excel/infrastructure/work-import-parser.ts` | 7 | Match name→userId on import |
-| 26 | `src/features/excel/application/import-works-from-excel.usecase.ts` | 7 | Write userId on import |
-| 27 | `src/features/excel/infrastructure/work-exporter.ts` | 7 | Export userId column (optional) |
-| 28 | `src/app/(app)/[type]/[id]/page.tsx` | 4 | Display User name in detail |
-| 29 | `docs/core/业务规则.md` | 1 | Document new fields |
-| 30 | `docs/rules/权限规则.md` | 1 | Document new permission rules |
-| 31 | `docs/rules/业务人员与附件权限规则.md` | 1 | Document field naming |
-| 32 | `docs/design/数据库设计.md` | 1 | Document schema changes |
+| 2 | `src/features/works/domain/work.permissions.ts` | 5 | Core: `canOperateWorkItem` restructure |
+| 3 | `src/features/works/application/create-work.usecase.ts` | 4 | Accept userId, drop MemberId, validate User |
+| 4 | `src/features/works/application/update-work.usecase.ts` | 4 | Same; block IN_PROGRESS direct changes |
+| 5 | `src/features/works/application/work.dto.ts` | 4 | Add userId, drop MemberId |
+| 6 | `src/features/works/application/work.mapper.ts` | 4 | Map new fields from Prisma result |
+| 7 | `src/features/works/client/work-client.types.ts` | 4 | Add userId, drop MemberId |
+| 8 | `src/features/works/client/work-client.mapper.ts` | 4 | Transform userId in API → client |
+| 9 | `src/features/works/client/build-create-work-payload.ts` | 4 | Pass userId, drop MemberId |
+| 10 | `src/features/works/ui/work-form-fields.tsx` | 4 | Rewrite `ResponsibleFields` props + render |
+| 11 | `src/features/users/client/user-select.tsx` | 4 | **NEW** User selector component |
+| 12 | `src/features/users/application/list-department-users.usecase.ts` | 4 | Add general list all users usecase |
+| 13 | `src/app/api/users/by-department/route.ts` | 4 | **NEW** API endpoint |
+| 14 | `src/features/users/client/user-api.ts` | 4 | Add `getDepartmentUsers()` |
+| 15 | `src/app/(app)/[type]/new/page.tsx` | 4 | Form state: add userId, drop MemberId |
+| 16 | `src/app/(app)/[type]/[id]/edit/page.tsx` | 4 | Form init: add userId, drop MemberId |
+| 17 | `src/features/works/ui/work-decompose-panel.tsx` | 4 | Add ResponsibleFields |
+| 18 | `src/features/workflow/application/decompose-todo-work.usecase.ts` | 4+6 | Accept + validate userId |
+| 19 | `src/features/workflow/application/submit-proposal.usecase.ts` | 6 | Validate responsiblePersonUserId exists |
+| 20 | `src/features/workflow/application/submit-adjustment.usecase.ts` | 6 | Check responsiblePersonUserId === user.id |
+| 21 | `src/features/workflow/application/submit-cancellation.usecase.ts` | 6 | Same |
+| 22 | `src/features/workflow/application/submit-completion.usecase.ts` | 6 | Same |
+| 23 | `src/features/workflow/application/approve-workflow-action.usecase.ts` | 6 | Guard: PROPOSE→IN_PROGRESS needs responsiblePersonUserId |
+| 24 | `src/features/excel/infrastructure/work-import-parser.ts` | 7 | Match name→userId on import |
+| 25 | `src/features/excel/application/import-works-from-excel.usecase.ts` | 7 | Write userId on import |
+| 26 | `src/features/excel/infrastructure/work-exporter.ts` | 7 | Export userId column (optional) |
+| 27 | `src/app/(app)/[type]/[id]/page.tsx` | 4 | Display User name in detail |
+| 28 | `docs/core/业务规则.md` | 1 | Document new fields |
+| 29 | `docs/rules/权限规则.md` | 1 | Document new permission rules |
+| 30 | `docs/rules/业务人员与附件权限规则.md` | 1 | Document field naming |
+| 31 | `docs/design/数据库设计.md` | 1 | Document schema changes |
 
 ---
 
@@ -287,255 +286,6 @@ Expected: PASS（或仅有预存错误，无新增类型错误）。
 ```bash
 git add prisma/schema.prisma prisma/migrations/
 git commit -m "feat(schema): add responsibleLeaderUserId and responsiblePersonUserId to WorkItem"
-```
-
----
-
-## Phase 3: 历史数据回填 (Supervised)
-
-### Task 3.1: 创建回填脚本
-
-**Files:** Create: `docs/superpowers/scripts/backfill-responsible-users.ts`
-
-- [ ] **Step 1: 编写回填脚本**
-
-```typescript
-// docs/superpowers/scripts/backfill-responsible-users.ts
-// 独立执行：npx tsx docs/superpowers/scripts/backfill-responsible-users.ts
-//
-// 按优先级回填 responsibleLeaderUserId / responsiblePersonUserId：
-// 1. responsibleLeaderMemberId -> Member.userId -> responsibleLeaderUserId
-// 2. responsiblePersonMemberId -> Member.userId -> responsiblePersonUserId
-// 3. responsibleLeader 姓名匹配 User.name -> responsibleLeaderUserId
-// 4. responsiblePerson 姓名匹配 User.name -> responsiblePersonUserId
-// 5. 仅匹配到唯一 isActive=true 的 User 时自动回填
-// 6. 回填成功后同步姓名快照
-
-import { PrismaClient } from '@prisma/client'
-
-const prisma = new PrismaClient()
-
-interface BackfillReport {
-  autoFilledLeader: number
-  autoFilledPerson: number
-  unfilledLeader: { id: number; name: string }[]
-  unfilledPerson: { id: number; name: string }[]
-  ambiguousLeader: { id: number; name: string; matches: string[] }[]
-  ambiguousPerson: { id: number; name: string; matches: string[] }[]
-  inactiveMatchesLeader: { id: number; name: string; matchedUserId: number; matchedName: string }[]
-  inactiveMatchesPerson: { id: number; name: string; matchedUserId: number; matchedName: string }[]
-}
-
-async function main() {
-  const report: BackfillReport = {
-    autoFilledLeader: 0,
-    autoFilledPerson: 0,
-    unfilledLeader: [],
-    unfilledPerson: [],
-    ambiguousLeader: [],
-    ambiguousPerson: [],
-    inactiveMatchesLeader: [],
-    inactiveMatchesPerson: [],
-  }
-
-  // Step 1-2: Member.userId chain (camelCase column names match Prisma schema)
-  const viaMember = await prisma.$queryRaw<Array<{
-    id: number
-    responsibleLeaderMemberId: number | null
-    responsiblePersonMemberId: number | null
-    leaderUserId: number | null
-    leaderName: string | null
-    personUserId: number | null
-    personName: string | null
-  }>>`
-    SELECT
-      w.id,
-      w."responsibleLeaderMemberId",
-      w."responsiblePersonMemberId",
-      lm."userId" AS "leaderUserId",
-      lu.name AS "leaderName",
-      pm."userId" AS "personUserId",
-      pu.name AS "personName"
-    FROM "work_items" w
-    LEFT JOIN "members" lm ON lm.id = w."responsibleLeaderMemberId"
-    LEFT JOIN "users" lu ON lu.id = lm."userId" AND lu."isActive" = true
-    LEFT JOIN "members" pm ON pm.id = w."responsiblePersonMemberId"
-    LEFT JOIN "users" pu ON pu.id = pm."userId" AND pu."isActive" = true
-    WHERE (w."responsibleLeaderMemberId" IS NOT NULL OR w."responsiblePersonMemberId" IS NOT NULL)
-      AND (w."responsibleLeaderUserId" IS NULL OR w."responsiblePersonUserId" IS NULL)
-  `
-
-  for (const row of viaMember) {
-    const data: Record<string, unknown> = {}
-    if (row.leaderUserId && row.leaderName) {
-      data.responsibleLeaderUserId = row.leaderUserId
-      data.responsibleLeader = row.leaderName
-      report.autoFilledLeader++
-    }
-    if (row.personUserId && row.personName) {
-      data.responsiblePersonUserId = row.personUserId
-      data.responsiblePerson = row.personName
-      report.autoFilledPerson++
-    }
-    if (Object.keys(data).length > 0) {
-      await prisma.workItem.update({ where: { id: row.id }, data })
-    }
-  }
-
-  // Step 3-4: Name matching (only for items where userId is still null)
-  const viaName = await prisma.$queryRaw<Array<{
-    id: number
-    responsibleLeader: string | null
-    responsiblePerson: string | null
-    responsibleLeaderUserId: number | null
-    responsiblePersonUserId: number | null
-  }>>`
-    SELECT
-      id,
-      "responsibleLeader",
-      "responsiblePerson",
-      "responsibleLeaderUserId",
-      "responsiblePersonUserId"
-    FROM "work_items"
-    WHERE ("responsibleLeaderUserId" IS NULL AND "responsibleLeader" IS NOT NULL AND "responsibleLeader" != '')
-       OR ("responsiblePersonUserId" IS NULL AND "responsiblePerson" IS NOT NULL AND "responsiblePerson" != '')
-  `
-
-  for (const row of viaName) {
-    // Match leader by name
-    if (!row.responsibleLeaderUserId && row.responsibleLeader) {
-      const activeMatches = await prisma.user.findMany({
-        where: { name: row.responsibleLeader, isActive: true },
-        select: { id: true, name: true },
-      })
-      if (activeMatches.length === 1) {
-        await prisma.workItem.update({
-          where: { id: row.id },
-          data: { responsibleLeaderUserId: activeMatches[0].id },
-        })
-        report.autoFilledLeader++
-      } else if (activeMatches.length > 1) {
-        report.ambiguousLeader.push({
-          id: row.id, name: row.responsibleLeader,
-          matches: activeMatches.map(m => m.name),
-        })
-      } else {
-        const inactiveMatches = await prisma.user.findMany({
-          where: { name: row.responsibleLeader, isActive: false },
-          select: { id: true, name: true },
-        })
-        if (inactiveMatches.length > 0) {
-          report.inactiveMatchesLeader.push({
-            id: row.id, name: row.responsibleLeader,
-            matchedUserId: inactiveMatches[0].id, matchedName: inactiveMatches[0].name,
-          })
-        } else {
-          report.unfilledLeader.push({ id: row.id, name: row.responsibleLeader })
-        }
-      }
-    }
-
-    // Match person by name (same pattern)
-    if (!row.responsiblePersonUserId && row.responsiblePerson) {
-      const activeMatches = await prisma.user.findMany({
-        where: { name: row.responsiblePerson, isActive: true },
-        select: { id: true, name: true },
-      })
-      if (activeMatches.length === 1) {
-        await prisma.workItem.update({
-          where: { id: row.id },
-          data: { responsiblePersonUserId: activeMatches[0].id },
-        })
-        report.autoFilledPerson++
-      } else if (activeMatches.length > 1) {
-        report.ambiguousPerson.push({
-          id: row.id, name: row.responsiblePerson,
-          matches: activeMatches.map(m => m.name),
-        })
-      } else {
-        const inactiveMatches = await prisma.user.findMany({
-          where: { name: row.responsiblePerson, isActive: false },
-          select: { id: true, name: true },
-        })
-        if (inactiveMatches.length > 0) {
-          report.inactiveMatchesPerson.push({
-            id: row.id, name: row.responsiblePerson,
-            matchedUserId: inactiveMatches[0].id, matchedName: inactiveMatches[0].name,
-          })
-        } else {
-          report.unfilledPerson.push({ id: row.id, name: row.responsiblePerson })
-        }
-      }
-    }
-  }
-
-  // Print report
-  console.log('=== 回填报告 ===')
-  console.log(`责任领导自动回填成功: ${report.autoFilledLeader}`)
-  console.log(`责任人自动回填成功: ${report.autoFilledPerson}`)
-
-  if (report.unfilledLeader.length > 0) {
-    console.log(`\n--- 责任领导未匹配 (${report.unfilledLeader.length}) ---`)
-    for (const u of report.unfilledLeader) {
-      console.log(`  workItemId=${u.id}  name="${u.name}"`)
-    }
-  }
-
-  if (report.unfilledPerson.length > 0) {
-    console.log(`\n--- 责任人未匹配 (${report.unfilledPerson.length}) ---`)
-    for (const u of report.unfilledPerson) {
-      console.log(`  workItemId=${u.id}  name="${u.name}"`)
-    }
-  }
-
-  if (report.ambiguousLeader.length > 0) {
-    console.log(`\n--- 责任领导重名/多匹配 (${report.ambiguousLeader.length}) ---`)
-    for (const a of report.ambiguousLeader) {
-      console.log(`  workItemId=${a.id}  name="${a.name}"  matches=[${a.matches.join(', ')}]`)
-    }
-  }
-
-  if (report.ambiguousPerson.length > 0) {
-    console.log(`\n--- 责任人重名/多匹配 (${report.ambiguousPerson.length}) ---`)
-    for (const a of report.ambiguousPerson) {
-      console.log(`  workItemId=${a.id}  name="${a.name}"  matches=[${a.matches.join(', ')}]`)
-    }
-  }
-
-  if (report.inactiveMatchesLeader.length > 0) {
-    console.log(`\n--- 责任领导匹配到非活跃用户 (${report.inactiveMatchesLeader.length}) ---`)
-    for (const i of report.inactiveMatchesLeader) {
-      console.log(`  workItemId=${i.id}  name="${i.name}"  matchedUserId=${i.matchedUserId}  matchedName="${i.matchedName}" (inactive)`)
-    }
-  }
-
-  if (report.inactiveMatchesPerson.length > 0) {
-    console.log(`\n--- 责任人匹配到非活跃用户 (${report.inactiveMatchesPerson.length}) ---`)
-    for (const i of report.inactiveMatchesPerson) {
-      console.log(`  workItemId=${i.id}  name="${i.name}"  matchedUserId=${i.matchedUserId}  matchedName="${i.matchedName}" (inactive)`)
-    }
-  }
-
-  console.log('\n=== 回填完成 ===')
-  await prisma.$disconnect()
-}
-
-main().catch(console.error)
-```
-
-- [ ] **Step 2: 验证脚本语法**
-
-```bash
-pnpm typecheck
-```
-
-Expected: 脚本文件不在 tsconfig include 中，可能不检查。手动确认无语法错误。
-
-- [ ] **Step 3: 记录执行说明**
-
-脚本需要在目标数据库环境手动执行：
-```bash
-npx tsx docs/superpowers/scripts/backfill-responsible-users.ts
 ```
 
 ---
@@ -1760,7 +1510,7 @@ Expected: PASS
 
 - [ ] Spec §3 (文档修改): Task 1.1-1.4 覆盖所有 4 个文档
 - [ ] Spec §4 (Schema): Task 2.1-2.4 覆盖字段、relation、索引、migration
-- [ ] Spec §5 (回填): Task 3.1 覆盖独立回填脚本 + 报告输出
+- [ ] Spec §5 (迁移): Task 3.1 覆盖独立迁移脚本 + 报告输出
 - [ ] Spec §6.1-6.3 (后端 usecase): Task 4.6-4.7 + 6.1-6.2 覆盖
 - [ ] Spec §6.4.1-6.4.10 (前端 UI): Task 4.2-4.11 覆盖全部文件
 - [ ] Spec §7 (权限): Task 5.1 覆盖 canOperateWorkItem
