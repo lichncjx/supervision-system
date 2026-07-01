@@ -47,7 +47,7 @@ export function canHandleReturnedInProgressWork(
 ): boolean {
   if (!user) return false
   if (!isReturnedInProgressWork(work)) return false
-  return isOwnedBy(user, work)
+  return isResponsiblePerson(user, work)
 }
 
 export function canDecomposeTodoWork(

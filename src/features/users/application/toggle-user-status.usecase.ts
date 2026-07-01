@@ -1,6 +1,7 @@
 import { isAdmin } from '@/features/users/domain/role.rules'
 import { PROTECTED_USERNAMES } from '@/features/users/domain/protected-usernames'
 import {
+  countOpenResponsibleWorks,
   findUserById,
   updateUser,
 } from '@/features/users/infrastructure/user.repository'
@@ -32,6 +33,16 @@ export async function toggleUserStatusUseCase(
   }
 
   const newIsActive = !user.isActive
+  if (!newIsActive) {
+    const openResponsibleWorks = await countOpenResponsibleWorks(userId)
+    if (openResponsibleWorks > 0) {
+      return err(
+        400,
+        `该用户仍是 ${openResponsibleWorks} 个未完成事项的责任人，请先处理责任人变更后再停用。`,
+      )
+    }
+  }
+
   await updateUser(userId, { isActive: newIsActive })
   return ok(newIsActive)
 }

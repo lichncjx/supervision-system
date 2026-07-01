@@ -213,6 +213,14 @@ export async function validateAndParseExcel(
           reason: '必填字段不能为空',
         })
       }
+      if (!responsiblePerson) {
+        errors.push({
+          row: rowNum,
+          field: '责任人',
+          value: responsiblePerson,
+          reason: '必填字段不能为空',
+        })
+      }
 
       const cooperators: ImportCooperator[] = []
       if (cooperatorsStr) {
@@ -325,6 +333,14 @@ export async function validateAndParseExcel(
           row: rowNum,
           field: '责任领导',
           value: responsibleLeader,
+          reason: '必填字段不能为空',
+        })
+      }
+      if (!responsiblePerson) {
+        errors.push({
+          row: rowNum,
+          field: '责任人',
+          value: responsiblePerson,
           reason: '必填字段不能为空',
         })
       }
@@ -449,6 +465,14 @@ export async function validateAndParseExcel(
           field: '主责部门',
           value: departmentName,
           reason: `部门"${departmentName}"不存在或不是业务部门，请填写部门全名或缩写代码`,
+        })
+      }
+      if (!responsiblePerson) {
+        errors.push({
+          row: rowNum,
+          field: '责任人',
+          value: responsiblePerson,
+          reason: '必填字段不能为空',
         })
       }
 
