@@ -4,11 +4,17 @@ import { canUserOperate, getProcessFirstApprover } from '@/features/workflow/dom
 import { toPermissionUser } from '@/features/works/domain/work-permission-user.mapper'
 import { findWorkForUpdateById } from '@/features/works/infrastructure/work.repository'
 import { findDepartmentById } from '@/features/departments/infrastructure/department.repository'
+import { findUserById as prismaFindUserById } from '@/features/users/infrastructure/user.repository'
+import { isDeptLeader, isDeptManager } from '@/features/users/domain/role.rules'
 import { validateMemberAssignments, type MemberAssignment } from '@/features/members/domain/member.rules'
 import { buildAdjustmentBeforeSnapshot, sanitizeAdjustmentPatch } from '@/features/workflow/application/adjustment-patch'
 import { getChangedAdjustmentFields } from '@/features/works/domain/work-adjustment-diff'
 import { createAdjustmentTransitional, createWorkflowRecord, createOperationLog } from '@/features/workflow/infrastructure/workflow.repository'
 import { type Result, err, ok } from '@/shared/result'
+
+function hasPatchField(patch: Record<string, unknown>, field: string): boolean {
+  return Object.prototype.hasOwnProperty.call(patch, field)
+}
 
 export async function submitAdjustment(
   workItemId: number,
@@ -54,25 +60,60 @@ export async function submitAdjustment(
     return err(400, '责任部门不存在')
   }
 
-  if (patch.responsibleLeaderMemberId != null || patch.responsiblePersonMemberId != null) {
-    const assignments: MemberAssignment[] = []
-    if (patch.responsibleLeaderMemberId != null) {
-      assignments.push({
-        memberId: Number(patch.responsibleLeaderMemberId),
-        role: 'leader',
-        departmentId: effectiveDeptId,
-      })
+  // Validate responsibleLeaderUserId if present in patch
+  const hasLeaderPatch = hasPatchField(patch, 'responsibleLeaderUserId')
+  const hasPersonPatch = hasPatchField(patch, 'responsiblePersonUserId')
+
+  if (patch.responsibleLeaderUserId != null) {
+    const leaderUser = await prismaFindUserById(Number(patch.responsibleLeaderUserId))
+    if (!leaderUser || !leaderUser.isActive) {
+      return err(400, '责任领导用户不存在或已禁用')
     }
-    if (patch.responsiblePersonMemberId != null) {
-      assignments.push({
-        memberId: Number(patch.responsiblePersonMemberId),
-        role: 'person',
-        departmentId: effectiveDeptId,
-      })
+    if (leaderUser.departmentId !== effectiveDeptId) {
+      return err(400, '责任领导不属于该责任部门')
     }
-    const errors = await validateMemberAssignments(assignments)
-    if (errors.length > 0) {
-      return err(400, errors[0].message)
+    if (!isDeptLeader(leaderUser.role)) {
+      return err(400, '责任领导必须是部门领导')
+    }
+  } else if (
+    patch.departmentId != null &&
+    !hasLeaderPatch &&
+    workItem.responsibleLeaderUserId != null
+  ) {
+    // Department changed but leader stays — revalidate existing leader against new dept
+    const leaderUser = await prismaFindUserById(workItem.responsibleLeaderUserId)
+    if (leaderUser && leaderUser.departmentId !== effectiveDeptId) {
+      return err(400, '当前责任领导不属于新的责任部门，请同时调整责任领导')
+    }
+    if (leaderUser && !isDeptLeader(leaderUser.role)) {
+      return err(400, '当前责任领导必须是部门领导，请同时调整责任领导')
+    }
+  }
+
+  // Validate responsiblePersonUserId if present in patch
+  if (patch.responsiblePersonUserId != null) {
+    const personUser = await prismaFindUserById(Number(patch.responsiblePersonUserId))
+    if (!personUser || !personUser.isActive) {
+      return err(400, '责任人用户不存在或已禁用')
+    }
+    if (personUser.departmentId !== effectiveDeptId) {
+      return err(400, '责任人不属于该责任部门')
+    }
+    if (!isDeptManager(personUser.role)) {
+      return err(400, '责任人不能是部门领导')
+    }
+  } else if (
+    patch.departmentId != null &&
+    !hasPersonPatch &&
+    workItem.responsiblePersonUserId != null
+  ) {
+    // Department changed but person stays — revalidate existing person against new dept
+    const personUser = await prismaFindUserById(workItem.responsiblePersonUserId)
+    if (personUser && personUser.departmentId !== effectiveDeptId) {
+      return err(400, '当前责任人不属于新的责任部门，请同时调整责任人')
+    }
+    if (personUser && !isDeptManager(personUser.role)) {
+      return err(400, '当前责任人不能是部门领导，请同时调整责任人')
     }
   }
 

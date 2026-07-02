@@ -10,8 +10,8 @@ export const ADJUSTMENT_PATCH_FIELDS = [
   'departmentId',
   'responsibleLeader',
   'responsiblePerson',
-  'responsibleLeaderMemberId',
-  'responsiblePersonMemberId',
+  'responsibleLeaderUserId',
+  'responsiblePersonUserId',
   'cooperators',
   'workPlan',
   'planCompleteTime',
@@ -41,8 +41,8 @@ const TEXT_FIELDS = new Set<AdjustmentPatchField>([
 ])
 const NUMBER_FIELDS = new Set<AdjustmentPatchField>([
   'departmentId',
-  'responsibleLeaderMemberId',
-  'responsiblePersonMemberId',
+  'responsibleLeaderUserId',
+  'responsiblePersonUserId',
 ])
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -123,8 +123,8 @@ export function buildAdjustmentBeforeSnapshot(workItem: Pick<
   | 'departmentId'
   | 'responsibleLeader'
   | 'responsiblePerson'
-  | 'responsibleLeaderMemberId'
-  | 'responsiblePersonMemberId'
+  | 'responsibleLeaderUserId'
+  | 'responsiblePersonUserId'
   | 'cooperators'
   | 'workPlan'
   | 'planCompleteTime'
@@ -143,8 +143,8 @@ export function buildAdjustmentBeforeSnapshot(workItem: Pick<
     departmentId: workItem.departmentId,
     responsibleLeader: workItem.responsibleLeader,
     responsiblePerson: workItem.responsiblePerson,
-    responsibleLeaderMemberId: workItem.responsibleLeaderMemberId,
-    responsiblePersonMemberId: workItem.responsiblePersonMemberId,
+    responsibleLeaderUserId: workItem.responsibleLeaderUserId,
+    responsiblePersonUserId: workItem.responsiblePersonUserId,
     cooperators: parseJsonField(workItem.cooperators, []),
     workPlan: workItem.workPlan,
     planCompleteTime: toDateString(workItem.planCompleteTime),

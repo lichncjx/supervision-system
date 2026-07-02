@@ -107,30 +107,6 @@ sh deploy.sh
 > 5. 不使用 `-f` 参数
 > 6. 用户会手动将 compose 文件改名为默认识别文件名
 
-### 数据回填（Data Backfill）
-
-部分 migration 新增字段后，历史数据可能需要回填。回填 SQL 统一放在 `docs/archive/` 目录下。
-
-当前仓库中保留的回填参考：
-- `docs/archive/backfill-first-submitter-id.sql`（关联 Issue #8，已执行完毕，仅供回填模式参考）
-
-> **注意**：Phase 2 的 `deptLeaderId` / `deptLeaderName` / `deptManagerId` / `deptManagerName` 字段已在 Phase 7 删除，不再需要执行相关回填。当前字段体系（`departmentId` + `responsibleLeader` + `responsiblePerson` + `cooperators`）见 `docs/core/业务规则.md`。
-
-执行步骤：
-
-```bash
-# 1. 先执行迁移
-sh migrate.sh
-
-# 2. 进入 PostgreSQL 容器执行回填 SQL
-docker-compose exec postgres psql -U postgres -d supervision -f /path/to/docs/archive/backfill-*.sql
-
-# 3. 确认回填成功后，再发布应用
-sh deploy.sh
-```
-
-> **注意**：回填 SQL 中包含执行前检查、回填逻辑和执行后验证三部分。
-> 执行前请先阅读 SQL 文件头部的注释说明。异常情况下可通过 SQL 尾部的回滚语句恢复。
 > **执行 migration 后必须执行 `prisma generate`**，确保 Prisma Client 类型与数据库结构一致。部署脚本（deploy.sh / migrate.sh）中已包含此步骤。
 
 ## 查看日志
@@ -267,15 +243,14 @@ sh migrate.sh
 
 以下 migration 已合入 `main`，部署时需确保已执行：
 
-| 阶段 | 内容 | 涉及表 | 是否需要回填 |
-|------|------|--------|-------------|
-| Phase 2 | 新增 `deptLeaderId` / `deptLeaderName` / `deptManagerId` / `deptManagerName` 四列 | `work_items` | **是**（需执行回填 SQL，将旧字段匹配到新 ID/Name 字段） |
-| Phase 3A | 新增 `category` 字段 | `attachments` | 否（DEFAULT 'general' 自动覆盖存量行） |
+| 阶段 | 内容 | 涉及表 |
+|------|------|--------|
+| Phase 2 | 新增 `deptLeaderId` / `deptLeaderName` / `deptManagerId` / `deptManagerName` 四列 | `work_items` |
+| Phase 3A | 新增 `category` 字段 | `attachments` |
 
-**回填执行顺序**：
+**执行顺序**：
 1. 先执行 `sh migrate.sh`（DDL 变更）
-2. 再执行回填 SQL（数据回填）
-3. 最后执行 `sh deploy.sh`（发布应用）
+2. 再执行 `sh deploy.sh`（发布应用）
 
 旧字段 `responsibleLeader` / `supervisor` 未删除，不需要清理历史数据。
 

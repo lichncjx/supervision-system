@@ -28,7 +28,10 @@ export function WorkAttachmentPanel({
   return (
     <div className={PANEL_PADDED}>
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold text-slate-500 tracking-wide">附件</h3>
+        <div className="flex items-center gap-2">
+          <Paperclip className="h-4 w-4 text-sky-500" />
+          <h3 className="text-sm font-semibold text-slate-500 tracking-wide">附件</h3>
+        </div>
         {canUpload && (
           <label className="inline-flex items-center gap-1 text-xs text-slate-500 cursor-pointer hover:text-slate-700 transition-colors">
             <Upload className="h-3.5 w-3.5" />
@@ -86,11 +89,7 @@ export function WorkAttachmentPanel({
                 {canDelete(att) && (
                   <button
                     className="p-1 rounded hover:bg-rose-50 text-slate-400 hover:text-rose-500 transition-colors"
-                    onClick={() => {
-                      if (confirm('确定要删除这个附件吗？')) {
-                        onDelete(att.id)
-                      }
-                    }}
+                    onClick={() => onDelete(att.id)}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>

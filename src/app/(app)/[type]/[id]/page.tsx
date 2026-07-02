@@ -36,7 +36,7 @@ import {
   canHandleReturnedDraftWork,
   canDecomposeTodoWork,
   canApproveWork,
-  isOwnedBy,
+  isResponsiblePerson,
   isWorkRelatedToDepartment,
 } from '@/features/works/client/work-client-permissions';
 import { isTerminal, isReturnedDraftWork, isInProgress } from '@/features/works/domain/work-status.rules';
@@ -83,8 +83,8 @@ export default function WorkDetailPage() {
         departmentId: work.departmentId,
         responsibleLeader: work.responsibleLeader || '',
         responsiblePerson: work.responsiblePerson || '',
-        responsibleLeaderMemberId: work.responsibleLeaderMemberId,
-        responsiblePersonMemberId: work.responsiblePersonMemberId,
+        responsibleLeaderUserId: work.responsibleLeaderUserId,
+        responsiblePersonUserId: work.responsiblePersonUserId,
         proposedLeader: work.proposedLeader || '',
         proposedLeaderId: work.proposedLeaderId ? String(work.proposedLeaderId) : '',
         proposedLeaderRole: work.proposedLeaderRole || '',
@@ -122,7 +122,7 @@ export default function WorkDetailPage() {
   const canHandleReturnedCreate = isAdmin || canHandleReturnedDraftWork(user, work);
   const canDecomposeTodo = canDecomposeTodoWork(user, work);
   const canApprove = user ? canApproveWork(user, work) : false;
-  const canOperate = !!user && (isAdmin || isSupervisor || (isOwnedBy(user, work) && isInProgress(work.status)));
+  const canOperate = !!user && (isAdmin || isSupervisor || (isResponsiblePerson(user, work) && isInProgress(work.status)));
 
   const isRelatedDept = user ? isWorkRelatedToDepartment(work, user.departmentId) : false;
   const canEdit = user && (
@@ -474,6 +474,7 @@ export default function WorkDetailPage() {
               rejectReason={work.rejectReason || ''}
               isReturned={!!(work.status === 'pending_decompose' && (work.rejectReason || work.rejectedFromStatus))}
               onSubmitDecomposition={handleDecompose}
+              departments={departments}
             />
           )}
 

@@ -1,11 +1,12 @@
-import { ApprovalType } from '@prisma/client'
+import { ApprovalType, WorkItemStatus } from '@prisma/client'
 import { getTargetStatus, getNextApprovalAssignment } from '@/features/workflow/domain/workflow.rules'
 import { isApproving } from '@/features/works/domain/work-status.rules'
 import { toPermissionUser } from '@/features/works/domain/work-permission-user.mapper'
 import type { BaseCurrentUser } from '@/shared/auth/current-user'
 import { canApproveWorkItem } from '@/features/works/domain/work.permissions'
-import { isCompanyLevel } from '@/features/users/domain/role.rules'
+import { isCompanyLevel, isDeptManager } from '@/features/users/domain/role.rules'
 import { findWorkForUpdateById, updateWorkItem } from '@/features/works/infrastructure/work.repository'
+import { findUserById } from '@/features/users/infrastructure/user.repository'
 import { ensureIsActiveCompanyLeader } from './workflow-next-approver.guard'
 import {
   buildAdjustHistoryEntry,
@@ -29,6 +30,38 @@ function parseJsonField<T>(value: unknown, fallback: T): T {
   } catch {
     return fallback
   }
+}
+
+function hasPatchField(patch: Record<string, unknown>, field: string): boolean {
+  return Object.prototype.hasOwnProperty.call(patch, field)
+}
+
+async function validateEffectiveResponsiblePerson(params: {
+  responsiblePersonUserId: unknown
+  departmentId: unknown
+}): Promise<Result> {
+  const responsiblePersonUserId = Number(params.responsiblePersonUserId)
+  const departmentId = Number(params.departmentId)
+
+  if (!Number.isInteger(responsiblePersonUserId) || responsiblePersonUserId <= 0) {
+    return err(400, '事项缺少责任人，无法审批通过。请先补充责任人信息。')
+  }
+  if (!Number.isInteger(departmentId) || departmentId <= 0) {
+    return err(400, '事项缺少责任部门，无法审批通过。请先补充责任部门信息。')
+  }
+
+  const responsiblePerson = await findUserById(responsiblePersonUserId)
+  if (!responsiblePerson || !responsiblePerson.isActive) {
+    return err(400, '责任人用户不存在或已禁用，无法审批通过')
+  }
+  if (responsiblePerson.departmentId !== departmentId) {
+    return err(400, '责任人不属于责任部门，无法审批通过')
+  }
+  if (!isDeptManager(responsiblePerson.role)) {
+    return err(400, '责任人必须是部门事项管理岗，无法审批通过')
+  }
+
+  return ok()
 }
 
 export async function approveWorkflowAction(
@@ -102,8 +135,11 @@ export async function approveWorkflowAction(
   }
 
   const targetStatus = getTargetStatus(workItem.approvalType)
+
   let adjustmentUpdateData: Record<string, unknown> = {}
   let approvedAdjustmentRequestId: number | null = null
+  let effectiveDepartmentId: unknown = workItem.departmentId
+  let effectiveResponsiblePersonUserId: unknown = workItem.responsiblePersonUserId
 
   if (workItem.approvalType === ApprovalType.ADJUST) {
     const adjustmentRequest = await findAdjustment(workItemId)
@@ -111,22 +147,44 @@ export async function approveWorkflowAction(
       return err(400, '调整申请内容缺失，无法审批通过')
     }
 
-    const patch = adjustmentRequest.patch as AdjustmentPatch
+    // Guard: ADJUST must not clear responsiblePersonUserId when returning to IN_PROGRESS
+    const patch = adjustmentRequest.patch as Record<string, unknown>
+    effectiveDepartmentId = hasPatchField(patch, 'departmentId')
+      ? patch.departmentId
+      : workItem.departmentId
+    const newPersonId =
+      hasPatchField(patch, 'responsiblePersonUserId')
+        ? patch.responsiblePersonUserId
+        : workItem.responsiblePersonUserId
+    effectiveResponsiblePersonUserId = newPersonId
+    if (!newPersonId) {
+      return err(400, '调整后事项缺少责任人，无法审批通过')
+    }
+
     const beforeSnapshot = adjustmentRequest.beforeSnapshot as AdjustmentPatch
     const currentHistory = parseJsonField<unknown[]>(workItem.adjustHistory, [])
+    const adjustmentPatch = adjustmentRequest.patch as AdjustmentPatch
     adjustmentUpdateData = {
-      ...buildAdjustmentWorkUpdateData(patch),
+      ...buildAdjustmentWorkUpdateData(adjustmentPatch),
       adjustHistory: [
         ...currentHistory,
         buildAdjustHistoryEntry({
           beforeSnapshot,
-          patch,
+          patch: adjustmentPatch,
           reason: adjustmentRequest.reason,
           approvedBy: user.name,
         }),
       ],
     }
     approvedAdjustmentRequestId = adjustmentRequest.id
+  }
+
+  if (targetStatus === WorkItemStatus.IN_PROGRESS) {
+    const responsiblePersonError = await validateEffectiveResponsiblePerson({
+      responsiblePersonUserId: effectiveResponsiblePersonUserId,
+      departmentId: effectiveDepartmentId,
+    })
+    if (!responsiblePersonError.ok) return responsiblePersonError
   }
 
   const updated = await updateWorkItem(workItemId, {

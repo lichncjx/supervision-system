@@ -102,11 +102,29 @@ export async function submitTodoDecomposition(
   patch: WorkEditablePatch,
 ) {
   const nodes = patch.nodes || []
+  const body: Record<string, unknown> = {
+    action: 'decompose',
+    nodes,
+    comment: '待办分解',
+    workPlan: patch.workPlan ?? null,
+    planCompleteTime: patch.planCompleteTime ?? null,
+  }
+  if (patch.cooperators !== undefined) {
+    body.cooperators = patch.cooperators
+  }
+  if (patch.responsibleLeaderUserId !== undefined) {
+    body.responsibleLeaderUserId = patch.responsibleLeaderUserId
+    body.responsibleLeader = patch.responsibleLeader
+  }
+  if (patch.responsiblePersonUserId !== undefined) {
+    body.responsiblePersonUserId = patch.responsiblePersonUserId
+    body.responsiblePerson = patch.responsiblePerson
+  }
   const response = await fetch(`/api/works/${work.id}/workflow`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
-    body: JSON.stringify({ action: 'decompose', nodes, comment: '待办分解' }),
+    body: JSON.stringify(body),
   })
   await throwOnError(response)
   return getWorkById(work.id)

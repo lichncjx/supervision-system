@@ -2,6 +2,8 @@ import type { BaseCurrentUser } from '@/shared/auth/current-user'
 import { Role, WorkItemType, WorkItemStatus } from '@prisma/client'
 import { createWorkItem, createWorkOperationLog } from '@/features/works/infrastructure/work.repository'
 import { findDepartmentById } from '@/features/departments/infrastructure/department.repository'
+import { findUserById as prismaFindUserById } from '@/features/users/infrastructure/user.repository'
+import { isDeptLeader, isDeptManager } from '@/features/users/domain/role.rules'
 import { validateMemberAssignments, type MemberAssignment } from '@/features/members/domain/member.rules'
 import { toWorkDto } from '@/features/works/application/work.mapper'
 import type { WorkDto } from './work.dto'
@@ -18,8 +20,8 @@ export interface CreateWorkBody {
   isInnovation?: boolean | null
   responsibleLeader?: string | null
   responsiblePerson?: string | null
-  responsibleLeaderMemberId?: number | null
-  responsiblePersonMemberId?: number | null
+  responsibleLeaderUserId?: number | null
+  responsiblePersonUserId?: number | null
   proposedLeader?: string | null
   proposedLeaderId?: number | null
   proposedScene?: string | null
@@ -103,18 +105,31 @@ export async function createWorkUseCase(input: CreateWorkInput): Promise<Result<
     return err(400, '责任部门不存在')
   }
 
-  // Validate member IDs if provided
-  if (body.responsibleLeaderMemberId != null || body.responsiblePersonMemberId != null) {
-    const assignments: MemberAssignment[] = []
-    if (body.responsibleLeaderMemberId != null) {
-      assignments.push({ memberId: body.responsibleLeaderMemberId, role: 'leader', departmentId })
+  // Validate responsibleLeaderUserId
+  if (body.responsibleLeaderUserId != null) {
+    const leaderUser = await prismaFindUserById(body.responsibleLeaderUserId)
+    if (!leaderUser || !leaderUser.isActive) {
+      return err(400, '责任领导用户不存在或已禁用')
     }
-    if (body.responsiblePersonMemberId != null) {
-      assignments.push({ memberId: body.responsiblePersonMemberId, role: 'person', departmentId })
+    if (leaderUser.departmentId !== departmentId) {
+      return err(400, '责任领导不属于该责任部门')
     }
-    const errors = await validateMemberAssignments(assignments)
-    if (errors.length > 0) {
-      return err(400, errors[0].message)
+    if (!isDeptLeader(leaderUser.role)) {
+      return err(400, '责任领导必须是部门领导')
+    }
+  }
+
+  // Validate responsiblePersonUserId
+  if (body.responsiblePersonUserId != null) {
+    const personUser = await prismaFindUserById(body.responsiblePersonUserId)
+    if (!personUser || !personUser.isActive) {
+      return err(400, '责任人用户不存在或已禁用')
+    }
+    if (personUser.departmentId !== departmentId) {
+      return err(400, '责任人不属于该责任部门')
+    }
+    if (!isDeptManager(personUser.role)) {
+      return err(400, '责任人不能是部门领导')
     }
   }
 
@@ -158,8 +173,8 @@ export async function createWorkUseCase(input: CreateWorkInput): Promise<Result<
     isInnovation: body.isInnovation || false,
     responsibleLeader: body.responsibleLeader,
     responsiblePerson: body.responsiblePerson,
-    responsibleLeaderMemberId: body.responsibleLeaderMemberId,
-    responsiblePersonMemberId: body.responsiblePersonMemberId,
+    responsibleLeaderUserId: body.responsibleLeaderUserId,
+    responsiblePersonUserId: body.responsiblePersonUserId,
     proposedLeaderId: body.proposedLeaderId ? Number(body.proposedLeaderId) : null,
     approvalLeaderId: body.approvalLeaderId ? Number(body.approvalLeaderId) : null,
     proposedScene: body.proposedScene,
@@ -171,6 +186,7 @@ export async function createWorkUseCase(input: CreateWorkInput): Promise<Result<
     nodes: body.nodes ? JSON.stringify(processNodes(body.nodes as any[])) : null,
   }
 
+  // for company leader proposed todo, if approval leader is not specified, set it to proposed leader by default
   if (workData.proposedLeaderId && !workData.approvalLeaderId) {
     workData.approvalLeaderId = workData.proposedLeaderId
   }

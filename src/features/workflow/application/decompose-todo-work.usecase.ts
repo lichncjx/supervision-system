@@ -7,6 +7,9 @@ import {
 } from '@/features/workflow/domain/workflow.rules'
 import { toPermissionUser } from '@/features/works/domain/work-permission-user.mapper'
 import { findWorkForUpdateById, updateWorkItem } from '@/features/works/infrastructure/work.repository'
+import { findUserById } from '@/features/users/infrastructure/user.repository'
+import { isDeptLeader, isDeptManager } from '@/features/users/domain/role.rules'
+import { validateMemberAssignments, type MemberAssignment } from '@/features/members/domain/member.rules'
 import {
   createWorkflowRecord,
   createOperationLog,
@@ -18,6 +21,13 @@ export async function decomposeTodoWork(
   user: BaseCurrentUser,
   nodes: unknown[],
   comment?: string,
+  workPlan?: string | null,
+  planCompleteTime?: string | null,
+  cooperators?: unknown,
+  responsibleLeaderUserId?: number | null,
+  responsiblePersonUserId?: number | null,
+  responsibleLeader?: string | null,
+  responsiblePerson?: string | null,
 ): Promise<Result> {
   const permUser = toPermissionUser(user)
   const workItem = await findWorkForUpdateById(workItemId)
@@ -41,6 +51,67 @@ export async function decomposeTodoWork(
     return err(403, '只有主责部门可以分解该待办事项')
   }
 
+  if (!responsiblePersonUserId) {
+    return err(400, '请先指定责任人后再提交分解方案')
+  }
+  if (!workPlan?.trim()) {
+    return err(400, '请先填写工作计划后再提交分解方案')
+  }
+  if (!planCompleteTime) {
+    return err(400, '请先填写完成时间后再提交分解方案')
+  }
+
+  // Validate responsiblePersonUserId belongs to the work item's department
+  const personUser = await findUserById(responsiblePersonUserId)
+  if (!personUser || !personUser.isActive) {
+    return err(400, '责任人用户不存在或已禁用')
+  }
+  if (personUser.departmentId !== workItem.departmentId) {
+    return err(400, '责任人不属于该责任部门')
+  }
+  if (!isDeptManager(personUser.role)) {
+    return err(400, '责任人不能是部门领导')
+  }
+
+  // Validate responsibleLeaderUserId if provided
+  if (responsibleLeaderUserId) {
+    const leaderUser = await findUserById(responsibleLeaderUserId)
+    if (!leaderUser || !leaderUser.isActive) {
+      return err(400, '责任领导用户不存在或已禁用')
+    }
+    if (leaderUser.departmentId !== workItem.departmentId) {
+      return err(400, '责任领导不属于该责任部门')
+    }
+    if (!isDeptLeader(leaderUser.role)) {
+      return err(400, '责任领导必须是部门领导')
+    }
+  }
+
+  const cooperatorList = Array.isArray(cooperators) ? cooperators : []
+  if (cooperatorList.some((c: any) => c.leaderMemberId != null || c.personMemberId != null)) {
+    const coopAssignments: MemberAssignment[] = []
+    for (const c of cooperatorList) {
+      if (c.leaderMemberId != null) {
+        coopAssignments.push({
+          memberId: Number(c.leaderMemberId),
+          role: 'leader',
+          departmentId: Number(c.departmentId),
+        })
+      }
+      if (c.personMemberId != null) {
+        coopAssignments.push({
+          memberId: Number(c.personMemberId),
+          role: 'person',
+          departmentId: Number(c.departmentId),
+        })
+      }
+    }
+    const coopErrors = await validateMemberAssignments(coopAssignments)
+    if (coopErrors.length > 0) {
+      return err(400, `配合方: ${coopErrors[0].message}`)
+    }
+  }
+
   const oldStatus = workItem.status
   const approver = getProposalFirstApprover(workItem, user)
   if (!approver) {
@@ -49,6 +120,9 @@ export async function decomposeTodoWork(
 
   await updateWorkItem(workItemId, {
     nodes,
+    workPlan,
+    planCompleteTime: new Date(`${planCompleteTime}T00:00:00.000Z`),
+    cooperators: cooperators ?? workItem.cooperators,
     status: WorkItemStatus.PROPOSING,
     action: ActionType.TODO_DECOMPOSE,
     beforeApprovalStatus: oldStatus,
@@ -58,6 +132,10 @@ export async function decomposeTodoWork(
     firstSubmitterId: workItem.firstSubmitterId ?? user.id,
     rejectReason: null,
     rejectedFromStatus: null,
+    responsibleLeaderUserId: responsibleLeaderUserId ?? null,
+    responsiblePersonUserId: responsiblePersonUserId ?? null,
+    responsibleLeader: responsibleLeader ?? null,
+    responsiblePerson: responsiblePerson ?? null,
   })
 
   await createWorkflowRecord({

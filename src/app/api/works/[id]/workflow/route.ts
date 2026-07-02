@@ -75,7 +75,19 @@ export const POST = withApiHandler(
         if (!body.nodes || !Array.isArray(body.nodes)) {
           return fail('请提供分解节点', 400)
         }
-        result = await decomposeTodoWork(workItemId, currentUser, body.nodes, body.comment)
+        result = await decomposeTodoWork(
+          workItemId,
+          currentUser,
+          body.nodes,
+          body.comment,
+          body.workPlan ?? null,
+          body.planCompleteTime ?? null,
+          body.cooperators,
+          body.responsibleLeaderUserId ?? null,
+          body.responsiblePersonUserId ?? null,
+          body.responsibleLeader ?? null,
+          body.responsiblePerson ?? null,
+        )
         break
       default:
         return fail('无效的操作', 400)

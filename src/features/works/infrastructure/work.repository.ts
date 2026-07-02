@@ -6,6 +6,8 @@ const WORK_LIST_INCLUDE = {
   creator: { select: { name: true, role: true } },
   proposedLeader: { select: { id: true, name: true, role: true } },
   approvalLeader: { select: { id: true, name: true, role: true } },
+  responsibleLeaderUser: { select: { id: true, name: true } },
+  responsiblePersonUser: { select: { id: true, name: true } },
   adjustmentRequests: {
     where: { status: WorkAdjustmentRequestStatus.PENDING },
     orderBy: { requestedAt: 'desc' as const },
@@ -31,6 +33,8 @@ const WORK_DETAIL_INCLUDE = {
   department: true,
   creator: { select: { name: true, role: true } },
   firstSubmitter: { select: { name: true } },
+  responsibleLeaderUser: { select: { id: true, name: true } },
+  responsiblePersonUser: { select: { id: true, name: true } },
   proposedLeader: { select: { id: true, name: true, role: true } },
   approvalLeader: { select: { id: true, name: true, role: true } },
   adjustmentRequests: {
@@ -62,6 +66,8 @@ export async function findWorkDetailById(
 const WORK_CREATE_INCLUDE = {
   department: true,
   proposedLeader: { select: { id: true, name: true } },
+  responsibleLeaderUser: { select: { id: true, name: true } },
+  responsiblePersonUser: { select: { id: true, name: true } },
 } as const
 
 export type WorkCreateRow = Prisma.WorkItemGetPayload<{

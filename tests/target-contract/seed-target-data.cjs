@@ -152,8 +152,7 @@ async function main() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(loginBody) },
       }, (res) => {
-        let body = '';
-        res.on('data', (c) => { body += c; });
+        res.resume();
         res.on('end', () => {
           const cookies = (res.headers['set-cookie'] || []).map((c) => c.split(';')[0]);
           const clearBody = JSON.stringify({ cache: 'departments' });

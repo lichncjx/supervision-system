@@ -1,6 +1,7 @@
 import { Role } from '@prisma/client'
 import { isAdmin } from '@/features/users/domain/role.rules'
 import {
+  countOpenResponsibleWorks,
   findUserById,
   updateUser,
 } from '@/features/users/infrastructure/user.repository'
@@ -57,6 +58,20 @@ export async function updateUserUseCase(
   if (email !== undefined) updateData.email = email
   if (phone !== undefined) updateData.phone = phone
   if (isActive !== undefined) updateData.isActive = isActive
+
+  const changesResponsibleHandlerValidity =
+    isActive === false ||
+    (role !== undefined && role !== user.role) ||
+    (departmentId !== undefined && departmentId !== user.departmentId)
+  if (changesResponsibleHandlerValidity) {
+    const openResponsibleWorks = await countOpenResponsibleWorks(userId)
+    if (openResponsibleWorks > 0) {
+      return err(
+        400,
+        `该用户仍是 ${openResponsibleWorks} 个未完成事项的责任人，请先处理责任人变更后再修改用户状态、角色或部门。`,
+      )
+    }
+  }
 
   const updatedUser = await updateUser(userId, updateData)
   return ok(toUserListItemDto(updatedUser))

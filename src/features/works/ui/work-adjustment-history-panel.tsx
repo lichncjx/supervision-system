@@ -6,6 +6,7 @@ import {
   ADJUSTMENT_FIELD_LABELS,
   adjustmentValueToDisplay,
   getChangedAdjustmentFields,
+  getDisplayAdjustmentFields,
 } from '@/features/works/ui/work-adjustment-display';
 
 interface WorkAdjustmentHistoryPanelProps {
@@ -43,6 +44,7 @@ export function WorkAdjustmentHistoryPanel({
           const beforeSnapshot = item.beforeSnapshot || {};
           const patch = item.patch || {};
           const changedFields = getChangedAdjustmentFields(beforeSnapshot, patch);
+          const displayFields = getDisplayAdjustmentFields(changedFields);
 
           return (
             <div
@@ -60,13 +62,13 @@ export function WorkAdjustmentHistoryPanel({
               </div>
               <div className="text-xs font-semibold text-purple-600">
                 调整事项内容
-                {changedFields.length > 0 && (
+                {displayFields.length > 0 && (
                   <span className="font-normal text-slate-500">
                     {' '}
-                    · {changedFields.map((field) => ADJUSTMENT_FIELD_LABELS[field] || field).join('、')}
+                    · {displayFields.map((field) => ADJUSTMENT_FIELD_LABELS[field] || field).join('、')}
                   </span>
                 )}
-                {changedFields.length === 0 && (item.fromTime || item.toTime) && (
+                {displayFields.length === 0 && (item.fromTime || item.toTime) && (
                   <span className="font-normal text-slate-500">
                     {' '}
                     · {item.fromTime || '-'} → {item.toTime || '-'}
@@ -78,23 +80,23 @@ export function WorkAdjustmentHistoryPanel({
                   {item.reason}
                 </div>
               )}
-              {changedFields.length > 0 && (
+              {displayFields.length > 0 && (
                 <div className="mt-2 overflow-hidden rounded-md border border-slate-200 bg-white">
                   <div className="grid grid-cols-[6rem_1fr_1fr] bg-slate-50 text-[11px] font-medium text-slate-500">
                     <div className="border-r border-slate-200 px-2.5 py-1.5">字段</div>
                     <div className="border-r border-slate-200 px-2.5 py-1.5">调整前</div>
                     <div className="px-2.5 py-1.5">调整后</div>
                   </div>
-                  {changedFields.map((field) => (
+                  {displayFields.map((field) => (
                     <div key={field} className="grid grid-cols-[6rem_1fr_1fr] border-t border-slate-200 text-xs">
                       <div className="border-r border-slate-200 px-2.5 py-1.5 font-medium text-slate-600">
                         {ADJUSTMENT_FIELD_LABELS[field] || field}
                       </div>
                       <div className="border-r border-slate-200 px-2.5 py-1.5 text-slate-600 whitespace-pre-wrap break-words">
-                        {adjustmentValueToDisplay(field, beforeSnapshot[field], departments)}
+                        {adjustmentValueToDisplay(field, beforeSnapshot[field], departments, beforeSnapshot)}
                       </div>
                       <div className="px-2.5 py-1.5 text-slate-900 whitespace-pre-wrap break-words">
-                        {adjustmentValueToDisplay(field, patch[field], departments)}
+                        {adjustmentValueToDisplay(field, patch[field], departments, patch)}
                       </div>
                     </div>
                   ))}

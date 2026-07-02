@@ -10,8 +10,10 @@ export const ADJUSTMENT_FIELD_LABELS: Record<string, string> = {
   departmentId: '责任部门',
   responsibleLeader: '责任领导',
   responsiblePerson: '责任人',
-  responsibleLeaderMemberId: '责任领导人员',
-  responsiblePersonMemberId: '责任人人员',
+  responsibleLeaderUserId: '责任领导',
+  responsiblePersonUserId: '责任人',
+  responsibleLeaderMemberId: '责任领导',
+  responsiblePersonMemberId: '责任人',
   cooperators: '配合方',
   workPlan: '工作计划',
   planCompleteTime: '计划完成时间',
@@ -21,9 +23,38 @@ export const ADJUSTMENT_FIELD_LABELS: Record<string, string> = {
   formedTime: '形成时间',
 };
 
+export function getDisplayAdjustmentFields(fields: string[]) {
+  const fieldSet = new Set(fields);
+  return fields.filter((field) => {
+    if (
+      field === 'responsibleLeader' &&
+      (fieldSet.has('responsibleLeaderUserId') || fieldSet.has('responsibleLeaderMemberId'))
+    ) {
+      return false;
+    }
+    if (
+      field === 'responsiblePerson' &&
+      (fieldSet.has('responsiblePersonUserId') || fieldSet.has('responsiblePersonMemberId'))
+    ) {
+      return false;
+    }
+    return true;
+  });
+}
+
 export function normalizeAdjustmentValue(value: unknown) {
   if (value === undefined) return null;
   return value;
+}
+
+function getRelatedNameField(field: string) {
+  if (field === 'responsibleLeaderUserId' || field === 'responsibleLeaderMemberId') {
+    return 'responsibleLeader';
+  }
+  if (field === 'responsiblePersonUserId' || field === 'responsiblePersonMemberId') {
+    return 'responsiblePerson';
+  }
+  return null;
 }
 
 function renderCooperators(
@@ -86,11 +117,20 @@ export function adjustmentValueToDisplay(
   field: string,
   value: unknown,
   departments?: Array<{ id: number; name: string }>,
+  context?: Record<string, unknown>,
 ): ReactNode {
   const normalized = normalizeAdjustmentValue(value);
   if (field === 'departmentId') {
     const department = departments?.find((d) => d.id === Number(normalized));
     return department?.name || (normalized == null ? '-' : String(normalized));
+  }
+  const relatedNameField = getRelatedNameField(field);
+  if (relatedNameField) {
+    const relatedName = context?.[relatedNameField];
+    if (typeof relatedName === 'string' && relatedName.trim()) {
+      return relatedName;
+    }
+    return normalized == null || normalized === '' ? '-' : '已选择用户';
   }
   if (field === 'cooperators') return renderCooperators(normalized, departments);
   if (field === 'nodes') return renderNodes(normalized);

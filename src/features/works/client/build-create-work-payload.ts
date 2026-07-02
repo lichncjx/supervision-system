@@ -13,8 +13,8 @@ interface BuildCreateWorkPayloadParams {
     departmentId: string;
     responsibleLeader: string;
     responsiblePerson: string;
-    responsibleLeaderMemberId?: number;
-    responsiblePersonMemberId?: number;
+    responsibleLeaderUserId?: number;
+    responsiblePersonUserId?: number;
   };
   todoForm: {
     proposedLeaderId: string;
@@ -24,8 +24,8 @@ interface BuildCreateWorkPayloadParams {
     departmentId: number;
     responsibleLeader: string;
     responsiblePerson: string;
-    responsibleLeaderMemberId?: number;
-    responsiblePersonMemberId?: number;
+    responsibleLeaderUserId?: number;
+    responsiblePersonUserId?: number;
     cooperators: Array<{ departmentId: number; departmentName?: string; leaderMemberId?: number; leader?: string; personMemberId?: number; person?: string }>;
     workPlan: string;
     planCompleteTime: string;
@@ -82,8 +82,8 @@ export function buildCreateWorkPayload({
       completeForm: priorityMainForm.completeForm,
       responsibleLeader: priorityMainForm.responsibleLeader,
       responsiblePerson: priorityMainForm.responsiblePerson,
-      responsibleLeaderMemberId: priorityMainForm.responsibleLeaderMemberId,
-      responsiblePersonMemberId: priorityMainForm.responsiblePersonMemberId,
+      responsibleLeaderUserId: priorityMainForm.responsibleLeaderUserId,
+      responsiblePersonUserId: priorityMainForm.responsiblePersonUserId,
     };
   }
 
@@ -108,8 +108,8 @@ export function buildCreateWorkPayload({
     formedTime: todoForm.formedTime,
     responsibleLeader: todoForm.responsibleLeader,
     responsiblePerson: todoForm.responsiblePerson,
-    responsibleLeaderMemberId: todoForm.responsibleLeaderMemberId,
-    responsiblePersonMemberId: todoForm.responsiblePersonMemberId,
+    responsibleLeaderUserId: todoForm.responsibleLeaderUserId,
+    responsiblePersonUserId: todoForm.responsiblePersonUserId,
     cooperators,
     workPlan: todoForm.workPlan,
     planCompleteTime: todoForm.planCompleteTime,

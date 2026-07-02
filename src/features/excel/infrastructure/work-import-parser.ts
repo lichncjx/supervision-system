@@ -1,4 +1,5 @@
 import * as XLSX from 'xlsx'
+import { Role } from '@prisma/client'
 import {
   parseExcelDate,
   isAllowedImportedStatus,
@@ -6,6 +7,7 @@ import {
   type ImportCooperator,
 } from '@/features/excel/domain/excel-import.rules'
 import type { ValidationError as ImportValidationError } from '@/features/excel/domain/excel-import.rules'
+import { isDeptLeader, isDeptManager } from '@/features/users/domain/role.rules'
 
 interface DepartmentInfo {
   id: number; name: string; code: string | null
@@ -15,11 +17,16 @@ interface CompanyLeaderInfo {
   id: number; name: string
 }
 
+interface DepartmentUserInfo {
+  id: number; name: string; departmentId: number; role: Role | string
+}
+
 export async function validateAndParseExcel(
   fileBuffer: Buffer,
   type: string,
   departments: DepartmentInfo[],
   companyLeaders: CompanyLeaderInfo[],
+  allUsers: DepartmentUserInfo[] = [],
 ): Promise<{ rows: ImportRow[]; errors: ImportValidationError[] }> {
   const errors: ImportValidationError[] = []
   const rows: ImportRow[] = []
@@ -62,6 +69,57 @@ export async function validateAndParseExcel(
     companyLeaders.map((u) => [u.name, u.id]),
   )
 
+  // Group users by name to detect duplicates (prevents ambiguous matching)
+  const nameToUsers = new Map<string, DepartmentUserInfo[]>()
+  for (const u of allUsers) {
+    const existing = nameToUsers.get(u.name)
+    if (existing) { existing.push(u) }
+    else { nameToUsers.set(u.name, [u]) }
+  }
+
+  function resolveUserName(
+    field: string,
+    name: string,
+    rowNum: number,
+    expectedDeptId: number | null | undefined,
+    expectedKind: 'leader' | 'person',
+  ) {
+    const matches = nameToUsers.get(name)
+    if (!matches || matches.length === 0) {
+      errors.push({ row: rowNum, field, value: name,
+        reason: `系统中未找到启用的用户"${name}"，无法自动关联` })
+      return null
+    }
+    const scopedMatches = expectedDeptId != null
+      ? matches.filter((user) => user.departmentId === expectedDeptId)
+      : matches
+    if (scopedMatches.length === 0 && expectedDeptId != null) {
+      errors.push({ row: rowNum, field, value: name,
+        reason: `用户"${name}"不属于该事项的责任部门，无法自动关联` })
+      return null
+    }
+    if (scopedMatches.length > 1) {
+      errors.push({ row: rowNum, field, value: name,
+        reason: `姓名"${name}"在该责任部门匹配到 ${scopedMatches.length} 个系统用户，无法自动关联，请在系统中手动指定` })
+      return null
+    }
+    const user = scopedMatches[0]
+    if (expectedKind === 'leader' && !isDeptLeader(user.role)) {
+      errors.push({ row: rowNum, field, value: name,
+        reason: `用户"${name}"不是部门领导，不能作为责任领导` })
+      return null
+    }
+    if (expectedKind === 'person' && !isDeptManager(user.role)) {
+      errors.push({ row: rowNum, field, value: name,
+        reason: `用户"${name}"不是部门主管，不能作为责任人` })
+      return null
+    }
+    return user.id
+  }
+
+  const hasRowErrors = (rowNum: number) =>
+    errors.some((error) => error.row === rowNum)
+
   for (let i = 0; i < jsonData.length; i++) {
     const row = jsonData[i]
     const rowNum = i + 2
@@ -73,6 +131,18 @@ export async function validateAndParseExcel(
       return val !== undefined && val !== null
         ? String(val).trim()
         : ''
+    }
+    const splitResponsibleParty = (value: string) => {
+      const parts = value
+        .split(/[\/／]/)
+        .map((part) => part.trim())
+        .filter(Boolean)
+
+      if (parts.length >= 2) {
+        return { leader: parts[0], person: parts[1] }
+      }
+
+      return { leader: '', person: parts[0] ?? '' }
     }
 
     const importedStatus =
@@ -155,6 +225,14 @@ export async function validateAndParseExcel(
           reason: '必填字段不能为空',
         })
       }
+      if (!responsiblePerson) {
+        errors.push({
+          row: rowNum,
+          field: '责任人',
+          value: responsiblePerson,
+          reason: '必填字段不能为空',
+        })
+      }
 
       const cooperators: ImportCooperator[] = []
       if (cooperatorsStr) {
@@ -186,7 +264,14 @@ export async function validateAndParseExcel(
         }
       }
 
-      if (errors.filter((e) => e.row === rowNum).length === 0) {
+      if (!hasRowErrors(rowNum)) {
+        const responsibleLeaderUserId = responsibleLeader
+          ? resolveUserName('责任领导', responsibleLeader, rowNum, resolvedDeptId, 'leader')
+          : null
+        const responsiblePersonUserId = responsiblePerson
+          ? resolveUserName('责任人', responsiblePerson, rowNum, resolvedDeptId, 'person')
+          : null
+        if (hasRowErrors(rowNum)) continue
         rows.push({
           row: rowNum,
           data: {
@@ -204,6 +289,8 @@ export async function validateAndParseExcel(
                 ?.code || departmentName,
             responsibleLeader,
             responsiblePerson: responsiblePerson || null,
+            responsibleLeaderUserId,
+            responsiblePersonUserId,
             cooperators,
           },
         })
@@ -261,6 +348,14 @@ export async function validateAndParseExcel(
           reason: '必填字段不能为空',
         })
       }
+      if (!responsiblePerson) {
+        errors.push({
+          row: rowNum,
+          field: '责任人',
+          value: responsiblePerson,
+          reason: '必填字段不能为空',
+        })
+      }
 
       const cooperators: ImportCooperator[] = []
       if (cooperatorsStr) {
@@ -292,7 +387,14 @@ export async function validateAndParseExcel(
         }
       }
 
-      if (errors.filter((e) => e.row === rowNum).length === 0) {
+      if (!hasRowErrors(rowNum)) {
+        const responsibleLeaderUserId = responsibleLeader
+          ? resolveUserName('责任领导', responsibleLeader, rowNum, resolvedDeptId, 'leader')
+          : null
+        const responsiblePersonUserId = responsiblePerson
+          ? resolveUserName('责任人', responsiblePerson, rowNum, resolvedDeptId, 'person')
+          : null
+        if (hasRowErrors(rowNum)) continue
         rows.push({
           row: rowNum,
           data: {
@@ -309,6 +411,8 @@ export async function validateAndParseExcel(
                 ?.code || departmentName,
             responsibleLeader,
             responsiblePerson: responsiblePerson || null,
+            responsibleLeaderUserId,
+            responsiblePersonUserId,
             cooperators,
           },
         })
@@ -320,9 +424,13 @@ export async function validateAndParseExcel(
       const workItem = getCell('待办事项')
       const formedTimeStr = getCell('形成时间')
       const departmentName = getCell('主责部门')
-      const responsibleLeader = getCell('责任领导')
-      const responsiblePerson = getCell('责任人')
+      const responsibleParty = getCell('主责责任人')
+      const parsedResponsibleParty = splitResponsibleParty(responsibleParty)
+      const responsibleLeader = getCell('责任领导') || parsedResponsibleParty.leader
+      const responsiblePerson = getCell('责任人') || parsedResponsibleParty.person
+      const responsiblePersonField = headerMap['责任人'] ? '责任人' : '主责责任人'
       const cooperatorsStr = getCell('配合方')
+
       const workPlan = getCell('工作计划')
       const planCompleteTimeStr = getCell('完成时间')
       const progress = getCell('进展情况')
@@ -374,6 +482,14 @@ export async function validateAndParseExcel(
           reason: `部门"${departmentName}"不存在或不是业务部门，请填写部门全名或缩写代码`,
         })
       }
+      if (!responsiblePerson) {
+        errors.push({
+          row: rowNum,
+          field: responsiblePersonField,
+          value: responsiblePerson,
+          reason: '必填字段不能为空',
+        })
+      }
 
       const hasProposedLeader =
         proposedLeaderName && leaderNameToId.has(proposedLeaderName)
@@ -419,7 +535,14 @@ export async function validateAndParseExcel(
         }
       }
 
-      if (errors.filter((e) => e.row === rowNum).length === 0) {
+      if (!hasRowErrors(rowNum)) {
+        const responsibleLeaderUserId = responsibleLeader
+          ? resolveUserName('责任领导', responsibleLeader, rowNum, resolvedDeptId, 'leader')
+          : null
+        const responsiblePersonUserId = responsiblePerson
+          ? resolveUserName(responsiblePersonField, responsiblePerson, rowNum, resolvedDeptId, 'person')
+          : null
+        if (hasRowErrors(rowNum)) continue
         rows.push({
           row: rowNum,
           data: {
@@ -438,6 +561,8 @@ export async function validateAndParseExcel(
             departmentId: resolvedDeptId,
             responsibleLeader: responsibleLeader || null,
             responsiblePerson: responsiblePerson || null,
+            responsibleLeaderUserId,
+            responsiblePersonUserId,
             cooperators,
             workPlan,
             planCompleteTime: parseExcelDate(planCompleteTimeStr),

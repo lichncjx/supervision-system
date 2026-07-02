@@ -59,6 +59,8 @@ COPY package.json pnpm-lock.yaml ./
 COPY prisma ./prisma
 COPY scripts/wait-for-db.mjs ./scripts/wait-for-db.mjs
 
+RUN ./node_modules/.bin/prisma generate --schema=./prisma/schema.prisma
+
 CMD ["sh", "-c", "node ./scripts/wait-for-db.mjs && ./node_modules/.bin/prisma migrate deploy --schema=./prisma/schema.prisma"]
 
 

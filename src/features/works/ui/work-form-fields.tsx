@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FIELD_LABEL, ERROR_TEXT } from './visual-tokens';
-import { MemberSelect } from '@/features/members/client/member-select';
+import { UserSelect } from '@/features/users/client/user-select';
 
 // WorkItemField
 export interface WorkItemFieldProps {
@@ -151,12 +151,11 @@ export interface ResponsibleFieldsProps {
   onLeaderChange: (value: string) => void;
   personValue: string;
   onPersonChange: (value: string) => void;
-  // Member selection — when departmentId is provided, dropdown selects replace text inputs.
   departmentId?: number;
-  leaderMemberId?: number;
-  onLeaderMemberIdChange?: (id: number | undefined) => void;
-  personMemberId?: number;
-  onPersonMemberIdChange?: (id: number | undefined) => void;
+  leaderUserId?: number;
+  onLeaderUserIdChange?: (id: number | undefined) => void;
+  personUserId?: number;
+  onPersonUserIdChange?: (id: number | undefined) => void;
 }
 
 export function ResponsibleFields({
@@ -165,12 +164,12 @@ export function ResponsibleFields({
   personValue,
   onPersonChange,
   departmentId,
-  leaderMemberId,
-  onLeaderMemberIdChange,
-  personMemberId,
-  onPersonMemberIdChange,
+  leaderUserId,
+  onLeaderUserIdChange,
+  personUserId,
+  onPersonUserIdChange,
 }: ResponsibleFieldsProps) {
-  const useMembers = Boolean(departmentId);
+  const hasDepartment = Boolean(departmentId);
 
   return (
     <>
@@ -178,12 +177,12 @@ export function ResponsibleFields({
         <label className={FIELD_LABEL + ' mb-1'}>
           责任领导
         </label>
-        {useMembers ? (
-          <MemberSelect
+        {hasDepartment ? (
+          <UserSelect
             departmentId={departmentId}
-            value={leaderMemberId}
+            value={leaderUserId}
             onChange={(id, name) => {
-              onLeaderMemberIdChange?.(id);
+              onLeaderUserIdChange?.(id);
               onLeaderChange(name);
             }}
             filterLeaders
@@ -202,12 +201,12 @@ export function ResponsibleFields({
         <label className={FIELD_LABEL + ' mb-1'}>
           责任人
         </label>
-        {useMembers ? (
-          <MemberSelect
+        {hasDepartment ? (
+          <UserSelect
             departmentId={departmentId}
-            value={personMemberId}
+            value={personUserId}
             onChange={(id, name) => {
-              onPersonMemberIdChange?.(id);
+              onPersonUserIdChange?.(id);
               onPersonChange(name);
             }}
             excludeLeaders

@@ -92,8 +92,8 @@ export interface Work {
   approvalLeaderRole?: string
   responsibleLeader?: string
   responsiblePerson?: string
-  responsibleLeaderMemberId?: number
-  responsiblePersonMemberId?: number
+  responsibleLeaderUserId?: number | null
+  responsiblePersonUserId?: number | null
 
   // ---- 事项基本信息 ----
   status: WorkStatus
@@ -148,14 +148,14 @@ type WorkEditablePatchBase = Pick<
   | 'departmentId'
   | 'cooperators'
   | 'responsibleLeader'
-  | 'responsibleLeaderMemberId'
+  | 'responsibleLeaderUserId'
   | 'proposedLeader'
   | 'proposedLeaderId'
   | 'proposedLeaderRole'
   | 'proposedScene'
   | 'formedTime'
   | 'responsiblePerson'
-  | 'responsiblePersonMemberId'
+  | 'responsiblePersonUserId'
   | 'workPlan'
   | 'planCompleteTime'
   | 'progress'
@@ -184,8 +184,8 @@ type NullableWorkTextField =
 
 type NullableWorkNumberField =
   | 'departmentId'
-  | 'responsibleLeaderMemberId'
-  | 'responsiblePersonMemberId'
+  | 'responsibleLeaderUserId'
+  | 'responsiblePersonUserId'
   | 'proposedLeaderId'
   | 'approvalLeaderId'
 

@@ -25,8 +25,8 @@ export interface WorkDto {
     currentApproverRole?: string | null
     responsibleLeader?: string | null
     responsiblePerson?: string | null
-    responsibleLeaderMemberId?: number | null
-    responsiblePersonMemberId?: number | null
+    responsibleLeaderUserId?: number | null
+    responsiblePersonUserId?: number | null
     workItem?: string | null
     workNode?: string | null
     businessCategory?: string | null

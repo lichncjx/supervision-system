@@ -6,6 +6,7 @@ import {
   ADJUSTMENT_FIELD_LABELS,
   adjustmentValueToDisplay,
   getChangedAdjustmentFields,
+  getDisplayAdjustmentFields,
 } from '@/features/works/ui/work-adjustment-display';
 
 interface WorkPendingAdjustmentPanelProps {
@@ -26,6 +27,7 @@ export function WorkPendingAdjustmentPanel({
     beforeSnapshot as Record<string, unknown>,
     work.pendingAdjustment as Record<string, unknown>,
   );
+  const displayFields = getDisplayAdjustmentFields(changedFields);
 
   return (
     <div className={PANEL_PADDED}>
@@ -37,23 +39,33 @@ export function WorkPendingAdjustmentPanel({
         <div>
           公司审批领导：{work.approvalLeader || '-'}
         </div>
-        {changedFields.length > 0 ? (
+        {displayFields.length > 0 ? (
           <div className="mt-4 overflow-hidden rounded-lg border border-slate-200">
             <div className="grid grid-cols-[7rem_1fr_1fr] bg-slate-50 text-xs font-medium text-slate-500">
               <div className="border-r border-slate-200 px-3 py-2">字段</div>
               <div className="border-r border-slate-200 px-3 py-2">调整前</div>
               <div className="px-3 py-2">调整后</div>
             </div>
-            {changedFields.map((field) => (
+            {displayFields.map((field) => (
               <div key={field} className="grid grid-cols-[7rem_1fr_1fr] border-t border-slate-200 text-sm">
                 <div className="border-r border-slate-200 px-3 py-2 font-medium text-slate-600">
                   {ADJUSTMENT_FIELD_LABELS[field] || field}
                 </div>
                 <div className="border-r border-slate-200 px-3 py-2 whitespace-pre-wrap break-words text-slate-600">
-                  {adjustmentValueToDisplay(field, (beforeSnapshot as any)[field], departments)}
+                  {adjustmentValueToDisplay(
+                    field,
+                    (beforeSnapshot as any)[field],
+                    departments,
+                    beforeSnapshot as Record<string, unknown>,
+                  )}
                 </div>
                 <div className="px-3 py-2 whitespace-pre-wrap break-words text-slate-900">
-                  {adjustmentValueToDisplay(field, (work.pendingAdjustment as any)[field], departments)}
+                  {adjustmentValueToDisplay(
+                    field,
+                    (work.pendingAdjustment as any)[field],
+                    departments,
+                    work.pendingAdjustment as Record<string, unknown>,
+                  )}
                 </div>
               </div>
             ))}

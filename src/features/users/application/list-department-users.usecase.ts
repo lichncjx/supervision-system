@@ -44,3 +44,23 @@ export async function listDepartmentManagersUseCase(
   const managers = await findUsersByDepartment(departmentId, Role.DEPARTMENT_MANAGER)
   return ok(managers.map(toUserDto))
 }
+
+export async function listDepartmentUsersUseCase(
+  currentUser: { id: number; role: string; departmentId: number },
+  departmentId: number,
+): Promise<Result<UserDto[]>> {
+  if (isNaN(departmentId)) {
+    return err(400, '请提供部门ID')
+  }
+
+  if (
+    !isGlobalView(currentUser.role) &&
+    !isCompanyLevel(currentUser.role) &&
+    currentUser.departmentId !== departmentId
+  ) {
+    return err(403, '无权限查询其他部门用户')
+  }
+
+  const users = await findUsersByDepartment(departmentId)
+  return ok(users.map(toUserDto))
+}

@@ -23,6 +23,7 @@ docker-compose run --rm migrate
 echo "Migration completed."
 
 echo "======================================"
-echo "After migration, run deploy.sh to restart the app:"
-echo "  ./deploy.sh"
+echo "After migration:"
+echo "  - Run deploy.sh to restart the app:"
+echo "      sh deploy.sh"
 echo "======================================"

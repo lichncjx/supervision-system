@@ -58,3 +58,17 @@ export async function getDepartmentManagers(departmentId: number): Promise<User[
     return []
   }
 }
+
+export async function getDepartmentUsers(departmentId: number): Promise<User[]> {
+  try {
+    const response = await fetch(
+      `/api/users/by-department?departmentId=${departmentId}`,
+      { method: 'GET', credentials: 'include' },
+    )
+    if (!response.ok) return []
+    const data = (await response.json()) as UserDto[]
+    return data.map(toClientUser)
+  } catch {
+    return []
+  }
+}

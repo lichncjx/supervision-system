@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { WorkFormNodes } from '@/features/works/ui/work-form-nodes';
+import { WorkFormCooperators } from '@/features/works/ui/work-form-cooperators';
+import { ResponsibleFields } from '@/features/works/ui/work-form-fields';
 import type { WorkNode } from '@/features/works/client/work-client.types';
 import { FIELD_LABEL, PANEL_PADDED } from '@/features/works/ui/visual-tokens';
 
@@ -13,6 +15,7 @@ interface WorkDecomposePanelProps {
   onSubmitDecomposition: () => void;
   rejectReason?: string;
   isReturned?: boolean;
+  departments: Array<{ id: number; name: string; code: string; isBusiness: boolean }>;
 }
 
 export function WorkDecomposePanel({
@@ -21,6 +24,7 @@ export function WorkDecomposePanel({
   onSubmitDecomposition,
   rejectReason,
   isReturned,
+  departments,
 }: WorkDecomposePanelProps) {
   const nodes: WorkNode[] = Array.isArray(editForm.nodes) ? editForm.nodes : [];
 
@@ -40,6 +44,20 @@ export function WorkDecomposePanel({
           该事项由公司领导提出，请责任部门进行任务分解，补充工作计划、节点、子节点和计划完成时间后提交审批。
         </div>
 
+        <div className="flex gap-4 [&>div]:flex-1">
+          <ResponsibleFields
+            leaderValue={editForm.responsibleLeader || ''}
+            onLeaderChange={(v) => setEditForm((prev: any) => ({ ...prev, responsibleLeader: v }))}
+            personValue={editForm.responsiblePerson || ''}
+            onPersonChange={(v) => setEditForm((prev: any) => ({ ...prev, responsiblePerson: v }))}
+            departmentId={editForm.departmentId || undefined}
+            leaderUserId={editForm.responsibleLeaderUserId}
+            onLeaderUserIdChange={(id) => setEditForm((prev: any) => ({ ...prev, responsibleLeaderUserId: id }))}
+            personUserId={editForm.responsiblePersonUserId}
+            onPersonUserIdChange={(id) => setEditForm((prev: any) => ({ ...prev, responsiblePersonUserId: id }))}
+          />
+        </div>
+
         <div>
           <label className={FIELD_LABEL + ' mb-1 block'}>工作计划</label>
           <Textarea
@@ -57,6 +75,12 @@ export function WorkDecomposePanel({
             onChange={(e) => setEditForm((prev: any) => ({ ...prev, planCompleteTime: e.target.value }))}
           />
         </div>
+
+        <WorkFormCooperators
+          cooperators={Array.isArray(editForm.cooperators) ? editForm.cooperators : []}
+          onChange={(cooperators) => setEditForm((prev: any) => ({ ...prev, cooperators }))}
+          departments={departments.filter((d) => d.isBusiness && d.id !== editForm.departmentId)}
+        />
 
         <WorkFormNodes
           nodes={nodes}

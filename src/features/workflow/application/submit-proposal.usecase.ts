@@ -31,15 +31,12 @@ export async function submitProposal(
     return err(403, '无权提交该事项')
   }
 
-  const nextApproverError = await ensureIsActiveCompanyLeader(nextApproverId)
-  if (nextApproverError) return nextApproverError
-
   const oldStatus = workItem.status
-
-  if (
+  const isCompanyTodoDraft =
     workItem.type === WorkItemType.TODO &&
     isCompanyLevel(user.role)
-  ) {
+
+  if (isCompanyTodoDraft) {
     const updated = await updateWorkItem(workItemId, {
       status: WorkItemStatus.PENDING_DECOMPOSE,
       action: ActionType.TODO_DECOMPOSE,
@@ -72,6 +69,13 @@ export async function submitProposal(
 
     return ok()
   }
+
+  if (!workItem.responsiblePersonUserId) {
+    return err(400, '请先指定责任人后再提交审批')
+  }
+
+  const nextApproverError = await ensureIsActiveCompanyLeader(nextApproverId)
+  if (nextApproverError) return nextApproverError
 
   const approver = getProposalFirstApprover(workItem, user, nextApproverId)
   if (!approver) {

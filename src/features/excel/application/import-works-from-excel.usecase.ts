@@ -3,7 +3,7 @@ import { Prisma, WorkItemStatus, WorkItemType } from '@prisma/client'
 import { err, ok, type Result } from '@/shared/result'
 import { validateAndParseExcel } from '@/features/excel/infrastructure/work-import-parser'
 import { findDepartmentsForImport } from '@/features/departments/infrastructure/department.repository'
-import { findCompanyLeaders } from '@/features/excel/infrastructure/work-import.repository'
+import { findCompanyLeaders, findAllActiveUsers } from '@/features/excel/infrastructure/work-import.repository'
 import {
   createImportedWorkItems,
 } from '@/features/excel/infrastructure/work-import.repository'
@@ -27,12 +27,14 @@ export async function importWorksFromExcelUseCase(
 
   const departments = await findDepartmentsForImport()
   const companyLeaders = await findCompanyLeaders()
+  const allUsers = await findAllActiveUsers()
 
   const { rows, errors } = await validateAndParseExcel(
     fileBuffer,
     type,
     departments,
     companyLeaders,
+    allUsers,
   )
 
   if (errors.length > 0) {
@@ -74,6 +76,8 @@ export async function importWorksFromExcelUseCase(
         completeForm: data.completeForm || null,
         responsibleLeader: data.responsibleLeader || null,
         responsiblePerson: data.responsiblePerson || null,
+        responsibleLeaderUserId: data.responsibleLeaderUserId ?? null,
+        responsiblePersonUserId: data.responsiblePersonUserId ?? null,
         cooperators: data.cooperators.length
           ? toInputJsonValue(data.cooperators)
           : undefined,
@@ -101,6 +105,8 @@ export async function importWorksFromExcelUseCase(
           : null,
         responsibleLeader: data.responsibleLeader || null,
         responsiblePerson: data.responsiblePerson || null,
+        responsibleLeaderUserId: data.responsibleLeaderUserId ?? null,
+        responsiblePersonUserId: data.responsiblePersonUserId ?? null,
         cooperators: data.cooperators.length
           ? toInputJsonValue(data.cooperators)
           : undefined,
