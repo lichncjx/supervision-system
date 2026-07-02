@@ -1,0 +1,728 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>公司督办管理系统普通用户操作手册</title>
+  <style>
+
+:root {
+  color-scheme: light;
+  --ink: #1f2933;
+  --muted: #5b6472;
+  --line: #d7dde5;
+  --soft: #f5f7fa;
+  --accent: #315f9f;
+  --accent-soft: #edf4ff;
+}
+
+@page {
+  size: A4 portrait;
+  margin: 20mm 18mm;
+}
+
+* { box-sizing: border-box; }
+html { background: #eef1f5; }
+body {
+  margin: 0;
+  color: var(--ink);
+  font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif;
+  font-size: 10.8pt;
+  line-height: 1.62;
+  letter-spacing: 0;
+}
+.page {
+  width: 210mm;
+  min-height: 297mm;
+  margin: 0 auto 16px;
+  padding: 20mm 18mm;
+  background: #fff;
+  box-shadow: 0 8px 28px rgba(31, 41, 51, 0.14);
+}
+.cover-page, .toc-page-wrap { page-break-after: always; break-after: page; }
+.cover-page {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.cover-kicker {
+  color: var(--accent);
+  font-size: 13pt;
+  font-weight: 700;
+  margin-bottom: 10mm;
+}
+.cover-title {
+  font-size: 28pt;
+  line-height: 1.25;
+  margin: 0 0 6mm;
+  font-weight: 800;
+}
+.cover-subtitle {
+  font-size: 16pt;
+  margin: 0 0 18mm;
+  color: var(--muted);
+}
+.cover-desc {
+  margin: 10mm 0 0;
+  padding: 4mm 5mm;
+  border-left: 4px solid var(--accent);
+  background: var(--accent-soft);
+  color: #26374f;
+}
+.cover-meta { width: 100%; margin-top: 4mm; }
+.cover-meta th { width: 34mm; }
+.toc-title { margin-top: 0; font-size: 20pt; }
+.toc-note { color: var(--muted); margin-bottom: 8mm; }
+.toc-list { list-style: none; padding: 0; margin: 0; }
+.toc-list li {
+  display: flex;
+  gap: 6mm;
+  justify-content: space-between;
+  border-bottom: 1px dotted #b9c1cd;
+  padding: 2.2mm 0;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+.toc-list a { color: var(--ink); text-decoration: none; font-weight: 600; }
+.toc-page { color: var(--ink); white-space: nowrap; font-size: 10pt; font-weight: 600; }
+.manual-body { padding-top: 18mm; }
+.manual-body::before {
+  content: "公司督办管理系统｜普通用户操作手册";
+  position: fixed;
+  top: 7mm;
+  left: 18mm;
+  right: 18mm;
+  height: 8mm;
+  color: var(--muted);
+  font-size: 9pt;
+  border-bottom: 1px solid var(--line);
+}
+.manual-body::after {
+  content: "文档版本 V1.0 ｜ 打印版页码由浏览器生成";
+  position: fixed;
+  bottom: 7mm;
+  left: 18mm;
+  right: 18mm;
+  height: 8mm;
+  color: var(--muted);
+  font-size: 9pt;
+  border-top: 1px solid var(--line);
+  padding-top: 2mm;
+}
+.chapter { page-break-before: always; break-before: page; }
+.chapter:first-child { page-break-before: auto; break-before: auto; }
+h2 {
+  margin: 0 0 7mm;
+  padding-bottom: 2.5mm;
+  border-bottom: 2px solid var(--accent);
+  font-size: 18pt;
+  line-height: 1.35;
+  page-break-after: avoid;
+  break-after: avoid;
+}
+h3 {
+  margin: 8mm 0 3mm;
+  font-size: 13.2pt;
+  line-height: 1.35;
+  color: #223b5f;
+  page-break-after: avoid;
+  break-after: avoid;
+}
+p { margin: 0 0 3.2mm; }
+ul, ol { margin: 0 0 4mm 7mm; padding: 0; }
+li { margin: 1.2mm 0; padding-left: 1mm; }
+strong { font-weight: 700; }
+code {
+  font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif;
+  background: var(--soft);
+  padding: 0 1mm;
+  border-radius: 2px;
+}
+a { color: var(--accent); }
+.table-wrap {
+  width: 100%;
+  overflow-wrap: anywhere;
+  margin: 4mm 0 6mm;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 10pt;
+}
+th, td {
+  border: 1px solid var(--line);
+  padding: 2.2mm 2.5mm;
+  vertical-align: top;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+th {
+  background: #f0f4f8;
+  font-weight: 700;
+  color: #24364b;
+}
+tr { page-break-inside: avoid; break-inside: avoid; }
+.note {
+  margin: 4mm 0 5mm;
+  padding: 3mm 4mm;
+  border-left: 4px solid var(--accent);
+  background: #f7faff;
+  color: #26374f;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+.note p { margin: 0; }
+figure {
+  margin: 6mm auto 8mm;
+  text-align: center;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+figure img {
+  display: block;
+  max-width: 100%;
+  max-height: 185mm;
+  width: auto;
+  height: auto;
+  margin: 0 auto;
+  object-fit: contain;
+  border: 1px solid #d8dee8;
+  background: #fff;
+}
+figure img[src*="IMG-03"] { max-width: 96%; }
+figcaption {
+  margin-top: 2.5mm;
+  color: var(--muted);
+  font-size: 9.6pt;
+  line-height: 1.5;
+  text-align: left;
+}
+hr { border: 0; border-top: 1px solid var(--line); margin: 6mm 0; }
+
+@media screen {
+  .page { border-radius: 2px; }
+}
+
+@media print {
+  html, body { background: #fff; }
+  body { font-size: 10.8pt; }
+  .page {
+    width: auto;
+    min-height: auto;
+    margin: 0;
+    padding: 0;
+    box-shadow: none;
+  }
+  .cover-page, .toc-page-wrap { page-break-after: always; break-after: page; }
+  .manual-body { padding-top: 0; }
+  .manual-body::before,
+  .manual-body::after {
+    content: none !important;
+    display: none !important;
+  }
+  .chapter { page-break-before: always; break-before: page; }
+  .chapter:first-child { page-break-before: auto; break-before: auto; }
+  h2, h3 {
+    page-break-after: avoid;
+    break-after: avoid;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  h3 + p,
+  h3 + ul,
+  h3 + ol,
+  h3 + .table-wrap {
+    page-break-before: avoid;
+    break-before: avoid;
+  }
+  table, tr, .table-wrap, figure, figcaption, .note {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  figure { margin: 4.5mm auto 6mm; }
+  figcaption {
+    margin-top: 1.8mm;
+    page-break-before: avoid;
+    break-before: avoid;
+  }
+  p { margin-bottom: 2.8mm; }
+  ul, ol { margin-bottom: 3.4mm; }
+  .note { margin: 3.4mm 0 4.2mm; }
+  img { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  a { color: inherit; text-decoration: none; }
+  a[href]::after { content: ""; }
+}
+
+  </style>
+</head>
+<body>
+  <main>
+    <section class="page cover-page" id="cover">
+      <div class="cover-kicker">公司督办管理系统</div>
+      <h1 class="cover-title">普通用户操作手册</h1>
+      <p class="cover-subtitle">V1.0 ｜ 2026年7月2日</p>
+      <table class="cover-meta">
+        <tbody>
+<tr><th>系统名称</th><td>公司督办管理系统</td></tr>
+<tr><th>文档名称</th><td>普通用户操作手册</td></tr>
+<tr><th>版本号</th><td>V1.0</td></tr>
+<tr><th>编写日期</th><td>2026年7月2日</td></tr>
+<tr><th>适用对象</th><td>部门事项管理岗 / 系统办理人、部门领导、公司主管领导、公司主要领导</td></tr>
+<tr><th>使用说明</th><td>文中截图均为演示数据，与实际业务数据无关。</td></tr>
+        </tbody>
+      </table>
+      <p class="cover-desc">本文档用于指导普通业务用户完成事项查看、办理、审批和材料提交等操作。</p>
+    </section>
+
+    <section class="page toc-page-wrap" id="toc">
+      <h2 class="toc-title">目录</h2>
+      <p class="toc-note">目录链接可在浏览器中点击跳转。</p>
+      <ol class="toc-list">
+<li><a href="#section-preface">阅读前说明</a><span class="toc-page">3</span></li>
+<li><a href="#section-1">1. 登录、修改密码与退出</a><span class="toc-page">5</span></li>
+<li><a href="#section-2">2. 首页概览与提醒</a><span class="toc-page">7</span></li>
+<li><a href="#section-3">3. 查找和查看事项</a><span class="toc-page">8</span></li>
+<li><a href="#section-4">4. 新建事项前：选择事项类型</a><span class="toc-page">11</span></li>
+<li><a href="#section-5">5. 新建事项并保存草稿</a><span class="toc-page">12</span></li>
+<li><a href="#section-6">6. 编辑草稿并提交审批</a><span class="toc-page">14</span></li>
+<li><a href="#section-7">7. 公司领导发起待办与部门分解</a><span class="toc-page">16</span></li>
+<li><a href="#section-8">8. 处理中心：待我审批与待我办理</a><span class="toc-page">19</span></li>
+<li><a href="#section-9">9. 审批通过与审批退回</a><span class="toc-page">20</span></li>
+<li><a href="#section-10">10. 退回后修改并重新提交</a><span class="toc-page">22</span></li>
+<li><a href="#section-11">11. 进行中事项办理</a><span class="toc-page">23</span></li>
+<li><a href="#section-12">12. 提交完成材料与完成后查看</a><span class="toc-page">26</span></li>
+<li><a href="#section-13">13. 普通附件与审批记录</a><span class="toc-page">28</span></li>
+<li><a href="#section-14">14. 常见问题</a><span class="toc-page">30</span></li>
+      </ol>
+    </section>
+
+    <article class="page manual-body" id="content">
+<section class="chapter" id="section-preface">
+<h2>阅读前说明</h2>
+<h3>适用范围</h3>
+<p>本手册面向普通业务用户，说明如何查看事项、创建事项、办理审批、处理退回、申请调整或取消、提交完成材料、查看附件和审批记录。</p>
+<p>本手册适用以下角色：</p>
+<ul>
+<li>部门事项管理岗 / 系统办理人；</li>
+<li>部门领导；</li>
+<li>公司主管领导；</li>
+<li>公司主要领导。</li>
+</ul>
+<p>本手册不包含系统管理员、督办管理员、全局管理、全局统计、导入导出等管理类功能。</p>
+<h3>重要概念</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>概念</th><th>用户应如何理解</th></tr></thead>
+<tbody>
+<tr><td>系统办理人</td><td>系统中负责继续办理进行中事项的用户，例如申请调整、申请取消、提交完成材料。</td></tr>
+<tr><td>业务责任人</td><td>页面展示、责任留痕使用的责任人信息，不代表一定拥有系统办理权限。</td></tr>
+<tr><td>待我审批</td><td>当前事项正等待本人审批。</td></tr>
+<tr><td>待我办理</td><td>当前事项需要本人继续处理，但不处于本人审批节点。</td></tr>
+<tr><td>可查看</td><td>可以打开和查看事项，不等于可以修改、办理或审批。</td></tr>
+<tr><td>草稿</td><td>尚未提交审批的事项。</td></tr>
+<tr><td>待分解</td><td>公司领导发起待办后，等待主责部门补充分解方案。</td></tr>
+<tr><td>进行中</td><td>已完成立项或分解审批，正在实施的事项。</td></tr>
+</tbody>
+</table></div>
+<div class="note"><p><strong>提示：</strong> 系统办理权限由系统中的用户关联决定；业务责任人主要用于页面展示和责任留痕。</p></div>
+<h3>第一版不包含的功能</h3>
+<ul>
+<li>系统管理；</li>
+<li>督办管理；</li>
+<li>Excel 导入、导出和模板下载；</li>
+<li>重点工作取消至公司主要领导最终审批的特殊流程。</li>
+</ul>
+</section>
+<section class="chapter" id="section-1">
+<h2>1. 登录、修改密码与退出</h2>
+<h3>1.1 登录系统</h3>
+<p>打开系统登录页面后，按以下步骤登录：</p>
+<ol>
+<li>输入用户名。</li>
+<li>输入密码。</li>
+<li>点击“登录”。</li>
+</ol>
+<figure>
+<img src="images/IMG-01-login.png" alt="图 1-1 登录页面" loading="lazy" />
+<figcaption>图 1-1 展示登录页面的用户名、密码输入框和“登录”按钮。登录前，密码输入框应保持空白，不在手册中展示任何密码。</figcaption>
+</figure>
+<h3>1.2 修改密码与退出</h3>
+<p>登录后，在页面右上角可以看到当前用户信息，并可以使用“修改密码”和“退出”入口。</p>
+<ol>
+<li>点击“修改密码”，按页面提示修改本人密码。</li>
+<li>点击“退出”，结束当前登录会话。</li>
+</ol>
+<figure>
+<img src="images/IMG-02-user-menu.png" alt="图 1-2 用户菜单" loading="lazy" />
+<figcaption>图 1-2 展示右上角用户区域中的“修改密码”和“退出”入口。日常离开系统前，建议先退出登录。</figcaption>
+</figure>
+</section>
+<section class="chapter" id="section-2">
+<h2>2. 首页概览与提醒</h2>
+<p>首页用于快速查看工作概况和待处理任务入口。首页不展开具体审批办理规则，审批和办理操作在后续章节说明。</p>
+<p>首页通常包括：</p>
+<ul>
+<li>事项统计卡片；</li>
+<li>到期提醒；</li>
+<li>待办理、待审批等处理入口；</li>
+<li>进入重点工作、主要工作、待办事项列表的入口。</li>
+</ul>
+<figure>
+<img src="images/IMG-03-dashboard.png" alt="图 2-1 首页概览" loading="lazy" />
+<figcaption>图 2-1 展示首页统计卡片、提醒入口和处理中心入口。用户可以通过这些入口快速进入事项列表或处理中心。</figcaption>
+</figure>
+</section>
+<section class="chapter" id="section-3">
+<h2>3. 查找和查看事项</h2>
+<h3>3.1 按事项类型查看</h3>
+<p>系统将事项分为三类：</p>
+<ul>
+<li>重点工作；</li>
+<li>主要工作；</li>
+<li>待办事项。</li>
+</ul>
+<p>用户可以通过顶部导航进入对应列表，查看自己有权限查看的事项。</p>
+<h3>3.2 搜索和筛选事项</h3>
+<p>在事项列表中，可以通过关键词搜索事项，也可以按月份、状态等条件筛选。</p>
+<p>常用操作包括：</p>
+<ol>
+<li>在搜索框输入事项关键词。</li>
+<li>选择月份条件。</li>
+<li>选择状态条件。</li>
+<li>点击“查看”进入事项详情页。</li>
+</ol>
+<figure>
+<img src="images/IMG-04-work-list-and-filter.png" alt="图 3-1 搜索和筛选事项" loading="lazy" />
+<figcaption>图 3-1 展示事项列表中的搜索框、月份筛选、状态筛选和“查看”入口。列表筛选可以帮助用户快速定位需要处理或查看的事项。</figcaption>
+</figure>
+<h3>3.3 查看事项详情</h3>
+<p>进入事项详情页后，通常可以查看以下信息：</p>
+<ul>
+<li>当前状态；</li>
+<li>主责部门；</li>
+<li>责任领导、责任人员等责任信息；</li>
+<li>工作计划或任务节点；</li>
+<li>普通附件；</li>
+<li>完成材料；</li>
+<li>审批记录。</li>
+</ul>
+<figure>
+<img src="images/IMG-05-work-detail-overview.png" alt="图 3-2 事项详情" loading="lazy" />
+<figcaption>图 3-2 展示事项详情页中的状态、主责部门和责任信息。不同状态下，页面右侧或下方会显示不同的操作入口。</figcaption>
+</figure>
+<div class="note"><p><strong>提示：</strong> 能查看事项，不代表一定可以修改、办理或审批。</p></div>
+</section>
+<section class="chapter" id="section-4">
+<h2>4. 新建事项前：选择事项类型</h2>
+<p>新建事项前，应先根据业务场景选择事项类型。</p>
+<div class="table-wrap"><table>
+<thead><tr><th>事项类型</th><th>常见适用场景</th><th>谁可以创建</th><th>流程特点</th></tr></thead>
+<tbody>
+<tr><td>重点工作</td><td>公司级重点督办事项</td><td>部门事项管理岗、部门领导</td><td>正常立项、调整、取消、完成流程。</td></tr>
+<tr><td>主要工作</td><td>部门主要工作事项</td><td>部门事项管理岗、部门领导</td><td>正常立项、调整、取消、完成流程。</td></tr>
+<tr><td>待办事项</td><td>领导交办或日常待办事项</td><td>部门角色、公司领导</td><td>公司领导发起后需由主责部门进行分解。</td></tr>
+</tbody>
+</table></div>
+<p>第一版手册只说明普通高频流程，不展开特殊取消流程。</p>
+</section>
+<section class="chapter" id="section-5">
+<h2>5. 新建事项并保存草稿</h2>
+<h3>5.1 新建重点工作或主要工作</h3>
+<p>部门事项管理岗或部门领导可以进入对应类型的新建页面，填写事项基础信息并保存草稿。</p>
+<p>常用步骤：</p>
+<ol>
+<li>进入重点工作或主要工作列表。</li>
+<li>点击新建入口。</li>
+<li>填写业务类别、工作事项、完成时间、完成形式等基础信息。</li>
+<li>选择责任部门、责任领导、业务责任人和系统办理人。</li>
+<li>根据需要填写工作节点。</li>
+<li>点击“保存草稿”。</li>
+</ol>
+<figure>
+<img src="images/IMG-06-new-work-form.png" alt="图 5-1 新建主要工作" loading="lazy" />
+<figcaption>图 5-1 展示新建主要工作页面。用户应重点关注基础信息、责任分工和“保存草稿”按钮。</figcaption>
+</figure>
+<div class="note"><p><strong>提示：</strong> 业务责任人用于展示和责任留痕；系统办理人负责后续系统办理动作。两者可以是同一人，也可能不同。</p></div>
+<h3>5.2 查看已保存的草稿</h3>
+<p>草稿保存后，可以在详情页继续查看和完善。草稿状态下，用户可以继续编辑、保存或提交审批。</p>
+<figure>
+<img src="images/IMG-07-save-draft-detail.png" alt="图 5-2 草稿详情" loading="lazy" />
+<figcaption>图 5-2 展示草稿详情页。草稿尚未进入审批流程，用户应在确认信息完整后再提交审批。</figcaption>
+</figure>
+</section>
+<section class="chapter" id="section-6">
+<h2>6. 编辑草稿并提交审批</h2>
+<h3>6.1 编辑草稿</h3>
+<p>如果草稿内容需要补充或修改，可以进入编辑页面。</p>
+<p>常用步骤：</p>
+<ol>
+<li>打开草稿事项详情页。</li>
+<li>点击编辑入口。</li>
+<li>修改需要调整的内容。</li>
+<li>点击保存按钮。</li>
+</ol>
+<figure>
+<img src="images/IMG-08-edit-draft.png" alt="图 6-1 编辑草稿" loading="lazy" />
+<figcaption>图 6-1 展示草稿编辑页面。用户可以在此修改基础信息、责任信息和节点信息。</figcaption>
+</figure>
+<h3>6.2 提交审批</h3>
+<p>草稿信息确认无误后，可以提交审批。</p>
+<p>实际操作步骤：</p>
+<ol>
+<li>在草稿详情页确认信息无误。</li>
+<li>点击“提交审批”。</li>
+<li>系统直接提交，并显示“已提交审批”提示。</li>
+<li>事项进入审批流程。</li>
+</ol>
+<div class="note"><p><strong>提示：</strong> 提交审批时，系统不会显示额外的提交确认弹窗。请在点击“提交审批”前先确认信息完整、准确。</p></div>
+</section>
+<section class="chapter" id="section-7">
+<h2>7. 公司领导发起待办与部门分解</h2>
+<h3>7.1 公司领导发起待办</h3>
+<p>公司领导可以进入待办事项新建页面，填写待办事项内容。公司领导发起的待办事项提交后，会进入“待分解”，由主责部门补充分解方案。</p>
+<p>常用填写内容包括：</p>
+<ul>
+<li>事项提出领导；</li>
+<li>事项提出场景；</li>
+<li>工作计划；</li>
+<li>进展情况；</li>
+<li>待办事项；</li>
+<li>完成时间；</li>
+<li>主责部门和责任信息。</li>
+</ul>
+<figure>
+<img src="images/IMG-10-company-todo-create.png" alt="图 7-1 公司领导新建待办" loading="lazy" />
+<figcaption>图 7-1 展示公司领导新建待办事项页面。用户应重点关注待办事项主要内容、主责部门和责任人选择区域。</figcaption>
+</figure>
+<h3>7.2 主责部门查看待分解事项</h3>
+<p>公司领导发起待办后，主责部门可以在事项详情中看到“待分解”状态和分解办理区域。</p>
+<figure>
+<img src="images/IMG-11-pending-decompose.png" alt="图 7-2 待分解事项" loading="lazy" />
+<figcaption>图 7-2 展示待分解事项详情页。主责部门应重点关注事项状态、责任信息和右侧的分解办理区。</figcaption>
+</figure>
+<h3>7.3 填写并提交分解方案</h3>
+<p>主责部门办理人需要补充分解方案后提交。</p>
+<p>已验证的填写规则：</p>
+<ul>
+<li>工作计划必填；</li>
+<li>完成时间必填；</li>
+<li>至少一个任务节点必填；</li>
+<li>提交按钮为“提交分解结果”。</li>
+</ul>
+<p>常用步骤：</p>
+<ol>
+<li>确认责任领导和责任人。</li>
+<li>填写工作计划。</li>
+<li>填写完成时间。</li>
+<li>添加至少一个任务节点。</li>
+<li>点击“提交分解结果”。</li>
+<li>系统将分解方案提交审批。</li>
+</ol>
+<figure>
+<img src="images/IMG-12-decompose-submit.png" alt="图 7-3 提交分解方案" loading="lazy" />
+<figcaption>图 7-3 展示分解方案中的任务节点和“提交分解结果”按钮。提交后，事项进入审批流程。</figcaption>
+</figure>
+</section>
+<section class="chapter" id="section-8">
+<h2>8. 处理中心：待我审批与待我办理</h2>
+<p>处理中心用于集中查看需要本人处理的事项。不同标签含义不同，不能混用。</p>
+<div class="table-wrap"><table>
+<thead><tr><th>标签</th><th>含义</th></tr></thead>
+<tbody>
+<tr><td>待我审批</td><td>当前事项正等待本人审批。</td></tr>
+<tr><td>待我办理</td><td>当前事项需要本人继续办理，例如草稿编辑、待办分解、退回后修改、进行中办理。</td></tr>
+<tr><td>全部事项</td><td>用于集中查看处理中心中的相关事项，不等于所有用户都能办理所有事项。</td></tr>
+</tbody>
+</table></div>
+<figure>
+<img src="images/IMG-13-process-tabs.png" alt="图 8-1 处理中心" loading="lazy" />
+<figcaption>图 8-1 展示处理中心的“待我审批”“待我办理”“全部事项”标签。用户应先确认事项处于哪类处理任务，再执行对应操作。</figcaption>
+</figure>
+<div class="note"><p><strong>提示：</strong> 部门领导可以查看本部门相关事项，但只有事项进入本人审批节点时，才可以审批。</p></div>
+</section>
+<section class="chapter" id="section-9">
+<h2>9. 审批通过与审批退回</h2>
+<h3>9.1 审批通过</h3>
+<p>当事项进入本人审批节点时，详情页会显示审批操作区。审批通过时，可以填写审批意见。</p>
+<p>常用步骤：</p>
+<ol>
+<li>打开待审批事项。</li>
+<li>查看事项内容和审批流程。</li>
+<li>点击“审批通过”。</li>
+<li>填写审批意见。</li>
+<li>点击“确认通过”。</li>
+</ol>
+<figure>
+<img src="images/IMG-14-approve-action.png" alt="图 9-1 审批通过" loading="lazy" />
+<figcaption>图 9-1 展示审批通过弹窗。部门领导审批后，系统可能进入公司主管领导审批；是否有下一审批节点，以页面当前实际显示为准。</figcaption>
+</figure>
+<h3>9.2 审批退回</h3>
+<p>如果事项内容需要修改，审批人可以退回事项。</p>
+<p>常用步骤：</p>
+<ol>
+<li>打开待审批事项。</li>
+<li>点击“审批拒绝”。</li>
+<li>按页面提示填写退回原因。</li>
+<li>提交后，事项回到可修改状态。</li>
+<li>退回原因会显示在事项详情中。</li>
+</ol>
+<figure>
+<img src="images/IMG-15-reject-action.png" alt="图 9-2 审批退回" loading="lazy" />
+<figcaption>图 9-2 展示审批操作区中的退回入口。退回后，办理人需要根据退回原因修改并重新提交。</figcaption>
+</figure>
+</section>
+<section class="chapter" id="section-10">
+<h2>10. 退回后修改并重新提交</h2>
+<p>事项被退回后，系统指定的办理人可以查看退回原因，修改后重新提交。</p>
+<p>操作步骤：</p>
+<ol>
+<li>打开被退回事项。</li>
+<li>查看退回原因。</li>
+<li>进入修改页面，调整事项内容。</li>
+<li>填写修改说明。</li>
+<li>点击“保存修改并重新提交”。</li>
+</ol>
+<figure>
+<img src="images/IMG-16-returned-resubmit.png" alt="图 10-1 退回后重新提交" loading="lazy" />
+<figcaption>图 10-1 展示退回待修改状态、退回原因和重新提交入口。退回后应按审批意见补充或修正事项内容。</figcaption>
+</figure>
+<div class="note"><p><strong>提示：</strong> 退回后由系统指定的办理人继续处理。同部门其他用户即使可以查看，也不一定有重新提交权限。</p></div>
+</section>
+<section class="chapter" id="section-11">
+<h2>11. 进行中事项办理</h2>
+<h3>11.1 可办理操作</h3>
+<p>事项进入“进行中”后，系统办理人可以根据页面入口继续办理。</p>
+<p>常见办理操作包括：</p>
+<ul>
+<li>申请调整；</li>
+<li>申请取消；</li>
+<li>提交完成材料。</li>
+</ul>
+<figure>
+<img src="images/IMG-17-in-progress-actions.png" alt="图 11-1 进行中事项办理入口" loading="lazy" />
+<figcaption>图 11-1 展示进行中事项的办理入口。只有具备办理权限的用户才能看到并使用相应操作。</figcaption>
+</figure>
+<h3>11.2 申请调整</h3>
+<p>当事项内容需要变更时，系统办理人可以申请调整。</p>
+<p>操作步骤：</p>
+<ol>
+<li>打开进行中事项。</li>
+<li>点击“申请调整”。</li>
+<li>填写调整原因。</li>
+<li>修改允许调整的事项内容。</li>
+<li>点击“提交调整申请”。</li>
+<li>调整申请进入审批流程。</li>
+<li>审批通过后，事项回到进行中。</li>
+</ol>
+<figure>
+<img src="images/IMG-18-adjust-submit.png" alt="图 11-2 提交调整申请" loading="lazy" />
+<figcaption>图 11-2 展示调整原因、可调整内容和“提交调整申请”按钮。调整提交后，应等待审批结果。</figcaption>
+</figure>
+<h3>11.3 申请取消</h3>
+<p>当事项不再需要继续实施时，系统办理人可以申请取消。</p>
+<p>操作步骤：</p>
+<ol>
+<li>打开进行中事项。</li>
+<li>点击“申请取消”。</li>
+<li>查看公司审批领导。</li>
+<li>填写取消原因。</li>
+<li>点击“提交取消申请”。</li>
+<li>取消申请进入审批流程。</li>
+<li>审批通过后，事项进入“已取消”。</li>
+</ol>
+<figure>
+<img src="images/IMG-19-cancel-submit.png" alt="图 11-3 提交取消申请" loading="lazy" />
+<figcaption>图 11-3 展示申请取消弹窗。取消申请审批通过后，事项结束为已取消状态。</figcaption>
+</figure>
+</section>
+<section class="chapter" id="section-12">
+<h2>12. 提交完成材料与完成后查看</h2>
+<h3>12.1 提交完成材料</h3>
+<p>事项处于“进行中”且实际工作已完成后，系统办理人可以提交完成材料，进入完成审批流程。</p>
+<p>操作步骤：</p>
+<ol>
+<li>打开进行中事项。</li>
+<li>在“完成见证材料说明”中填写完成说明。</li>
+<li>上传见证材料附件。</li>
+<li>点击“提交完成材料”。</li>
+<li>事项进入完成审批流程。</li>
+<li>审批通过后，事项进入已完成。</li>
+</ol>
+<figure>
+<img src="images/IMG-20-complete-submit.png" alt="图 12-1 提交完成材料" loading="lazy" />
+<figcaption>图 12-1 展示完成材料说明、见证材料附件和“提交完成材料”按钮。提交前应确认材料完整。</figcaption>
+</figure>
+<h3>12.2 查看完成结果和见证材料</h3>
+<p>事项完成后，详情页会显示已完成状态，并保留完成材料和见证材料附件。</p>
+<p>用户可以查看：</p>
+<ul>
+<li>已完成状态；</li>
+<li>完成材料说明；</li>
+<li>见证材料附件；</li>
+<li>下载入口。</li>
+</ul>
+<figure>
+<img src="images/IMG-22-completed-evidence-records.png" alt="图 12-2 完成后查看" loading="lazy" />
+<figcaption>图 12-2 展示已完成事项中的普通附件和见证材料附件。用户可以通过下载入口查看材料。</figcaption>
+</figure>
+</section>
+<section class="chapter" id="section-13">
+<h2>13. 普通附件与审批记录</h2>
+<h3>13.1 管理普通附件</h3>
+<p>普通附件用于补充事项过程中的相关材料，不等同于完成材料。</p>
+<p>常用操作包括：</p>
+<ol>
+<li>点击普通附件区域的“上传”。</li>
+<li>选择文件并上传。</li>
+<li>在附件列表中点击下载入口查看附件。</li>
+<li>对本人上传的附件，可以使用删除入口删除。</li>
+</ol>
+<figure>
+<img src="images/IMG-21-attachment-management.png" alt="图 13-1 普通附件管理" loading="lazy" />
+<figcaption>图 13-1 展示普通附件上传后的附件列表、下载入口和删除入口。用户只能删除本人上传且页面允许删除的附件。</figcaption>
+</figure>
+<div class="note"><p><strong>提示：</strong> 已完成或已取消事项不能继续上传普通附件。</p></div>
+<h3>13.2 查看审批记录</h3>
+<p>审批记录用于查看事项流转过程，帮助用户了解事项经过了哪些环节。</p>
+<p>审批记录通常可以帮助用户查看：</p>
+<ul>
+<li>何时提交；</li>
+<li>谁进行了审批；</li>
+<li>审批意见；</li>
+<li>状态如何流转；</li>
+<li>是否提交过完成材料。</li>
+</ul>
+<figure>
+<img src="images/IMG-23-workflow-records.png" alt="图 13-2 审批记录" loading="lazy" />
+<figcaption>图 13-2 展示事项审批记录。用户可以通过记录了解事项从提交、分解、审批到完成的完整过程。</figcaption>
+</figure>
+</section>
+<section class="chapter" id="section-14">
+<h2>14. 常见问题</h2>
+<h3>14.1 为什么我能看到事项，却没有编辑或办理按钮？</h3>
+<p>能查看事项，只代表你有查看权限。编辑、办理、提交、调整、取消、完成等操作需要系统判断你是否是当前应办理的用户，以及事项是否处于允许办理的状态。</p>
+<h3>14.2 为什么我看得到本部门事项，却不能审批？</h3>
+<p>部门领导可以查看本部门相关事项，但只有事项进入本人审批节点时，页面才会显示审批操作。能查看不等于能审批。</p>
+<h3>14.3 业务责任人和系统办理人有什么区别？</h3>
+<p>业务责任人用于页面展示和责任留痕。系统办理人负责进行中事项的调整、取消和完成材料提交等操作。草稿编辑、退回后修改和重新提交，由页面显示可办理入口的用户继续处理。两者可以相同，也可以不同。</p>
+<h3>14.4 提交审批后为什么没有确认弹窗？</h3>
+<p>系统实际行为是：点击“提交审批”后直接提交，并显示“已提交审批”提示。因此提交前应先检查事项内容是否完整、准确。</p>
+<h3>14.5 待我审批和待我办理有什么区别？</h3>
+<p>待我审批表示事项正在等待本人审批。待我办理表示事项需要本人继续处理，但不一定是审批，例如草稿编辑、待办分解、退回后修改、进行中办理等。</p>
+<h3>14.6 公司领导发起的待办为什么不能直接进入进行中？</h3>
+<p>公司领导发起待办后，主责部门还需要补充分解方案，包括工作计划、完成时间和任务节点。分解方案提交并审批通过后，事项才会进入进行中。</p>
+<h3>14.7 退回后由谁修改和重新提交？</h3>
+<p>退回后，由系统指定的办理人查看退回原因、修改事项并重新提交。同部门其他用户即使可以查看，也不一定有重新提交权限。</p>
+<h3>14.8 为什么完成后不能继续上传普通附件？</h3>
+<p>事项完成后，流程已经结束，页面不再提供继续上传普通附件的入口。完成后的材料主要用于查看和留痕。</p>
+<h3>14.9 为什么我不能删除其他人上传的附件？</h3>
+<p>普通用户只能删除本人上传且页面允许删除的附件。其他人上传的附件通常只能查看或下载，不能删除。</p>
+<h3>14.10 如何查看事项已经经过哪些审批环节？</h3>
+<p>打开事项详情页，查看“审批记录”区域。审批记录会显示提交、审批、退回、分解、提交完成材料等关键操作，以及对应的操作人、时间、意见和状态变化。</p>
+</section>
+    </article>
+  </main>
+</body>
+</html>
