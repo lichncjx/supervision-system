@@ -8,9 +8,7 @@ import {
 import { isReturnedInProgressWork, isApproving } from './work-status.rules'
 import { isGlobalView, isDepartmentLevel, isCompanyLevel, isDeptLeader } from '@/features/users/domain/role.rules'
 
-export type PermissionUser = Pick<User, 'id' | 'role' | 'departmentId'> & {
-  name?: string | null
-}
+export type PermissionUser = Pick<User, 'id' | 'role' | 'departmentId'>
 
 export interface PermissionWorkItem {
   id?: number
@@ -28,7 +26,6 @@ export interface PermissionWorkItem {
   approvalType?: ApprovalType | string | null
   rejectReason?: string | null
   rejectedFromStatus?: WorkItemStatus | string | null
-  responsiblePerson?: string | null
   responsiblePersonUserId?: number | null
   responsibleLeaderUserId?: number | null
 }
@@ -92,11 +89,7 @@ export function isResponsiblePerson(
   workItem: PermissionWorkItem,
   user: PermissionUser,
 ): boolean {
-  if (workItem.responsiblePersonUserId != null) {
-    return workItem.responsiblePersonUserId === user.id
-  }
-
-  return !!user.name && workItem.responsiblePerson === user.name
+  return workItem.responsiblePersonUserId === user.id
 }
 
 /**

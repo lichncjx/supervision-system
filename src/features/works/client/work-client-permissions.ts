@@ -8,13 +8,9 @@ export function isOwnedBy(user: { id: number }, work: Work): boolean {
   return (work.firstSubmitterId ?? work.creatorId) === user.id
 }
 
-/** IN_PROGRESS 后操作权归属：优先 responsiblePersonUserId，遗留空 ID 行按姓名快照兜底。 */
-export function isResponsiblePerson(user: { id: number; name?: string | null }, work: Work): boolean {
-  if (work.responsiblePersonUserId != null) {
-    return work.responsiblePersonUserId === user.id
-  }
-
-  return !!user.name && work.responsiblePerson === user.name
+/** IN_PROGRESS 后操作权归属：responsiblePersonUserId */
+export function isResponsiblePerson(user: { id: number }, work: Work): boolean {
+  return work.responsiblePersonUserId === user.id
 }
 
 // 原子权限函数 —— 不含 ADMIN/SUPERVISOR，只判断普通业务角色能否办理
