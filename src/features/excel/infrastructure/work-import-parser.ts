@@ -132,6 +132,18 @@ export async function validateAndParseExcel(
         ? String(val).trim()
         : ''
     }
+    const splitResponsibleParty = (value: string) => {
+      const parts = value
+        .split(/[\/／]/)
+        .map((part) => part.trim())
+        .filter(Boolean)
+
+      if (parts.length >= 2) {
+        return { leader: parts[0], person: parts[1] }
+      }
+
+      return { leader: '', person: parts[0] ?? '' }
+    }
 
     const importedStatus =
       getCell('当前状态') ||
@@ -412,8 +424,11 @@ export async function validateAndParseExcel(
       const workItem = getCell('待办事项')
       const formedTimeStr = getCell('形成时间')
       const departmentName = getCell('主责部门')
-      const responsibleLeader = getCell('责任领导')
-      const responsiblePerson = getCell('责任人')
+      const responsibleParty = getCell('主责责任人')
+      const parsedResponsibleParty = splitResponsibleParty(responsibleParty)
+      const responsibleLeader = getCell('责任领导') || parsedResponsibleParty.leader
+      const responsiblePerson = getCell('责任人') || parsedResponsibleParty.person
+      const responsiblePersonField = headerMap['责任人'] ? '责任人' : '主责责任人'
       const cooperatorsStr = getCell('配合方')
 
       const workPlan = getCell('工作计划')
@@ -470,7 +485,7 @@ export async function validateAndParseExcel(
       if (!responsiblePerson) {
         errors.push({
           row: rowNum,
-          field: '责任人',
+          field: responsiblePersonField,
           value: responsiblePerson,
           reason: '必填字段不能为空',
         })
@@ -525,7 +540,7 @@ export async function validateAndParseExcel(
           ? resolveUserName('责任领导', responsibleLeader, rowNum, resolvedDeptId, 'leader')
           : null
         const responsiblePersonUserId = responsiblePerson
-          ? resolveUserName('责任人', responsiblePerson, rowNum, resolvedDeptId, 'person')
+          ? resolveUserName(responsiblePersonField, responsiblePerson, rowNum, resolvedDeptId, 'person')
           : null
         if (hasRowErrors(rowNum)) continue
         rows.push({
