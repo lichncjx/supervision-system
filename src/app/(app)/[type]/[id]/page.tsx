@@ -36,7 +36,6 @@ import {
   canHandleReturnedDraftWork,
   canDecomposeTodoWork,
   canApproveWork,
-  isOwnedBy,
   isResponsiblePerson,
   isWorkRelatedToDepartment,
 } from '@/features/works/client/work-client-permissions';
