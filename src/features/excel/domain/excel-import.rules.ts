@@ -15,7 +15,6 @@ export interface ImportWorkRowData {
   businessCategory?: string
   workItem: string
   isInnovation?: boolean
-  workNode?: string
   planCompleteTime: string | null
   completeForm?: string
   departmentName?: string

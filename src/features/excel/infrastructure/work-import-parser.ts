@@ -164,7 +164,6 @@ export async function validateAndParseExcel(
       const businessCategory = getCell('业务类别')
       const workItem = getCell('工作事项')
       const isInnovationStr = getCell('是否为创新工作')
-      const workNode = getCell('工作节点')
       const planCompleteTimeStr = getCell('完成时间')
       const completeForm = getCell('完成形式')
       const departmentName = getCell('责任部门')
@@ -279,7 +278,6 @@ export async function validateAndParseExcel(
             businessCategory,
             workItem,
             isInnovation: isInnovationStr === '是',
-            workNode,
             planCompleteTime: parseExcelDate(planCompleteTimeStr),
             completeForm,
             departmentName,
@@ -298,7 +296,6 @@ export async function validateAndParseExcel(
     } else if (type === 'main' || type === 'MAIN') {
       const businessCategory = getCell('业务类别')
       const workItem = getCell('工作事项')
-      const workNode = getCell('工作节点')
       const planCompleteTimeStr = getCell('完成时间')
       const completeForm = getCell('完成形式')
       const departmentName = getCell('责任部门')
@@ -401,7 +398,6 @@ export async function validateAndParseExcel(
             type: 'MAIN',
             businessCategory,
             workItem,
-            workNode,
             planCompleteTime: parseExcelDate(planCompleteTimeStr),
             completeForm,
             departmentName,

@@ -15,7 +15,6 @@ export function getExcelTemplate(
         '业务类别',
         '工作事项',
         '是否为创新工作',
-        '工作节点',
         '完成时间',
         '完成形式',
         '责任部门',
@@ -26,7 +25,6 @@ export function getExcelTemplate(
         '示例：生产管理',
         '示例：完成年度生产计划',
         '是',
-        '示例：制定方案',
         '2026-12-31',
         '示例：书面报告',
         'JH',
@@ -39,7 +37,6 @@ export function getExcelTemplate(
       headers = [
         '业务类别',
         '工作事项',
-        '工作节点',
         '完成时间',
         '完成形式',
         '责任部门',
@@ -49,7 +46,6 @@ export function getExcelTemplate(
       example = [
         '示例：生产管理',
         '示例：完成年度生产计划',
-        '示例：制定方案',
         '2026-12-31',
         '示例：书面报告',
         'JH',

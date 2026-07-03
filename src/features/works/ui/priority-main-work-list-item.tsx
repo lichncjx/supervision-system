@@ -23,10 +23,6 @@ export function PriorityMainWorkListItem({ item, routeType, getDepartmentName }:
         )}
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs mt-2">
-        <div className="break-words">
-          <span className="text-slate-400">工作节点：</span>
-          <span className="text-slate-600">{item.workNode || '-'}</span>
-        </div>
         <div>
           <span className="text-slate-400">完成时间：</span>
           <span className="text-slate-600">{item.planCompleteTime || '-'}</span>

@@ -68,7 +68,6 @@ export async function importWorksFromExcelUseCase(
         businessCategory: data.businessCategory || null,
         workItem: data.workItem,
         isInnovation: data.isInnovation || false,
-        workNode: data.workNode || null,
         completeTime: null,
         planCompleteTime: data.planCompleteTime
           ? new Date(data.planCompleteTime)

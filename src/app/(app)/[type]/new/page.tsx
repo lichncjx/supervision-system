@@ -71,7 +71,6 @@ export default function NewWorkPage() {
   const [priorityMainForm, setPriorityMainForm] = useState({
     businessCategory: '',
     workItem: '',
-    workNode: '',
     planCompleteTime: '',
     completeForm: '',
     departmentId: String(user?.departmentId || 2),

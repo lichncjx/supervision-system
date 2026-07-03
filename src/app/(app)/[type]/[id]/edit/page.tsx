@@ -45,7 +45,6 @@ function buildInitialPriorityMainForm(work: Work) {
   return {
     businessCategory: work.businessCategory || '',
     workItem: work.workItem || work.title || '',
-    workNode: work.workNode || '',
     planCompleteTime: work.planCompleteTime || '',
     completeForm: work.completeForm || '',
     departmentId: work.departmentId ? String(work.departmentId) : '',
@@ -153,7 +152,6 @@ export default function EditWorkPage() {
         title: priorityMainForm.workItem || work.title,
         workItem: priorityMainForm.workItem,
         businessCategory: priorityMainForm.businessCategory,
-        workNode: priorityMainForm.workNode,
         planCompleteTime: priorityMainForm.planCompleteTime,
         completeForm: priorityMainForm.completeForm,
         departmentId: priorityMainForm.departmentId ? Number(priorityMainForm.departmentId) : null,

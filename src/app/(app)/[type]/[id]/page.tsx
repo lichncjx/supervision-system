@@ -117,18 +117,21 @@ export default function WorkDetailPage() {
 
   const isAdmin = user?.role === 'ADMIN';
   const isSupervisor = user?.role === 'SUPERVISOR';
-  const canEditDraft = isAdmin || canEditRegularDraftWork(user, work);
+  const isReturnedDraft = isReturnedDraftWork(work);
+  const canEditDraft = canEditRegularDraftWork(user, work)
+    || (isAdmin && work.status === 'draft' && !isReturnedDraft);
   const canSubmitDraft = canSubmitDraftWork(user, work);
-  const canHandleReturnedCreate = isAdmin || canHandleReturnedDraftWork(user, work);
+  const canHandleReturnedCreate = canHandleReturnedDraftWork(user, work)
+    || (isAdmin && isReturnedDraft);
   const canDecomposeTodo = canDecomposeTodoWork(user, work);
   const canApprove = user ? canApproveWork(user, work) : false;
-  const canOperate = !!user && (isAdmin || isSupervisor || (isResponsiblePerson(user, work) && isInProgress(work.status)));
+  const canOperateInProgress = !!user && isResponsiblePerson(user, work) && isInProgress(work.status);
 
   const isRelatedDept = user ? isWorkRelatedToDepartment(work, user.departmentId) : false;
   const canEdit = user && (
     isAdmin || isSupervisor ||
     ((user.role === 'DEPARTMENT_MANAGER' || user.role === 'DEPARTMENT_LEADER') &&
-      isRelatedDept && !isTerminal(work.status) && !isReturnedDraftWork(work)) ||
+      isRelatedDept && !isTerminal(work.status) && !isReturnedDraft) ||
     ((work.type === '重点' || work.type === '主要') && isRelatedDept && !isTerminal(work.status))
   );
   const canDeleteAttachment = (att: { userId: number }) =>
@@ -451,7 +454,7 @@ export default function WorkDetailPage() {
             onDelete={handleDeleteAttachment}
           />
 
-          {(!isInProgress(work.status) || !canOperate) && (
+          {(!isInProgress(work.status) || !canOperateInProgress) && (
             <WorkEvidencePanel
               proof={work.proof}
               evidenceAttachments={(work.attachments || []).filter(a => a.category === 'evidence')}
@@ -478,7 +481,7 @@ export default function WorkDetailPage() {
             />
           )}
 
-          {canOperate && (
+          {canOperateInProgress && (
             <WorkCompletePanel
               proof={proof}
               onProofChange={setProof}
@@ -490,7 +493,7 @@ export default function WorkDetailPage() {
             />
           )}
 
-          {canOperate && (
+          {canOperateInProgress && (
             <WorkAdjustCancelActions
               onAdjust={() => {
                 router.push(`/${type}/${work.id}/adjust`);
