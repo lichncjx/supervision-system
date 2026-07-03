@@ -36,7 +36,7 @@ import {
   canHandleReturnedDraftWork,
   canDecomposeTodoWork,
   canApproveWork,
-  isResponsiblePerson,
+  canOperateInProgressWork,
   isWorkRelatedToDepartment,
 } from '@/features/works/client/work-client-permissions';
 import { isTerminal, isReturnedDraftWork, isInProgress } from '@/features/works/domain/work-status.rules';
@@ -117,18 +117,19 @@ export default function WorkDetailPage() {
 
   const isAdmin = user?.role === 'ADMIN';
   const isSupervisor = user?.role === 'SUPERVISOR';
-  const canEditDraft = isAdmin || canEditRegularDraftWork(user, work);
+  const isReturnedDraft = isReturnedDraftWork(work);
+  const canEditDraft = canEditRegularDraftWork(user, work);
   const canSubmitDraft = canSubmitDraftWork(user, work);
-  const canHandleReturnedCreate = isAdmin || canHandleReturnedDraftWork(user, work);
+  const canHandleReturnedCreate = canHandleReturnedDraftWork(user, work);
   const canDecomposeTodo = canDecomposeTodoWork(user, work);
-  const canApprove = user ? canApproveWork(user, work) : false;
-  const canOperate = !!user && (isAdmin || isSupervisor || (isResponsiblePerson(user, work) && isInProgress(work.status)));
+  const canApprove = canApproveWork(user, work);
+  const canOperateInProgress = canOperateInProgressWork(user, work);
 
   const isRelatedDept = user ? isWorkRelatedToDepartment(work, user.departmentId) : false;
-  const canEdit = user && (
+  const canUploadAttachmentPanel = user && (
     isAdmin || isSupervisor ||
     ((user.role === 'DEPARTMENT_MANAGER' || user.role === 'DEPARTMENT_LEADER') &&
-      isRelatedDept && !isTerminal(work.status) && !isReturnedDraftWork(work)) ||
+      isRelatedDept && !isTerminal(work.status) && !isReturnedDraft) ||
     ((work.type === '重点' || work.type === '主要') && isRelatedDept && !isTerminal(work.status))
   );
   const canDeleteAttachment = (att: { userId: number }) =>
@@ -445,13 +446,13 @@ export default function WorkDetailPage() {
         <aside className="lg:col-span-2 space-y-4">
           <WorkAttachmentPanel
             attachments={(work.attachments || []).filter(a => a.category !== 'evidence')}
-            canUpload={!!canEdit}
+            canUpload={!!canUploadAttachmentPanel}
             canDelete={canDeleteAttachment}
             onUpload={handleUploadAttachments}
             onDelete={handleDeleteAttachment}
           />
 
-          {(!isInProgress(work.status) || !canOperate) && (
+          {(!isInProgress(work.status) || !canOperateInProgress) && (
             <WorkEvidencePanel
               proof={work.proof}
               evidenceAttachments={(work.attachments || []).filter(a => a.category === 'evidence')}
@@ -478,7 +479,7 @@ export default function WorkDetailPage() {
             />
           )}
 
-          {canOperate && (
+          {canOperateInProgress && (
             <WorkCompletePanel
               proof={proof}
               onProofChange={setProof}
@@ -490,7 +491,7 @@ export default function WorkDetailPage() {
             />
           )}
 
-          {canOperate && (
+          {canOperateInProgress && (
             <WorkAdjustCancelActions
               onAdjust={() => {
                 router.push(`/${type}/${work.id}/adjust`);
