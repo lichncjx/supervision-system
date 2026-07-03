@@ -36,7 +36,7 @@ import {
   canHandleReturnedDraftWork,
   canDecomposeTodoWork,
   canApproveWork,
-  isResponsiblePerson,
+  canOperateInProgressWork,
   isWorkRelatedToDepartment,
 } from '@/features/works/client/work-client-permissions';
 import { isTerminal, isReturnedDraftWork, isInProgress } from '@/features/works/domain/work-status.rules';
@@ -118,17 +118,15 @@ export default function WorkDetailPage() {
   const isAdmin = user?.role === 'ADMIN';
   const isSupervisor = user?.role === 'SUPERVISOR';
   const isReturnedDraft = isReturnedDraftWork(work);
-  const canEditDraft = canEditRegularDraftWork(user, work)
-    || (isAdmin && work.status === 'draft' && !isReturnedDraft);
+  const canEditDraft = canEditRegularDraftWork(user, work);
   const canSubmitDraft = canSubmitDraftWork(user, work);
-  const canHandleReturnedCreate = canHandleReturnedDraftWork(user, work)
-    || (isAdmin && isReturnedDraft);
+  const canHandleReturnedCreate = canHandleReturnedDraftWork(user, work);
   const canDecomposeTodo = canDecomposeTodoWork(user, work);
-  const canApprove = user ? canApproveWork(user, work) : false;
-  const canOperateInProgress = !!user && isResponsiblePerson(user, work) && isInProgress(work.status);
+  const canApprove = canApproveWork(user, work);
+  const canOperateInProgress = canOperateInProgressWork(user, work);
 
   const isRelatedDept = user ? isWorkRelatedToDepartment(work, user.departmentId) : false;
-  const canEdit = user && (
+  const canUploadAttachmentPanel = user && (
     isAdmin || isSupervisor ||
     ((user.role === 'DEPARTMENT_MANAGER' || user.role === 'DEPARTMENT_LEADER') &&
       isRelatedDept && !isTerminal(work.status) && !isReturnedDraft) ||
@@ -448,7 +446,7 @@ export default function WorkDetailPage() {
         <aside className="lg:col-span-2 space-y-4">
           <WorkAttachmentPanel
             attachments={(work.attachments || []).filter(a => a.category !== 'evidence')}
-            canUpload={!!canEdit}
+            canUpload={!!canUploadAttachmentPanel}
             canDelete={canDeleteAttachment}
             onUpload={handleUploadAttachments}
             onDelete={handleDeleteAttachment}

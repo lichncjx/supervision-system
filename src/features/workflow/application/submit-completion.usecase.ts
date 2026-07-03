@@ -29,7 +29,7 @@ export async function submitCompletion(
     return err(400, '只有进行中事项可以提交完成申请')
   }
 
-  // 办理人权限按 firstSubmitterId ?? creatorId 保留，不随当前主责部门人员调整而收回。
+  // 进行中事项办理权归属 responsiblePersonUserId，不随全局查看权限放开。
   if (!canUserOperate(user, workItem)) {
     return err(403, '无权提交完成申请')
   }

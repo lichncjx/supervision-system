@@ -204,7 +204,7 @@ export default function ApprovalPage() {
                     </div>
 
                     <div className="flex gap-2 p-4 shrink-0">
-                      {canApproveWork(user!, work) && (
+                      {canApproveWork(user, work) && (
                         <>
                           <button onClick={() => handleApproveClick(work)} className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1.5 text-sm font-medium text-emerald-600 hover:bg-emerald-100 hover:-translate-y-0.5 transition-all">
                             <CheckCircle className="h-3.5 w-3.5" />
@@ -217,7 +217,7 @@ export default function ApprovalPage() {
                         </>
                       )}
 
-                      {!canApproveWork(user!, work) && canHandleWork(user!, work) && (
+                      {!canApproveWork(user, work) && canHandleWork(user, work) && (
                         <Link href={`/${getRouteType(work)}/${work.id}`}>
                           <span className="inline-flex items-center gap-1 rounded-full bg-sky-50 border border-sky-200 px-3 py-1.5 text-sm font-medium text-sky-600 hover:bg-sky-100 hover:-translate-y-0.5 transition-all">
                             <Play className="h-3.5 w-3.5" />
