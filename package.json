@@ -16,6 +16,7 @@
     "seed:admin": "tsx prisma/seed-admin.ts",
     "seed:demo": "tsx prisma/seed-demo.ts",
     "db:deploy": "pnpm prisma:generate && pnpm prisma:deploy",
+    "db:backfill-assessment-year": "tsx scripts/backfill-assessment-year.ts",
     "db:init": "pnpm prisma:generate && pnpm prisma:deploy && pnpm prisma:seed",
     "test:regression": "node tests/regression-baseline.cjs",
     "test:regression:prepare": "docker compose up -d db && pnpm prisma:deploy && pnpm prisma:seed && pnpm dev",

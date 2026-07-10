@@ -1,5 +1,7 @@
+import { createHash } from 'crypto'
 import { NextRequest } from 'next/server'
 import { requireCurrentUser } from '@/shared/auth/current-user'
+import { verifyExcelImportPreviewToken } from '@/shared/auth/jwt'
 import { withApiHandler } from '@/shared/http/with-api-handler'
 import { ok, fail } from '@/shared/http/api-response'
 import { importWorksFromExcelUseCase } from '@/features/excel/application/import-works-from-excel.usecase'
@@ -9,21 +11,16 @@ export const POST = withApiHandler(
     const currentUser = await requireCurrentUser(request)
 
     const { type } = await params
-    const validTypes = [
-      'priority',
-      'main',
-      'todo',
-      'PRIORITY',
-      'MAIN',
-      'TODO',
-    ]
-    if (!validTypes.includes(type)) {
+    const normalizedType = type.toLowerCase()
+    if (!['priority', 'main', 'todo'].includes(normalizedType)) {
       return fail('无效的导入类型', 400)
     }
 
     const formData = await request.formData()
-    const file = formData.get('file') as File
-    if (!file) {
+    const file = formData.get('file')
+    const assessmentYear = formData.get('assessmentYear')
+    const previewToken = formData.get('previewToken')
+    if (!(file instanceof File)) {
       return fail('请选择要导入的文件', 400)
     }
 
@@ -32,26 +29,40 @@ export const POST = withApiHandler(
     }
 
     const fileBuffer = Buffer.from(await file.arrayBuffer())
+    if (typeof previewToken !== 'string') {
+      return fail('请先完成导入预览', 400)
+    }
+
+    const preview = verifyExcelImportPreviewToken(previewToken)
+    if (
+      !preview ||
+      preview.userId !== currentUser.id ||
+      preview.type !== normalizedType ||
+      String(preview.assessmentYear) !== String(assessmentYear) ||
+      preview.fileHash !== createHash('sha256').update(fileBuffer).digest('hex')
+    ) {
+      return fail('导入预览已失效或文件、年度已变更，请重新预览', 400)
+    }
 
     const result = await importWorksFromExcelUseCase({
       currentUser,
-      type,
+      type: normalizedType,
       fileBuffer,
       fileName: file.name,
+      assessmentYear: preview.assessmentYear,
     })
 
     if (!result.ok) {
       const details = result.details as { reason: string }[] | undefined
-      const status =
-        details?.some(
-          (d) =>
-            d.reason.includes('部门用户只能导入') ||
-            d.reason.includes('公司领导普通导入') ||
-            d.reason.includes('公司领导不能默认') ||
-            d.reason.includes('当前角色无'),
-        )
-          ? 403
-          : 400
+      const status = details?.some(
+        (d) =>
+          d.reason.includes('部门用户只能导入') ||
+          d.reason.includes('公司领导普通导入') ||
+          d.reason.includes('公司领导不能默认') ||
+          d.reason.includes('当前角色无'),
+      )
+        ? 403
+        : 400
 
       return fail(result.message, status, undefined, details)
     }

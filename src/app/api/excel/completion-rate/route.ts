@@ -8,13 +8,11 @@ export const GET = withApiHandler(async (request: NextRequest) => {
   const currentUser = await requireCurrentUser(request)
 
   const { searchParams } = new URL(request.url)
-  const startDate = searchParams.get('startDate')
-  const endDate = searchParams.get('endDate')
+  const year = searchParams.get('year')
 
   const result = await exportCompletionRateUseCase({
     currentUser,
-    startDate,
-    endDate,
+    year,
   })
 
   if (!result.ok) return fromError(result)
@@ -22,8 +20,7 @@ export const GET = withApiHandler(async (request: NextRequest) => {
   return new NextResponse(result.data.buffer as unknown as BodyInit, {
     status: 200,
     headers: {
-      'Content-Type':
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'Content-Disposition': `attachment; filename="${encodeURIComponent(result.data.fileName)}"`,
     },
   })

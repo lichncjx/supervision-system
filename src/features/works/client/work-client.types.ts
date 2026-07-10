@@ -23,12 +23,7 @@ export interface WorkQuery {
   keyword?: string
 }
 
-export type ActionType =
-  | 'create'
-  | 'complete'
-  | 'adjust'
-  | 'cancel'
-  | 'todo_decompose'
+export type ActionType = 'create' | 'complete' | 'adjust' | 'cancel' | 'todo_decompose'
 
 export interface WorkSubNode {
   id: number
@@ -120,6 +115,7 @@ export interface Work {
   adjustNewTime?: string
   adjustTimeType?: 'planCompleteTime'
   rejectReason?: string
+  approvalType?: string
   rejectedFrom?: WorkStatus
   rejectedFromStatus?: WorkStatus
   rejectedBy?: string

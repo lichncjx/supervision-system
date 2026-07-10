@@ -10,15 +10,21 @@ import type { ValidationError as ImportValidationError } from '@/features/excel/
 import { isDeptLeader, isDeptManager } from '@/features/users/domain/role.rules'
 
 interface DepartmentInfo {
-  id: number; name: string; code: string | null
+  id: number
+  name: string
+  code: string | null
 }
 
 interface CompanyLeaderInfo {
-  id: number; name: string
+  id: number
+  name: string
 }
 
 interface DepartmentUserInfo {
-  id: number; name: string; departmentId: number; role: Role | string
+  id: number
+  name: string
+  departmentId: number
+  role: Role | string
 }
 
 export async function validateAndParseExcel(
@@ -33,7 +39,12 @@ export async function validateAndParseExcel(
 
   const workbook = XLSX.read(fileBuffer, { type: 'buffer' })
   const worksheet = workbook.Sheets[workbook.SheetNames[0]]
-  const jsonData = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet, { defval: '' })
+  const worksheetRange = XLSX.utils.decode_range(worksheet['!ref'] || 'A1')
+  const headerRowIndex = worksheetRange.s.r
+  const jsonData = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet, {
+    defval: '',
+    blankrows: true,
+  })
 
   if (!jsonData || jsonData.length === 0) {
     errors.push({
@@ -52,29 +63,48 @@ export async function validateAndParseExcel(
     headerMap[key.trim()] = key
   }
 
-  const deptNameToId = new Map(
-    departments.map((d) => [d.name, d.id]),
-  )
-  const deptCodeToId = new Map(
-    departments
-      .filter((d) => d.code)
-      .map((d) => [d.code!, d.id]),
-  )
-  const resolveDeptId = (input: string) =>
-    deptNameToId.get(input) ??
-    deptCodeToId.get(input.toUpperCase()) ??
-    null
+  // Excel 的合并单元格只在左上角保存值。仅当“工作事项”列确实存在
+  // 合并区域时，才向该区域内的工作节点继承工作事项；普通空白不继承上一行。
+  const mergedWorkItems = new Map<number, string>()
+  const workItemColumn = Array.from(
+    { length: worksheetRange.e.c - worksheetRange.s.c + 1 },
+    (_, index) => worksheetRange.s.c + index,
+  ).find((column) => {
+    const cell = worksheet[XLSX.utils.encode_cell({ r: headerRowIndex, c: column })]
+    return String(cell?.v ?? '').trim() === '工作事项'
+  })
 
-  const leaderNameToId = new Map(
-    companyLeaders.map((u) => [u.name, u.id]),
-  )
+  if (workItemColumn !== undefined) {
+    for (const merge of worksheet['!merges'] || []) {
+      const isWorkItemOnlyMerge =
+        merge.s.c === workItemColumn && merge.e.c === workItemColumn && merge.s.r > headerRowIndex
+      if (!isWorkItemOnlyMerge) continue
+
+      const value = String(
+        worksheet[XLSX.utils.encode_cell({ r: merge.s.r, c: workItemColumn })]?.v ?? '',
+      ).trim()
+      for (let rowIndex = merge.s.r; rowIndex <= merge.e.r; rowIndex += 1) {
+        mergedWorkItems.set(rowIndex + 1, value)
+      }
+    }
+  }
+
+  const deptNameToId = new Map(departments.map((d) => [d.name, d.id]))
+  const deptCodeToId = new Map(departments.filter((d) => d.code).map((d) => [d.code!, d.id]))
+  const resolveDeptId = (input: string) =>
+    deptNameToId.get(input) ?? deptCodeToId.get(input.toUpperCase()) ?? null
+
+  const leaderNameToId = new Map(companyLeaders.map((u) => [u.name, u.id]))
 
   // Group users by name to detect duplicates (prevents ambiguous matching)
   const nameToUsers = new Map<string, DepartmentUserInfo[]>()
   for (const u of allUsers) {
     const existing = nameToUsers.get(u.name)
-    if (existing) { existing.push(u) }
-    else { nameToUsers.set(u.name, [u]) }
+    if (existing) {
+      existing.push(u)
+    } else {
+      nameToUsers.set(u.name, [u])
+    }
   }
 
   function resolveUserName(
@@ -86,51 +116,81 @@ export async function validateAndParseExcel(
   ) {
     const matches = nameToUsers.get(name)
     if (!matches || matches.length === 0) {
-      errors.push({ row: rowNum, field, value: name,
-        reason: `系统中未找到启用的用户"${name}"，无法自动关联` })
+      errors.push({
+        row: rowNum,
+        field,
+        value: name,
+        reason: `系统中未找到启用的用户"${name}"，无法自动关联`,
+      })
       return null
     }
-    const scopedMatches = expectedDeptId != null
-      ? matches.filter((user) => user.departmentId === expectedDeptId)
-      : matches
+    const scopedMatches =
+      expectedDeptId != null
+        ? matches.filter((user) => user.departmentId === expectedDeptId)
+        : matches
     if (scopedMatches.length === 0 && expectedDeptId != null) {
-      errors.push({ row: rowNum, field, value: name,
-        reason: `用户"${name}"不属于该事项的责任部门，无法自动关联` })
+      errors.push({
+        row: rowNum,
+        field,
+        value: name,
+        reason: `用户"${name}"不属于该事项的责任部门，无法自动关联`,
+      })
       return null
     }
     if (scopedMatches.length > 1) {
-      errors.push({ row: rowNum, field, value: name,
-        reason: `姓名"${name}"在该责任部门匹配到 ${scopedMatches.length} 个系统用户，无法自动关联，请在系统中手动指定` })
+      errors.push({
+        row: rowNum,
+        field,
+        value: name,
+        reason: `姓名"${name}"在该责任部门匹配到 ${scopedMatches.length} 个系统用户，无法自动关联，请在系统中手动指定`,
+      })
       return null
     }
     const user = scopedMatches[0]
     if (expectedKind === 'leader' && !isDeptLeader(user.role)) {
-      errors.push({ row: rowNum, field, value: name,
-        reason: `用户"${name}"不是部门领导，不能作为责任领导` })
+      errors.push({
+        row: rowNum,
+        field,
+        value: name,
+        reason: `用户"${name}"不是部门领导，不能作为责任领导`,
+      })
       return null
     }
     if (expectedKind === 'person' && !isDeptManager(user.role)) {
-      errors.push({ row: rowNum, field, value: name,
-        reason: `用户"${name}"不是部门主管，不能作为责任人` })
+      errors.push({
+        row: rowNum,
+        field,
+        value: name,
+        reason: `用户"${name}"不是部门主管，不能作为责任人`,
+      })
       return null
     }
     return user.id
   }
 
-  const hasRowErrors = (rowNum: number) =>
-    errors.some((error) => error.row === rowNum)
+  const hasRowErrors = (rowNum: number) => errors.some((error) => error.row === rowNum)
 
   for (let i = 0; i < jsonData.length; i++) {
     const row = jsonData[i]
-    const rowNum = i + 2
+    const rowNum = headerRowIndex + i + 2
+
+    if (
+      Object.values(row).every(
+        (value) => value === null || value === undefined || String(value).trim() === '',
+      )
+    ) {
+      continue
+    }
 
     const getCell = (field: string): string => {
       const key = headerMap[field]
       if (!key) return ''
       const val = row[key]
-      return val !== undefined && val !== null
-        ? String(val).trim()
-        : ''
+      const value = val !== undefined && val !== null ? String(val).trim() : ''
+      if (field === '工作事项' && !value) {
+        return mergedWorkItems.get(rowNum) || ''
+      }
+      return value
     }
     const splitResponsibleParty = (value: string) => {
       const parts = value
@@ -146,10 +206,7 @@ export async function validateAndParseExcel(
     }
 
     const importedStatus =
-      getCell('当前状态') ||
-      getCell('状态') ||
-      getCell('status') ||
-      getCell('Status')
+      getCell('当前状态') || getCell('状态') || getCell('status') || getCell('Status')
     if (!isAllowedImportedStatus(importedStatus)) {
       errors.push({
         row: rowNum,
@@ -180,10 +237,15 @@ export async function validateAndParseExcel(
           reason: '必填字段不能为空',
         })
       }
-      if (
-        !isInnovationStr ||
-        !['是', '否'].includes(isInnovationStr)
-      ) {
+      if (!workNode) {
+        errors.push({
+          row: rowNum,
+          field: '工作节点',
+          value: workNode,
+          reason: '必填字段不能为空',
+        })
+      }
+      if (!isInnovationStr || !['是', '否'].includes(isInnovationStr)) {
         errors.push({
           row: rowNum,
           field: '是否为创新工作',
@@ -199,9 +261,7 @@ export async function validateAndParseExcel(
           reason: '必填字段，格式为 YYYY-MM-DD',
         })
       }
-      const resolvedDeptId = departmentName
-        ? resolveDeptId(departmentName)
-        : null
+      const resolvedDeptId = departmentName ? resolveDeptId(departmentName) : null
       if (!departmentName) {
         errors.push({
           row: rowNum,
@@ -243,9 +303,7 @@ export async function validateAndParseExcel(
         for (const seg of segments) {
           const parts = seg.split('|').map((s: string) => s.trim())
           const coopDeptName = parts[0] || ''
-          const resolvedCoopDeptId = coopDeptName
-            ? resolveDeptId(coopDeptName)
-            : null
+          const resolvedCoopDeptId = coopDeptName ? resolveDeptId(coopDeptName) : null
           if (coopDeptName && !resolvedCoopDeptId) {
             errors.push({
               row: rowNum,
@@ -285,8 +343,7 @@ export async function validateAndParseExcel(
             departmentName,
             departmentId: resolvedDeptId,
             departmentCode:
-              departments.find((d) => d.id === resolvedDeptId)
-                ?.code || departmentName,
+              departments.find((d) => d.id === resolvedDeptId)?.code || departmentName,
             responsibleLeader,
             responsiblePerson: responsiblePerson || null,
             responsibleLeaderUserId,
@@ -314,6 +371,14 @@ export async function validateAndParseExcel(
           reason: '必填字段不能为空',
         })
       }
+      if (!workNode) {
+        errors.push({
+          row: rowNum,
+          field: '工作节点',
+          value: workNode,
+          reason: '必填字段不能为空',
+        })
+      }
       if (!planCompleteTimeStr || !parseExcelDate(planCompleteTimeStr)) {
         errors.push({
           row: rowNum,
@@ -322,9 +387,7 @@ export async function validateAndParseExcel(
           reason: '必填字段，格式为 YYYY-MM-DD',
         })
       }
-      const resolvedDeptId = departmentName
-        ? resolveDeptId(departmentName)
-        : null
+      const resolvedDeptId = departmentName ? resolveDeptId(departmentName) : null
       if (!departmentName) {
         errors.push({
           row: rowNum,
@@ -366,9 +429,7 @@ export async function validateAndParseExcel(
         for (const seg of segments) {
           const parts = seg.split('|').map((s: string) => s.trim())
           const coopDeptName = parts[0] || ''
-          const resolvedCoopDeptId = coopDeptName
-            ? resolveDeptId(coopDeptName)
-            : null
+          const resolvedCoopDeptId = coopDeptName ? resolveDeptId(coopDeptName) : null
           if (coopDeptName && !resolvedCoopDeptId) {
             errors.push({
               row: rowNum,
@@ -407,8 +468,7 @@ export async function validateAndParseExcel(
             departmentName,
             departmentId: resolvedDeptId,
             departmentCode:
-              departments.find((d) => d.id === resolvedDeptId)
-                ?.code || departmentName,
+              departments.find((d) => d.id === resolvedDeptId)?.code || departmentName,
             responsibleLeader,
             responsiblePerson: responsiblePerson || null,
             responsibleLeaderUserId,
@@ -459,10 +519,7 @@ export async function validateAndParseExcel(
           reason: '必填字段不能为空',
         })
       }
-      if (
-        !planCompleteTimeStr ||
-        !parseExcelDate(planCompleteTimeStr)
-      ) {
+      if (!planCompleteTimeStr || !parseExcelDate(planCompleteTimeStr)) {
         errors.push({
           row: rowNum,
           field: '完成时间',
@@ -471,9 +528,7 @@ export async function validateAndParseExcel(
         })
       }
 
-      const resolvedDeptId = departmentName
-        ? resolveDeptId(departmentName)
-        : null
+      const resolvedDeptId = departmentName ? resolveDeptId(departmentName) : null
       if (departmentName && !resolvedDeptId) {
         errors.push({
           row: rowNum,
@@ -491,10 +546,8 @@ export async function validateAndParseExcel(
         })
       }
 
-      const hasProposedLeader =
-        proposedLeaderName && leaderNameToId.has(proposedLeaderName)
-      const hasApprovalLeader =
-        approvalLeaderName && leaderNameToId.has(approvalLeaderName)
+      const hasProposedLeader = proposedLeaderName && leaderNameToId.has(proposedLeaderName)
+      const hasApprovalLeader = approvalLeaderName && leaderNameToId.has(approvalLeaderName)
       if (!hasProposedLeader && !hasApprovalLeader) {
         errors.push({
           row: rowNum,
@@ -514,9 +567,7 @@ export async function validateAndParseExcel(
         for (const seg of segments) {
           const parts = seg.split('|').map((s: string) => s.trim())
           const coopDeptName = parts[0] || ''
-          const resolvedCoopDeptId = coopDeptName
-            ? resolveDeptId(coopDeptName)
-            : null
+          const resolvedCoopDeptId = coopDeptName ? resolveDeptId(coopDeptName) : null
           if (coopDeptName && !resolvedCoopDeptId) {
             errors.push({
               row: rowNum,
@@ -540,20 +591,22 @@ export async function validateAndParseExcel(
           ? resolveUserName('责任领导', responsibleLeader, rowNum, resolvedDeptId, 'leader')
           : null
         const responsiblePersonUserId = responsiblePerson
-          ? resolveUserName(responsiblePersonField, responsiblePerson, rowNum, resolvedDeptId, 'person')
+          ? resolveUserName(
+              responsiblePersonField,
+              responsiblePerson,
+              rowNum,
+              resolvedDeptId,
+              'person',
+            )
           : null
         if (hasRowErrors(rowNum)) continue
         rows.push({
           row: rowNum,
           data: {
             type: 'TODO',
-            proposedLeaderId: hasProposedLeader
-              ? leaderNameToId.get(proposedLeaderName)!
-              : null,
+            proposedLeaderId: hasProposedLeader ? leaderNameToId.get(proposedLeaderName)! : null,
             proposedLeaderName,
-            approvalLeaderId: hasApprovalLeader
-              ? leaderNameToId.get(approvalLeaderName)!
-              : null,
+            approvalLeaderId: hasApprovalLeader ? leaderNameToId.get(approvalLeaderName)! : null,
             approvalLeaderName,
             proposedScene,
             workItem,

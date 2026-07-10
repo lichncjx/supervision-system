@@ -22,9 +22,10 @@ const HEADERS = [
 
 export function generateCompletionRateBuffer(
   stats: CompletionRateStat[],
+  assessmentYear: number,
 ): { buffer: Buffer; fileName: string } {
   const today = new Date().toISOString().split('T')[0]
-  const fileName = `完成率统计_${today}.xlsx`
+  const fileName = `${assessmentYear}年度完成率统计_${today}.xlsx`
 
   const rows = stats.map((stat, index) => [
     index + 1,

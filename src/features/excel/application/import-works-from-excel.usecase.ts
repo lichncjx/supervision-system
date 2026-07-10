@@ -1,19 +1,15 @@
 import type { BaseCurrentUser } from '@/shared/auth/current-user'
 import { Prisma, WorkItemStatus, WorkItemType } from '@prisma/client'
 import { err, ok, type Result } from '@/shared/result'
-import { validateAndParseExcel } from '@/features/excel/infrastructure/work-import-parser'
-import { findDepartmentsForImport } from '@/features/departments/infrastructure/department.repository'
-import { findCompanyLeaders, findAllActiveUsers } from '@/features/excel/infrastructure/work-import.repository'
-import {
-  createImportedWorkItems,
-} from '@/features/excel/infrastructure/work-import.repository'
-import { validateImportScope } from '@/features/excel/domain/excel-import.rules'
+import { createImportedWorkItems } from '@/features/excel/infrastructure/work-import.repository'
+import { inspectExcelImport } from '@/features/excel/application/inspect-excel-import.usecase'
 
 export interface ImportWorksFromExcelInput {
   currentUser: BaseCurrentUser
   type: string
   fileBuffer: Buffer
   fileName: string
+  assessmentYear: number
 }
 
 function toInputJsonValue(value: unknown): Prisma.InputJsonValue {
@@ -23,19 +19,9 @@ function toInputJsonValue(value: unknown): Prisma.InputJsonValue {
 export async function importWorksFromExcelUseCase(
   input: ImportWorksFromExcelInput,
 ): Promise<Result<number>> {
-  const { currentUser, type, fileBuffer } = input
-
-  const departments = await findDepartmentsForImport()
-  const companyLeaders = await findCompanyLeaders()
-  const allUsers = await findAllActiveUsers()
-
-  const { rows, errors } = await validateAndParseExcel(
-    fileBuffer,
-    type,
-    departments,
-    companyLeaders,
-    allUsers,
-  )
+  const { currentUser, type } = input
+  const inspection = await inspectExcelImport(input)
+  const { rows, errors, assessmentYear } = inspection
 
   if (errors.length > 0) {
     return err(400, '导入失败，请修正以下错误', undefined, errors)
@@ -47,13 +33,7 @@ export async function importWorksFromExcelUseCase(
     ])
   }
 
-  const scopeErrors = rows
-    .map((row) => validateImportScope(currentUser, row))
-    .filter((error): error is NonNullable<typeof error> => Boolean(error))
-
-  if (scopeErrors.length > 0) {
-    return err(400, '导入失败', undefined, scopeErrors)
-  }
+  if (!assessmentYear) return err(400, '导入失败，请选择有效年度')
 
   const now = new Date()
   const workItems: Prisma.WorkItemCreateManyInput[] = rows.map((row) => {
@@ -61,59 +41,49 @@ export async function importWorksFromExcelUseCase(
     if (data.type === 'PRIORITY' || data.type === 'MAIN') {
       return {
         type: data.type === 'PRIORITY' ? WorkItemType.PRIORITY : WorkItemType.MAIN,
-        title: data.workItem,
+        title: `${data.workItem}｜${data.workNode}`,
         status: WorkItemStatus.DRAFT,
         creatorId: currentUser.id,
+        assessmentYear,
         departmentId: data.departmentId,
         businessCategory: data.businessCategory || null,
         workItem: data.workItem,
         isInnovation: data.isInnovation || false,
         workNode: data.workNode || null,
         completeTime: null,
-        planCompleteTime: data.planCompleteTime
-          ? new Date(data.planCompleteTime)
-          : null,
+        planCompleteTime: data.planCompleteTime ? new Date(data.planCompleteTime) : null,
         completeForm: data.completeForm || null,
         responsibleLeader: data.responsibleLeader || null,
         responsiblePerson: data.responsiblePerson || null,
         responsibleLeaderUserId: data.responsibleLeaderUserId ?? null,
         responsiblePersonUserId: data.responsiblePersonUserId ?? null,
-        cooperators: data.cooperators.length
-          ? toInputJsonValue(data.cooperators)
-          : undefined,
+        cooperators: data.cooperators.length ? toInputJsonValue(data.cooperators) : undefined,
         createdAt: now,
         updatedAt: now,
       }
     } else {
-      const finalProposedLeaderId =
-        data.proposedLeaderId || data.approvalLeaderId
-      const finalApprovalLeaderId =
-        data.approvalLeaderId || finalProposedLeaderId
+      const finalProposedLeaderId = data.proposedLeaderId || data.approvalLeaderId
+      const finalApprovalLeaderId = data.approvalLeaderId || finalProposedLeaderId
 
       return {
         type: WorkItemType.TODO,
         title: data.workItem,
         status: WorkItemStatus.DRAFT,
         creatorId: currentUser.id,
+        assessmentYear,
         departmentId: data.departmentId || currentUser.departmentId,
         proposedLeaderId: finalProposedLeaderId,
         approvalLeaderId: finalApprovalLeaderId,
         proposedScene: data.proposedScene || null,
         workItem: data.workItem,
-        formedTime: data.formedTime
-          ? new Date(data.formedTime)
-          : null,
+        formedTime: data.formedTime ? new Date(data.formedTime) : null,
         responsibleLeader: data.responsibleLeader || null,
         responsiblePerson: data.responsiblePerson || null,
         responsibleLeaderUserId: data.responsibleLeaderUserId ?? null,
         responsiblePersonUserId: data.responsiblePersonUserId ?? null,
-        cooperators: data.cooperators.length
-          ? toInputJsonValue(data.cooperators)
-          : undefined,
+        cooperators: data.cooperators.length ? toInputJsonValue(data.cooperators) : undefined,
         workPlan: data.workPlan,
-        planCompleteTime: data.planCompleteTime
-          ? new Date(data.planCompleteTime)
-          : null,
+        planCompleteTime: data.planCompleteTime ? new Date(data.planCompleteTime) : null,
         progress: data.progress || null,
         createdAt: now,
         updatedAt: now,

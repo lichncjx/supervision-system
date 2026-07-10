@@ -1,117 +1,181 @@
-'use client';
+'use client'
 
-import React, { useEffect, useMemo, useState } from 'react';
-import { useSearchAndPagination } from '@/features/works/client/use-search-pagination';
-import Link from 'next/link';
-import { getWorkTypeAccent, getWorkTypeText } from '@/features/works/ui/status-colors';
-import { ClipboardCheck, Eye, CheckCircle, XCircle, Play } from 'lucide-react';
-import { useAuth } from '@/components/providers/auth-provider';
-import { getDepartments } from '@/features/departments/client/department-api';
-import { getCompanyLeaders } from '@/features/users/client/user-api';
-import { canApproveWork, canHandleWork } from '@/features/works/client/work-client-permissions';
-import { getWorkDueDate } from '@/features/works/client/work-date.utils';
-import { queryWorks } from '@/features/works/client/work-api';
-import { approveWork, rejectWork } from '@/features/workflow/client/workflow-api';
-import type { Work } from '@/features/works/client/work-client.types';
-import { StatusBadge } from '@/features/works/ui/badges';
-import { WorkListPagination } from '@/features/works/ui/work-list-pagination';
-import { WorkSearchBar } from '@/features/works/ui/work-search-bar';
-import { ApproveDialog } from '@/features/workflow/ui/approve-dialog';
-import type { User } from '@/features/users/client/user-client.types';
-import type { Department } from '@/features/departments/client/department-api';
+import React, { useEffect, useMemo, useState } from 'react'
+import { useSearchAndPagination } from '@/features/works/client/use-search-pagination'
+import Link from 'next/link'
+import { getWorkTypeAccent, getWorkTypeText } from '@/features/works/ui/status-colors'
+import { ClipboardCheck, Eye, CheckCircle, XCircle, Play } from 'lucide-react'
+import { useAuth } from '@/components/providers/auth-provider'
+import { getDepartments } from '@/features/departments/client/department-api'
+import { getCompanyLeaders } from '@/features/users/client/user-api'
+import { canApproveWork, canHandleWork } from '@/features/works/client/work-client-permissions'
+import { getWorkDueDate } from '@/features/works/client/work-date.utils'
+import { queryWorks } from '@/features/works/client/work-api'
+import {
+  approveWork,
+  executeBatchWorkflow,
+  previewBatchWorkflow,
+  rejectWork,
+} from '@/features/workflow/client/workflow-api'
+import type { Work } from '@/features/works/client/work-client.types'
+import { StatusBadge } from '@/features/works/ui/badges'
+import { WorkListPagination } from '@/features/works/ui/work-list-pagination'
+import { WorkSearchBar } from '@/features/works/ui/work-search-bar'
+import { ApproveDialog } from '@/features/workflow/ui/approve-dialog'
+import type { User } from '@/features/users/client/user-client.types'
+import type { Department } from '@/features/departments/client/department-api'
+import { Checkbox } from '@/components/ui/checkbox'
 
 export default function ApprovalPage() {
-  const { user } = useAuth();
-  const [approvingWorks, setApprovingWorks] = useState<Work[]>([]);
-  const [handlingWorks, setHandlingWorks] = useState<Work[]>([]);
-  const [tab, setTab] = useState<'approving' | 'handling' | 'all'>('approving');
-  const [keyword, setKeyword] = useState('');
-  const [departments, setDepartments] = useState<Department[]>([]);
-  const [companyLeaders, setCompanyLeaders] = useState<User[]>([]);
-  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
-  const [selectedWork, setSelectedWork] = useState<Work | null>(null);
+  const { user } = useAuth()
+  const [approvingWorks, setApprovingWorks] = useState<Work[]>([])
+  const [handlingWorks, setHandlingWorks] = useState<Work[]>([])
+  const [tab, setTab] = useState<'approving' | 'handling' | 'all'>('approving')
+  const [keyword, setKeyword] = useState('')
+  const [departments, setDepartments] = useState<Department[]>([])
+  const [companyLeaders, setCompanyLeaders] = useState<User[]>([])
+  const [approveDialogOpen, setApproveDialogOpen] = useState(false)
+  const [selectedWork, setSelectedWork] = useState<Work | null>(null)
+  const [selectedBatchWorkIds, setSelectedBatchWorkIds] = useState<Set<number>>(new Set())
+  const [batchApproveDialogOpen, setBatchApproveDialogOpen] = useState(false)
 
   useEffect(() => {
     const loadData = async () => {
-      const [depts, leaders] = await Promise.all([
-        getDepartments(),
-        getCompanyLeaders(),
-      ]);
-      setDepartments(depts);
-      setCompanyLeaders(leaders);
-    };
-    loadData();
-  }, []);
+      const [depts, leaders] = await Promise.all([getDepartments(), getCompanyLeaders()])
+      setDepartments(depts)
+      setCompanyLeaders(leaders)
+    }
+    loadData()
+  }, [])
 
   const load = async () => {
     const [approving, handling] = await Promise.all([
       queryWorks(user, { status: 'approving' } as any),
       queryWorks(user, { status: 'handling' } as any),
-    ]);
-    setApprovingWorks(approving);
-    setHandlingWorks(handling);
-  };
+    ])
+    setApprovingWorks(approving)
+    setHandlingWorks(handling)
+    setSelectedBatchWorkIds(new Set())
+  }
 
   useEffect(() => {
-    load();
+    load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  }, [user])
 
-  const approvingCount = approvingWorks.length;
-  const handlingCount = handlingWorks.length;
+  const approvingCount = approvingWorks.length
+  const handlingCount = handlingWorks.length
 
   const allWorks = useMemo(() => {
-    const seen = new Set<number>();
-    const merged: Work[] = [];
+    const seen = new Set<number>()
+    const merged: Work[] = []
     for (const w of [...approvingWorks, ...handlingWorks]) {
-      if (!seen.has(w.id)) { seen.add(w.id); merged.push(w); }
+      if (!seen.has(w.id)) {
+        seen.add(w.id)
+        merged.push(w)
+      }
     }
-    return merged;
-  }, [approvingWorks, handlingWorks]);
+    return merged
+  }, [approvingWorks, handlingWorks])
 
-  const baseList = tab === 'approving' ? approvingWorks : tab === 'handling' ? handlingWorks : allWorks;
+  const baseList =
+    tab === 'approving' ? approvingWorks : tab === 'handling' ? handlingWorks : allWorks
 
-  const { list, total, totalPages, page, setPage, pageSize, setPageSize } =
-    useSearchAndPagination(baseList, keyword, [tab, keyword]);
+  const { list, total, totalPages, page, setPage, pageSize, setPageSize } = useSearchAndPagination(
+    baseList,
+    keyword,
+    [tab, keyword],
+  )
 
-  if (!user) return null;
+  if (!user) return null
 
   const handleApproveClick = (work: Work) => {
-    setSelectedWork(work);
-    setApproveDialogOpen(true);
-  };
+    setSelectedWork(work)
+    setApproveDialogOpen(true)
+  }
 
   const handleApproveConfirm = async (comment?: string, nextApproverId?: number | null) => {
-    if (!user || !selectedWork) return;
+    if (!user || !selectedWork) return
     try {
-      await approveWork(selectedWork, comment, nextApproverId);
-      await load();
-      alert('审批已通过');
+      await approveWork(selectedWork, comment, nextApproverId)
+      await load()
+      alert('审批已通过')
     } catch (error) {
-      console.error(error);
-      alert('审批失败，请查看控制台错误');
+      console.error(error)
+      alert('审批失败，请查看控制台错误')
     }
-  };
+  }
 
   const handleReject = async (work: Work) => {
-    const reason = prompt('请输入退回原因：');
-    if (reason === null) return;
+    const reason = prompt('请输入退回原因：')
+    if (reason === null) return
 
     try {
-      await rejectWork(work, reason || '审批退回');
-      await load();
-      alert('已退回');
+      await rejectWork(work, reason || '审批退回')
+      await load()
+      alert('已退回')
     } catch (error) {
-      console.error(error);
-      alert('退回失败，请查看控制台错误');
+      console.error(error)
+      alert('退回失败，请查看控制台错误')
     }
-  };
+  }
+
+  const selectedBatchWorks = approvingWorks.filter((work) => selectedBatchWorkIds.has(work.id))
+  const batchNeedsLeaderSelection =
+    user?.role === 'DEPARTMENT_LEADER' &&
+    selectedBatchWorks.length > 0 &&
+    selectedBatchWorks.every((work) => !work.proposedLeaderId && !work.approvalLeaderId)
+
+  const isBatchApprovable = (work: Work) =>
+    work.type !== '待办' &&
+    work.status === 'proposing' &&
+    work.approvalType === 'propose' &&
+    canApproveWork(user, work)
+
+  const toggleBatchWork = (workId: number, checked: boolean) => {
+    setSelectedBatchWorkIds((current) => {
+      const next = new Set(current)
+      if (checked) next.add(workId)
+      else next.delete(workId)
+      return next
+    })
+  }
+
+  const executeBatchApprove = async (comment?: string, nextApproverId?: number | null) => {
+    if (selectedBatchWorks.length < 2) return
+    const payload = {
+      action: 'approve' as const,
+      items: selectedBatchWorks.map((work) => ({ id: work.id, updatedAt: work.updatedAt })),
+      ...(comment ? { comment } : {}),
+      ...(nextApproverId ? { nextApproverId } : {}),
+    }
+    try {
+      await previewBatchWorkflow(payload)
+      await executeBatchWorkflow(payload)
+      await load()
+      alert('批量审批已通过')
+    } catch (error) {
+      alert(error instanceof Error ? error.message : '批量审批失败，请刷新后重试')
+    }
+  }
+
+  const handleBatchApproveClick = () => {
+    if (selectedBatchWorks.length < 2) {
+      alert('请至少选择 2 条可批量审批的工作节点')
+      return
+    }
+    if (batchNeedsLeaderSelection) {
+      setBatchApproveDialogOpen(true)
+      return
+    }
+    void executeBatchApprove()
+  }
 
   const getRouteType = (work: Work) => {
-    if (work.type === '重点') return 'priority';
-    if (work.type === '主要') return 'main';
-    return 'todo';
-  };
+    if (work.type === '重点') return 'priority'
+    if (work.type === '主要') return 'main'
+    return 'todo'
+  }
 
   return (
     <div className="space-y-6">
@@ -125,7 +189,9 @@ export default function ApprovalPage() {
         <button
           onClick={() => setTab('approving')}
           className={`rounded-full px-4 py-1.5 text-sm font-medium transition-all ${
-            tab === 'approving' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+            tab === 'approving'
+              ? 'bg-white text-slate-900 shadow-sm'
+              : 'text-slate-500 hover:text-slate-700'
           }`}
         >
           待我审批（{approvingCount}）
@@ -133,7 +199,9 @@ export default function ApprovalPage() {
         <button
           onClick={() => setTab('handling')}
           className={`rounded-full px-4 py-1.5 text-sm font-medium transition-all ${
-            tab === 'handling' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+            tab === 'handling'
+              ? 'bg-white text-slate-900 shadow-sm'
+              : 'text-slate-500 hover:text-slate-700'
           }`}
         >
           待我办理（{handlingCount}）
@@ -141,14 +209,36 @@ export default function ApprovalPage() {
         <button
           onClick={() => setTab('all')}
           className={`rounded-full px-4 py-1.5 text-sm font-medium transition-all ${
-            tab === 'all' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+            tab === 'all'
+              ? 'bg-white text-slate-900 shadow-sm'
+              : 'text-slate-500 hover:text-slate-700'
           }`}
         >
           全部事项
         </button>
       </div>
 
-      <WorkSearchBar keyword={keyword} onKeywordChange={setKeyword} total={total} page={page} totalPages={totalPages} />
+      <WorkSearchBar
+        keyword={keyword}
+        onKeywordChange={setKeyword}
+        total={total}
+        page={page}
+        totalPages={totalPages}
+      />
+
+      {tab === 'approving' && (
+        <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+          <span>仅可选择同一工作事项下、处于立项审批中的重点/主要工作节点。</span>
+          <button
+            type="button"
+            onClick={handleBatchApproveClick}
+            disabled={selectedBatchWorks.length < 2}
+            className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 font-medium text-emerald-700 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            批量通过（{selectedBatchWorks.length}）
+          </button>
+        </div>
+      )}
 
       <div className="stagger-3 rounded-xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50/50 overflow-hidden">
         {list.length === 0 ? (
@@ -157,26 +247,53 @@ export default function ApprovalPage() {
           <>
             <div>
               {list.map((work) => {
-                const borderClass = getWorkTypeAccent(work.type);
+                const borderClass = getWorkTypeAccent(work.type)
 
                 return (
-                  <div key={work.id} className={`list-separator flex items-start justify-between hover:translate-x-0.5 transition min-w-0 ${borderClass}`}>
+                  <div
+                    key={work.id}
+                    className={`list-separator flex items-start justify-between hover:translate-x-0.5 transition min-w-0 ${borderClass}`}
+                  >
+                    {tab === 'approving' && isBatchApprovable(work) && (
+                      <div className="px-1 pt-5 pl-4">
+                        <Checkbox
+                          checked={selectedBatchWorkIds.has(work.id)}
+                          onCheckedChange={(checked) => toggleBatchWork(work.id, checked === true)}
+                          aria-label={`选择工作节点：${work.workNode || work.title}`}
+                        />
+                      </div>
+                    )}
                     <div className="p-4 min-w-0 flex-1">
-                      <div className="text-sm font-medium text-slate-700 break-words leading-snug">{work.title}</div>
+                      <div className="text-sm font-medium text-slate-700 break-words leading-snug">
+                        {work.title}
+                      </div>
                       <div className="text-xs text-slate-500 mt-1.5 flex items-center gap-2 flex-wrap">
-                        <span className={`font-medium ${getWorkTypeText(work.type)}`}>{work.type}</span>
+                        <span className={`font-medium ${getWorkTypeText(work.type)}`}>
+                          {work.type}
+                        </span>
                         <StatusBadge status={work.status} work={work} />
-                        <span className="text-slate-400">责任部门：{departments.find((d) => d.id === work.departmentId)?.name || '-'}</span>
-                        <span className="text-slate-400">完成时间：{getWorkDueDate(work) || '-'}</span>
+                        <span className="text-slate-400">
+                          责任部门：
+                          {departments.find((d) => d.id === work.departmentId)?.name || '-'}
+                        </span>
+                        <span className="text-slate-400">
+                          完成时间：{getWorkDueDate(work) || '-'}
+                        </span>
                       </div>
                       {work.type === '待办' && (
                         <div className="text-xs text-slate-500 mt-1">
                           事项提出领导：{work.proposedLeader || '-'}
                         </div>
                       )}
-                      {work.adjustReason && <div className="text-xs text-purple-600 mt-1.5 bg-purple-50/50 rounded px-2 py-1">调整原因：{work.adjustReason}</div>}
+                      {work.adjustReason && (
+                        <div className="text-xs text-purple-600 mt-1.5 bg-purple-50/50 rounded px-2 py-1">
+                          调整原因：{work.adjustReason}
+                        </div>
+                      )}
                       {work.adjustNewTime && (
-                        <div className="text-xs text-purple-600 mt-1">调整后时间：{work.adjustNewTime}</div>
+                        <div className="text-xs text-purple-600 mt-1">
+                          调整后时间：{work.adjustNewTime}
+                        </div>
                       )}
                       {work.pendingAdjustmentReason && (
                         <div className="text-xs text-purple-600 mt-1 break-words bg-purple-50/50 rounded px-2 py-1">
@@ -184,13 +301,19 @@ export default function ApprovalPage() {
                         </div>
                       )}
                       {work.pendingAdjustmentFromTime && (
-                        <div className="text-xs text-purple-600 mt-1">原完成时间：{work.pendingAdjustmentFromTime}</div>
+                        <div className="text-xs text-purple-600 mt-1">
+                          原完成时间：{work.pendingAdjustmentFromTime}
+                        </div>
                       )}
                       {work.pendingAdjustmentToTime && (
-                        <div className="text-xs text-purple-600 mt-1">现完成时间：{work.pendingAdjustmentToTime}</div>
+                        <div className="text-xs text-purple-600 mt-1">
+                          现完成时间：{work.pendingAdjustmentToTime}
+                        </div>
                       )}
                       {work.approvalLeader && (
-                        <div className="text-xs text-sky-600 mt-1">公司审批领导：{work.approvalLeader}</div>
+                        <div className="text-xs text-sky-600 mt-1">
+                          公司审批领导：{work.approvalLeader}
+                        </div>
                       )}
                       {work.rejectReason && (
                         <div className="text-xs text-rose-600 mt-1.5 break-words bg-rose-50/50 rounded px-2 py-1">
@@ -198,19 +321,31 @@ export default function ApprovalPage() {
                         </div>
                       )}
                       {work.pendingAdjustment && (
-                        <div className="text-xs text-slate-600 mt-1">本次申请包含调整内容，请进入详情查看。</div>
+                        <div className="text-xs text-slate-600 mt-1">
+                          本次申请包含调整内容，请进入详情查看。
+                        </div>
                       )}
-                      {work.cancelReason && <div className="text-xs text-slate-500 mt-1">取消原因：{work.cancelReason}</div>}
+                      {work.cancelReason && (
+                        <div className="text-xs text-slate-500 mt-1">
+                          取消原因：{work.cancelReason}
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex gap-2 p-4 shrink-0">
                       {canApproveWork(user, work) && (
                         <>
-                          <button onClick={() => handleApproveClick(work)} className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1.5 text-sm font-medium text-emerald-600 hover:bg-emerald-100 hover:-translate-y-0.5 transition-all">
+                          <button
+                            onClick={() => handleApproveClick(work)}
+                            className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1.5 text-sm font-medium text-emerald-600 hover:bg-emerald-100 hover:-translate-y-0.5 transition-all"
+                          >
                             <CheckCircle className="h-3.5 w-3.5" />
                             通过
                           </button>
-                          <button onClick={() => handleReject(work)} className="inline-flex items-center gap-1 rounded-full bg-rose-50 border border-rose-200 px-3 py-1.5 text-sm font-medium text-rose-600 hover:bg-rose-100 hover:-translate-y-0.5 transition-all">
+                          <button
+                            onClick={() => handleReject(work)}
+                            className="inline-flex items-center gap-1 rounded-full bg-rose-50 border border-rose-200 px-3 py-1.5 text-sm font-medium text-rose-600 hover:bg-rose-100 hover:-translate-y-0.5 transition-all"
+                          >
                             <XCircle className="h-3.5 w-3.5" />
                             退回
                           </button>
@@ -234,7 +369,7 @@ export default function ApprovalPage() {
                       </Link>
                     </div>
                   </div>
-                );
+                )
               })}
             </div>
             <WorkListPagination
@@ -243,7 +378,10 @@ export default function ApprovalPage() {
               total={total}
               totalPages={totalPages}
               onPageChange={setPage}
-              onPageSizeChange={(newSize) => { setPageSize(newSize); setPage(1); }}
+              onPageSizeChange={(newSize) => {
+                setPageSize(newSize)
+                setPage(1)
+              }}
             />
           </>
         )}
@@ -263,6 +401,21 @@ export default function ApprovalPage() {
           leaderName={selectedWork.approvalLeader || selectedWork.proposedLeader}
         />
       )}
+
+      {selectedBatchWorks.length >= 2 && (
+        <ApproveDialog
+          open={batchApproveDialogOpen}
+          onOpenChange={setBatchApproveDialogOpen}
+          onConfirm={executeBatchApprove}
+          companyLeaders={companyLeaders}
+          needsLeaderSelection={batchNeedsLeaderSelection}
+          leaderName={
+            selectedBatchWorks[0]?.approvalLeader || selectedBatchWorks[0]?.proposedLeader
+          }
+          title="批量审批通过"
+          confirmLabel="确认批量通过"
+        />
+      )}
     </div>
-  );
+  )
 }

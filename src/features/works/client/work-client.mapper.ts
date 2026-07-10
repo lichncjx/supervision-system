@@ -114,23 +114,26 @@ export function transformWorkFromAPI(work: WorkDto): Work {
     adjustReason: work.adjustReason || undefined,
     cancelReason: work.cancelReason || undefined,
     rejectReason: work.rejectReason || undefined,
+    approvalType: work.approvalType ?? undefined,
     rejectedFrom: normalizeWorkStatus(work.rejectedFrom || work.rejectedFromStatus) || undefined,
     rejectedFromStatus: normalizeWorkStatus(work.rejectedFromStatus) || undefined,
     createdAt: work.createdAt ?? work.updatedAt,
     updatedAt: work.updatedAt,
     attachments: parseAttachments(work.attachments),
-    adjustHistory: (Array.isArray(work.adjustHistory) ? work.adjustHistory : []) as Work['adjustHistory'],
+    adjustHistory: (Array.isArray(work.adjustHistory)
+      ? work.adjustHistory
+      : []) as Work['adjustHistory'],
     pendingAdjustment: optionalRecord<WorkEditablePatch>(work.pendingAdjustment),
     pendingAdjustmentReason: work.pendingAdjustmentReason ?? undefined,
-    pendingAdjustmentBeforeSnapshot: optionalRecord<WorkEditablePatch>(work.pendingAdjustmentBeforeSnapshot),
+    pendingAdjustmentBeforeSnapshot: optionalRecord<WorkEditablePatch>(
+      work.pendingAdjustmentBeforeSnapshot,
+    ),
     pendingAdjustmentFromTime: work.pendingAdjustmentFromTime ?? undefined,
     pendingAdjustmentToTime: work.pendingAdjustmentToTime ?? undefined,
   }
 }
 
-export function buildCreateWorkBody(
-  work: Omit<Work, 'createdAt' | 'updatedAt'>,
-): CreateWorkBody {
+export function buildCreateWorkBody(work: Omit<Work, 'createdAt' | 'updatedAt'>): CreateWorkBody {
   return {
     type: work.type,
     title: work.title,

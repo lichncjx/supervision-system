@@ -1,17 +1,8 @@
 import { prisma } from '@/shared/db/prisma'
 
-export async function findWorksForCompletionRate(
-  departmentId: number,
-  dateFilter: Record<string, unknown>,
-) {
-  const filters: Record<string, unknown>[] = [{ departmentId }]
-
-  if (Object.keys(dateFilter).length > 0) {
-    filters.push({ createdAt: dateFilter })
-  }
-
+export async function findWorksForCompletionRate(departmentId: number, assessmentYear: number) {
   return prisma.workItem.findMany({
-    where: { AND: filters },
+    where: { departmentId, assessmentYear },
   })
 }
 
