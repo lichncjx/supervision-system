@@ -21,6 +21,8 @@ export interface WorkQuery {
   departmentId?: number | '全部'
   status?: WorkStatusFilter
   keyword?: string
+  assessmentYear?: number
+  workItem?: string
 }
 
 export type ActionType = 'create' | 'complete' | 'adjust' | 'cancel' | 'todo_decompose'

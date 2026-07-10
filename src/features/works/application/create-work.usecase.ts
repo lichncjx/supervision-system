@@ -1,5 +1,5 @@
 import type { BaseCurrentUser } from '@/shared/auth/current-user'
-import { Role, WorkItemType, WorkItemStatus } from '@prisma/client'
+import { Prisma, Role, WorkItemType, WorkItemStatus } from '@prisma/client'
 import { createWorkItem, createWorkOperationLog } from '@/features/works/infrastructure/work.repository'
 import { findDepartmentById } from '@/features/departments/infrastructure/department.repository'
 import { findUserById as prismaFindUserById } from '@/features/users/infrastructure/user.repository'
@@ -71,7 +71,9 @@ function processNodes(nodes: any[]) {
   }))
 }
 
-export async function createWorkUseCase(input: CreateWorkInput): Promise<Result<WorkDto>> {
+export async function prepareWorkCreateData(
+  input: CreateWorkInput,
+): Promise<Result<Prisma.WorkItemUncheckedCreateInput>> {
   const { currentUser, body } = input
   const departmentId = body.departmentId
 
@@ -215,12 +217,19 @@ export async function createWorkUseCase(input: CreateWorkInput): Promise<Result<
     workData.approvalLeaderId = workData.proposedLeaderId
   }
 
-  const work = await createWorkItem(workData as any)
+  return ok(workData as Prisma.WorkItemUncheckedCreateInput)
+}
+
+export async function createWorkUseCase(input: CreateWorkInput): Promise<Result<WorkDto>> {
+  const prepared = await prepareWorkCreateData(input)
+  if (!prepared.ok) return prepared
+
+  const work = await createWorkItem(prepared.data as any)
 
   await createWorkOperationLog({
-    userId: currentUser.id,
-    userName: currentUser.name,
-    userRole: currentUser.role as Role,
+    userId: input.currentUser.id,
+    userName: input.currentUser.name,
+    userRole: input.currentUser.role as Role,
     workId: work.id,
     workType: work.type,
     workTitle: work.title,

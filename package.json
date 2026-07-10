@@ -20,6 +20,8 @@
     "db:init": "pnpm prisma:generate && pnpm prisma:deploy && pnpm prisma:seed",
     "test:regression": "node tests/regression-baseline.cjs",
     "test:regression:prepare": "docker compose up -d db && pnpm prisma:deploy && pnpm prisma:seed && pnpm dev",
+    "test:target-contract:seed": "node tests/target-contract/seed-target-data.cjs",
+    "test:target-contract:verify": "node tests/target-contract/verify-target-contract.cjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check": "pnpm typecheck && pnpm lint && pnpm build"

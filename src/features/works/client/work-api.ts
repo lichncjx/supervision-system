@@ -53,6 +53,8 @@ export async function queryWorks(user: User | null | undefined, query: WorkQuery
   if (query.departmentId && query.departmentId !== '全部')
     params.set('departmentId', String(query.departmentId))
   if (query.keyword && query.keyword.trim()) params.set('keyword', query.keyword.trim())
+  if (query.assessmentYear) params.set('assessmentYear', String(query.assessmentYear))
+  if (query.workItem && query.workItem.trim()) params.set('workItem', query.workItem.trim())
 
   const url = `/api/works${params.toString() ? '?' + params.toString() : ''}`
 

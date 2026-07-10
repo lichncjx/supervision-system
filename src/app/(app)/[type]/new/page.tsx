@@ -15,6 +15,7 @@ import { WorkFormShell } from '@/features/works/ui/work-form-shell';
 import { WorkFormSectionCard } from '@/features/works/ui/work-form-section-card';
 import { WorkFormNodes } from '@/features/works/ui/work-form-nodes';
 import { WorkFormCooperators } from '@/features/works/ui/work-form-cooperators';
+import { WorkItemCombobox } from '@/features/works/ui/work-item-combobox';
 import {
   WorkItemField,
   IsInnovationField,
@@ -177,6 +178,15 @@ export default function NewWorkPage() {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    if (!isPriorityOrMain || !user?.departmentId) return;
+    if (user.role !== 'DEPARTMENT_MANAGER' && user.role !== 'DEPARTMENT_LEADER') return;
+    setPriorityMainForm((current) => ({
+      ...current,
+      departmentId: String(user.departmentId),
+    }));
+  }, [isPriorityOrMain, user?.departmentId, user?.role]);
+
 
   if (type === '待办' && !canCreateTodo) {
     return (
@@ -238,8 +248,8 @@ export default function NewWorkPage() {
   };
 
   const titleMap: Record<WorkType, string> = {
-    重点: '新建重点工作',
-    主要: '新建主要工作',
+    重点: '新增重点工作节点',
+    主要: '新增主要工作节点',
     待办: '新建待办事项',
   };
 
@@ -337,11 +347,12 @@ export default function NewWorkPage() {
               placeholder="请输入业务类别"
             />
 
-            <WorkItemField
-              label="工作事项"
+            <WorkItemCombobox
               value={priorityMainForm.workItem}
               onChange={(v) => setPriorityMainForm({ ...priorityMainForm, workItem: v })}
-              placeholder="请输入工作事项"
+              type={routeType === 'priority' ? 'priority' : 'main'}
+              assessmentYear={priorityMainForm.assessmentYear}
+              departmentId={priorityMainForm.departmentId}
               error={fieldError('workItem')}
               onBlur={() => handleBlur('workItem')}
               fieldId="field-workItem"
@@ -509,6 +520,13 @@ export default function NewWorkPage() {
             取消
           </Button>
         </Link>
+        {isPriorityOrMain && (
+          <Link href={`/${routeType}/batch-new`}>
+            <Button variant="outline" type="button" className="rounded-full border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100">
+              批量新增节点
+            </Button>
+          </Link>
+        )}
         <Button type="submit" className="rounded-full bg-slate-950 px-5 text-white shadow-lg shadow-slate-950/15 hover:bg-slate-800">
           保存草稿
         </Button>

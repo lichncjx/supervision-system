@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useMemo, useRef } from 'react'
 import { useSearchAndPagination } from '@/features/works/client/use-search-pagination'
-import { useParams } from 'next/navigation'
+import { useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/components/providers/auth-provider'
 import { isCompanyLevel, isGlobalView } from '@/features/users/domain/role.rules'
@@ -12,7 +12,7 @@ import { getVisibleWorks, queryWorks } from '@/features/works/client/work-api'
 import type { Work } from '@/features/works/client/work-client.types'
 import type { WorkType, WorkStatusFilter } from '@/features/works/client/work-client.types'
 import { workTypeColors, getStatusAccent } from '@/features/works/ui/status-colors'
-import { Plus, Download, Upload, FileSpreadsheet, Star, ListTodo, CheckSquare } from 'lucide-react'
+import { Plus, Download, Upload, FileSpreadsheet, Star, ListTodo, CheckSquare, ChevronDown } from 'lucide-react'
 import { WorkListToolbar } from '@/features/works/ui/work-list-toolbar'
 import { PriorityMainWorkListItem } from '@/features/works/ui/priority-main-work-list-item'
 import { TodoWorkListItem } from '@/features/works/ui/todo-work-list-item'
@@ -37,6 +37,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 const pillButton =
   'inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:-translate-y-0.5 transition-all'
@@ -63,6 +69,7 @@ interface ImportPreview {
 
 export default function ItemListPage() {
   const params = useParams<{ type: string }>()
+  const searchParams = useSearchParams()
   const routeType = params?.type || 'todo'
   const { user } = useAuth()
   const [items, setItems] = useState<Work[]>([])
@@ -70,6 +77,8 @@ export default function ItemListPage() {
   const [departmentFilter, setDepartmentFilter] = useState<number | '全部'>('全部')
   const [statusFilter, setStatusFilter] = useState<WorkStatusFilter>('all')
   const [monthFilter, setMonthFilter] = useState('')
+  const [assessmentYearFilter, setAssessmentYearFilter] = useState('')
+  const [workItemFilter, setWorkItemFilter] = useState('')
   const [departments, setDepartments] = useState<Department[]>([])
   const [companyLeaders, setCompanyLeaders] = useState<User[]>([])
   const companyLevel = isGlobalView(user?.role) || isCompanyLevel(user?.role)
@@ -81,6 +90,11 @@ export default function ItemListPage() {
     }
     fetchDepartments()
   }, [])
+
+  useEffect(() => {
+    setAssessmentYearFilter(searchParams.get('assessmentYear') || '')
+    setWorkItemFilter(searchParams.get('workItem') || '')
+  }, [searchParams])
 
   useEffect(() => {
     getCompanyLeaders()
@@ -166,12 +180,14 @@ export default function ItemListPage() {
         departmentId: companyLevel ? departmentFilter : (user?.departmentId ?? undefined),
         status: statusFilter,
         keyword,
+        assessmentYear: assessmentYearFilter ? Number(assessmentYearFilter) : undefined,
+        workItem: workItemFilter || undefined,
       })
       setList(data)
     }
     fetchList()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, type, departmentFilter, statusFilter, keyword])
+  }, [user, type, departmentFilter, statusFilter, keyword, assessmentYearFilter, workItemFilter])
 
   const filteredList = useMemo(() => {
     if (monthFilter) {
@@ -193,6 +209,8 @@ export default function ItemListPage() {
     departmentFilter,
     statusFilter,
     monthFilter,
+    assessmentYearFilter,
+    workItemFilter,
     type,
   ])
 
@@ -233,6 +251,8 @@ export default function ItemListPage() {
     setMonthFilter('')
     setDepartmentFilter('全部')
     setStatusFilter('all')
+    setAssessmentYearFilter('')
+    setWorkItemFilter('')
     load()
   }
 
@@ -442,7 +462,28 @@ export default function ItemListPage() {
             <Download className="h-3.5 w-3.5" />
             导出
           </button>
-          {canCreate && (
+          {canCreate && isPriorityOrMain && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm font-medium hover:-translate-y-0.5 transition-all ${c.button}`}
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  新增工作节点
+                  <ChevronDown className="h-3.5 w-3.5" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem asChild>
+                  <Link href={`/${routeType}/new`}>新增单个工作节点</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href={`/${routeType}/batch-new`}>批量新增工作节点</Link>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+          {canCreate && !isPriorityOrMain && (
             <Link
               href={`/${routeType}/new`}
               className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm font-medium hover:-translate-y-0.5 transition-all ${c.button}`}
@@ -601,6 +642,23 @@ export default function ItemListPage() {
         onReset={handleReset}
         onRefresh={load}
       />
+
+      {workItemFilter && (
+        <div className="flex items-center justify-between rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-800">
+          <span>正在查看：{assessmentYearFilter || '-'} 年 · {workItemFilter} 的当前可见工作节点</span>
+          <button
+            type="button"
+            className="font-medium text-sky-700 hover:underline"
+            onClick={() => {
+              setAssessmentYearFilter('')
+              setWorkItemFilter('')
+              window.history.replaceState(null, '', `/${routeType}`)
+            }}
+          >
+            查看全部
+          </button>
+        </div>
+      )}
 
       {isPriorityOrMain && (
         <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">

@@ -98,6 +98,11 @@ async function seedWorks(deptByKey, userByKey, memberByKey) {
   for (const scenario of scenarios) {
     const data = { ...scenario.data };
 
+    if ((data.type === 'PRIORITY' || data.type === 'MAIN') && !data.workNode) {
+      data.workNode = `目标节点-${scenario.key}`;
+      data.title = `${data.workItem}｜${data.workNode}`;
+    }
+
     // Assign memberId to a few work items to verify memberId persistence.
     if (scenario.key === 'priority_plain_in_progress_dept_a') {
       data.responsibleLeaderMemberId = memberByKey.leaderA.id;
