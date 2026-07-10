@@ -92,7 +92,12 @@ async function getWork(id, cookies) {
 }
 
 async function createWork(cookies, data) {
-  const res = await request('POST', '/api/works', data, cookies);
+  const res = await request(
+    'POST',
+    '/api/works',
+    { assessmentYear: data.assessmentYear ?? 2026, ...data },
+    cookies,
+  );
   if (res.body?.id) createdWorkIds.push(res.body.id);
   return res;
 }
