@@ -100,6 +100,7 @@ export function transformWorkFromAPI(work: WorkDto): Work {
     needCeo: work.type === '重点',
     isInnovation: work.isInnovation ?? undefined,
     nodes: Array.isArray(work.nodes) ? work.nodes : [],
+    assessmentYear: work.assessmentYear ?? undefined,
     businessCategory: work.businessCategory ?? undefined,
     workItem: work.workItem ?? undefined,
     workNode: work.workNode ?? undefined,
@@ -133,6 +134,7 @@ export function buildCreateWorkBody(
   return {
     type: work.type,
     title: work.title,
+    assessmentYear: work.assessmentYear ?? null,
     departmentId: work.departmentId ?? null,
     workItem: work.workItem ?? null,
     workNode: work.workNode ?? null,
@@ -160,6 +162,7 @@ export function buildUpdateWorkBody(patch: WorkEditablePatch): UpdateWorkBody {
   const data: UpdateWorkBody = {}
 
   if ('title' in patch) data.title = patch.title ?? null
+  if ('assessmentYear' in patch) data.assessmentYear = patch.assessmentYear ?? null
   if ('departmentId' in patch && patch.departmentId != null) data.departmentId = patch.departmentId
   if ('workItem' in patch) data.workItem = patch.workItem ?? null
   if ('workNode' in patch) data.workNode = patch.workNode ?? null

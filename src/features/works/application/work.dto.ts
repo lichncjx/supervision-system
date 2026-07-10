@@ -27,6 +27,7 @@ export interface WorkDto {
     responsiblePerson?: string | null
     responsibleLeaderUserId?: number | null
     responsiblePersonUserId?: number | null
+    assessmentYear?: number | null
     workItem?: string | null
     workNode?: string | null
     businessCategory?: string | null

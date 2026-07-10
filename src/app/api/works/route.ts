@@ -14,6 +14,8 @@ export const GET = withApiHandler(async (request: NextRequest) => {
     status: searchParams.get('status'),
     departmentId: searchParams.get('departmentId'),
     keyword: searchParams.get('keyword'),
+    assessmentYear: searchParams.get('assessmentYear'),
+    workItem: searchParams.get('workItem'),
   }
 
   const result = await queryWorksUseCase({ currentUser, params })

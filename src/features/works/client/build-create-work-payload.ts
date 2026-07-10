@@ -5,6 +5,7 @@ interface BuildCreateWorkPayloadParams {
   type: string;
   user: User;
   priorityMainForm: {
+    assessmentYear: string;
     businessCategory: string;
     workItem: string;
     workNode: string;
@@ -17,6 +18,7 @@ interface BuildCreateWorkPayloadParams {
     responsiblePersonUserId?: number;
   };
   todoForm: {
+    assessmentYear: string;
     proposedLeaderId: string;
     proposedScene: string;
     workItem: string;
@@ -63,6 +65,7 @@ export function buildCreateWorkPayload({
     return {
       id: Date.now(),
       title: priorityMainForm.workItem,
+      assessmentYear: Number(priorityMainForm.assessmentYear),
       type: type as WorkType,
       departmentId: Number(priorityMainForm.departmentId),
       creatorRole: user.role,
@@ -92,6 +95,7 @@ export function buildCreateWorkPayload({
   return {
     id: Date.now(),
     title: todoForm.workItem,
+    assessmentYear: Number(todoForm.assessmentYear),
     type: '待办' as WorkType,
     departmentId: todoForm.departmentId || 2,
     creatorRole: user.role,

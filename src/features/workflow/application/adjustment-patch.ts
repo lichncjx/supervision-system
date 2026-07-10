@@ -2,6 +2,7 @@ import type { WorkItem } from '@prisma/client'
 
 export const ADJUSTMENT_PATCH_FIELDS = [
   'title',
+  'assessmentYear',
   'workItem',
   'businessCategory',
   'workNode',
@@ -40,6 +41,7 @@ const TEXT_FIELDS = new Set<AdjustmentPatchField>([
   'formedTime',
 ])
 const NUMBER_FIELDS = new Set<AdjustmentPatchField>([
+  'assessmentYear',
   'departmentId',
   'responsibleLeaderUserId',
   'responsiblePersonUserId',
@@ -115,6 +117,7 @@ export function sanitizeAdjustmentPatch(input: unknown):
 export function buildAdjustmentBeforeSnapshot(workItem: Pick<
   WorkItem,
   | 'title'
+  | 'assessmentYear'
   | 'workItem'
   | 'businessCategory'
   | 'workNode'
@@ -135,6 +138,7 @@ export function buildAdjustmentBeforeSnapshot(workItem: Pick<
 >): AdjustmentPatch {
   return {
     title: workItem.title,
+    assessmentYear: workItem.assessmentYear,
     workItem: workItem.workItem,
     businessCategory: workItem.businessCategory,
     workNode: workItem.workNode,

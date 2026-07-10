@@ -8,8 +8,11 @@ export interface CreateWorkFormInput {
   user: CreateWorkFormUser | null | undefined;
   isPriorityOrMain: boolean;
   isTodo: boolean;
+  priorityMainAssessmentYear: string;
   priorityMainWorkItem: string;
+  priorityMainWorkNode: string;
   priorityMainDepartmentId: string;
+  todoAssessmentYear: string;
   todoWorkItem: string;
   todoDepartmentId: number;
   todoProposedLeaderId: string;
@@ -18,7 +21,7 @@ export interface CreateWorkFormInput {
   nodes: WorkNode[];
 }
 
-export type CreateWorkFormField = 'workItem' | 'departmentId' | 'proposedLeaderId' | 'cooperators' | 'nodes';
+export type CreateWorkFormField = 'assessmentYear' | 'workItem' | 'workNode' | 'departmentId' | 'proposedLeaderId' | 'cooperators' | 'nodes';
 
 export type CreateWorkFormErrors = Partial<Record<CreateWorkFormField, string>>;
 
@@ -57,13 +60,22 @@ export function validateCreateWorkFormFields(input: CreateWorkFormInput): Create
   }
 
   if (isPriorityOrMain) {
+    if (!input.priorityMainAssessmentYear.trim()) {
+      errors.assessmentYear = '请选择年度';
+    }
     if (!input.priorityMainWorkItem.trim()) {
       errors.workItem = '请输入工作事项';
+    }
+    if (!input.priorityMainWorkNode.trim()) {
+      errors.workNode = '请输入工作节点';
     }
     if (!input.priorityMainDepartmentId) {
       errors.departmentId = '请选择责任部门';
     }
   } else if (isTodo) {
+    if (!input.todoAssessmentYear.trim()) {
+      errors.assessmentYear = '请选择年度';
+    }
     if (!input.todoWorkItem.trim()) {
       errors.workItem = '请输入待办事项';
     }

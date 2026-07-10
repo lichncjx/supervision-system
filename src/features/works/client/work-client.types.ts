@@ -101,6 +101,7 @@ export interface Work {
   needCeo: boolean
   isInnovation?: boolean
   nodes?: WorkNode[]
+  assessmentYear?: number
   businessCategory?: string
   workItem?: string
   workNode?: string
@@ -138,6 +139,7 @@ export interface Work {
 type WorkEditablePatchBase = Pick<
   Work,
   | 'title'
+  | 'assessmentYear'
   | 'description'
   | 'businessCategory'
   | 'workItem'

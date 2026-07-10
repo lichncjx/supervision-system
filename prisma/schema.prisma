@@ -131,6 +131,7 @@ model WorkItem {
   needMainLeaderCancel  Boolean         @default(false)
 
   businessCategory      String?         @db.VarChar(100)
+  assessmentYear        Int?
   workItem              String?         @db.VarChar(500)
   workNode              String?         @db.VarChar(200)
   completeTime          DateTime?
@@ -200,6 +201,7 @@ model WorkItem {
 
   @@index([responsibleLeaderUserId])
   @@index([responsiblePersonUserId])
+  @@index([assessmentYear, type, workItem])
 
   @@map("work_items")
 }

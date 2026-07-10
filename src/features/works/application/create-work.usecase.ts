@@ -6,11 +6,17 @@ import { findUserById as prismaFindUserById } from '@/features/users/infrastruct
 import { isDeptLeader, isDeptManager } from '@/features/users/domain/role.rules'
 import { validateMemberAssignments, type MemberAssignment } from '@/features/members/domain/member.rules'
 import { toWorkDto } from '@/features/works/application/work.mapper'
+import {
+  isPriorityOrMainWorkType,
+  normalizeAssessmentYear,
+  validateStructuredWorkFields,
+} from '@/features/works/domain/work-structure.rules'
 import type { WorkDto } from './work.dto'
 import { type Result, err, ok } from '@/shared/result'
 
 export interface CreateWorkBody {
   type: string
+  assessmentYear?: number | null
   departmentId: number | null
   title?: string | null
   workItem?: string | null
@@ -99,6 +105,21 @@ export async function createWorkUseCase(input: CreateWorkInput): Promise<Result<
     return err(400, '请指定责任部门')
   }
 
+  const assessmentYear = normalizeAssessmentYear(body.assessmentYear)
+  if (!assessmentYear) {
+    return err(400, '请选择有效年度')
+  }
+
+  const structuredFields = isPriorityOrMainWorkType(workType)
+    ? validateStructuredWorkFields({
+      workItem: body.workItem,
+      workNode: body.workNode,
+    })
+    : null
+  if (structuredFields && !structuredFields.ok) {
+    return err(400, structuredFields.message)
+  }
+
   const department = await findDepartmentById(departmentId)
 
   if (!department) {
@@ -161,12 +182,15 @@ export async function createWorkUseCase(input: CreateWorkInput): Promise<Result<
 
   const workData = {
     type: workType,
-    title: body.title || body.workItem || '未命名事项',
+    title: structuredFields?.ok
+      ? structuredFields.title
+      : body.title || body.workItem || '未命名事项',
+    assessmentYear,
     departmentId,
     creatorId: currentUser.id,
     status: WorkItemStatus.DRAFT,
-    workItem: body.workItem,
-    workNode: body.workNode,
+    workItem: structuredFields?.ok ? structuredFields.workItem : body.workItem,
+    workNode: structuredFields?.ok ? structuredFields.workNode : body.workNode,
     businessCategory: body.businessCategory,
     completeTime: null,
     completeForm: body.completeForm,

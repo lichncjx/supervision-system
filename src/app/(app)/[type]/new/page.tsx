@@ -69,6 +69,7 @@ export default function NewWorkPage() {
 
   // 重点工作和主要工作表单
   const [priorityMainForm, setPriorityMainForm] = useState({
+    assessmentYear: String(new Date().getFullYear()),
     businessCategory: '',
     workItem: '',
     workNode: '',
@@ -83,6 +84,7 @@ export default function NewWorkPage() {
 
   // 待办事项表单
   const [todoForm, setTodoForm] = useState({
+    assessmentYear: String(new Date().getFullYear()),
     proposedLeaderId:
       isCompanyLevel(user?.role)
         ? String(user?.id)
@@ -133,8 +135,11 @@ export default function NewWorkPage() {
       user: s.user,
       isPriorityOrMain: s.isPriorityOrMain,
       isTodo: s.isTodo,
+      priorityMainAssessmentYear: s.priorityMainForm.assessmentYear,
       priorityMainWorkItem: s.priorityMainForm.workItem,
+      priorityMainWorkNode: s.priorityMainForm.workNode,
       priorityMainDepartmentId: s.priorityMainForm.departmentId,
+      todoAssessmentYear: s.todoForm.assessmentYear,
       todoWorkItem: s.todoForm.workItem,
       todoDepartmentId: s.todoForm.departmentId,
       todoProposedLeaderId: s.todoForm.proposedLeaderId,
@@ -316,6 +321,16 @@ export default function NewWorkPage() {
         <>
           <WorkFormSectionCard title="基本信息">
             <WorkItemField
+              label="年度"
+              value={priorityMainForm.assessmentYear}
+              onChange={(v) => setPriorityMainForm({ ...priorityMainForm, assessmentYear: v })}
+              placeholder="例如：2026"
+              error={fieldError('assessmentYear')}
+              onBlur={() => handleBlur('assessmentYear')}
+              fieldId="field-assessmentYear"
+            />
+
+            <WorkItemField
               label="业务类别"
               value={priorityMainForm.businessCategory}
               onChange={(v) => setPriorityMainForm({ ...priorityMainForm, businessCategory: v })}
@@ -330,6 +345,16 @@ export default function NewWorkPage() {
               error={fieldError('workItem')}
               onBlur={() => handleBlur('workItem')}
               fieldId="field-workItem"
+            />
+
+            <WorkItemField
+              label="工作节点"
+              value={priorityMainForm.workNode}
+              onChange={(v) => setPriorityMainForm({ ...priorityMainForm, workNode: v })}
+              placeholder="请输入工作节点"
+              error={fieldError('workNode')}
+              onBlur={() => handleBlur('workNode')}
+              fieldId="field-workNode"
             />
 
             {type === '重点' && (
@@ -410,6 +435,16 @@ export default function NewWorkPage() {
               onWorkPlanChange={(v) => setTodoForm({ ...todoForm, workPlan: v })}
               progress={todoForm.progress}
               onProgressChange={(v) => setTodoForm({ ...todoForm, progress: v })}
+            />
+
+            <WorkItemField
+              label="年度"
+              value={todoForm.assessmentYear}
+              onChange={(v) => setTodoForm({ ...todoForm, assessmentYear: v })}
+              placeholder="例如：2026"
+              error={fieldError('assessmentYear')}
+              onBlur={() => handleBlur('assessmentYear')}
+              fieldId="field-assessmentYear"
             />
 
             <WorkItemField
