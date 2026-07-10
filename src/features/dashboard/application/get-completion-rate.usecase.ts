@@ -15,10 +15,12 @@ import {
   findDepartmentsByIds,
   type Department,
 } from '@/features/departments/infrastructure/department.repository'
+import { normalizeAssessmentYear } from '@/features/works/domain/work-structure.rules'
 
 export interface GetCompletionRateInput {
   currentUser: BaseCurrentUser
   type: string | null
+  year: string | null
   startDate: string | null
   endDate: string | null
 }
@@ -27,22 +29,13 @@ async function getDepartmentStats(
   departmentId: number,
   departmentName: string,
   visibilityWhere: Prisma.WorkItemWhereInput,
+  assessmentYear: number,
   typeFilter?: WorkItemType,
-  startDate?: Date,
-  endDate?: Date,
 ): Promise<CompletionRateStat> {
-  const dateFilter: Record<string, unknown> = {}
-  if (startDate) dateFilter.gte = startDate
-  if (endDate) {
-    const end = new Date(endDate)
-    end.setHours(23, 59, 59, 999)
-    dateFilter.lte = end
-  }
-
   const works = await findWorksForDashboardCompletionRate({
     departmentId,
     visibilityWhere,
-    dateFilter,
+    assessmentYear,
     typeFilter,
   })
 
@@ -69,12 +62,11 @@ function normalizeTypeFilter(type: string | null): WorkItemType | undefined {
 export async function getCompletionRateUseCase(
   input: GetCompletionRateInput,
 ): Promise<Result<CompletionRateStat[]>> {
-  const { currentUser, type, startDate, endDate } = input
+  const { currentUser, type, year } = input
 
   const visibilityWhere = await buildWorkVisibilityWhere(currentUser, false)
 
-  const sDate = startDate ? new Date(startDate) : undefined
-  const eDate = endDate ? new Date(endDate) : undefined
+  const assessmentYear = normalizeAssessmentYear(year) || new Date().getFullYear()
   const typeFilter = normalizeTypeFilter(type)
   if (type && !typeFilter) {
     return err(400, '无效的事项类型')
@@ -97,9 +89,8 @@ export async function getCompletionRateUseCase(
         dept.id,
         dept.name,
         visibilityWhere,
+        assessmentYear,
         typeFilter,
-        sDate,
-        eDate,
       ),
     ),
   )

@@ -6,6 +6,7 @@ export const dashboardWorkSelect = {
   id: true,
   type: true,
   title: true,
+  assessmentYear: true,
   status: true,
   action: true,
   completeTime: true,
@@ -46,7 +47,7 @@ export async function findDashboardWorks(
 export async function findWorksForDashboardCompletionRate(params: {
   departmentId: number
   visibilityWhere: Prisma.WorkItemWhereInput
-  dateFilter: Record<string, unknown>
+  assessmentYear: number
   typeFilter?: WorkItemType
 }) {
   const filters: Prisma.WorkItemWhereInput[] = [
@@ -54,9 +55,7 @@ export async function findWorksForDashboardCompletionRate(params: {
     { departmentId: params.departmentId },
   ]
 
-  if (Object.keys(params.dateFilter).length > 0) {
-    filters.push({ createdAt: params.dateFilter })
-  }
+  filters.push({ assessmentYear: params.assessmentYear })
 
   if (params.typeFilter) {
     filters.push({ type: params.typeFilter })

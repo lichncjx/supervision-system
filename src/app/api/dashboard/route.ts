@@ -10,10 +10,11 @@ export const GET = withApiHandler(async (request: NextRequest) => {
 
   const { searchParams } = new URL(request.url)
   const limit = Number(searchParams.get('limit') || undefined)
+  const assessmentYear = Number(searchParams.get('year') || undefined)
 
   const response: DashboardData = await getDashboardDataUseCase({
     currentUser,
-    options: { limit },
+    options: { limit, assessmentYear },
   })
 
   return ok(response)
