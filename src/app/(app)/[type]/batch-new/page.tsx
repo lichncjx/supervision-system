@@ -187,6 +187,8 @@ export default function BatchNewWorkNodesPage() {
               </div>
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 <WorkItemField label="工作节点" value={row.workNode} onChange={(workNode) => updateRow(row.id, { workNode })} placeholder="请输入工作节点" />
+                <WorkItemField label="完成形式（可选）" value={row.completeForm} onChange={(completeForm) => updateRow(row.id, { completeForm })} placeholder="例如：验收报告" />
+                <PlanCompleteTimeField label="完成时间" value={row.planCompleteTime} onChange={(planCompleteTime) => updateRow(row.id, { planCompleteTime })} />
                 <DepartmentField
                   label="责任部门"
                   value={row.departmentId}
@@ -200,8 +202,6 @@ export default function BatchNewWorkNodesPage() {
                   departments={availableDepartments}
                   placeholder="请选择责任部门"
                 />
-                <PlanCompleteTimeField label="完成时间" value={row.planCompleteTime} onChange={(planCompleteTime) => updateRow(row.id, { planCompleteTime })} />
-                <WorkItemField label="完成形式（可选）" value={row.completeForm} onChange={(completeForm) => updateRow(row.id, { completeForm })} placeholder="例如：验收报告" />
                 <ResponsibleFields
                   leaderValue={row.responsibleLeader}
                   onLeaderChange={(responsibleLeader) => updateRow(row.id, { responsibleLeader })}
@@ -211,7 +211,7 @@ export default function BatchNewWorkNodesPage() {
                   leaderUserId={row.responsibleLeaderUserId}
                   onLeaderUserIdChange={(responsibleLeaderUserId) => updateRow(row.id, { responsibleLeaderUserId })}
                   personUserId={row.responsiblePersonUserId}
-                  onPersonUserIdChange={(responsiblePersonUserId) => updateRow(row.id, { responsiblePersonUserId})}
+                  onPersonUserIdChange={(responsiblePersonUserId) => updateRow(row.id, { responsiblePersonUserId })}
                 />
               </div>
             </div>
