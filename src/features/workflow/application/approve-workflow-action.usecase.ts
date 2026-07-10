@@ -14,6 +14,10 @@ import {
   type AdjustmentPatch,
 } from '@/features/workflow/application/adjustment-patch'
 import {
+  isPriorityOrMainWorkType,
+  validateStructuredWorkFields,
+} from '@/features/works/domain/work-structure.rules'
+import {
   createWorkflowRecord,
   createOperationLog,
   findPresident,
@@ -175,6 +179,24 @@ export async function approveWorkflowAction(
           approvedBy: user.name,
         }),
       ],
+    }
+
+    if (
+      isPriorityOrMainWorkType(workItem.type) &&
+      (hasPatchField(adjustmentPatch, 'workItem') || hasPatchField(adjustmentPatch, 'workNode'))
+    ) {
+      const structuredFields = validateStructuredWorkFields({
+        workItem: hasPatchField(adjustmentPatch, 'workItem')
+          ? adjustmentPatch.workItem
+          : workItem.workItem,
+        workNode: hasPatchField(adjustmentPatch, 'workNode')
+          ? adjustmentPatch.workNode
+          : workItem.workNode,
+      })
+      if (!structuredFields.ok) return err(400, structuredFields.message)
+      adjustmentUpdateData.workItem = structuredFields.workItem
+      adjustmentUpdateData.workNode = structuredFields.workNode
+      adjustmentUpdateData.title = structuredFields.title
     }
     approvedAdjustmentRequestId = adjustmentRequest.id
   }

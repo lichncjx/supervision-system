@@ -38,6 +38,7 @@ const TYPE_TO_ROUTE: Record<WorkType, string> = {
 
 function buildInitialPriorityMainForm(work: Work) {
   return {
+    assessmentYear: String(work.assessmentYear || new Date().getFullYear()),
     businessCategory: work.businessCategory || '',
     workItem: work.workItem || work.title || '',
     workNode: work.workNode || '',
@@ -53,6 +54,7 @@ function buildInitialPriorityMainForm(work: Work) {
 
 function buildInitialTodoForm(work: Work) {
   return {
+    assessmentYear: String(work.assessmentYear || new Date().getFullYear()),
     proposedScene: work.proposedScene || '',
     workItem: work.workItem || work.title || '',
     formedTime: work.formedTime || '',
@@ -80,6 +82,7 @@ function filterValidNodes(nodes: WorkNode[]) {
 function buildAdjustmentBeforeSnapshot(work: Work): Record<string, unknown> {
   return {
     title: work.title,
+    assessmentYear: work.assessmentYear,
     workItem: work.workItem,
     businessCategory: work.businessCategory,
     workNode: work.workNode,
@@ -170,7 +173,7 @@ export default function AdjustWorkPage() {
   const buildPatch = (): WorkEditablePatch => {
     if (isPriorityOrMain) {
       return {
-        title: priorityMainForm.workItem || work.title,
+        assessmentYear: Number(priorityMainForm.assessmentYear),
         workItem: priorityMainForm.workItem,
         businessCategory: priorityMainForm.businessCategory,
         workNode: priorityMainForm.workNode,
@@ -187,7 +190,7 @@ export default function AdjustWorkPage() {
     }
 
     return {
-      title: todoForm.workItem || work.title,
+      assessmentYear: Number(todoForm.assessmentYear),
       workItem: todoForm.workItem,
       proposedScene: todoForm.proposedScene,
       formedTime: todoForm.formedTime,
@@ -298,6 +301,12 @@ export default function AdjustWorkPage() {
         <>
           <WorkFormSectionCard title="基本信息">
             <WorkItemField
+              label="年度"
+              value={priorityMainForm.assessmentYear}
+              onChange={(v) => setPriorityMainForm((prev) => ({ ...prev!, assessmentYear: v }))}
+              placeholder="例如：2026"
+            />
+            <WorkItemField
               label="业务类别"
               value={priorityMainForm.businessCategory}
               onChange={(v) => setPriorityMainForm((prev) => ({ ...prev!, businessCategory: v }))}
@@ -308,6 +317,12 @@ export default function AdjustWorkPage() {
               value={priorityMainForm.workItem}
               onChange={(v) => setPriorityMainForm((prev) => ({ ...prev!, workItem: v }))}
               placeholder="请输入工作事项"
+            />
+            <WorkItemField
+              label="工作节点"
+              value={priorityMainForm.workNode}
+              onChange={(v) => setPriorityMainForm((prev) => ({ ...prev!, workNode: v }))}
+              placeholder="请输入工作节点"
             />
             {type === '重点' && (
               <IsInnovationField
@@ -363,6 +378,12 @@ export default function AdjustWorkPage() {
       {isTodo && (
         <>
           <WorkFormSectionCard title="基本信息">
+            <WorkItemField
+              label="年度"
+              value={todoForm.assessmentYear}
+              onChange={(v) => setTodoForm((prev) => ({ ...prev!, assessmentYear: v }))}
+              placeholder="例如：2026"
+            />
             <ReadonlyInfo label="事项提出领导" value={work.proposedLeader} />
             <TodoSpecificFields
               proposedScene={todoForm.proposedScene}
