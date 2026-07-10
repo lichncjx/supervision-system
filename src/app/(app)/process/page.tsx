@@ -26,6 +26,11 @@ import type { User } from '@/features/users/client/user-client.types'
 import type { Department } from '@/features/departments/client/department-api'
 import { Checkbox } from '@/components/ui/checkbox'
 
+function getStructuredGroupKey(work: Work) {
+  if ((work.type !== '重点' && work.type !== '主要') || !work.workItem) return null
+  return `${work.assessmentYear ?? '未设置年度'}\u0000${work.type}\u0000${work.workItem}`
+}
+
 export default function ApprovalPage() {
   const { user } = useAuth()
   const [approvingWorks, setApprovingWorks] = useState<Work[]>([])
@@ -78,8 +83,24 @@ export default function ApprovalPage() {
     return merged
   }, [approvingWorks, handlingWorks])
 
-  const baseList =
-    tab === 'approving' ? approvingWorks : tab === 'handling' ? handlingWorks : allWorks
+  const baseList = useMemo(() => {
+    const source =
+      tab === 'approving' ? approvingWorks : tab === 'handling' ? handlingWorks : allWorks
+    if (tab !== 'approving') return source
+
+    return [...source].sort((left, right) => {
+      const leftGroup = getStructuredGroupKey(left)
+      const rightGroup = getStructuredGroupKey(right)
+      if (leftGroup && rightGroup) {
+        const groupComparison = leftGroup.localeCompare(rightGroup, 'zh-CN')
+        if (groupComparison !== 0) return groupComparison
+        return (left.workNode || left.title).localeCompare(right.workNode || right.title, 'zh-CN')
+      }
+      if (leftGroup) return -1
+      if (rightGroup) return 1
+      return 0
+    })
+  }, [allWorks, approvingWorks, handlingWorks, tab])
 
   const { list, total, totalPages, page, setPage, pageSize, setPageSize } = useSearchAndPagination(
     baseList,
@@ -132,11 +153,31 @@ export default function ApprovalPage() {
     work.approvalType === 'propose' &&
     canApproveWork(user, work)
 
+  const getGroupWorks = (work: Work) => {
+    const groupKey = getStructuredGroupKey(work)
+    if (!groupKey) return []
+    return approvingWorks.filter(
+      (item) => getStructuredGroupKey(item) === groupKey && isBatchApprovable(item),
+    )
+  }
+
   const toggleBatchWork = (workId: number, checked: boolean) => {
     setSelectedBatchWorkIds((current) => {
       const next = new Set(current)
       if (checked) next.add(workId)
       else next.delete(workId)
+      return next
+    })
+  }
+
+  const toggleGroupWorks = (works: Work[]) => {
+    setSelectedBatchWorkIds((current) => {
+      const next = new Set(current)
+      const allSelected = works.length > 0 && works.every((work) => next.has(work.id))
+      for (const work of works) {
+        if (allSelected) next.delete(work.id)
+        else next.add(work.id)
+      }
       return next
     })
   }
@@ -246,129 +287,156 @@ export default function ApprovalPage() {
         ) : (
           <>
             <div>
-              {list.map((work) => {
+              {list.map((work, index) => {
                 const borderClass = getWorkTypeAccent(work.type)
+                const groupKey = getStructuredGroupKey(work)
+                const previousGroupKey = index > 0 ? getStructuredGroupKey(list[index - 1]) : null
+                const isFirstInGroup =
+                  tab === 'approving' && Boolean(groupKey) && groupKey !== previousGroupKey
+                const groupWorks = isFirstInGroup ? getGroupWorks(work) : []
 
                 return (
-                  <div
-                    key={work.id}
-                    className={`list-separator flex items-start justify-between hover:translate-x-0.5 transition min-w-0 ${borderClass}`}
-                  >
-                    {tab === 'approving' && isBatchApprovable(work) && (
-                      <div className="px-1 pt-5 pl-4">
-                        <Checkbox
-                          checked={selectedBatchWorkIds.has(work.id)}
-                          onCheckedChange={(checked) => toggleBatchWork(work.id, checked === true)}
-                          aria-label={`选择工作节点：${work.workNode || work.title}`}
-                        />
+                  <React.Fragment key={work.id}>
+                    {isFirstInGroup && (
+                      <div className="flex items-center justify-between border-y border-sky-100 bg-sky-50/70 px-4 py-2 text-xs text-sky-800">
+                        <span>
+                          {work.assessmentYear} 年 · {work.type}工作 · 工作事项：{work.workItem}
+                          （当前可批量审批 {groupWorks.length} 个节点）
+                        </span>
+                        {groupWorks.length >= 2 && (
+                          <button
+                            type="button"
+                            onClick={() => toggleGroupWorks(groupWorks)}
+                            className="rounded-full border border-sky-200 bg-white px-2.5 py-1 font-medium text-sky-700 hover:bg-sky-100"
+                          >
+                            {groupWorks.every((item) => selectedBatchWorkIds.has(item.id))
+                              ? '取消选择同组节点'
+                              : '选择同组节点'}
+                          </button>
+                        )}
                       </div>
                     )}
-                    <div className="p-4 min-w-0 flex-1">
-                      <div className="text-sm font-medium text-slate-700 break-words leading-snug">
-                        {work.title}
+                    <div
+                      className={`list-separator flex items-start justify-between hover:translate-x-0.5 transition min-w-0 ${borderClass}`}
+                    >
+                      {tab === 'approving' && isBatchApprovable(work) && (
+                        <div className="px-1 pt-5 pl-4">
+                          <Checkbox
+                            checked={selectedBatchWorkIds.has(work.id)}
+                            onCheckedChange={(checked) =>
+                              toggleBatchWork(work.id, checked === true)
+                            }
+                            aria-label={`选择工作节点：${work.workNode || work.title}`}
+                          />
+                        </div>
+                      )}
+                      <div className="p-4 min-w-0 flex-1">
+                        <div className="text-sm font-medium text-slate-700 break-words leading-snug">
+                          {work.title}
+                        </div>
+                        <div className="text-xs text-slate-500 mt-1.5 flex items-center gap-2 flex-wrap">
+                          <span className={`font-medium ${getWorkTypeText(work.type)}`}>
+                            {work.type}
+                          </span>
+                          <StatusBadge status={work.status} work={work} />
+                          <span className="text-slate-400">
+                            责任部门：
+                            {departments.find((d) => d.id === work.departmentId)?.name || '-'}
+                          </span>
+                          <span className="text-slate-400">
+                            完成时间：{getWorkDueDate(work) || '-'}
+                          </span>
+                        </div>
+                        {work.type === '待办' && (
+                          <div className="text-xs text-slate-500 mt-1">
+                            事项提出领导：{work.proposedLeader || '-'}
+                          </div>
+                        )}
+                        {work.adjustReason && (
+                          <div className="text-xs text-purple-600 mt-1.5 bg-purple-50/50 rounded px-2 py-1">
+                            调整原因：{work.adjustReason}
+                          </div>
+                        )}
+                        {work.adjustNewTime && (
+                          <div className="text-xs text-purple-600 mt-1">
+                            调整后时间：{work.adjustNewTime}
+                          </div>
+                        )}
+                        {work.pendingAdjustmentReason && (
+                          <div className="text-xs text-purple-600 mt-1 break-words bg-purple-50/50 rounded px-2 py-1">
+                            调整原因：{work.pendingAdjustmentReason}
+                          </div>
+                        )}
+                        {work.pendingAdjustmentFromTime && (
+                          <div className="text-xs text-purple-600 mt-1">
+                            原完成时间：{work.pendingAdjustmentFromTime}
+                          </div>
+                        )}
+                        {work.pendingAdjustmentToTime && (
+                          <div className="text-xs text-purple-600 mt-1">
+                            现完成时间：{work.pendingAdjustmentToTime}
+                          </div>
+                        )}
+                        {work.approvalLeader && (
+                          <div className="text-xs text-sky-600 mt-1">
+                            公司审批领导：{work.approvalLeader}
+                          </div>
+                        )}
+                        {work.rejectReason && (
+                          <div className="text-xs text-rose-600 mt-1.5 break-words bg-rose-50/50 rounded px-2 py-1">
+                            上次退回原因：{work.rejectReason}
+                          </div>
+                        )}
+                        {work.pendingAdjustment && (
+                          <div className="text-xs text-slate-600 mt-1">
+                            本次申请包含调整内容，请进入详情查看。
+                          </div>
+                        )}
+                        {work.cancelReason && (
+                          <div className="text-xs text-slate-500 mt-1">
+                            取消原因：{work.cancelReason}
+                          </div>
+                        )}
                       </div>
-                      <div className="text-xs text-slate-500 mt-1.5 flex items-center gap-2 flex-wrap">
-                        <span className={`font-medium ${getWorkTypeText(work.type)}`}>
-                          {work.type}
-                        </span>
-                        <StatusBadge status={work.status} work={work} />
-                        <span className="text-slate-400">
-                          责任部门：
-                          {departments.find((d) => d.id === work.departmentId)?.name || '-'}
-                        </span>
-                        <span className="text-slate-400">
-                          完成时间：{getWorkDueDate(work) || '-'}
-                        </span>
-                      </div>
-                      {work.type === '待办' && (
-                        <div className="text-xs text-slate-500 mt-1">
-                          事项提出领导：{work.proposedLeader || '-'}
-                        </div>
-                      )}
-                      {work.adjustReason && (
-                        <div className="text-xs text-purple-600 mt-1.5 bg-purple-50/50 rounded px-2 py-1">
-                          调整原因：{work.adjustReason}
-                        </div>
-                      )}
-                      {work.adjustNewTime && (
-                        <div className="text-xs text-purple-600 mt-1">
-                          调整后时间：{work.adjustNewTime}
-                        </div>
-                      )}
-                      {work.pendingAdjustmentReason && (
-                        <div className="text-xs text-purple-600 mt-1 break-words bg-purple-50/50 rounded px-2 py-1">
-                          调整原因：{work.pendingAdjustmentReason}
-                        </div>
-                      )}
-                      {work.pendingAdjustmentFromTime && (
-                        <div className="text-xs text-purple-600 mt-1">
-                          原完成时间：{work.pendingAdjustmentFromTime}
-                        </div>
-                      )}
-                      {work.pendingAdjustmentToTime && (
-                        <div className="text-xs text-purple-600 mt-1">
-                          现完成时间：{work.pendingAdjustmentToTime}
-                        </div>
-                      )}
-                      {work.approvalLeader && (
-                        <div className="text-xs text-sky-600 mt-1">
-                          公司审批领导：{work.approvalLeader}
-                        </div>
-                      )}
-                      {work.rejectReason && (
-                        <div className="text-xs text-rose-600 mt-1.5 break-words bg-rose-50/50 rounded px-2 py-1">
-                          上次退回原因：{work.rejectReason}
-                        </div>
-                      )}
-                      {work.pendingAdjustment && (
-                        <div className="text-xs text-slate-600 mt-1">
-                          本次申请包含调整内容，请进入详情查看。
-                        </div>
-                      )}
-                      {work.cancelReason && (
-                        <div className="text-xs text-slate-500 mt-1">
-                          取消原因：{work.cancelReason}
-                        </div>
-                      )}
-                    </div>
 
-                    <div className="flex gap-2 p-4 shrink-0">
-                      {canApproveWork(user, work) && (
-                        <>
-                          <button
-                            onClick={() => handleApproveClick(work)}
-                            className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1.5 text-sm font-medium text-emerald-600 hover:bg-emerald-100 hover:-translate-y-0.5 transition-all"
-                          >
-                            <CheckCircle className="h-3.5 w-3.5" />
-                            通过
-                          </button>
-                          <button
-                            onClick={() => handleReject(work)}
-                            className="inline-flex items-center gap-1 rounded-full bg-rose-50 border border-rose-200 px-3 py-1.5 text-sm font-medium text-rose-600 hover:bg-rose-100 hover:-translate-y-0.5 transition-all"
-                          >
-                            <XCircle className="h-3.5 w-3.5" />
-                            退回
-                          </button>
-                        </>
-                      )}
+                      <div className="flex gap-2 p-4 shrink-0">
+                        {canApproveWork(user, work) && (
+                          <>
+                            <button
+                              onClick={() => handleApproveClick(work)}
+                              className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1.5 text-sm font-medium text-emerald-600 hover:bg-emerald-100 hover:-translate-y-0.5 transition-all"
+                            >
+                              <CheckCircle className="h-3.5 w-3.5" />
+                              通过
+                            </button>
+                            <button
+                              onClick={() => handleReject(work)}
+                              className="inline-flex items-center gap-1 rounded-full bg-rose-50 border border-rose-200 px-3 py-1.5 text-sm font-medium text-rose-600 hover:bg-rose-100 hover:-translate-y-0.5 transition-all"
+                            >
+                              <XCircle className="h-3.5 w-3.5" />
+                              退回
+                            </button>
+                          </>
+                        )}
 
-                      {!canApproveWork(user, work) && canHandleWork(user, work) && (
+                        {!canApproveWork(user, work) && canHandleWork(user, work) && (
+                          <Link href={`/${getRouteType(work)}/${work.id}`}>
+                            <span className="inline-flex items-center gap-1 rounded-full bg-sky-50 border border-sky-200 px-3 py-1.5 text-sm font-medium text-sky-600 hover:bg-sky-100 hover:-translate-y-0.5 transition-all">
+                              <Play className="h-3.5 w-3.5" />
+                              处理
+                            </span>
+                          </Link>
+                        )}
+
                         <Link href={`/${getRouteType(work)}/${work.id}`}>
-                          <span className="inline-flex items-center gap-1 rounded-full bg-sky-50 border border-sky-200 px-3 py-1.5 text-sm font-medium text-sky-600 hover:bg-sky-100 hover:-translate-y-0.5 transition-all">
-                            <Play className="h-3.5 w-3.5" />
-                            处理
+                          <span className="inline-flex items-center gap-1 rounded-full bg-slate-50 border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:-translate-y-0.5 transition-all">
+                            <Eye className="h-3.5 w-3.5" />
+                            查看
                           </span>
                         </Link>
-                      )}
-
-                      <Link href={`/${getRouteType(work)}/${work.id}`}>
-                        <span className="inline-flex items-center gap-1 rounded-full bg-slate-50 border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:-translate-y-0.5 transition-all">
-                          <Eye className="h-3.5 w-3.5" />
-                          查看
-                        </span>
-                      </Link>
+                      </div>
                     </div>
-                  </div>
+                  </React.Fragment>
                 )
               })}
             </div>
