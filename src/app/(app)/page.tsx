@@ -6,6 +6,7 @@ import { statusColors, expiryColors, workTypeColors } from '@/features/works/ui/
 
 const pillColors = { ...statusColors, ...expiryColors };
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Bell, Search } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { StatusBadge } from '@/features/works/ui/badges';
@@ -67,6 +68,7 @@ export default function DashboardPage() {
   });
   const [alertWorks, setAlertWorks] = useState<DashboardWorkItem[]>([]);
   const [pendingProcesses, setPendingProcesses] = useState<DashboardWorkItem[]>([]);
+  const [assessmentYear, setAssessmentYear] = useState(String(new Date().getFullYear()));
 
   useEffect(() => {
     const saved = localStorage.getItem(NOTICE_KEY) || '';
@@ -78,7 +80,7 @@ export default function DashboardPage() {
     const loadData = async () => {
       if (!user) return;
       try {
-        const response = await fetch('/api/dashboard', { credentials: 'include' });
+        const response = await fetch(`/api/dashboard?year=${assessmentYear}`, { credentials: 'include' });
         if (response.ok) {
           const data = await response.json();
           const summary = data.summary || {};
@@ -105,7 +107,7 @@ export default function DashboardPage() {
       }
     };
     loadData();
-  }, [user]);
+  }, [user, assessmentYear]);
 
   const saveNotice = () => {
     localStorage.setItem(NOTICE_KEY, noticeDraft);
@@ -116,7 +118,7 @@ export default function DashboardPage() {
 
   const handleExportCompletionRate = async () => {
     try {
-      const res = await fetch('/api/excel/completion-rate', { credentials: 'include' });
+      const res = await fetch(`/api/excel/completion-rate?year=${assessmentYear}`, { credentials: 'include' });
       if (!res.ok) {
         const err = await res.json().catch(() => ({ message: '导出失败' }));
         alert(err.message || '导出失败');
@@ -162,6 +164,16 @@ export default function DashboardPage() {
         </div>
 
         <div className="flex gap-2">
+          <Select value={assessmentYear} onValueChange={setAssessmentYear}>
+            <SelectTrigger className="w-[108px] rounded-full bg-white">
+              <SelectValue placeholder="年度" />
+            </SelectTrigger>
+            <SelectContent>
+              {Array.from({ length: 7 }, (_, index) => new Date().getFullYear() - 3 + index).map((year) => (
+                <SelectItem key={year} value={String(year)}>{year}年度</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           {canCreateWork && (
             <>
               <Link href="/priority/new" className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm font-medium hover:-translate-y-0.5 transition-all ${workTypeColors.priority.button}`}>
