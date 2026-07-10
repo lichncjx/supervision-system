@@ -1,11 +1,17 @@
 import { ApprovalType, WorkItemStatus } from '@prisma/client'
-import { getTargetStatus, getNextApprovalAssignment } from '@/features/workflow/domain/workflow.rules'
+import {
+  getTargetStatus,
+  getNextApprovalAssignment,
+} from '@/features/workflow/domain/workflow.rules'
 import { isApproving } from '@/features/works/domain/work-status.rules'
 import { toPermissionUser } from '@/features/works/domain/work-permission-user.mapper'
 import type { BaseCurrentUser } from '@/shared/auth/current-user'
 import { canApproveWorkItem } from '@/features/works/domain/work.permissions'
 import { isCompanyLevel, isDeptManager } from '@/features/users/domain/role.rules'
-import { findWorkForUpdateById, updateWorkItem } from '@/features/works/infrastructure/work.repository'
+import {
+  findWorkForUpdateById,
+  updateWorkItem,
+} from '@/features/works/infrastructure/work.repository'
 import { findUserById } from '@/features/users/infrastructure/user.repository'
 import { ensureIsActiveCompanyLeader } from './workflow-next-approver.guard'
 import {
@@ -15,6 +21,7 @@ import {
 } from '@/features/workflow/application/adjustment-patch'
 import {
   isPriorityOrMainWorkType,
+  normalizeAssessmentYear,
   validateStructuredWorkFields,
 } from '@/features/works/domain/work-structure.rules'
 import {
@@ -156,10 +163,9 @@ export async function approveWorkflowAction(
     effectiveDepartmentId = hasPatchField(patch, 'departmentId')
       ? patch.departmentId
       : workItem.departmentId
-    const newPersonId =
-      hasPatchField(patch, 'responsiblePersonUserId')
-        ? patch.responsiblePersonUserId
-        : workItem.responsiblePersonUserId
+    const newPersonId = hasPatchField(patch, 'responsiblePersonUserId')
+      ? patch.responsiblePersonUserId
+      : workItem.responsiblePersonUserId
     effectiveResponsiblePersonUserId = newPersonId
     if (!newPersonId) {
       return err(400, '调整后事项缺少责任人，无法审批通过')
@@ -181,6 +187,12 @@ export async function approveWorkflowAction(
       ],
     }
 
+    if (hasPatchField(adjustmentPatch, 'assessmentYear')) {
+      const assessmentYear = normalizeAssessmentYear(adjustmentPatch.assessmentYear)
+      if (!assessmentYear) return err(400, '请选择有效年度')
+      adjustmentUpdateData.assessmentYear = assessmentYear
+    }
+
     if (
       isPriorityOrMainWorkType(workItem.type) &&
       (hasPatchField(adjustmentPatch, 'workItem') || hasPatchField(adjustmentPatch, 'workNode'))
@@ -197,6 +209,10 @@ export async function approveWorkflowAction(
       adjustmentUpdateData.workItem = structuredFields.workItem
       adjustmentUpdateData.workNode = structuredFields.workNode
       adjustmentUpdateData.title = structuredFields.title
+    } else if (isPriorityOrMainWorkType(workItem.type)) {
+      // 结构化工作节点的 title 只能由工作事项和工作节点组合生成，
+      // 不接受调整请求单独写入展示标题。
+      delete adjustmentUpdateData.title
     }
     approvedAdjustmentRequestId = adjustmentRequest.id
   }
@@ -216,7 +232,9 @@ export async function approveWorkflowAction(
     approvalType: null,
     currentApproverId: null,
     currentApproverRole: null,
-    ...(isCompanyLevel(user.role) && workItem.approvalType === ApprovalType.PROPOSE ? { approvalLeaderId: user.id } : {}),
+    ...(isCompanyLevel(user.role) && workItem.approvalType === ApprovalType.PROPOSE
+      ? { approvalLeaderId: user.id }
+      : {}),
   })
 
   if (approvedAdjustmentRequestId) {
