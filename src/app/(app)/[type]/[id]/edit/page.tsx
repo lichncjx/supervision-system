@@ -30,7 +30,6 @@ import {
 import {
   canEditRegularDraftWork,
   canHandleReturnedDraftWork,
-  isOwnedBy,
 } from '@/features/works/client/work-client-permissions';
 import type { Cooperator, Work, WorkEditablePatch, WorkNode, WorkType } from '@/features/works/client/work-client.types';
 import { FIELD_LABEL, HINT_BOX, STICKY_ACTION_BAR } from '@/features/works/ui/visual-tokens';
@@ -115,19 +114,10 @@ export default function EditWorkPage() {
     return <div className="p-8 text-center text-slate-500">加载中...</div>;
   }
 
-  const shouldResubmitReturnedWork =
-    user.role !== 'ADMIN' &&
-    user.role !== 'SUPERVISOR' &&
-    canHandleReturnedDraftWork(user, work);
-  const canEditDraftDirectly =
-    work.status === 'draft' &&
-    isOwnedBy(user, work) &&
-    !canHandleReturnedDraftWork(user, work);
+  const shouldResubmitReturnedWork = canHandleReturnedDraftWork(user, work);
 
   const canEdit =
-    user.role === 'ADMIN' ||
     canEditRegularDraftWork(user, work) ||
-    canEditDraftDirectly ||
     shouldResubmitReturnedWork;
 
   if (!canEdit) {

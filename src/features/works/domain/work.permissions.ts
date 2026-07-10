@@ -85,13 +85,6 @@ export function isWorkMainResponsibleDepartment(
   return getResponsibleDepartmentIds(workItem).includes(departmentId)
 }
 
-export function isResponsiblePerson(
-  workItem: PermissionWorkItem,
-  user: PermissionUser,
-): boolean {
-  return workItem.responsiblePersonUserId === user.id
-}
-
 /**
  * Broad view permission for listing and detail viewing. Does not guarantee actionable permissions.
  *
@@ -139,25 +132,29 @@ export function canApproveWorkItem(
 }
 
 /**
- * Broad operation permission for workflow actions (submit completion, adjust, cancel)
- * and attachment uploads on non-terminal items.
+ * Business operation permission for workflow actions.
  *
- * This is the foundation — shouldHandleWorkItem builds on it by narrowing.
+ * This is state-aware:
+ * - DRAFT: draft owner submits/edits the draft.
+ * - PENDING_DECOMPOSE: main responsible department decomposes the todo.
+ * - IN_PROGRESS: responsiblePersonUserId submits completion/adjust/cancel.
+ *
+ * Global view does not grant business operation permission; each branch must
+ * match the concrete actor required by that state.
+ * Attachment management has separate permission rules.
  */
 export function canOperateWorkItem(
   user: PermissionUser,
   workItem: PermissionWorkItem,
 ): boolean {
-  // ADMIN/SUPERVISOR do not initiate workflow state changes.
-  if (isGlobalView(user.role)) return false
-
   switch (normalizeStatus(workItem.status)) {
     case WorkItemStatus.DRAFT:
       return (workItem.firstSubmitterId ?? workItem.creatorId) === user.id
     case WorkItemStatus.PENDING_DECOMPOSE:
-      return isWorkMainResponsibleDepartment(workItem, user.departmentId)
+      return isDepartmentLevel(user.role)
+        && isWorkMainResponsibleDepartment(workItem, user.departmentId)
     case WorkItemStatus.IN_PROGRESS:
-      return isResponsiblePerson(workItem, user)
+      return workItem.responsiblePersonUserId === user.id
     default:
       return false
   }
@@ -182,11 +179,7 @@ export function canEditWorkItem(
   user: PermissionUser,
   workItem: PermissionWorkItem,
 ): boolean {
-  const status = normalizeStatus(workItem.status)
-  if (status !== WorkItemStatus.DRAFT) return false
+  if (normalizeStatus(workItem.status) !== WorkItemStatus.DRAFT) return false
 
-  if (isGlobalView(user.role)) return true
-
-  const ownerId = workItem.firstSubmitterId ?? workItem.creatorId
-  return ownerId === user.id
+  return (workItem.firstSubmitterId ?? workItem.creatorId) === user.id
 }

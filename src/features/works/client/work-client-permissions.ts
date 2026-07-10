@@ -1,15 +1,27 @@
 import type { User } from '@/features/users/client/user-client.types'
 import type { Work } from '@/features/works/client/work-client.types'
 import type { WorkStatus } from '@/features/works/domain/work-status'
-import { isReturnedDraftWork, isReturnedInProgressWork } from '@/features/works/domain/work-status.rules'
+import {
+  isInProgress,
+  isReturnedDraftWork,
+  isReturnedInProgressWork,
+} from '@/features/works/domain/work-status.rules'
 import { isCompanyLevel, isDeptLeader } from '@/features/users/domain/role.rules'
 
-export function isOwnedBy(user: { id: number }, work: Work): boolean {
+function isDraftOwnerUser(
+  user: Pick<User, 'id'> | null | undefined,
+  work: Work,
+): boolean {
+  if (!user) return false
   return (work.firstSubmitterId ?? work.creatorId) === user.id
 }
 
 /** IN_PROGRESS 后操作权归属：responsiblePersonUserId */
-export function isResponsiblePerson(user: { id: number }, work: Work): boolean {
+function isInProgressResponsibleUser(
+  user: Pick<User, 'id'> | null | undefined,
+  work: Work,
+): boolean {
+  if (!user) return false
   return work.responsiblePersonUserId === user.id
 }
 
@@ -22,7 +34,7 @@ export function canEditRegularDraftWork(
   if (!user) return false
   if (work.status !== 'draft') return false
   if (isReturnedDraftWork(work)) return false
-  return isOwnedBy(user, work)
+  return isDraftOwnerUser(user, work)
 }
 
 export function canSubmitDraftWork(
@@ -38,16 +50,44 @@ export function canHandleReturnedDraftWork(
 ): boolean {
   if (!user) return false
   if (!isReturnedDraftWork(work)) return false
-  return isOwnedBy(user, work)
+  return isDraftOwnerUser(user, work)
 }
 
 export function canHandleReturnedInProgressWork(
   user: User | null | undefined,
   work: Work,
 ): boolean {
-  if (!user) return false
   if (!isReturnedInProgressWork(work)) return false
-  return isResponsiblePerson(user, work)
+  return isInProgressResponsibleUser(user, work)
+}
+
+export function canOperateInProgressWork(
+  user: User | null | undefined,
+  work: Work,
+): boolean {
+  if (!isInProgress(work.status)) return false
+  return isInProgressResponsibleUser(user, work)
+}
+
+export function canSubmitCompletionWork(
+  user: User | null | undefined,
+  work: Work,
+): boolean {
+  return canOperateInProgressWork(user, work)
+}
+
+export function canRequestAdjustmentWork(
+  user: User | null | undefined,
+  work: Work,
+): boolean {
+  return canOperateInProgressWork(user, work)
+}
+
+export function canRequestCancellationWork(
+  user: User | null | undefined,
+  work: Work,
+): boolean {
+  return canOperateInProgressWork(user, work)
 }
 
 export function canDecomposeTodoWork(
