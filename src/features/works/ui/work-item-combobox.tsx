@@ -155,7 +155,6 @@ export function WorkItemCombobox({
           </Command>
         </PopoverContent>
       </Popover>
-      <p className="text-xs text-slate-400">选择已有事项只会让当前节点归属到该事项，不会修改其他节点。</p>
       {error && <p className={ERROR_TEXT}>{error}</p>}
     </div>
   )
