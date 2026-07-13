@@ -367,13 +367,6 @@ export default function NewWorkPage() {
               fieldId="field-assessmentYear"
             />
 
-            <WorkItemField
-              label="业务类别"
-              value={priorityMainForm.businessCategory}
-              onChange={(v) => setPriorityMainForm({ ...priorityMainForm, businessCategory: v })}
-              placeholder="请输入业务类别"
-            />
-
             <WorkItemCombobox
               value={priorityMainForm.workItem}
               onChange={(v) => {
@@ -388,9 +381,30 @@ export default function NewWorkPage() {
               onBlur={() => handleBlur('workItem')}
               fieldId="field-workItem"
             />
-            {workItemDefaultNotice && (
-              <p className="-mt-2 text-xs text-slate-500">{workItemDefaultNotice}</p>
+
+            <WorkItemField
+              label="业务类别"
+              value={priorityMainForm.businessCategory}
+              onChange={(v) => setPriorityMainForm({ ...priorityMainForm, businessCategory: v })}
+              placeholder="请输入业务类别"
+            />
+
+            {type === '重点' && (
+              <IsInnovationField
+                isInnovation={isInnovation}
+                onChange={setIsInnovation}
+              />
             )}
+
+            {workItemDefaultNotice && (
+              <p className="text-xs text-slate-500">{workItemDefaultNotice}</p>
+            )}
+
+            <div className="flex items-center gap-3 py-1" aria-label="工作节点属性">
+              <div className="h-px flex-1 bg-slate-200" />
+              <span className="text-xs font-semibold tracking-wide text-slate-500">工作节点属性</span>
+              <div className="h-px flex-1 bg-slate-200" />
+            </div>
 
             <WorkItemField
               label="工作节点"
@@ -401,13 +415,6 @@ export default function NewWorkPage() {
               onBlur={() => handleBlur('workNode')}
               fieldId="field-workNode"
             />
-
-            {type === '重点' && (
-              <IsInnovationField
-                isInnovation={isInnovation}
-                onChange={setIsInnovation}
-              />
-            )}
 
             <PlanCompleteTimeField
               label="完成时间"
