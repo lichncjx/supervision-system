@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { Check, ChevronsUpDown, Plus } from 'lucide-react'
+import { Check, ChevronDown, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Command,
@@ -14,6 +14,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { cn } from '@/shared/ui/cn'
 import { getWorkItemOptions, type WorkItemOption } from '@/features/works/client/work-item-api'
+import { ERROR_TEXT, FIELD_LABEL } from '@/features/works/ui/visual-tokens'
 
 interface WorkItemComboboxProps {
   value: string
@@ -97,27 +98,29 @@ export function WorkItemCombobox({
     finishSelection()
   }
 
+  const triggerId = fieldId ? `${fieldId}-trigger` : undefined
+
   return (
-    <div className="space-y-1.5">
-      <label htmlFor={fieldId} className="block text-sm font-medium text-slate-700">
+    <div id={fieldId}>
+      <label htmlFor={triggerId} className={`${FIELD_LABEL} mb-1`}>
         {label}
       </label>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
-            id={fieldId}
+            id={triggerId}
             type="button"
             variant="outline"
             role="combobox"
             aria-expanded={open}
             className={cn(
-              'h-10 w-full justify-between rounded-lg border-slate-200 bg-white px-3 text-left font-normal hover:bg-slate-50',
-              !value && 'text-slate-400',
-              error && 'border-red-400',
+              'border-input h-9 w-full min-w-0 justify-between rounded-md border bg-transparent px-3 py-1 text-left text-sm font-normal shadow-sm transition-[color,box-shadow] hover:bg-transparent focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]',
+              !value && 'text-muted-foreground',
+              error && 'border-destructive',
             )}
           >
             <span className="truncate">{value || placeholder}</span>
-            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
@@ -153,7 +156,7 @@ export function WorkItemCombobox({
         </PopoverContent>
       </Popover>
       <p className="text-xs text-slate-400">选择已有事项只会让当前节点归属到该事项，不会修改其他节点。</p>
-      {error && <p className="text-xs text-red-500">{error}</p>}
+      {error && <p className={ERROR_TEXT}>{error}</p>}
     </div>
   )
 }
