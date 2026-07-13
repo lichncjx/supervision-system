@@ -322,8 +322,8 @@ export default function NewWorkPage() {
           <WorkFormNodes
             nodes={nodes}
             onChange={setNodes}
-            nodeLabel={isPriorityOrMain ? '工作节点（可选）' : '任务节点（可选）'}
-            nodePlaceholderPrefix={isPriorityOrMain ? '工作节点' : '任务节点'}
+            nodeLabel="任务分解节点（可选）"
+            nodePlaceholderPrefix="任务分解节点"
             error={fieldError('nodes')}
             onTouched={() => handleBlur('nodes')}
             fieldId="field-nodes"

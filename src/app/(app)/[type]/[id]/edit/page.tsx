@@ -239,8 +239,8 @@ export default function EditWorkPage() {
       <WorkFormNodes
         nodes={nodes}
         onChange={setNodes}
-        nodeLabel={isTodo ? '任务节点（可选）' : '工作节点（可选）'}
-        nodePlaceholderPrefix={isTodo ? '任务节点' : '工作节点'}
+        nodeLabel="任务分解节点（可选）"
+        nodePlaceholderPrefix="任务分解节点"
       />
       {isTodo && (
         <WorkFormCooperators

@@ -369,7 +369,7 @@ export default function WorkDetailPage() {
           {work.nodes && work.nodes.length > 0 && (
             <div className={PANEL_PADDED}>
               <h3 className="text-sm font-semibold text-slate-500 tracking-wide mb-4">
-                {isTodo ? '任务分解节点' : '工作节点'}
+                任务分解节点
               </h3>
               <div className="relative pl-5">
                 <div className="absolute left-[7px] top-2 bottom-2 w-px bg-slate-200" />

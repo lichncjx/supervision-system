@@ -18,7 +18,7 @@ export const ADJUSTMENT_FIELD_LABELS: Record<string, string> = {
   workPlan: '工作计划',
   planCompleteTime: '计划完成时间',
   progress: '进展情况',
-  nodes: '工作节点',
+  nodes: '任务分解节点',
   proposedScene: '事项提出场景',
   formedTime: '形成时间',
 };

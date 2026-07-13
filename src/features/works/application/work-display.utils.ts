@@ -1,7 +1,7 @@
 import { formatDate } from '@/shared/utils/date'
 
 /**
- * 处理工作节点数据，格式化其中的日期
+ * 处理任务分解节点数据，格式化其中的日期
  */
 export function processNodesForDisplay(nodes: any[]) {
   return nodes.map((node) => ({
