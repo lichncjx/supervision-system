@@ -3,6 +3,10 @@ import type { ErrorData } from '@/shared/http/api-response'
 export interface WorkItemOption {
   workItem: string
   visibleNodeCount: number
+  businessCategoryDefault: string | null
+  isInnovationDefault: boolean | null
+  businessCategoryConsistent: boolean
+  isInnovationConsistent: boolean
 }
 
 export async function getWorkItemOptions(params: {

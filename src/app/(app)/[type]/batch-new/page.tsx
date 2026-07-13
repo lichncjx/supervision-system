@@ -7,6 +7,7 @@ import { Copy, Plus, Trash2 } from 'lucide-react'
 import { useAuth } from '@/components/providers/auth-provider'
 import { getDepartments } from '@/features/departments/client/department-api'
 import { createWorkDraftsBatch } from '@/features/works/client/work-item-api'
+import type { WorkItemOption } from '@/features/works/client/work-item-api'
 import type { Department } from '@/features/departments/client/department-api'
 import { Button } from '@/components/ui/button'
 import { WorkItemCombobox } from '@/features/works/ui/work-item-combobox'
@@ -54,6 +55,7 @@ export default function BatchNewWorkNodesPage() {
   const [workItem, setWorkItem] = useState('')
   const [businessCategory, setBusinessCategory] = useState('')
   const [isInnovation, setIsInnovation] = useState(false)
+  const [workItemDefaultNotice, setWorkItemDefaultNotice] = useState('')
   const [rows, setRows] = useState<BatchNodeForm[]>([
     createNode(String(user?.departmentId || '')),
     createNode(String(user?.departmentId || '')),
@@ -94,6 +96,28 @@ export default function BatchNewWorkNodesPage() {
 
   const removeRow = (id: string) => {
     setRows((current) => (current.length <= 2 ? current : current.filter((row) => row.id !== id)))
+  }
+
+  const applyExistingWorkItemDefaults = (option: WorkItemOption) => {
+    setWorkItem(option.workItem)
+    if (option.businessCategoryConsistent) {
+      setBusinessCategory(option.businessCategoryDefault || '')
+    }
+    if (routeType === 'priority' && option.isInnovationConsistent && option.isInnovationDefault !== null) {
+      setIsInnovation(option.isInnovationDefault)
+    }
+
+    const inconsistentFields = [
+      !option.businessCategoryConsistent && '业务类别',
+      routeType === 'priority' && !option.isInnovationConsistent && '是否创新工作',
+    ].filter(Boolean)
+    setWorkItemDefaultNotice(
+      inconsistentFields.length > 0
+        ? `该工作事项的当前可见节点${inconsistentFields.join('、')}不一致，未自动带入，请确认后填写。`
+        : routeType === 'priority'
+          ? '已带入该工作事项当前可见节点一致的业务类别和是否创新工作。'
+          : '已带入该工作事项当前可见节点一致的业务类别。',
+    )
   }
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -156,11 +180,18 @@ export default function BatchNewWorkNodesPage() {
           <WorkItemField label="年度" value={assessmentYear} onChange={setAssessmentYear} placeholder="例如：2026" />
           <WorkItemCombobox
             value={workItem}
-            onChange={setWorkItem}
+            onChange={(value) => {
+              setWorkItem(value)
+              setWorkItemDefaultNotice('')
+            }}
+            onSelectExisting={applyExistingWorkItemDefaults}
             type={routeType}
             assessmentYear={assessmentYear}
             departmentId={isDepartmentUser ? user?.departmentId : undefined}
           />
+          {workItemDefaultNotice && (
+            <p className="-mt-2 text-xs text-slate-500 md:col-span-2">{workItemDefaultNotice}</p>
+          )}
           <WorkItemField label="业务类别（可选，默认应用于全部节点）" value={businessCategory} onChange={setBusinessCategory} placeholder="请输入业务类别" />
           {routeType === 'priority' && <IsInnovationField isInnovation={isInnovation} onChange={setIsInnovation} />}
         </div>

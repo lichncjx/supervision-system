@@ -16,6 +16,7 @@ import { WorkFormSectionCard } from '@/features/works/ui/work-form-section-card'
 import { WorkFormNodes } from '@/features/works/ui/work-form-nodes';
 import { WorkFormCooperators } from '@/features/works/ui/work-form-cooperators';
 import { WorkItemCombobox } from '@/features/works/ui/work-item-combobox';
+import type { WorkItemOption } from '@/features/works/client/work-item-api';
 import {
   WorkItemField,
   IsInnovationField,
@@ -65,6 +66,7 @@ export default function NewWorkPage() {
     user?.role === 'SUPERVISOR';
 
   const [isInnovation, setIsInnovation] = useState(false);
+  const [workItemDefaultNotice, setWorkItemDefaultNotice] = useState('');
 
   const [nodes, setNodes] = useState<WorkNode[]>([]);
 
@@ -107,6 +109,31 @@ export default function NewWorkPage() {
   const [touched, setTouched] = useState<Set<string>>(new Set());
   const [errors, setErrors] = useState<Partial<Record<CreateWorkFormField, string>>>({});
   const [submitAttempted, setSubmitAttempted] = useState(false);
+
+  const applyExistingWorkItemDefaults = (option: WorkItemOption) => {
+    setPriorityMainForm((current) => ({
+      ...current,
+      workItem: option.workItem,
+      businessCategory: option.businessCategoryConsistent
+        ? option.businessCategoryDefault || ''
+        : current.businessCategory,
+    }));
+    if (routeType === 'priority' && option.isInnovationConsistent && option.isInnovationDefault !== null) {
+      setIsInnovation(option.isInnovationDefault);
+    }
+
+    const inconsistentFields = [
+      !option.businessCategoryConsistent && '业务类别',
+      routeType === 'priority' && !option.isInnovationConsistent && '是否创新工作',
+    ].filter(Boolean);
+    setWorkItemDefaultNotice(
+      inconsistentFields.length > 0
+        ? `该工作事项的当前可见节点${inconsistentFields.join('、')}不一致，未自动带入，请确认后填写。`
+        : routeType === 'priority'
+          ? '已带入该工作事项当前可见节点一致的业务类别和是否创新工作。'
+          : '已带入该工作事项当前可见节点一致的业务类别。',
+    );
+  };
 
   const stateRef = useRef({
     priorityMainForm,
@@ -349,7 +376,11 @@ export default function NewWorkPage() {
 
             <WorkItemCombobox
               value={priorityMainForm.workItem}
-              onChange={(v) => setPriorityMainForm({ ...priorityMainForm, workItem: v })}
+              onChange={(v) => {
+                setPriorityMainForm({ ...priorityMainForm, workItem: v });
+                setWorkItemDefaultNotice('');
+              }}
+              onSelectExisting={applyExistingWorkItemDefaults}
               type={routeType === 'priority' ? 'priority' : 'main'}
               assessmentYear={priorityMainForm.assessmentYear}
               departmentId={priorityMainForm.departmentId}
@@ -357,6 +388,9 @@ export default function NewWorkPage() {
               onBlur={() => handleBlur('workItem')}
               fieldId="field-workItem"
             />
+            {workItemDefaultNotice && (
+              <p className="-mt-2 text-xs text-slate-500">{workItemDefaultNotice}</p>
+            )}
 
             <WorkItemField
               label="工作节点"

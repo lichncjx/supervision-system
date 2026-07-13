@@ -26,6 +26,7 @@ interface WorkItemComboboxProps {
   error?: string
   onBlur?: () => void
   fieldId?: string
+  onSelectExisting?: (option: WorkItemOption) => void
 }
 
 export function WorkItemCombobox({
@@ -39,6 +40,7 @@ export function WorkItemCombobox({
   error,
   onBlur,
   fieldId,
+  onSelectExisting,
 }: WorkItemComboboxProps) {
   const [open, setOpen] = useState(false)
   const [keyword, setKeyword] = useState('')
@@ -78,11 +80,21 @@ export function WorkItemCombobox({
     }
   }, [assessmentYear, departmentId, normalizedKeyword, open, type])
 
-  const selectWorkItem = (workItem: string) => {
-    onChange(workItem)
+  const finishSelection = () => {
     setKeyword('')
     setOpen(false)
     onBlur?.()
+  }
+
+  const selectExistingWorkItem = (option: WorkItemOption) => {
+    onChange(option.workItem)
+    onSelectExisting?.(option)
+    finishSelection()
+  }
+
+  const selectNewWorkItem = (workItem: string) => {
+    onChange(workItem)
+    finishSelection()
   }
 
   return (
@@ -117,17 +129,20 @@ export function WorkItemCombobox({
               {options.length > 0 && (
                 <CommandGroup heading="当前可见的已有工作事项">
                   {options.map((option) => (
-                    <CommandItem key={option.workItem} value={option.workItem} onSelect={() => selectWorkItem(option.workItem)}>
+                    <CommandItem key={option.workItem} value={option.workItem} onSelect={() => selectExistingWorkItem(option)}>
                       <Check className={cn('mr-2 h-4 w-4', value === option.workItem ? 'opacity-100' : 'opacity-0')} />
                       <span className="min-w-0 flex-1 truncate">{option.workItem}</span>
                       <span className="ml-2 shrink-0 text-xs text-slate-400">可见 {option.visibleNodeCount} 个节点</span>
+                      {(!option.businessCategoryConsistent || (type === 'priority' && !option.isInnovationConsistent)) && (
+                        <span className="ml-2 shrink-0 text-xs text-amber-600">属性待确认</span>
+                      )}
                     </CommandItem>
                   ))}
                 </CommandGroup>
               )}
               {normalizedKeyword && !hasExactOption && (
                 <CommandGroup>
-                  <CommandItem value={`new-${normalizedKeyword}`} onSelect={() => selectWorkItem(normalizedKeyword)}>
+                  <CommandItem value={`new-${normalizedKeyword}`} onSelect={() => selectNewWorkItem(normalizedKeyword)}>
                     <Plus className="mr-2 h-4 w-4" />
                     创建“{normalizedKeyword}”作为新工作事项
                   </CommandItem>

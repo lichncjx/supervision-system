@@ -1071,7 +1071,14 @@ async function verifyWorkItemOptionsAndBatchDrafts(baseUrl, loginByUsername, dep
     endpoint: 'GET /api/works/work-item-options returns visible current-year work items',
     actual: {
       statusCode: optionsResponse.statusCode,
-      hasPriorityOption: options.some((option) => option.workItem === 'TC-普通重点工作-A' && option.visibleNodeCount >= 1),
+      hasPriorityOption: options.some((option) => (
+        option.workItem === 'TC-普通重点工作-A'
+        && option.visibleNodeCount >= 1
+        && option.businessCategoryConsistent === true
+        && option.businessCategoryDefault === '目标口径自动化验证'
+        && option.isInnovationConsistent === true
+        && option.isInnovationDefault === false
+      )),
     },
     expected: { statusCode: 200, hasPriorityOption: true },
     expectedFailure: false,
