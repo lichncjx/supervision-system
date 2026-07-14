@@ -302,8 +302,9 @@ function parseWorkbookRows(buffer) {
   return XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
 }
 
-function buildWorkbookBuffer(rows) {
+function buildWorkbookBuffer(rows, merges = []) {
   const worksheet = XLSX.utils.aoa_to_sheet(rows);
+  worksheet['!merges'] = merges;
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, '数据');
   return XLSX.write(workbook, { bookType: 'xlsx', type: 'buffer' });
@@ -984,6 +985,72 @@ async function verifyExcelImport(baseUrl, loginByUsername, deptByCode, userByUse
     },
     expectedFailure: false,
     note: 'Phase 8C: priority import supports cooperators with leader field.',
+  });
+
+  const mergedPriorityWorkItem = 'TC-导入重点工作-事项属性合并';
+  const mergedPriorityRows = [
+    priorityHeaders,
+    [
+      'target-contract merged import',
+      mergedPriorityWorkItem,
+      '是',
+      '编制导入方案',
+      '2026-11-15',
+      '导入方案',
+      'TDA',
+      userByUsername.dept_leader_a.name,
+      userByUsername.dept_manager_a1.name,
+      '',
+    ],
+    [
+      '',
+      '',
+      '',
+      '组织导入验收',
+      '2026-12-15',
+      '验收记录',
+      'TDA',
+      userByUsername.dept_leader_a.name,
+      userByUsername.dept_manager_a1.name,
+      '',
+    ],
+  ];
+  const mergedPriorityAttempt = await importWorkbook(
+    baseUrl,
+    'priority',
+    'priority-merged-item-attributes.xlsx',
+    buildWorkbookBuffer(mergedPriorityRows, [
+      { s: { r: 1, c: 0 }, e: { r: 2, c: 0 } },
+      { s: { r: 1, c: 1 }, e: { r: 2, c: 1 } },
+      { s: { r: 1, c: 2 }, e: { r: 2, c: 2 } },
+    ]),
+    loginByUsername.dept_manager_a1.cookies,
+  );
+  const mergedPriorityWorks = await prisma.workItem.findMany({
+    where: { workItem: mergedPriorityWorkItem },
+    orderBy: { workNode: 'asc' },
+  });
+
+  record({
+    role: 'dept_manager_a1',
+    endpoint: 'Excel priority import inherits merged work-item attributes only from true merged cells',
+    actual: {
+      statusCode: mergedPriorityAttempt.confirmation?.statusCode,
+      nodes: mergedPriorityWorks.map((work) => ({
+        workNode: work.workNode,
+        businessCategory: work.businessCategory,
+        isInnovation: work.isInnovation,
+      })),
+    },
+    expected: {
+      statusCode: 200,
+      nodes: [
+        { workNode: '编制导入方案', businessCategory: 'target-contract merged import', isInnovation: true },
+        { workNode: '组织导入验收', businessCategory: 'target-contract merged import', isInnovation: true },
+      ],
+    },
+    expectedFailure: false,
+    note: 'Only actual single-column merged cells inherit work-item attributes; ordinary blank cells remain invalid or blank.',
   });
 
   // --- main import ---

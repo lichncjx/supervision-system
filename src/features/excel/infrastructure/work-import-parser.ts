@@ -63,30 +63,37 @@ export async function validateAndParseExcel(
     headerMap[key.trim()] = key
   }
 
-  // Excel 的合并单元格只在左上角保存值。仅当“工作事项”列确实存在
-  // 合并区域时，才向该区域内的工作节点继承工作事项；普通空白不继承上一行。
-  const mergedWorkItems = new Map<number, string>()
-  const workItemColumn = Array.from(
-    { length: worksheetRange.e.c - worksheetRange.s.c + 1 },
-    (_, index) => worksheetRange.s.c + index,
-  ).find((column) => {
-    const cell = worksheet[XLSX.utils.encode_cell({ r: headerRowIndex, c: column })]
-    return String(cell?.v ?? '').trim() === '工作事项'
-  })
+  // Excel 的合并单元格只在左上角保存值。重点/主要工作的“工作事项”与
+  // 事项级属性只在对应列存在真实单列合并区域时向下继承；普通空白不继承上一行。
+  const normalizedType = type.toUpperCase()
+  const inheritableMergedFields = new Set(['工作事项', '业务类别'])
+  if (normalizedType === 'PRIORITY') inheritableMergedFields.add('是否为创新工作')
 
-  if (workItemColumn !== undefined) {
+  const mergedValuesByField = new Map<string, Map<number, string>>()
+  for (const field of inheritableMergedFields) {
+    const column = Array.from(
+      { length: worksheetRange.e.c - worksheetRange.s.c + 1 },
+      (_, index) => worksheetRange.s.c + index,
+    ).find((columnIndex) => {
+      const cell = worksheet[XLSX.utils.encode_cell({ r: headerRowIndex, c: columnIndex })]
+      return String(cell?.v ?? '').trim() === field
+    })
+    if (column === undefined) continue
+
+    const inheritedValues = new Map<number, string>()
     for (const merge of worksheet['!merges'] || []) {
-      const isWorkItemOnlyMerge =
-        merge.s.c === workItemColumn && merge.e.c === workItemColumn && merge.s.r > headerRowIndex
-      if (!isWorkItemOnlyMerge) continue
+      const isSingleColumnMerge =
+        merge.s.c === column && merge.e.c === column && merge.s.r > headerRowIndex
+      if (!isSingleColumnMerge) continue
 
       const value = String(
-        worksheet[XLSX.utils.encode_cell({ r: merge.s.r, c: workItemColumn })]?.v ?? '',
+        worksheet[XLSX.utils.encode_cell({ r: merge.s.r, c: column })]?.v ?? '',
       ).trim()
       for (let rowIndex = merge.s.r; rowIndex <= merge.e.r; rowIndex += 1) {
-        mergedWorkItems.set(rowIndex + 1, value)
+        inheritedValues.set(rowIndex + 1, value)
       }
     }
+    if (inheritedValues.size > 0) mergedValuesByField.set(field, inheritedValues)
   }
 
   const deptNameToId = new Map(departments.map((d) => [d.name, d.id]))
@@ -187,10 +194,7 @@ export async function validateAndParseExcel(
       if (!key) return ''
       const val = row[key]
       const value = val !== undefined && val !== null ? String(val).trim() : ''
-      if (field === '工作事项' && !value) {
-        return mergedWorkItems.get(rowNum) || ''
-      }
-      return value
+      return value || mergedValuesByField.get(field)?.get(rowNum) || ''
     }
     const splitResponsibleParty = (value: string) => {
       const parts = value
