@@ -47,6 +47,10 @@ import {
 const pillButton =
   'inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:-translate-y-0.5 transition-all'
 
+const importConfirmButton =
+  `${pillButton} border-sky-600 bg-sky-600 text-white hover:bg-sky-700 ` +
+  'disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400 disabled:hover:bg-slate-100 disabled:hover:translate-y-0'
+
 interface ImportIssue {
   row: number
   field: string
@@ -612,7 +616,7 @@ export default function ItemListPage() {
             </button>
             <button
               type="button"
-              className={`${pillButton} border-sky-600 bg-sky-600 text-white hover:bg-sky-700`}
+              className={importConfirmButton}
               onClick={handleConfirmImport}
               disabled={
                 !importPreview?.previewToken ||
