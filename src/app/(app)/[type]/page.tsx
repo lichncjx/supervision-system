@@ -18,6 +18,7 @@ import { PriorityMainWorkListItem } from '@/features/works/ui/priority-main-work
 import { TodoWorkListItem } from '@/features/works/ui/todo-work-list-item'
 import { WorkListPagination } from '@/features/works/ui/work-list-pagination'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Button } from '@/components/ui/button'
 import { getCompanyLeaders } from '@/features/users/client/user-api'
 import type { User } from '@/features/users/client/user-client.types'
 import { executeBatchWorkflow, previewBatchWorkflow } from '@/features/workflow/client/workflow-api'
@@ -46,10 +47,6 @@ import {
 
 const pillButton =
   'inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:-translate-y-0.5 transition-all'
-
-const importConfirmButton =
-  `${pillButton} border-sky-600 bg-sky-600 text-white hover:bg-sky-700 ` +
-  'disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:hover:bg-slate-100 disabled:hover:translate-y-0'
 
 interface ImportIssue {
   row: number
@@ -620,18 +617,20 @@ export default function ItemListPage() {
             >
               {isPreviewingImport ? '正在预览…' : importPreview ? '重新预览' : '开始预览'}
             </button>
-            <button
+            <Button
               type="button"
-              className={importConfirmButton}
+              variant="outline"
+              size="sm"
+              className={
+                canConfirmImport
+                  ? 'rounded-full border-sky-600 bg-sky-600 text-white hover:bg-sky-700 hover:text-white'
+                  : 'rounded-full border-slate-200 bg-slate-100 text-slate-400 hover:bg-slate-100 hover:text-slate-400'
+              }
               onClick={handleConfirmImport}
               disabled={!canConfirmImport}
             >
-              {isConfirmingImport ? (
-                '正在导入…'
-              ) : (
-                <span className={canConfirmImport ? undefined : '!text-slate-400'}>确认导入</span>
-              )}
-            </button>
+              {isConfirmingImport ? '正在导入…' : '确认导入'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
