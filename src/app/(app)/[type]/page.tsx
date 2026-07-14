@@ -49,7 +49,7 @@ const pillButton =
 
 const importConfirmButton =
   `${pillButton} border-sky-600 bg-sky-600 text-white hover:bg-sky-700 ` +
-  'disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400 disabled:hover:bg-slate-100 disabled:hover:translate-y-0'
+  'disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:hover:bg-slate-100 disabled:hover:translate-y-0'
 
 interface ImportIssue {
   row: number
@@ -423,6 +423,12 @@ export default function ItemListPage() {
     }
   }
 
+  const canConfirmImport =
+    importPreview !== null &&
+    Boolean(importPreview.previewToken) &&
+    importPreview.errors.length === 0 &&
+    !isConfirmingImport
+
   const handleDownloadTemplate = async () => {
     try {
       const res = await fetch(`/api/excel/template/${routeType}`, { credentials: 'include' })
@@ -612,19 +618,19 @@ export default function ItemListPage() {
               onClick={handlePreviewImport}
               disabled={!importFile || isPreviewingImport || isConfirmingImport}
             >
-              {isPreviewingImport ? '正在预览…' : '开始预览'}
+              {isPreviewingImport ? '正在预览…' : importPreview ? '重新预览' : '开始预览'}
             </button>
             <button
               type="button"
               className={importConfirmButton}
               onClick={handleConfirmImport}
-              disabled={
-                !importPreview?.previewToken ||
-                importPreview.errors.length > 0 ||
-                isConfirmingImport
-              }
+              disabled={!canConfirmImport}
             >
-              {isConfirmingImport ? '正在导入…' : '确认导入'}
+              {isConfirmingImport ? (
+                '正在导入…'
+              ) : (
+                <span className={canConfirmImport ? undefined : '!text-slate-400'}>确认导入</span>
+              )}
             </button>
           </DialogFooter>
         </DialogContent>
