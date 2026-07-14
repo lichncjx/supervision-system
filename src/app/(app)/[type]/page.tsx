@@ -609,14 +609,16 @@ export default function ItemListPage() {
           )}
 
           <DialogFooter>
-            <button
+            <Button
               type="button"
-              className={pillButton}
+              variant="outline"
+              size="sm"
+              className="rounded-full border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
               onClick={handlePreviewImport}
               disabled={!importFile || isPreviewingImport || isConfirmingImport}
             >
               {isPreviewingImport ? '正在预览…' : importPreview ? '重新预览' : '开始预览'}
-            </button>
+            </Button>
             <Button
               type="button"
               variant="outline"
