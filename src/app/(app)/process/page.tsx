@@ -398,29 +398,9 @@ export default function ApprovalPage() {
                             调整原因：{adjustmentReason}
                           </div>
                         )}
-                        {work.adjustNewTime && (
-                          <div className="text-xs text-purple-600 mt-1">
-                            调整后时间：{work.adjustNewTime}
-                          </div>
-                        )}
-                        {work.pendingAdjustmentFromTime && (
-                          <div className="text-xs text-purple-600 mt-1">
-                            原完成时间：{work.pendingAdjustmentFromTime}
-                          </div>
-                        )}
-                        {work.pendingAdjustmentToTime && (
-                          <div className="text-xs text-purple-600 mt-1">
-                            现完成时间：{work.pendingAdjustmentToTime}
-                          </div>
-                        )}
                         {work.rejectReason && (
                           <div className="text-xs text-rose-600 mt-1.5 break-words bg-rose-50/50 rounded px-2 py-1">
                             上次退回原因：{work.rejectReason}
-                          </div>
-                        )}
-                        {work.pendingAdjustment && (
-                          <div className="text-xs text-slate-600 mt-1">
-                            本次申请包含调整内容，请进入详情查看。
                           </div>
                         )}
                         {work.cancelReason && (
