@@ -274,14 +274,42 @@ export default function ItemListPage() {
   const importYearOptions = Array.from({ length: 7 }, (_, index) =>
     String(new Date().getFullYear() - 3 + index),
   )
+  const isBatchSubmittable = (work: Work) =>
+    isPriorityOrMain && work.status === 'draft' && work.creatorId === user?.id
   const selectedBatchWorks = list.filter((work) => selectedBatchWorkIds.has(work.id))
+  const selectedDraftBatchWorks = selectedBatchWorks.filter(isBatchSubmittable)
+  const hasOnlySubmittableSelectedBatchWorks =
+    selectedBatchWorks.length === selectedDraftBatchWorks.length
+  const firstSelectedBatchWork = selectedDraftBatchWorks[0]
+  const hasSameBatchGroup =
+    selectedDraftBatchWorks.length >= 2 &&
+    !!firstSelectedBatchWork?.assessmentYear &&
+    !!firstSelectedBatchWork.workItem &&
+    selectedDraftBatchWorks.every(
+      (work) =>
+        work.type === firstSelectedBatchWork.type &&
+        work.assessmentYear === firstSelectedBatchWork.assessmentYear &&
+        work.workItem === firstSelectedBatchWork.workItem,
+    )
+  const allSelectedBatchWorksHaveResponsiblePerson = selectedDraftBatchWorks.every(
+    (work) => !!work.responsiblePersonUserId,
+  )
+  const canBatchSubmit =
+    selectedDraftBatchWorks.length >= 2 &&
+    hasOnlySubmittableSelectedBatchWorks &&
+    hasSameBatchGroup &&
+    allSelectedBatchWorksHaveResponsiblePerson
+  const batchSubmitHint = !hasOnlySubmittableSelectedBatchWorks
+    ? '仅可批量提交当前用户创建的重点/主要工作草稿节点。'
+    : !hasSameBatchGroup
+    ? '批量提交仅支持同一年度、同一类型、同一工作事项下的草稿工作节点。'
+    : !allSelectedBatchWorksHaveResponsiblePerson
+      ? '所选工作节点均须指定责任人后才能批量提交。'
+      : '所选草稿工作节点可批量提交，提交前仍会校验审批路由。'
   const batchNeedsLeaderSelection =
     user?.role === 'DEPARTMENT_LEADER' &&
     selectedBatchWorks.length > 0 &&
     selectedBatchWorks.every((work) => !work.proposedLeaderId && !work.approvalLeaderId)
-  const isBatchSubmittable = (work: Work) =>
-    isPriorityOrMain && work.status === 'draft' && work.creatorId === user?.id
-
   const toggleBatchWork = (workId: number, checked: boolean) => {
     setSelectedBatchWorkIds((current) => {
       const next = new Set(current)
@@ -292,7 +320,7 @@ export default function ItemListPage() {
   }
 
   const executeBatchSubmit = async (comment?: string, nextApproverId?: number | null) => {
-    if (selectedBatchWorks.length < 2) return
+    if (!canBatchSubmit) return
     const payload = {
       action: 'submit' as const,
       items: selectedBatchWorks.map((work) => ({ id: work.id, updatedAt: work.updatedAt })),
@@ -311,8 +339,8 @@ export default function ItemListPage() {
   }
 
   const handleBatchSubmitClick = () => {
-    if (selectedBatchWorks.length < 2) {
-      alert('请至少选择 2 条草稿工作节点')
+    if (!canBatchSubmit) {
+      alert(batchSubmitHint)
       return
     }
     if (batchNeedsLeaderSelection) {
@@ -671,17 +699,19 @@ export default function ItemListPage() {
         </div>
       )}
 
-      {isPriorityOrMain && (
+      {isPriorityOrMain && selectedDraftBatchWorks.length >= 2 && (
         <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
-          <span>仅可选择同一年度、同一工作事项下的草稿工作节点批量提交。</span>
-          <button
+          <span>{batchSubmitHint}</span>
+          <Button
             type="button"
             onClick={handleBatchSubmitClick}
-            disabled={selectedBatchWorks.length < 2}
-            className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1.5 font-medium text-sky-700 transition hover:bg-sky-100 disabled:cursor-not-allowed disabled:opacity-50"
+            variant="outline"
+            size="sm"
+            disabled={!canBatchSubmit}
+            className="rounded-full border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100 hover:text-sky-700"
           >
-            批量提交（{selectedBatchWorks.length}）
-          </button>
+            批量提交（{selectedDraftBatchWorks.length}）
+          </Button>
         </div>
       )}
 
