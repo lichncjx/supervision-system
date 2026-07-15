@@ -404,7 +404,7 @@ export default function ApprovalPage() {
                           </div>
                         )}
                         {work.cancelReason && (
-                          <div className="text-xs text-slate-500 mt-1">
+                          <div className="mt-1.5 rounded bg-slate-50/70 px-2 py-1 text-xs text-slate-600 break-words">
                             取消原因：{work.cancelReason}
                           </div>
                         )}
