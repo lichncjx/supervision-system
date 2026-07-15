@@ -24,30 +24,20 @@ export function PriorityMainWorkListItem({ item, routeType, getDepartmentName }:
           </span>
         )}
       </div>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs mt-2">
-        <div>
-          <span className="text-slate-400">完成时间：</span>
-          <span className="text-slate-600">{item.planCompleteTime || '-'}</span>
+      <div className="mt-2 space-y-1.5 text-xs">
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-slate-600">
+          <div className="inline-flex items-center gap-1">
+            <span className="text-slate-400">状态：</span>
+            <StatusBadge status={item.status} work={item} />
+          </div>
+          <div><span className="text-slate-400">完成时间：</span>{item.planCompleteTime || '-'}</div>
+          <div><span className="text-slate-400">业务类别：</span>{item.businessCategory || '-'}</div>
+          <div><span className="text-slate-400">完成形式：</span>{item.completeForm || '-'}</div>
         </div>
-        <div>
-          <span className="text-slate-400">完成形式：</span>
-          <span className="text-slate-600">{item.completeForm || '-'}</span>
-        </div>
-        <div>
-          <span className="text-slate-400">责任部门：</span>
-          <span className="text-slate-600">{getDepartmentName(item.departmentId ?? 0)}</span>
-        </div>
-        <div>
-          <span className="text-slate-400">责任领导：</span>
-          <span className="text-slate-600">{item.responsibleLeader || '-'}</span>
-        </div>
-        <div>
-          <span className="text-slate-400">责任人：</span>
-          <span className="text-slate-600">{item.responsiblePerson || '-'}</span>
-        </div>
-        <div>
-          <span className="text-slate-400">状态：</span>
-          <StatusBadge status={item.status} work={item} />
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-slate-100 pt-1.5 text-slate-600">
+          <div><span className="text-slate-400">责任部门：</span>{getDepartmentName(item.departmentId ?? 0)}</div>
+          <div><span className="text-slate-400">责任领导：</span>{item.responsibleLeader || '-'}</div>
+          <div><span className="text-slate-400">责任人：</span>{item.responsiblePerson || '-'}</div>
         </div>
         {item.adjustHistory && item.adjustHistory.length > 0 && (
           <div className="text-xs text-purple-600 bg-purple-50/50 rounded px-2 py-1 break-words">
