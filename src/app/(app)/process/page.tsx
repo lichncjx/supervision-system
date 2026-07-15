@@ -400,7 +400,7 @@ export default function ApprovalPage() {
                         )}
                         {work.rejectReason && (
                           <div className="mt-1.5 px-2 text-xs text-slate-500 break-words">
-                            上次退回原因：{work.rejectReason}
+                            退回原因：{work.rejectReason}
                           </div>
                         )}
                         {work.cancelReason && (
