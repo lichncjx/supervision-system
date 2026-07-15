@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import { Eye } from 'lucide-react';
 import { StatusBadge } from '@/features/works/ui/badges';
 import type { Work } from '@/features/works/client/work-client.types';
 
@@ -13,7 +12,10 @@ interface TodoWorkListItemProps {
 
 export function TodoWorkListItem({ item, routeType, getDepartmentName }: TodoWorkListItemProps) {
   return (
-    <div className="rounded-xl border border-slate-200/80 bg-white/60 p-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+    <Link
+      href={`/${routeType}/${item.id}`}
+      className="block rounded-xl border border-slate-200/80 bg-white/60 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-teal-500/20"
+    >
       <div className="text-sm font-semibold text-slate-800 break-words leading-snug">
         {item.workItem || item.title}
       </div>
@@ -57,14 +59,6 @@ export function TodoWorkListItem({ item, routeType, getDepartmentName }: TodoWor
           </div>
         )}
       </div>
-      <div className="mt-3 flex justify-end">
-        <Link href={`/${routeType}/${item.id}`}>
-          <span className="inline-flex items-center gap-1 rounded-full bg-slate-50 border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:-translate-y-0.5 transition-all">
-            <Eye className="h-3.5 w-3.5" />
-            查看
-          </span>
-        </Link>
-      </div>
-    </div>
+    </Link>
   );
 }

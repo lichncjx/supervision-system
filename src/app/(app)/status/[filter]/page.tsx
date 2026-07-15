@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Eye } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import {
   getWorkDueDate,
@@ -224,7 +224,11 @@ export default function StatusFilterPage() {
         ) : (
           <div>
             {finalList.map((work) => (
-              <div key={work.id} className={`list-separator flex items-start justify-between gap-4 min-w-0 rounded-lg hover:translate-x-0.5 transition ${getWorkTypeAccent(work.type)}`}>
+              <Link
+                key={work.id}
+                href={`/${getRouteType(work.type)}/${work.id}`}
+                className={`list-separator block min-w-0 rounded-lg transition hover:translate-x-0.5 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-sky-500/20 ${getWorkTypeAccent(work.type)}`}
+              >
                 <div className="p-4 min-w-0">
                   <div className="text-sm font-medium text-slate-700 break-words leading-snug">
                     {work.title}
@@ -250,14 +254,7 @@ export default function StatusFilterPage() {
                     </div>
                   )}
                 </div>
-
-                <Link href={`/${getRouteType(work.type)}/${work.id}`} className="shrink-0 pr-4 py-4">
-                  <span className="inline-flex items-center gap-1 rounded-full bg-slate-50 border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:-translate-y-0.5 transition-all">
-                    <Eye className="h-3.5 w-3.5" />
-                    查看
-                  </span>
-                </Link>
-              </div>
+              </Link>
             ))}
           </div>
         )}

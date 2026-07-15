@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchAndPagination } from '@/features/works/client/use-search-pagination';
 import Link from 'next/link';
 import { getWorkTypeAccent, getWorkTypeText } from '@/features/works/ui/status-colors';
-import { AlertTriangle, Eye } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { getDepartments } from '@/features/departments/client/department-api';
 import type { Department } from '@/features/departments/client/department-api';
@@ -116,7 +116,11 @@ export default function AlertPage() {
                 const borderClass = getWorkTypeAccent(work.type);
 
                 return (
-                  <div key={work.id} className={`list-separator flex items-center justify-between hover:translate-x-0.5 transition min-w-0 ${borderClass}`}>
+                  <Link
+                    key={work.id}
+                    href={`/${getRouteType(work)}/${work.id}`}
+                    className={`list-separator block min-w-0 transition hover:translate-x-0.5 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-orange-500/20 ${borderClass}`}
+                  >
                     <div className="p-4">
                       <div className="text-sm font-medium text-slate-700 break-words leading-snug">{work.title}</div>
                       <div className="text-xs text-slate-500 mt-1.5 flex items-center gap-2 flex-wrap">
@@ -132,13 +136,7 @@ export default function AlertPage() {
                       )}
                     </div>
 
-                    <Link href={`/${getRouteType(work)}/${work.id}`} className="shrink-0 pr-4">
-                      <span className="inline-flex items-center gap-1 rounded-full bg-slate-50 border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:-translate-y-0.5 transition-all">
-                        <Eye className="h-3.5 w-3.5" />
-                        查看
-                      </span>
-                    </Link>
-                  </div>
+                  </Link>
                 );
               })}
             </div>

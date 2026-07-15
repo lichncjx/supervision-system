@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { useSearchAndPagination } from '@/features/works/client/use-search-pagination'
 import Link from 'next/link'
 import { getWorkTypeAccent, getWorkTypeText } from '@/features/works/ui/status-colors'
-import { ClipboardCheck, Eye, CheckCircle, XCircle, Play } from 'lucide-react'
+import { ClipboardCheck, CheckCircle, XCircle, Play } from 'lucide-react'
 import { useAuth } from '@/components/providers/auth-provider'
 import { getDepartments } from '@/features/departments/client/department-api'
 import { getCompanyLeaders } from '@/features/users/client/user-api'
@@ -330,7 +330,10 @@ export default function ApprovalPage() {
                           />
                         </div>
                       )}
-                      <div className="p-4 min-w-0 flex-1">
+                      <Link
+                        href={`/${getRouteType(work)}/${work.id}`}
+                        className="min-w-0 flex-1 p-4 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-sky-500/20"
+                      >
                         <div className="text-sm font-medium text-slate-700 break-words leading-snug">
                           {work.title}
                         </div>
@@ -397,7 +400,7 @@ export default function ApprovalPage() {
                             取消原因：{work.cancelReason}
                           </div>
                         )}
-                      </div>
+                      </Link>
 
                       <div className="flex gap-2 p-4 shrink-0">
                         {canApproveWork(user, work) && (
@@ -427,13 +430,6 @@ export default function ApprovalPage() {
                             </span>
                           </Link>
                         )}
-
-                        <Link href={`/${getRouteType(work)}/${work.id}`}>
-                          <span className="inline-flex items-center gap-1 rounded-full bg-slate-50 border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:-translate-y-0.5 transition-all">
-                            <Eye className="h-3.5 w-3.5" />
-                            查看
-                          </span>
-                        </Link>
                       </div>
                     </div>
                   </React.Fragment>
