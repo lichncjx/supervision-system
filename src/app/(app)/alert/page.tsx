@@ -123,7 +123,7 @@ export default function AlertPage() {
                     className={`list-separator block min-w-0 transition hover:translate-x-0.5 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-orange-500/20 ${borderClass}`}
                   >
                     <div className="p-4">
-                      <div className="text-sm font-medium text-slate-700 break-words leading-snug"><WorkTitle work={work} /></div>
+                      <div className="text-sm font-semibold text-slate-700 break-words leading-snug"><WorkTitle work={work} /></div>
                       <div className="text-xs text-slate-500 mt-1.5 flex items-center gap-2 flex-wrap">
                         <span className={`font-medium ${getWorkTypeText(work.type)}`}>{work.type}</span>
                         <StatusBadge status={work.status} work={work} />

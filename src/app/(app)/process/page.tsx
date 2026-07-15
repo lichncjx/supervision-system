@@ -374,7 +374,7 @@ export default function ApprovalPage() {
                         href={`/${getRouteType(work)}/${work.id}`}
                         className="min-w-0 flex-1 p-4 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-sky-500/20"
                       >
-                        <div className="text-sm font-medium text-slate-700 break-words leading-snug">
+                        <div className="text-sm font-semibold text-slate-700 break-words leading-snug">
                           <WorkTitle work={work} />
                         </div>
                         <div className="text-xs text-slate-500 mt-1.5 flex items-center gap-2 flex-wrap">
