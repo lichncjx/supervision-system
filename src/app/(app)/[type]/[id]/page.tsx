@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, ListTree } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/features/works/ui/badges';
@@ -403,11 +403,14 @@ export default function WorkDetailPage() {
         {/* Sidebar */}
         <aside className="lg:col-span-2 space-y-4">
           {work.nodes && work.nodes.length > 0 && (
-            <section className="rounded-2xl border border-slate-200/80 bg-slate-50/70 p-4">
-              <h3 className="mb-3 text-xs font-semibold tracking-wide text-slate-500">任务分解节点</h3>
-              <div className="space-y-3">
+            <section className={PANEL_PADDED}>
+              <div className="mb-3 flex items-center gap-2">
+                <ListTree className="h-4 w-4 text-sky-500" />
+                <h3 className="text-sm font-semibold tracking-wide text-slate-500">任务分解节点</h3>
+              </div>
+              <div>
                 {work.nodes.map((node: any, index: number) => (
-                  <div key={node.id ?? index} className="border-l-2 border-slate-200 pl-3">
+                  <div key={node.id ?? index} className="border-b border-slate-100 py-2.5 last:border-b-0">
                     <div className="flex items-baseline justify-between gap-2">
                       <div className="text-sm text-slate-700 break-words">{node.title}</div>
                       {node.completeTime && (
@@ -415,7 +418,7 @@ export default function WorkDetailPage() {
                       )}
                     </div>
                     {node.children && node.children.length > 0 && (
-                      <div className="mt-1.5 space-y-1">
+                      <div className="mt-1.5 space-y-1 pl-3">
                         {node.children.map((child: any, childIndex: number) => (
                           <div key={child.id ?? `${index}-${childIndex}`} className="flex items-baseline justify-between gap-2 pl-2">
                             <div className="text-xs text-slate-500 break-words">{child.title}</div>
