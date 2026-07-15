@@ -154,7 +154,6 @@ function PriorityMainWorkDisplayInfo({
 
       <DetailSection title="辅助信息" accentColor={theme.light} variant="muted">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 text-xs text-slate-500">
-          <div>业务类别：{work.businessCategory || '-'}</div>
           <div>完成形式：{work.completeForm || '-'}</div>
           {work.type === '重点' && (
             <div>创新工作：{work.isInnovation ? '是' : '否'}</div>

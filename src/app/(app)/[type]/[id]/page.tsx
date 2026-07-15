@@ -20,6 +20,7 @@ import { WorkflowRecords } from '@/features/workflow/ui/workflow-records';
 import { WorkflowApprovalPanel } from '@/features/workflow/ui/workflow-approval-panel';
 import { ApproveDialog } from '@/features/workflow/ui/approve-dialog';
 import { WorkDisplayInfo } from '@/features/works/ui/work-display-info';
+import { WorkTitle } from '@/features/works/ui/work-title';
 import { WorkDecomposePanel } from '@/features/works/ui/work-decompose-panel';
 import { WorkActionDialogs } from '@/features/works/ui/work-action-dialogs';
 import { WorkPendingAdjustmentPanel } from '@/features/works/ui/work-pending-adjustment-panel';
@@ -323,7 +324,7 @@ export default function WorkDetailPage() {
 
             <h1 className="flex items-center gap-3 text-2xl font-bold leading-tight text-slate-900">
               <span className={`h-8 w-1 rounded-full ${theme.accent}`} />
-              {work.title}
+              <WorkTitle work={work} />
               <StatusBadge status={work.status} work={work} />
             </h1>
           </div>

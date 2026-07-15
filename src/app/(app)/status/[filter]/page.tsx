@@ -19,6 +19,7 @@ import { getDepartments } from '@/features/departments/client/department-api';
 import type { Department } from '@/features/departments/client/department-api';
 import { isCompanyLevel, isGlobalView } from '@/features/users/domain/role.rules';
 import { StatusBadge } from '@/features/works/ui/badges';
+import { WorkTitle } from '@/features/works/ui/work-title';
 import { WorkListToolbar } from '@/features/works/ui/work-list-toolbar';
 import { getWorkTypeAccent, getWorkTypeText } from '@/features/works/ui/status-colors';
 
@@ -231,7 +232,7 @@ export default function StatusFilterPage() {
               >
                 <div className="p-4 min-w-0">
                   <div className="text-sm font-medium text-slate-700 break-words leading-snug">
-                    {work.title}
+                    <WorkTitle work={work} />
                     {work.isInnovation && (
                       <span className="ml-2 inline-flex items-center rounded-full bg-purple-50 text-purple-700 border border-purple-100 px-2.5 py-0.5 text-xs font-medium">
                         创新工作

@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { StatusBadge } from '@/features/works/ui/badges';
+import { WorkTitle } from '@/features/works/ui/work-title';
 import type { Work } from '@/features/works/client/work-client.types';
 
 interface PriorityMainWorkListItemProps {
@@ -17,7 +18,7 @@ export function PriorityMainWorkListItem({ item, routeType, getDepartmentName }:
       className="block rounded-xl border border-slate-200/80 bg-white/60 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-sky-500/20"
     >
       <div className="text-sm font-semibold text-slate-800 break-words leading-snug">
-        {item.title || item.workItem}
+        <WorkTitle work={item} />
         {item.isInnovation && (
           <span className="ml-2 inline-flex items-center rounded-full bg-purple-50 text-purple-700 border border-purple-100 px-2.5 py-0.5 text-xs font-medium">
             创新工作
@@ -31,7 +32,6 @@ export function PriorityMainWorkListItem({ item, routeType, getDepartmentName }:
             <StatusBadge status={item.status} work={item} />
           </div>
           <div><span className="text-slate-400">完成时间：</span>{item.planCompleteTime || '-'}</div>
-          <div><span className="text-slate-400">业务类别：</span>{item.businessCategory || '-'}</div>
           <div><span className="text-slate-400">完成形式：</span>{item.completeForm || '-'}</div>
         </div>
         <div className="flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-slate-100 pt-1.5 text-slate-600">

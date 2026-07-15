@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Plus, Bell, Search } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { StatusBadge } from '@/features/works/ui/badges';
+import { WorkTitle } from '@/features/works/ui/work-title';
 import { isGlobalView } from '@/features/users/domain/role.rules';
 
 type DashboardWorkType = 'PRIORITY' | 'MAIN' | 'TODO';
@@ -347,7 +348,7 @@ export default function DashboardPage() {
                 return (
                   <Link key={work.id} href={`/${getDashboardWorkPath(work)}/${work.id}`}>
                     <div className={`border-l-2 rounded-lg p-3 hover:translate-x-0.5 transition min-w-0 ${typeColor.left}`}>
-                      <div className="text-sm font-medium text-slate-700 break-words leading-snug">{work.title}</div>
+                      <div className="text-sm font-medium text-slate-700 break-words leading-snug"><WorkTitle work={work} /></div>
                       <div className="text-xs text-slate-500 mt-1.5 flex items-center gap-2 flex-wrap">
                         <span className={`font-medium ${typeColor.text}`}>{work.typeLabel || work.type}</span>
                         <StatusBadge status={work.status} work={work} />
@@ -389,7 +390,7 @@ export default function DashboardPage() {
                 return (
                   <Link key={work.id} href={`/${getDashboardWorkPath(work)}/${work.id}`}>
                     <div className={`border-l-2 rounded-lg p-3 hover:translate-x-0.5 transition min-w-0 ${typeColor.left}`}>
-                      <div className="text-sm font-medium text-slate-700 break-words leading-snug">{work.title}</div>
+                      <div className="text-sm font-medium text-slate-700 break-words leading-snug"><WorkTitle work={work} /></div>
                       <div className="text-xs text-slate-500 mt-1.5 flex items-center gap-2 flex-wrap">
                         <span className={`font-medium ${typeColor.text}`}>{work.typeLabel || work.type}</span>
                         <StatusBadge status={work.status} work={work} />

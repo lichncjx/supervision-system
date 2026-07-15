@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { StatusBadge } from '@/features/works/ui/badges';
+import { WorkTitle } from '@/features/works/ui/work-title';
 import type { Work } from '@/features/works/client/work-client.types';
 
 interface TodoWorkListItemProps {
@@ -17,7 +18,7 @@ export function TodoWorkListItem({ item, routeType, getDepartmentName }: TodoWor
       className="block rounded-xl border border-slate-200/80 bg-white/60 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-teal-500/20"
     >
       <div className="text-sm font-semibold text-slate-800 break-words leading-snug">
-        {item.workItem || item.title}
+        <WorkTitle work={item} />
       </div>
       <div className="mt-2 space-y-1.5 text-xs">
         <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-slate-600">
