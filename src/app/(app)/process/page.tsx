@@ -389,12 +389,10 @@ export default function ApprovalPage() {
                           <span className="text-slate-400">
                             完成时间：{getWorkDueDate(work) || '-'}
                           </span>
+                          {work.approvalLeader && (
+                            <span className="text-slate-400">公司领导：{work.approvalLeader}</span>
+                          )}
                         </div>
-                        {work.type === '待办' && (
-                          <div className="text-xs text-slate-500 mt-1">
-                            事项提出领导：{work.proposedLeader || '-'}
-                          </div>
-                        )}
                         {adjustmentReason && (
                           <div className="mt-1.5 rounded bg-purple-50/50 px-2 py-1 text-xs text-purple-600 break-words">
                             调整原因：{adjustmentReason}
@@ -413,11 +411,6 @@ export default function ApprovalPage() {
                         {work.pendingAdjustmentToTime && (
                           <div className="text-xs text-purple-600 mt-1">
                             现完成时间：{work.pendingAdjustmentToTime}
-                          </div>
-                        )}
-                        {work.approvalLeader && (
-                          <div className="text-xs text-sky-600 mt-1">
-                            公司审批领导：{work.approvalLeader}
                           </div>
                         )}
                         {work.rejectReason && (

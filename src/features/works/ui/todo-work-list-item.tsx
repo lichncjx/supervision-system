@@ -27,7 +27,6 @@ export function TodoWorkListItem({ item, routeType, getDepartmentName }: TodoWor
             <StatusBadge status={item.status} work={item} />
           </div>
           <div><span className="text-slate-400">完成时间：</span>{item.planCompleteTime || '-'}</div>
-          <div><span className="text-slate-400">事项提出领导：</span>{item.proposedLeader || '-'}</div>
           <div className="max-w-full truncate"><span className="text-slate-400">事项提出场景：</span>{item.proposedScene || '-'}</div>
           <div className="max-w-full truncate"><span className="text-slate-400">进展情况：</span>{item.progress || '-'}</div>
         </div>
