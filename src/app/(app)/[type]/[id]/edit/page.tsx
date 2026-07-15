@@ -266,7 +266,7 @@ export default function EditWorkPage() {
       {isReturned && (
         <WorkFormSectionCard title="退回处理">
           {work.rejectReason && (
-            <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 whitespace-pre-wrap break-words">
+            <div className="px-2 text-sm text-slate-600 whitespace-pre-wrap break-words">
               退回原因：{work.rejectReason}
             </div>
           )}

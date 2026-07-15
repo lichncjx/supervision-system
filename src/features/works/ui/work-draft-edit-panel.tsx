@@ -81,7 +81,7 @@ export function WorkDraftEditPanel({
           <p className="text-sm text-slate-500">可继续完善事项信息、上传附件后提交审批</p>
         )}
         {!isRegularDraft && rejectReason && (
-          <div className="p-3 bg-rose-50 border border-red-200 rounded text-sm text-red-700 break-words whitespace-pre-wrap">
+          <div className="px-2 text-sm text-slate-600 break-words whitespace-pre-wrap">
             退回原因：{rejectReason}
           </div>
         )}

@@ -131,7 +131,7 @@ export default function AlertPage() {
                         <span className="text-slate-400">完成时间：{work.planCompleteTime || '-'}</span>
                       </div>
                       {work.rejectReason && (
-                        <div className="text-xs text-rose-600 mt-1.5 break-words bg-rose-50/50 rounded px-2 py-1">
+                        <div className="mt-1.5 px-2 text-xs text-slate-500 break-words">
                           上次退回原因：{work.rejectReason}
                         </div>
                       )}

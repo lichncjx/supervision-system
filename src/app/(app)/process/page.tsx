@@ -394,17 +394,17 @@ export default function ApprovalPage() {
                           )}
                         </div>
                         {adjustmentReason && (
-                          <div className="mt-1.5 rounded bg-purple-50/50 px-2 py-1 text-xs text-purple-600 break-words">
+                          <div className="mt-1.5 px-2 text-xs text-slate-500 break-words">
                             调整原因：{adjustmentReason}
                           </div>
                         )}
                         {work.rejectReason && (
-                          <div className="text-xs text-rose-600 mt-1.5 break-words bg-rose-50/50 rounded px-2 py-1">
+                          <div className="mt-1.5 px-2 text-xs text-slate-500 break-words">
                             上次退回原因：{work.rejectReason}
                           </div>
                         )}
                         {work.cancelReason && (
-                          <div className="mt-1.5 rounded bg-slate-50/70 px-2 py-1 text-xs text-slate-600 break-words">
+                          <div className="mt-1.5 px-2 text-xs text-slate-500 break-words">
                             取消原因：{work.cancelReason}
                           </div>
                         )}
