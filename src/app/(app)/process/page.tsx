@@ -26,10 +26,18 @@ import { ApproveDialog } from '@/features/workflow/ui/approve-dialog'
 import type { User } from '@/features/users/client/user-client.types'
 import type { Department } from '@/features/departments/client/department-api'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Button } from '@/components/ui/button'
 
 function getStructuredGroupKey(work: Work) {
   if ((work.type !== '重点' && work.type !== '主要') || !work.workItem) return null
   return `${work.assessmentYear ?? '未设置年度'}\u0000${work.type}\u0000${work.workItem}`
+}
+
+function getBatchApprovalRouteKey(work: Work) {
+  if (work.currentApproverRole === 'DEPARTMENT_LEADER') {
+    return `next:${work.proposedLeaderId ?? work.approvalLeaderId ?? '待指定公司领导'}`
+  }
+  return 'complete'
 }
 
 export default function ApprovalPage() {
@@ -142,17 +150,46 @@ export default function ApprovalPage() {
     }
   }
 
+  const isBatchApprovable = (work: Work) =>
+    Number.isInteger(work.assessmentYear) &&
+    Boolean(getStructuredGroupKey(work)) &&
+    work.status === 'proposing' &&
+    work.approvalType?.toUpperCase() === 'PROPOSE' &&
+    canApproveWork(user, work)
+
   const selectedBatchWorks = approvingWorks.filter((work) => selectedBatchWorkIds.has(work.id))
+  const selectedBatchApprovableWorks = selectedBatchWorks.filter(isBatchApprovable)
+  const hasOnlyBatchApprovableWorks =
+    selectedBatchWorks.length === selectedBatchApprovableWorks.length
+  const firstSelectedBatchWork = selectedBatchApprovableWorks[0]
+  const hasSameBatchGroup =
+    selectedBatchApprovableWorks.length >= 2 &&
+    !!firstSelectedBatchWork &&
+    selectedBatchApprovableWorks.every(
+      (work) => getStructuredGroupKey(work) === getStructuredGroupKey(firstSelectedBatchWork),
+    )
+  const hasSameBatchApprovalRoute =
+    selectedBatchApprovableWorks.length >= 2 &&
+    !!firstSelectedBatchWork &&
+    selectedBatchApprovableWorks.every(
+      (work) => getBatchApprovalRouteKey(work) === getBatchApprovalRouteKey(firstSelectedBatchWork),
+    )
+  const canBatchApprove =
+    selectedBatchApprovableWorks.length >= 2 &&
+    hasOnlyBatchApprovableWorks &&
+    hasSameBatchGroup &&
+    hasSameBatchApprovalRoute
+  const batchApproveHint = !hasOnlyBatchApprovableWorks
+    ? '仅可批量通过当前用户有审批权、处于立项审批中的重点/主要工作节点。'
+    : !hasSameBatchGroup
+      ? '批量通过仅支持同一年度、同一类型、同一工作事项下的工作节点。'
+      : !hasSameBatchApprovalRoute
+        ? '所选工作节点的审批后去向不同，请按审批路由分别选择。'
+        : '所选工作节点可批量通过，提交前仍会再次校验审批状态、权限和路由。'
   const batchNeedsLeaderSelection =
     user?.role === 'DEPARTMENT_LEADER' &&
     selectedBatchWorks.length > 0 &&
     selectedBatchWorks.every((work) => !work.proposedLeaderId && !work.approvalLeaderId)
-
-  const isBatchApprovable = (work: Work) =>
-    work.type !== '待办' &&
-    work.status === 'proposing' &&
-    work.approvalType === 'propose' &&
-    canApproveWork(user, work)
 
   const getGroupWorks = (work: Work) => {
     const groupKey = getStructuredGroupKey(work)
@@ -184,7 +221,7 @@ export default function ApprovalPage() {
   }
 
   const executeBatchApprove = async (comment?: string, nextApproverId?: number | null) => {
-    if (selectedBatchWorks.length < 2) return
+    if (!canBatchApprove) return
     const payload = {
       action: 'approve' as const,
       items: selectedBatchWorks.map((work) => ({ id: work.id, updatedAt: work.updatedAt })),
@@ -202,8 +239,8 @@ export default function ApprovalPage() {
   }
 
   const handleBatchApproveClick = () => {
-    if (selectedBatchWorks.length < 2) {
-      alert('请至少选择 2 条可批量审批的工作节点')
+    if (!canBatchApprove) {
+      alert(batchApproveHint)
       return
     }
     if (batchNeedsLeaderSelection) {
@@ -268,17 +305,19 @@ export default function ApprovalPage() {
         totalPages={totalPages}
       />
 
-      {tab === 'approving' && (
+      {tab === 'approving' && selectedBatchWorks.length >= 2 && (
         <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
-          <span>仅可选择同一工作事项下、处于立项审批中的重点/主要工作节点。</span>
-          <button
+          <span>{batchApproveHint}</span>
+          <Button
             type="button"
             onClick={handleBatchApproveClick}
-            disabled={selectedBatchWorks.length < 2}
-            className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 font-medium text-emerald-700 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={!canBatchApprove}
+            variant="outline"
+            size="sm"
+            className="rounded-full border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800"
           >
             批量通过（{selectedBatchWorks.length}）
-          </button>
+          </Button>
         </div>
       )}
 
@@ -294,33 +333,33 @@ export default function ApprovalPage() {
                 const previousGroupKey = index > 0 ? getStructuredGroupKey(list[index - 1]) : null
                 const isFirstInGroup =
                   tab === 'approving' && Boolean(groupKey) && groupKey !== previousGroupKey
-                const groupWorks = isFirstInGroup ? getGroupWorks(work) : []
+                const groupWorks = tab === 'approving' ? getGroupWorks(work) : []
+                const canBatchApproveInGroup = groupWorks.length >= 2
+                const adjustmentReason = work.pendingAdjustmentReason || work.adjustReason
 
                 return (
                   <React.Fragment key={work.id}>
-                    {isFirstInGroup && (
+                    {isFirstInGroup && canBatchApproveInGroup && (
                       <div className="flex items-center justify-between border-y border-sky-100 bg-sky-50/70 px-4 py-2 text-xs text-sky-800">
                         <span>
                           {work.assessmentYear} 年 · {work.type}工作 · 工作事项：{work.workItem}
                           （当前可批量审批 {groupWorks.length} 个节点）
                         </span>
-                        {groupWorks.length >= 2 && (
-                          <button
-                            type="button"
-                            onClick={() => toggleGroupWorks(groupWorks)}
-                            className="rounded-full border border-sky-200 bg-white px-2.5 py-1 font-medium text-sky-700 hover:bg-sky-100"
-                          >
-                            {groupWorks.every((item) => selectedBatchWorkIds.has(item.id))
-                              ? '取消选择同组节点'
-                              : '选择同组节点'}
-                          </button>
-                        )}
+                        <button
+                          type="button"
+                          onClick={() => toggleGroupWorks(groupWorks)}
+                          className="rounded-full border border-sky-200 bg-white px-2.5 py-1 font-medium text-sky-700 hover:bg-sky-100"
+                        >
+                          {groupWorks.every((item) => selectedBatchWorkIds.has(item.id))
+                            ? '取消选择同组节点'
+                            : '选择同组节点'}
+                        </button>
                       </div>
                     )}
                     <div
                       className={`list-separator flex items-start justify-between hover:translate-x-0.5 transition min-w-0 ${borderClass}`}
                     >
-                      {tab === 'approving' && isBatchApprovable(work) && (
+                      {tab === 'approving' && isBatchApprovable(work) && canBatchApproveInGroup && (
                         <div className="px-1 pt-5 pl-4">
                           <Checkbox
                             checked={selectedBatchWorkIds.has(work.id)}
@@ -356,19 +395,14 @@ export default function ApprovalPage() {
                             事项提出领导：{work.proposedLeader || '-'}
                           </div>
                         )}
-                        {work.adjustReason && (
-                          <div className="text-xs text-purple-600 mt-1.5 bg-purple-50/50 rounded px-2 py-1">
-                            调整原因：{work.adjustReason}
+                        {adjustmentReason && (
+                          <div className="mt-1.5 rounded bg-purple-50/50 px-2 py-1 text-xs text-purple-600 break-words">
+                            调整原因：{adjustmentReason}
                           </div>
                         )}
                         {work.adjustNewTime && (
                           <div className="text-xs text-purple-600 mt-1">
                             调整后时间：{work.adjustNewTime}
-                          </div>
-                        )}
-                        {work.pendingAdjustmentReason && (
-                          <div className="text-xs text-purple-600 mt-1 break-words bg-purple-50/50 rounded px-2 py-1">
-                            调整原因：{work.pendingAdjustmentReason}
                           </div>
                         )}
                         {work.pendingAdjustmentFromTime && (
@@ -467,7 +501,7 @@ export default function ApprovalPage() {
         />
       )}
 
-      {selectedBatchWorks.length >= 2 && (
+      {canBatchApprove && (
         <ApproveDialog
           open={batchApproveDialogOpen}
           onOpenChange={setBatchApproveDialogOpen}
