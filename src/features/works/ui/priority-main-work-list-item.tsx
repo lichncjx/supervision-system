@@ -15,14 +15,14 @@ export function PriorityMainWorkListItem({ item, routeType, getDepartmentName }:
   return (
     <Link
       href={`/${routeType}/${item.id}`}
-      className={`relative block rounded-xl border border-slate-200/80 bg-white/60 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-sky-500/20 ${item.isInnovation ? 'pt-10' : ''}`}
+      className="relative block rounded-xl border border-slate-200/80 bg-white/60 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-sky-500/20"
     >
       {item.isInnovation && (
-        <span className="absolute left-0 top-0 rounded-br-xl border-b border-r border-purple-100 bg-purple-50 px-3 py-1 text-xs font-medium text-purple-700">
+        <span className="absolute right-0 top-0 rounded-bl-xl border-b border-l border-purple-100 bg-purple-50 px-3 py-1 text-xs font-medium text-purple-700">
           创新工作
         </span>
       )}
-      <div className="text-sm font-semibold text-slate-800 break-words leading-snug">
+      <div className={`text-sm font-semibold text-slate-800 break-words leading-snug ${item.isInnovation ? 'pr-20' : ''}`}>
         <WorkTitle work={item} />
       </div>
       <div className="mt-2 space-y-1.5 text-xs">
