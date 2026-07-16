@@ -1,5 +1,6 @@
 import { WorkItemType, WorkItemStatus } from '@prisma/client'
 import { formatDate } from '@/shared/utils/date'
+import { deriveWorkDisplayTitle } from '@/features/works/domain/work-structure.rules'
 import {
   canApproveWorkItem,
   shouldHandleWorkItem,
@@ -70,7 +71,12 @@ export function toDashboardItem(
 
   return {
     id: workItem.id,
-    title: workItem.title,
+    title: deriveWorkDisplayTitle({
+      type: workItem.type,
+      workItem: workItem.workItem,
+      workNode: workItem.workNode,
+      legacyTitle: workItem.title,
+    }),
     type: workItem.type,
     typeLabel: getTypeLabel(workItem.type),
     status,

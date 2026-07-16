@@ -136,7 +136,6 @@ export interface Work {
 
 type WorkEditablePatchBase = Pick<
   Work,
-  | 'title'
   | 'assessmentYear'
   | 'description'
   | 'businessCategory'

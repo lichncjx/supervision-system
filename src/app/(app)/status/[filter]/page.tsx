@@ -166,7 +166,7 @@ export default function StatusFilterPage() {
 
   React.useEffect(() => {
     const loadData = async () => {
-      const newList = await queryWorks(user, {
+      const newList = await queryWorks({
         type: typeFilter,
         departmentId: companyLevel ? departmentFilter : (user?.departmentId ?? undefined),
         status: queryStatus,

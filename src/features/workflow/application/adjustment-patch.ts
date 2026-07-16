@@ -2,7 +2,6 @@ import type { WorkItem } from '@prisma/client'
 import { normalizeAssessmentYear } from '@/features/works/domain/work-structure.rules'
 
 export const ADJUSTMENT_PATCH_FIELDS = [
-  'title',
   'assessmentYear',
   'workItem',
   'businessCategory',
@@ -28,7 +27,6 @@ export type AdjustmentPatch = Partial<Record<AdjustmentPatchField, unknown>>
 
 const ADJUSTMENT_PATCH_FIELD_SET = new Set<string>(ADJUSTMENT_PATCH_FIELDS)
 const TEXT_FIELDS = new Set<AdjustmentPatchField>([
-  'title',
   'workItem',
   'businessCategory',
   'workNode',
@@ -121,7 +119,6 @@ export function sanitizeAdjustmentPatch(
 export function buildAdjustmentBeforeSnapshot(
   workItem: Pick<
     WorkItem,
-    | 'title'
     | 'assessmentYear'
     | 'workItem'
     | 'businessCategory'
@@ -143,7 +140,6 @@ export function buildAdjustmentBeforeSnapshot(
   >,
 ): AdjustmentPatch {
   return {
-    title: workItem.title,
     assessmentYear: workItem.assessmentYear,
     workItem: workItem.workItem,
     businessCategory: workItem.businessCategory,

@@ -2,7 +2,6 @@ import type { ReactNode } from 'react';
 export { getChangedAdjustmentFields } from '@/features/works/domain/work-adjustment-diff';
 
 export const ADJUSTMENT_FIELD_LABELS: Record<string, string> = {
-  title: '标题',
   workItem: '事项内容',
   businessCategory: '业务类别',
   completeForm: '完成形式',

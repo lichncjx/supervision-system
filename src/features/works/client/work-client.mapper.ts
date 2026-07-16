@@ -133,10 +133,11 @@ export function transformWorkFromAPI(work: WorkDto): Work {
   }
 }
 
-export function buildCreateWorkBody(work: Omit<Work, 'createdAt' | 'updatedAt'>): CreateWorkBody {
+export function buildCreateWorkBody(
+  work: Omit<Work, 'title' | 'createdAt' | 'updatedAt'>,
+): CreateWorkBody {
   return {
     type: work.type,
-    title: work.title,
     assessmentYear: work.assessmentYear ?? null,
     departmentId: work.departmentId ?? null,
     workItem: work.workItem ?? null,
@@ -164,7 +165,6 @@ export function buildCreateWorkBody(work: Omit<Work, 'createdAt' | 'updatedAt'>)
 export function buildUpdateWorkBody(patch: WorkEditablePatch): UpdateWorkBody {
   const data: UpdateWorkBody = {}
 
-  if ('title' in patch) data.title = patch.title ?? null
   if ('assessmentYear' in patch) data.assessmentYear = patch.assessmentYear ?? null
   if ('departmentId' in patch && patch.departmentId != null) data.departmentId = patch.departmentId
   if ('workItem' in patch) data.workItem = patch.workItem ?? null
