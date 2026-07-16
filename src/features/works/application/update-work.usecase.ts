@@ -1,5 +1,5 @@
 import type { BaseCurrentUser } from '@/shared/auth/current-user'
-import { Role, WorkItemStatus } from '@prisma/client'
+import { Role, WorkItemStatus, WorkItemType } from '@prisma/client'
 import { canEditWorkItem } from '@/features/works/domain/work.permissions'
 import { toPermissionUser } from '@/features/works/domain/work-permission-user.mapper'
 import {
@@ -15,8 +15,10 @@ import { toWorkDto } from '@/features/works/application/work.mapper'
 import {
   isPriorityOrMainWorkType,
   normalizeAssessmentYear,
+  normalizeWorkStructureText,
   validateStructuredWorkFields,
 } from '@/features/works/domain/work-structure.rules'
+import { hasAdjustmentValueChanged } from '@/features/works/domain/work-adjustment-diff'
 import type { WorkDto } from './work.dto'
 import { type ErrResult, type Result, err, ok } from '@/shared/result'
 
@@ -159,8 +161,13 @@ export async function updateWorkUseCase(input: UpdateWorkInput): Promise<Result<
 
   const updateData: Record<string, unknown> = {}
   const isStructuredWork = isPriorityOrMainWorkType(work.type)
-  const hasStructureChange =
-    body.workItem !== undefined || body.workNode !== undefined
+  const workItemChanged =
+    body.workItem !== undefined &&
+    hasAdjustmentValueChanged('workItem', work.workItem, body.workItem)
+  const workNodeChanged =
+    body.workNode !== undefined &&
+    hasAdjustmentValueChanged('workNode', work.workNode, body.workNode)
+  const hasStructureChange = workItemChanged || workNodeChanged
 
   if (isStructuredWork && hasStructureChange) {
     const structuredFields = validateStructuredWorkFields({
@@ -188,8 +195,16 @@ export async function updateWorkUseCase(input: UpdateWorkInput): Promise<Result<
   }
   if (body.title !== undefined && !isStructuredWork)
     updateData.title = body.title
-  if (body.workItem !== undefined && !isStructuredWork)
-    updateData.workItem = body.workItem
+  if (body.workItem !== undefined && !isStructuredWork) {
+    if (work.type === WorkItemType.TODO) {
+      const workItemName = normalizeWorkStructureText(body.workItem)
+      if (!workItemName) return err(400, '请输入待办事项')
+      updateData.workItem = workItemName
+      updateData.title = workItemName
+    } else {
+      updateData.workItem = body.workItem
+    }
+  }
   if (body.workNode !== undefined && !isStructuredWork)
     updateData.workNode = body.workNode
   if (body.businessCategory !== undefined)
