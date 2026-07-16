@@ -9,12 +9,14 @@ export const GET = withApiHandler(async (request: NextRequest) => {
 
   const { searchParams } = new URL(request.url)
   const type = searchParams.get('type')
+  const year = searchParams.get('year')
   const startDate = searchParams.get('startDate')
   const endDate = searchParams.get('endDate')
 
   const result = await getCompletionRateUseCase({
     currentUser,
     type,
+    year,
     startDate,
     endDate,
   })

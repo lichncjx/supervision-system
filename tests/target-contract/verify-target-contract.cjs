@@ -5,6 +5,7 @@ const XLSX = require('xlsx');
 const { PrismaClient } = require('@prisma/client');
 const {
   users,
+  TARGET_ASSESSMENT_YEAR,
   expectedSummary,
   expectedCompletionRate,
   canViewWork,
@@ -117,16 +118,24 @@ function requestBinary(baseUrl, method, path, cookies = []) {
   });
 }
 
-function requestMultipart(baseUrl, path, fileName, fileBuffer, cookies = []) {
+function requestMultipart(baseUrl, path, fileName, fileBuffer, cookies = [], fields = {}) {
   const url = new URL(path, baseUrl);
   const boundary = `----target-contract-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-  const chunks = [
+  const chunks = [];
+  for (const [name, value] of Object.entries(fields)) {
+    chunks.push(
+      Buffer.from(`--${boundary}\r\n`),
+      Buffer.from(`Content-Disposition: form-data; name="${name}"\r\n\r\n`),
+      Buffer.from(`${value}\r\n`),
+    );
+  }
+  chunks.push(
     Buffer.from(`--${boundary}\r\n`),
     Buffer.from(`Content-Disposition: form-data; name="file"; filename="${fileName}"\r\n`),
     Buffer.from('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet\r\n\r\n'),
     fileBuffer,
     Buffer.from(`\r\n--${boundary}--\r\n`),
-  ];
+  );
   const body = Buffer.concat(chunks);
 
   return new Promise((resolve, reject) => {
@@ -169,6 +178,30 @@ function requestMultipart(baseUrl, path, fileName, fileBuffer, cookies = []) {
     req.write(body);
     req.end();
   });
+}
+
+async function importWorkbook(baseUrl, type, fileName, fileBuffer, cookies = []) {
+  const fields = { assessmentYear: String(TARGET_ASSESSMENT_YEAR) };
+  const preview = await requestMultipart(
+    baseUrl,
+    `/api/excel/import/${type}/preview`,
+    fileName,
+    fileBuffer,
+    cookies,
+    fields,
+  );
+  const previewToken = preview.body?.previewToken;
+  if (!previewToken) return { preview, confirmation: null };
+
+  const confirmation = await requestMultipart(
+    baseUrl,
+    `/api/excel/import/${type}`,
+    fileName,
+    fileBuffer,
+    cookies,
+    { ...fields, previewToken },
+  );
+  return { preview, confirmation };
 }
 
 async function login(baseUrl, username) {
@@ -269,8 +302,9 @@ function parseWorkbookRows(buffer) {
   return XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
 }
 
-function buildWorkbookBuffer(rows) {
+function buildWorkbookBuffer(rows, merges = []) {
   const worksheet = XLSX.utils.aoa_to_sheet(rows);
+  worksheet['!merges'] = merges;
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, '数据');
   return XLSX.write(workbook, { bookType: 'xlsx', type: 'buffer' });
@@ -305,8 +339,12 @@ async function loadTargetFixture() {
   return { userByUsername, works, deptByCode };
 }
 
+function worksForAssessmentYear(works) {
+  return works.filter((work) => work.assessmentYear === TARGET_ASSESSMENT_YEAR);
+}
+
 function expectedRoleSummary(user, works) {
-  const summary = expectedSummary(user, works);
+  const summary = expectedSummary(user, worksForAssessmentYear(works));
   return {
     priorityTotal: summary.priorityTotal,
     mainTotal: summary.mainTotal,
@@ -322,8 +360,9 @@ function expectedRoleSummary(user, works) {
 }
 
 function expectedDashboardSummary(user, works) {
-  const summary = expectedSummary(user, works);
-  const visible = works.filter((work) => canViewWork(user, work));
+  const yearWorks = worksForAssessmentYear(works);
+  const summary = expectedSummary(user, yearWorks);
+  const visible = yearWorks.filter((work) => canViewWork(user, work));
   return {
     total: summary.visibleTotal,
     priorityTotal: summary.priorityTotal,
@@ -377,13 +416,13 @@ async function verifyDashboardSummary(baseUrl, loginByUsername, userByUsername, 
   for (const userDef of users) {
     const loginInfo = loginByUsername[userDef.username];
     const dbUser = userByUsername[userDef.username];
-    const response = await request(baseUrl, 'GET', '/api/dashboard', null, loginInfo.cookies);
+    const response = await request(baseUrl, 'GET', `/api/dashboard?year=${TARGET_ASSESSMENT_YEAR}`, null, loginInfo.cookies);
     const summary = response.body?.summary || {};
     const actual = response.statusCode === 200 ? pickSummaryFields(summary) : { statusCode: response.statusCode };
     const expected = expectedRoleSummary(dbUser, works);
     record({
       role: userDef.username,
-      endpoint: 'GET /api/dashboard (summary)',
+      endpoint: `GET /api/dashboard?year=${TARGET_ASSESSMENT_YEAR} (summary)`,
       actual,
       expected,
       expectedFailure: false,
@@ -396,7 +435,7 @@ async function verifyDashboardUnified(baseUrl, loginByUsername, userByUsername, 
   for (const userDef of users) {
     const loginInfo = loginByUsername[userDef.username];
     const dbUser = userByUsername[userDef.username];
-    const dashboardResponse = await request(baseUrl, 'GET', '/api/dashboard?limit=100', null, loginInfo.cookies);
+    const dashboardResponse = await request(baseUrl, 'GET', `/api/dashboard?limit=100&year=${TARGET_ASSESSMENT_YEAR}`, null, loginInfo.cookies);
     const body = dashboardResponse.body || {};
     const summary = body.summary || {};
     const lists = body.lists || {};
@@ -606,7 +645,7 @@ async function verifyTargetPermissionFacts(baseUrl, loginByUsername, works) {
 }
 
 async function verifyCompletionRate(baseUrl, loginByUsername, deptByCode, works) {
-  const response = await request(baseUrl, 'GET', '/api/dashboard/completion-rate', null, loginByUsername.admin.cookies);
+  const response = await request(baseUrl, 'GET', `/api/dashboard/completion-rate?year=${TARGET_ASSESSMENT_YEAR}`, null, loginByUsername.admin.cookies);
   const items = Array.isArray(response.body) ? response.body : [];
 
   const expectedFailureByDeptCode = {
@@ -635,10 +674,10 @@ async function verifyCompletionRate(baseUrl, loginByUsername, deptByCode, works)
           completionRate: actualItem.completionRate,
         }
       : null;
-    const expected = expectedCompletionRate(dept.id, works);
+    const expected = expectedCompletionRate(dept.id, worksForAssessmentYear(works));
     record({
       role: 'admin',
-      endpoint: `GET /api/dashboard/completion-rate dept=${code}`,
+      endpoint: `GET /api/dashboard/completion-rate?year=${TARGET_ASSESSMENT_YEAR} dept=${code}`,
       actual,
       expected,
       expectedFailure: expectedFailureByDeptCode[code],
@@ -751,9 +790,9 @@ async function verifyExcelImport(baseUrl, loginByUsername, deptByCode, userByUse
       '未开始',
     ],
   ];
-  const invalidResponse = await requestMultipart(
+  const invalidAttempt = await importWorkbook(
     baseUrl,
-    '/api/excel/import/todo',
+    'todo',
     'invalid.xlsx',
     buildWorkbookBuffer(invalidRows),
     loginByUsername.dept_manager_a1.cookies
@@ -761,13 +800,15 @@ async function verifyExcelImport(baseUrl, loginByUsername, deptByCode, userByUse
 
   record({
     role: 'dept_manager_a1',
-    endpoint: 'POST /api/excel/import/todo rejects unrelated responsible department',
+    endpoint: 'POST /api/excel/import/todo/preview rejects unrelated responsible department',
     actual: {
-      statusCode: invalidResponse.statusCode,
+      statusCode: invalidAttempt.preview.statusCode,
+      errorFields: invalidAttempt.preview.body?.errors?.map((error) => error.field).sort() || [],
       exists: Boolean(await prisma.workItem.findFirst({ where: { title: 'TC-导入越权待办-B' } })),
     },
     expected: {
-      statusCode: 403,
+      statusCode: 200,
+      errorFields: ['主责部门'],
       exists: false,
     },
     expectedFailure: false,
@@ -791,9 +832,9 @@ async function verifyExcelImport(baseUrl, loginByUsername, deptByCode, userByUse
       '未开始',
     ],
   ];
-  const validResponse = await requestMultipart(
+  const validAttempt = await importWorkbook(
     baseUrl,
-    '/api/excel/import/todo',
+    'todo',
     'valid.xlsx',
     buildWorkbookBuffer(validRows),
     loginByUsername.dept_manager_a1.cookies
@@ -805,15 +846,16 @@ async function verifyExcelImport(baseUrl, loginByUsername, deptByCode, userByUse
 
   record({
     role: 'dept_manager_a1',
-    endpoint: 'POST /api/excel/import/todo accepts own responsible department with external cooperate department',
+    endpoint: 'Excel preview then POST /api/excel/import/todo accepts own responsible department',
     actual: {
-      statusCode: validResponse.statusCode,
+      statusCode: validAttempt.confirmation?.statusCode,
       status: imported?.status,
       departmentId: imported?.departmentId,
       cooperators: normalizeCooperators(imported?.cooperators),
       responsiblePerson: imported?.responsiblePerson,
       responsibleLeaderUserId: imported?.responsibleLeaderUserId,
       responsiblePersonUserId: imported?.responsiblePersonUserId,
+      assessmentYear: imported?.assessmentYear,
     },
     expected: {
       statusCode: 200,
@@ -823,6 +865,7 @@ async function verifyExcelImport(baseUrl, loginByUsername, deptByCode, userByUse
       responsiblePerson: userByUsername.dept_manager_a1.name,
       responsibleLeaderUserId: userByUsername.dept_leader_a.id,
       responsiblePersonUserId: userByUsername.dept_manager_a1.id,
+      assessmentYear: TARGET_ASSESSMENT_YEAR,
     },
     expectedFailure: false,
     note: 'Phase 8C: TODO import uses departmentId, responsibleLeader, responsiblePerson, cooperators.',
@@ -850,9 +893,9 @@ async function verifyExcelImport(baseUrl, loginByUsername, deptByCode, userByUse
       'APPROVED',
     ],
   ];
-  const invalidStatusResponse = await requestMultipart(
+  const invalidStatusAttempt = await importWorkbook(
     baseUrl,
-    '/api/excel/import/todo',
+    'todo',
     'invalid-status.xlsx',
     buildWorkbookBuffer(invalidStatusRows),
     loginByUsername.dept_manager_a1.cookies
@@ -860,13 +903,15 @@ async function verifyExcelImport(baseUrl, loginByUsername, deptByCode, userByUse
 
   record({
     role: 'dept_manager_a1',
-    endpoint: 'POST /api/excel/import/todo rejects old/non-draft status',
+    endpoint: 'POST /api/excel/import/todo/preview rejects old/non-draft status',
     actual: {
-      statusCode: invalidStatusResponse.statusCode,
+      statusCode: invalidStatusAttempt.preview.statusCode,
+      errorFields: invalidStatusAttempt.preview.body?.errors?.map((error) => error.field).sort() || [],
       exists: Boolean(await prisma.workItem.findFirst({ where: { title: 'TC-导入非法状态-APPROVED' } })),
     },
     expected: {
-      statusCode: 400,
+      statusCode: 200,
+      errorFields: ['当前状态'],
       exists: false,
     },
     expectedFailure: false,
@@ -901,23 +946,23 @@ async function verifyExcelImport(baseUrl, loginByUsername, deptByCode, userByUse
       'TDB|导入配合领导|导入配合人',
     ],
   ];
-  const priorityImportResponse = await requestMultipart(
+  const priorityImportAttempt = await importWorkbook(
     baseUrl,
-    '/api/excel/import/priority',
+    'priority',
     'priority.xlsx',
     buildWorkbookBuffer(priorityRows),
     loginByUsername.dept_manager_a1.cookies
   );
   const importedPriority = await prisma.workItem.findFirst({
-    where: { title: 'TC-导入重点工作-cooperators' },
+    where: { title: 'TC-导入重点工作-cooperators｜导入节点' },
     orderBy: { id: 'desc' },
   });
 
   record({
     role: 'dept_manager_a1',
-    endpoint: 'POST /api/excel/import/priority imports with cooperators',
+    endpoint: 'Excel preview then POST /api/excel/import/priority imports with cooperators',
     actual: {
-      statusCode: priorityImportResponse.statusCode,
+      statusCode: priorityImportAttempt.confirmation?.statusCode,
       status: importedPriority?.status,
       departmentId: importedPriority?.departmentId,
       responsibleLeader: importedPriority?.responsibleLeader,
@@ -925,6 +970,7 @@ async function verifyExcelImport(baseUrl, loginByUsername, deptByCode, userByUse
       responsibleLeaderUserId: importedPriority?.responsibleLeaderUserId,
       responsiblePersonUserId: importedPriority?.responsiblePersonUserId,
       cooperators: normalizeCooperators(importedPriority?.cooperators),
+      assessmentYear: importedPriority?.assessmentYear,
     },
     expected: {
       statusCode: 200,
@@ -935,9 +981,76 @@ async function verifyExcelImport(baseUrl, loginByUsername, deptByCode, userByUse
       responsibleLeaderUserId: userByUsername.dept_leader_a.id,
       responsiblePersonUserId: userByUsername.dept_manager_a1.id,
       cooperators: [{ departmentId: deptByCode.TDB.id, departmentName: 'TDB', leader: '导入配合领导', person: '导入配合人' }],
+      assessmentYear: TARGET_ASSESSMENT_YEAR,
     },
     expectedFailure: false,
     note: 'Phase 8C: priority import supports cooperators with leader field.',
+  });
+
+  const mergedPriorityWorkItem = 'TC-导入重点工作-事项属性合并';
+  const mergedPriorityRows = [
+    priorityHeaders,
+    [
+      'target-contract merged import',
+      mergedPriorityWorkItem,
+      '是',
+      '编制导入方案',
+      '2026-11-15',
+      '导入方案',
+      'TDA',
+      userByUsername.dept_leader_a.name,
+      userByUsername.dept_manager_a1.name,
+      '',
+    ],
+    [
+      '',
+      '',
+      '',
+      '组织导入验收',
+      '2026-12-15',
+      '验收记录',
+      'TDA',
+      userByUsername.dept_leader_a.name,
+      userByUsername.dept_manager_a1.name,
+      '',
+    ],
+  ];
+  const mergedPriorityAttempt = await importWorkbook(
+    baseUrl,
+    'priority',
+    'priority-merged-item-attributes.xlsx',
+    buildWorkbookBuffer(mergedPriorityRows, [
+      { s: { r: 1, c: 0 }, e: { r: 2, c: 0 } },
+      { s: { r: 1, c: 1 }, e: { r: 2, c: 1 } },
+      { s: { r: 1, c: 2 }, e: { r: 2, c: 2 } },
+    ]),
+    loginByUsername.dept_manager_a1.cookies,
+  );
+  const mergedPriorityWorks = await prisma.workItem.findMany({
+    where: { workItem: mergedPriorityWorkItem },
+    orderBy: { workNode: 'asc' },
+  });
+
+  record({
+    role: 'dept_manager_a1',
+    endpoint: 'Excel priority import inherits merged work-item attributes only from true merged cells',
+    actual: {
+      statusCode: mergedPriorityAttempt.confirmation?.statusCode,
+      nodes: mergedPriorityWorks.map((work) => ({
+        workNode: work.workNode,
+        businessCategory: work.businessCategory,
+        isInnovation: work.isInnovation,
+      })),
+    },
+    expected: {
+      statusCode: 200,
+      nodes: [
+        { workNode: '编制导入方案', businessCategory: 'target-contract merged import', isInnovation: true },
+        { workNode: '组织导入验收', businessCategory: 'target-contract merged import', isInnovation: true },
+      ],
+    },
+    expectedFailure: false,
+    note: 'Only actual single-column merged cells inherit work-item attributes; ordinary blank cells remain invalid or blank.',
   });
 
   // --- main import ---
@@ -966,23 +1079,23 @@ async function verifyExcelImport(baseUrl, loginByUsername, deptByCode, userByUse
       'TDC||导入配合人M',
     ],
   ];
-  const mainImportResponse = await requestMultipart(
+  const mainImportAttempt = await importWorkbook(
     baseUrl,
-    '/api/excel/import/main',
+    'main',
     'main.xlsx',
     buildWorkbookBuffer(mainRows),
     loginByUsername.dept_manager_a1.cookies
   );
   const importedMain = await prisma.workItem.findFirst({
-    where: { title: 'TC-导入主要工作-cooperators' },
+    where: { title: 'TC-导入主要工作-cooperators｜导入节点' },
     orderBy: { id: 'desc' },
   });
 
   record({
     role: 'dept_manager_a1',
-    endpoint: 'POST /api/excel/import/main imports with cooperators',
+    endpoint: 'Excel preview then POST /api/excel/import/main imports with cooperators',
     actual: {
-      statusCode: mainImportResponse.statusCode,
+      statusCode: mainImportAttempt.confirmation?.statusCode,
       status: importedMain?.status,
       departmentId: importedMain?.departmentId,
       responsibleLeader: importedMain?.responsibleLeader,
@@ -990,6 +1103,7 @@ async function verifyExcelImport(baseUrl, loginByUsername, deptByCode, userByUse
       responsibleLeaderUserId: importedMain?.responsibleLeaderUserId,
       responsiblePersonUserId: importedMain?.responsiblePersonUserId,
       cooperators: normalizeCooperators(importedMain?.cooperators),
+      assessmentYear: importedMain?.assessmentYear,
     },
     expected: {
       statusCode: 200,
@@ -1000,9 +1114,125 @@ async function verifyExcelImport(baseUrl, loginByUsername, deptByCode, userByUse
       responsibleLeaderUserId: userByUsername.dept_leader_a.id,
       responsiblePersonUserId: userByUsername.dept_manager_a2.id,
       cooperators: [{ departmentId: deptByCode.TDC.id, departmentName: 'TDC', person: '导入配合人M' }],
+      assessmentYear: TARGET_ASSESSMENT_YEAR,
     },
     expectedFailure: false,
     note: 'Phase 8C: main import supports cooperators with optional leader.',
+  });
+}
+
+async function verifyWorkItemOptionsAndBatchDrafts(baseUrl, loginByUsername, deptByCode, userByUsername) {
+  const manager = userByUsername.dept_manager_a1;
+  const leader = userByUsername.dept_leader_a;
+  const managerLogin = loginByUsername.dept_manager_a1;
+  const optionsResponse = await request(
+    baseUrl,
+    'GET',
+    `/api/works/work-item-options?type=priority&assessmentYear=${TARGET_ASSESSMENT_YEAR}&departmentId=${deptByCode.TDA.id}`,
+    null,
+    managerLogin.cookies,
+  );
+  const options = Array.isArray(optionsResponse.body) ? optionsResponse.body : [];
+  record({
+    role: 'dept_manager_a1',
+    endpoint: 'GET /api/works/work-item-options returns visible current-year work items',
+    actual: {
+      statusCode: optionsResponse.statusCode,
+      hasPriorityOption: options.some((option) => (
+        option.workItem === 'TC-普通重点工作-A'
+        && option.visibleNodeCount >= 1
+        && option.businessCategoryConsistent === true
+        && option.businessCategoryDefault === '目标口径自动化验证'
+        && option.isInnovationConsistent === true
+        && option.isInnovationDefault === false
+      )),
+    },
+    expected: { statusCode: 200, hasPriorityOption: true },
+    expectedFailure: false,
+    note: '工作事项候选按当前用户可见范围、年度和类型返回，不返回隐藏节点数量。',
+  });
+
+  const batchWorkItem = 'TC-批量新建工作事项';
+  const batchNodes = [
+    {
+      workNode: '完成风险排查',
+      departmentId: deptByCode.TDA.id,
+      responsibleLeader: leader.name,
+      responsibleLeaderUserId: leader.id,
+      responsiblePerson: manager.name,
+      responsiblePersonUserId: manager.id,
+      planCompleteTime: '2026-12-20',
+      completeForm: '风险排查报告',
+    },
+    {
+      workNode: '形成整改闭环',
+      departmentId: deptByCode.TDA.id,
+      responsibleLeader: leader.name,
+      responsibleLeaderUserId: leader.id,
+      responsiblePerson: manager.name,
+      responsiblePersonUserId: manager.id,
+      planCompleteTime: '2026-12-25',
+      completeForm: '整改闭环报告',
+    },
+  ];
+  const batchResponse = await request(
+    baseUrl,
+    'POST',
+    '/api/works/batch-drafts',
+    {
+      type: 'priority',
+      assessmentYear: TARGET_ASSESSMENT_YEAR,
+      workItem: batchWorkItem,
+      nodes: batchNodes,
+    },
+    managerLogin.cookies,
+  );
+  const batchWorks = await prisma.workItem.findMany({
+    where: { assessmentYear: TARGET_ASSESSMENT_YEAR, workItem: batchWorkItem },
+    orderBy: { workNode: 'asc' },
+  });
+  record({
+    role: 'dept_manager_a1',
+    endpoint: 'POST /api/works/batch-drafts creates independent node drafts atomically',
+    actual: {
+      statusCode: batchResponse.statusCode,
+      count: batchWorks.length,
+      titles: batchWorks.map((work) => work.title),
+      statuses: batchWorks.map((work) => work.status),
+    },
+    expected: {
+      statusCode: 200,
+      count: 2,
+      titles: ['TC-批量新建工作事项｜完成风险排查', 'TC-批量新建工作事项｜形成整改闭环'],
+      statuses: ['DRAFT', 'DRAFT'],
+    },
+    expectedFailure: false,
+    note: '每个节点仍是独立 WorkItem 草稿，但共享工作事项归属。',
+  });
+
+  const duplicateWorkItem = 'TC-批量重复节点回滚';
+  const duplicateResponse = await request(
+    baseUrl,
+    'POST',
+    '/api/works/batch-drafts',
+    {
+      type: 'priority',
+      assessmentYear: TARGET_ASSESSMENT_YEAR,
+      workItem: duplicateWorkItem,
+      nodes: [batchNodes[0], { ...batchNodes[0] }],
+    },
+    managerLogin.cookies,
+  );
+  record({
+    role: 'dept_manager_a1',
+    endpoint: 'POST /api/works/batch-drafts rejects duplicate nodes with zero writes',
+    actual: {
+      statusCode: duplicateResponse.statusCode,
+      count: await prisma.workItem.count({ where: { workItem: duplicateWorkItem } }),
+    },
+    expected: { statusCode: 400, count: 0 },
+    expectedFailure: false,
+    note: '任一批量节点校验失败时，整批不写入。',
   });
 }
 
@@ -2774,6 +3004,7 @@ async function main() {
   await verifyCompletionRate(baseUrl, loginByUsername, deptByCode, works);
   await verifyExcelExport(baseUrl, loginByUsername, userByUsername, works);
   await verifyExcelImport(baseUrl, loginByUsername, deptByCode, userByUsername);
+  await verifyWorkItemOptionsAndBatchDrafts(baseUrl, loginByUsername, deptByCode, userByUsername);
   await verifyWorkflowTransitions(baseUrl, loginByUsername, deptByCode, userByUsername);
   await verifyStateFilters(baseUrl, loginByUsername, deptByCode, userByUsername);
 

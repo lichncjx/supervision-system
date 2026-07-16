@@ -1,7 +1,21 @@
 import type { Work, WorkEditablePatch } from '@/features/works/client/work-client.types'
-import type { WorkflowRecordDto as WorkflowRecord } from "../application/get-workflow-records.usecase"
+import type { WorkflowRecordDto as WorkflowRecord } from '../application/get-workflow-records.usecase'
 import type { ErrorData } from '@/shared/http/api-response'
 import { getWorkById } from '@/features/works/client/work-api'
+
+export interface BatchWorkflowItemRef {
+  id: number
+  updatedAt: string
+}
+
+export interface BatchWorkflowPreview {
+  count: number
+  action: 'submit' | 'approve'
+  assessmentYear: number
+  type: 'PRIORITY' | 'MAIN'
+  workItem: string
+  route: 'next' | 'complete'
+}
 
 async function throwOnError(response: Response) {
   if (!response.ok) {
@@ -97,10 +111,47 @@ export async function submitPropose(
   return getWorkById(work.id)
 }
 
-export async function submitTodoDecomposition(
-  work: Work,
-  patch: WorkEditablePatch,
-) {
+async function postBatchWorkflow(
+  endpoint: 'preview' | 'execute',
+  params: {
+    action: 'submit' | 'approve'
+    items: BatchWorkflowItemRef[]
+    comment?: string
+    nextApproverId?: number | null
+  },
+): Promise<BatchWorkflowPreview> {
+  const response = await fetch(
+    endpoint === 'preview' ? '/api/works/batch-workflow/preview' : '/api/works/batch-workflow',
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(params),
+    },
+  )
+  await throwOnError(response)
+  return (await response.json()) as BatchWorkflowPreview
+}
+
+export async function previewBatchWorkflow(params: {
+  action: 'submit' | 'approve'
+  items: BatchWorkflowItemRef[]
+  comment?: string
+  nextApproverId?: number | null
+}) {
+  return postBatchWorkflow('preview', params)
+}
+
+export async function executeBatchWorkflow(params: {
+  action: 'submit' | 'approve'
+  items: BatchWorkflowItemRef[]
+  comment?: string
+  nextApproverId?: number | null
+}) {
+  return postBatchWorkflow('execute', params)
+}
+
+export async function submitTodoDecomposition(work: Work, patch: WorkEditablePatch) {
   const nodes = patch.nodes || []
   const body: Record<string, unknown> = {
     action: 'decompose',

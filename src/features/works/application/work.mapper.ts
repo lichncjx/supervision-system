@@ -24,6 +24,7 @@ interface WorkSource {
   creator?: { name?: string | null; role?: string | null } | null
   firstSubmitterId?: number | null
   firstSubmitter?: { name?: string | null } | null
+  assessmentYear?: number | null
   workItem?: string | null
   workNode?: string | null
   businessCategory?: string | null
@@ -136,6 +137,7 @@ export function toWorkDto(work: WorkSource): WorkDto {
     creatorRole: work.creator?.role || '-',
     firstSubmitterId: work.firstSubmitterId,
     firstSubmitterName: work.firstSubmitter?.name || null,
+    assessmentYear: work.assessmentYear,
     workItem: work.workItem,
     workNode: work.workNode,
     businessCategory: work.businessCategory,

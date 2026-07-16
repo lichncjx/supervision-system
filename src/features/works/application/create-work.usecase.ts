@@ -1,16 +1,22 @@
 import type { BaseCurrentUser } from '@/shared/auth/current-user'
-import { Role, WorkItemType, WorkItemStatus } from '@prisma/client'
+import { Prisma, Role, WorkItemType, WorkItemStatus } from '@prisma/client'
 import { createWorkItem, createWorkOperationLog } from '@/features/works/infrastructure/work.repository'
 import { findDepartmentById } from '@/features/departments/infrastructure/department.repository'
 import { findUserById as prismaFindUserById } from '@/features/users/infrastructure/user.repository'
 import { isDeptLeader, isDeptManager } from '@/features/users/domain/role.rules'
 import { validateMemberAssignments, type MemberAssignment } from '@/features/members/domain/member.rules'
 import { toWorkDto } from '@/features/works/application/work.mapper'
+import {
+  isPriorityOrMainWorkType,
+  normalizeAssessmentYear,
+  validateStructuredWorkFields,
+} from '@/features/works/domain/work-structure.rules'
 import type { WorkDto } from './work.dto'
 import { type Result, err, ok } from '@/shared/result'
 
 export interface CreateWorkBody {
   type: string
+  assessmentYear?: number | null
   departmentId: number | null
   title?: string | null
   workItem?: string | null
@@ -65,7 +71,9 @@ function processNodes(nodes: any[]) {
   }))
 }
 
-export async function createWorkUseCase(input: CreateWorkInput): Promise<Result<WorkDto>> {
+export async function prepareWorkCreateData(
+  input: CreateWorkInput,
+): Promise<Result<Prisma.WorkItemUncheckedCreateInput>> {
   const { currentUser, body } = input
   const departmentId = body.departmentId
 
@@ -97,6 +105,21 @@ export async function createWorkUseCase(input: CreateWorkInput): Promise<Result<
 
   if (!departmentId) {
     return err(400, '请指定责任部门')
+  }
+
+  const assessmentYear = normalizeAssessmentYear(body.assessmentYear)
+  if (!assessmentYear) {
+    return err(400, '请选择有效年度')
+  }
+
+  const structuredFields = isPriorityOrMainWorkType(workType)
+    ? validateStructuredWorkFields({
+      workItem: body.workItem,
+      workNode: body.workNode,
+    })
+    : null
+  if (structuredFields && !structuredFields.ok) {
+    return err(400, structuredFields.message)
   }
 
   const department = await findDepartmentById(departmentId)
@@ -161,12 +184,15 @@ export async function createWorkUseCase(input: CreateWorkInput): Promise<Result<
 
   const workData = {
     type: workType,
-    title: body.title || body.workItem || '未命名事项',
+    title: structuredFields?.ok
+      ? structuredFields.title
+      : body.title || body.workItem || '未命名事项',
+    assessmentYear,
     departmentId,
     creatorId: currentUser.id,
     status: WorkItemStatus.DRAFT,
-    workItem: body.workItem,
-    workNode: body.workNode,
+    workItem: structuredFields?.ok ? structuredFields.workItem : body.workItem,
+    workNode: structuredFields?.ok ? structuredFields.workNode : body.workNode,
     businessCategory: body.businessCategory,
     completeTime: null,
     completeForm: body.completeForm,
@@ -191,12 +217,19 @@ export async function createWorkUseCase(input: CreateWorkInput): Promise<Result<
     workData.approvalLeaderId = workData.proposedLeaderId
   }
 
-  const work = await createWorkItem(workData as any)
+  return ok(workData as Prisma.WorkItemUncheckedCreateInput)
+}
+
+export async function createWorkUseCase(input: CreateWorkInput): Promise<Result<WorkDto>> {
+  const prepared = await prepareWorkCreateData(input)
+  if (!prepared.ok) return prepared
+
+  const work = await createWorkItem(prepared.data as any)
 
   await createWorkOperationLog({
-    userId: currentUser.id,
-    userName: currentUser.name,
-    userRole: currentUser.role as Role,
+    userId: input.currentUser.id,
+    userName: input.currentUser.name,
+    userRole: input.currentUser.role as Role,
     workId: work.id,
     workType: work.type,
     workTitle: work.title,

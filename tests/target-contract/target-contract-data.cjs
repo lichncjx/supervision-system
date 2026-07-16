@@ -10,6 +10,8 @@ const targetStateGroups = {
   CANCELLED: ['CANCELLED'],
 };
 
+const TARGET_ASSESSMENT_YEAR = 2026;
+
 const departments = [
   { key: 'leadership', name: '测试公司领导组', code: 'TLD', isBusiness: false },
   { key: 'deptA', name: '测试A部门', code: 'TDA', isBusiness: true },
@@ -44,6 +46,7 @@ function buildWorkItems(ctx) {
   const overdue = daysFromNow(-3);
 
   const base = {
+    assessmentYear: TARGET_ASSESSMENT_YEAR,
     businessCategory: '目标口径自动化验证',
     completeForm: '验证材料',
     isInnovation: false,
@@ -438,6 +441,27 @@ function buildWorkItems(ctx) {
         planCompleteTime: farFuture,
       },
     },
+    {
+      key: 'todo_next_year_excluded_from_summary',
+      label: '跨年度统计排除事项',
+      targetStatus: 'IN_PROGRESS',
+      data: {
+        ...base,
+        assessmentYear: TARGET_ASSESSMENT_YEAR + 1,
+        type: 'TODO',
+        title: 'TC-跨年度统计排除待办-A',
+        workItem: 'TC-跨年度统计排除待办-A',
+        status: 'IN_PROGRESS',
+        departmentId: dept.deptA.id,
+        creatorId: user.deptManagerA1.id,
+        firstSubmitterId: user.deptManagerA1.id,
+        proposedLeaderId: user.vpA.id,
+        approvalLeaderId: user.vpA.id,
+        responsiblePerson: '跨年度业务主责人A',
+        responsiblePersonUserId: user.deptManagerA1.id,
+        planCompleteTime: farFuture,
+      },
+    },
   ];
 }
 
@@ -643,6 +667,7 @@ function buildMembers(_ctx) {
 module.exports = {
   departments,
   users,
+  TARGET_ASSESSMENT_YEAR,
   buildWorkItems,
   buildMembers,
   targetStateGroups,

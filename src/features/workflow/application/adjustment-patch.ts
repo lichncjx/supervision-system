@@ -1,7 +1,9 @@
 import type { WorkItem } from '@prisma/client'
+import { normalizeAssessmentYear } from '@/features/works/domain/work-structure.rules'
 
 export const ADJUSTMENT_PATCH_FIELDS = [
   'title',
+  'assessmentYear',
   'workItem',
   'businessCategory',
   'workNode',
@@ -40,6 +42,7 @@ const TEXT_FIELDS = new Set<AdjustmentPatchField>([
   'formedTime',
 ])
 const NUMBER_FIELDS = new Set<AdjustmentPatchField>([
+  'assessmentYear',
   'departmentId',
   'responsibleLeaderUserId',
   'responsiblePersonUserId',
@@ -88,9 +91,9 @@ function normalizePatchValue(field: AdjustmentPatchField, value: unknown) {
   return value ?? null
 }
 
-export function sanitizeAdjustmentPatch(input: unknown):
-  | { ok: true; patch: AdjustmentPatch }
-  | { ok: false; message: string } {
+export function sanitizeAdjustmentPatch(
+  input: unknown,
+): { ok: true; patch: AdjustmentPatch } | { ok: false; message: string } {
   if (!isRecord(input)) {
     return { ok: false, message: '请提供拟调整内容' }
   }
@@ -102,6 +105,9 @@ export function sanitizeAdjustmentPatch(input: unknown):
     if (patchField === 'departmentId' && (value == null || value === '')) {
       return { ok: false, message: '责任部门不能为空' }
     }
+    if (patchField === 'assessmentYear' && !normalizeAssessmentYear(value)) {
+      return { ok: false, message: '请选择有效年度' }
+    }
     patch[patchField] = normalizePatchValue(patchField, value)
   }
 
@@ -112,29 +118,33 @@ export function sanitizeAdjustmentPatch(input: unknown):
   return { ok: true, patch }
 }
 
-export function buildAdjustmentBeforeSnapshot(workItem: Pick<
-  WorkItem,
-  | 'title'
-  | 'workItem'
-  | 'businessCategory'
-  | 'workNode'
-  | 'completeForm'
-  | 'isInnovation'
-  | 'departmentId'
-  | 'responsibleLeader'
-  | 'responsiblePerson'
-  | 'responsibleLeaderUserId'
-  | 'responsiblePersonUserId'
-  | 'cooperators'
-  | 'workPlan'
-  | 'planCompleteTime'
-  | 'progress'
-  | 'nodes'
-  | 'proposedScene'
-  | 'formedTime'
->): AdjustmentPatch {
+export function buildAdjustmentBeforeSnapshot(
+  workItem: Pick<
+    WorkItem,
+    | 'title'
+    | 'assessmentYear'
+    | 'workItem'
+    | 'businessCategory'
+    | 'workNode'
+    | 'completeForm'
+    | 'isInnovation'
+    | 'departmentId'
+    | 'responsibleLeader'
+    | 'responsiblePerson'
+    | 'responsibleLeaderUserId'
+    | 'responsiblePersonUserId'
+    | 'cooperators'
+    | 'workPlan'
+    | 'planCompleteTime'
+    | 'progress'
+    | 'nodes'
+    | 'proposedScene'
+    | 'formedTime'
+  >,
+): AdjustmentPatch {
   return {
     title: workItem.title,
+    assessmentYear: workItem.assessmentYear,
     workItem: workItem.workItem,
     businessCategory: workItem.businessCategory,
     workNode: workItem.workNode,

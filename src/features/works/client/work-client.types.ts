@@ -21,14 +21,11 @@ export interface WorkQuery {
   departmentId?: number | '全部'
   status?: WorkStatusFilter
   keyword?: string
+  assessmentYear?: number
+  workItem?: string
 }
 
-export type ActionType =
-  | 'create'
-  | 'complete'
-  | 'adjust'
-  | 'cancel'
-  | 'todo_decompose'
+export type ActionType = 'create' | 'complete' | 'adjust' | 'cancel' | 'todo_decompose'
 
 export interface WorkSubNode {
   id: number
@@ -101,6 +98,7 @@ export interface Work {
   needCeo: boolean
   isInnovation?: boolean
   nodes?: WorkNode[]
+  assessmentYear?: number
   businessCategory?: string
   workItem?: string
   workNode?: string
@@ -119,6 +117,7 @@ export interface Work {
   adjustNewTime?: string
   adjustTimeType?: 'planCompleteTime'
   rejectReason?: string
+  approvalType?: string
   rejectedFrom?: WorkStatus
   rejectedFromStatus?: WorkStatus
   rejectedBy?: string
@@ -138,6 +137,7 @@ export interface Work {
 type WorkEditablePatchBase = Pick<
   Work,
   | 'title'
+  | 'assessmentYear'
   | 'description'
   | 'businessCategory'
   | 'workItem'

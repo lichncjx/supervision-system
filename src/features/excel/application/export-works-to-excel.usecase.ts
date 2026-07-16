@@ -9,6 +9,9 @@ export interface ExportWorksToExcelInput {
   status: string | null
   departmentId: string | null
   keyword: string | null
+  assessmentYear: string | null
+  workItem: string | null
+  month: string | null
 }
 
 import {
@@ -24,11 +27,17 @@ import {
   createExportOperationLog,
 } from '@/features/excel/infrastructure/excel-work.repository'
 import { generateExportBuffer } from '@/features/excel/infrastructure/work-exporter'
-import { isApproving, isOverdueWorkItem, isExpiringWorkItem } from '@/features/works/domain/work-status.rules'
+import {
+  isApproving,
+  isOverdueWorkItem,
+  isExpiringWorkItem,
+} from '@/features/works/domain/work-status.rules'
+import {
+  normalizeAssessmentYear,
+  normalizeWorkStructureText,
+} from '@/features/works/domain/work-structure.rules'
 
-function normalizeTypeFilter(
-  type: string | null,
-): WorkItemType | null {
+function normalizeTypeFilter(type: string | null): WorkItemType | null {
   if (!type) return null
   const normalized = type.toUpperCase()
   if (normalized === WorkItemType.PRIORITY) return WorkItemType.PRIORITY
@@ -40,13 +49,8 @@ function normalizeTypeFilter(
 function normalizeStatusFilter(status: string | null): string | null {
   if (!status || status === 'all') return null
   const normalized = status.toUpperCase()
-  return Object.values(WorkItemStatus).includes(
-    normalized as WorkItemStatus,
-  )
-    ? normalized
-    : null
+  return Object.values(WorkItemStatus).includes(normalized as WorkItemStatus) ? normalized : null
 }
-
 
 function isValidStatusFilter(status: string | null): boolean {
   if (!status || status === 'all') return true
@@ -75,12 +79,13 @@ function keywordMatches(
   workItem: {
     title: string
     workItem: string | null
+    workNode: string | null
     businessCategory: string | null
   },
   keyword: string | null,
 ): boolean {
   if (!keyword) return true
-  return [workItem.title, workItem.workItem, workItem.businessCategory]
+  return [workItem.title, workItem.workItem, workItem.workNode, workItem.businessCategory]
     .filter(Boolean)
     .some((value) => String(value).includes(keyword))
 }
@@ -88,7 +93,16 @@ function keywordMatches(
 export async function exportWorksToExcelUseCase(
   input: ExportWorksToExcelInput,
 ): Promise<Result<ExcelExportFile>> {
-  const { currentUser, type, status, departmentId, keyword } = input
+  const {
+    currentUser,
+    type,
+    status,
+    departmentId,
+    keyword,
+    assessmentYear,
+    workItem,
+    month,
+  } = input
 
   const typeFilter = normalizeTypeFilter(type)
   if (type && !typeFilter) {
@@ -103,12 +117,24 @@ export async function exportWorksToExcelUseCase(
   const statusFilter = normalizeStatusFilter(rawStatusFilter)
   const departmentIdFilter = departmentId ? Number(departmentId) : null
   const keywordFilter = keyword?.trim() || null
+  const assessmentYearFilter = normalizeAssessmentYear(assessmentYear)
+  if (assessmentYear && !assessmentYearFilter) {
+    return err(400, '无效的年度筛选条件')
+  }
+
+  const workItemFilter = normalizeWorkStructureText(workItem)
+  if (workItem && (!typeFilter || !assessmentYearFilter || !workItemFilter)) {
+    return err(400, '精确工作事项筛选必须同时指定类型和年度')
+  }
+
+  const monthFilter = month?.trim() || null
+  if (monthFilter && !/^\d{4}-(0[1-9]|1[0-2])$/.test(monthFilter)) {
+    return err(400, '无效的月份筛选条件')
+  }
 
   const permUser = toPermissionUser(currentUser)
 
-  const workItems = await findWorksForExport(
-    await buildWorkVisibilityWhere(currentUser),
-  )
+  const workItems = await findWorksForExport(await buildWorkVisibilityWhere(currentUser))
 
   const now = new Date()
   now.setHours(0, 0, 0, 0)
@@ -117,6 +143,11 @@ export async function exportWorksToExcelUseCase(
   const visibleItems = workItems
     .filter((workItem) => canViewWorkItem(permUser, workItem))
     .filter((workItem) => !typeFilter || workItem.type === typeFilter)
+    .filter(
+      (workItem) =>
+        !assessmentYearFilter || workItem.assessmentYear === assessmentYearFilter,
+    )
+    .filter((workItem) => !workItemFilter || workItem.workItem === workItemFilter)
     .filter((workItem) => {
       if (!rawStatusFilter || rawStatusFilter === 'all') return true
       if (rawStatusLower === 'draft') {
@@ -126,47 +157,34 @@ export async function exportWorksToExcelUseCase(
           !workItem.rejectedFromStatus
         )
       }
-      if (
-        rawStatusLower === 'returneddraft' ||
-        rawStatusLower === 'returned_draft'
-      ) {
+      if (rawStatusLower === 'returneddraft' || rawStatusLower === 'returned_draft') {
         return (
           workItem.status === WorkItemStatus.DRAFT &&
           Boolean(workItem.rejectReason || workItem.rejectedFromStatus)
         )
       }
-      if (
-        rawStatusLower === 'pendingdecompose' ||
-        rawStatusLower === 'pending_decompose'
-      ) {
+      if (rawStatusLower === 'pendingdecompose' || rawStatusLower === 'pending_decompose') {
         return workItem.status === WorkItemStatus.PENDING_DECOMPOSE
       }
-      if (rawStatusLower === 'approving')
-        return isApproving(workItem.status)
-      if (rawStatusLower === 'handling')
-        return shouldHandleWorkItem(permUser, workItem)
-      if (
-        rawStatusLower === 'inprogress' ||
-        rawStatusLower === 'in_progress'
-      )
+      if (rawStatusLower === 'approving') return isApproving(workItem.status)
+      if (rawStatusLower === 'handling') return shouldHandleWorkItem(permUser, workItem)
+      if (rawStatusLower === 'inprogress' || rawStatusLower === 'in_progress')
         return workItem.status === WorkItemStatus.IN_PROGRESS
-      if (rawStatusLower === 'completed')
-        return workItem.status === WorkItemStatus.COMPLETED
-      if (rawStatusLower === 'cancelled')
-        return workItem.status === WorkItemStatus.CANCELLED
-      if (rawStatusLower === 'overdue')
-        return isOverdueWorkItem(workItem, now)
-      if (rawStatusLower === 'expiring')
-        return isExpiringWorkItem(workItem, now)
+      if (rawStatusLower === 'completed') return workItem.status === WorkItemStatus.COMPLETED
+      if (rawStatusLower === 'cancelled') return workItem.status === WorkItemStatus.CANCELLED
+      if (rawStatusLower === 'overdue') return isOverdueWorkItem(workItem, now)
+      if (rawStatusLower === 'expiring') return isExpiringWorkItem(workItem, now)
       return !statusFilter || workItem.status === statusFilter
     })
     .filter((workItem) => keywordMatches(workItem, keywordFilter))
+    .filter(
+      (workItem) =>
+        !monthFilter || workItem.planCompleteTime?.toISOString().slice(0, 7) === monthFilter,
+    )
     .filter((workItem) => {
       if (!departmentIdFilter) return true
       return (
-        getResponsibleDepartmentIds(workItem).includes(
-          departmentIdFilter,
-        ) ||
+        getResponsibleDepartmentIds(workItem).includes(departmentIdFilter) ||
         getCooperatorDepartmentIds(workItem).includes(departmentIdFilter)
       )
     })
@@ -180,5 +198,5 @@ export async function exportWorksToExcelUseCase(
     visibleItemCount: visibleItems.length,
   })
 
-  return ok({ buffer, fileName, })
+  return ok({ buffer, fileName })
 }

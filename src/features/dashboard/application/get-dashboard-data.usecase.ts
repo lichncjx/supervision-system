@@ -23,6 +23,7 @@ import {
   isOverdueWorkItem,
 } from '@/features/works/domain/work-status.rules'
 import { findDashboardWorks } from '@/features/dashboard/infrastructure/dashboard.repository'
+import { normalizeAssessmentYear } from '@/features/works/domain/work-structure.rules'
 
 export type GetDashboardDataInput = {
   currentUser: BaseCurrentUser
@@ -34,6 +35,7 @@ export async function getDashboardDataUseCase(
 ): Promise<DashboardData> {
   const { currentUser, options = {} } = input
   const limit = normalizeLimit(options.limit)
+  const assessmentYear = normalizeAssessmentYear(options.assessmentYear) || new Date().getFullYear()
 
   const permUser = toPermissionUser(currentUser)
   const whereClause = await buildWorkVisibilityWhere(currentUser)
@@ -42,11 +44,14 @@ export async function getDashboardDataUseCase(
   const visibleWorks: DashboardWorkLike[] = allRelevantWorks.filter((workItem) =>
     canViewWorkItem(permUser, workItem),
   )
+  const annualVisibleWorks = visibleWorks.filter(
+    (workItem) => workItem.assessmentYear === assessmentYear,
+  )
   const now = new Date()
-  const summary = buildSummary(permUser, visibleWorks, now)
+  const summary = buildSummary(permUser, annualVisibleWorks, now)
 
   const expiringAndOverdue = sortExpiringAndOverdue(
-    visibleWorks.filter(
+    annualVisibleWorks.filter(
       (workItem) =>
         isExpiringWorkItem(workItem, now) ||
         isOverdueWorkItem(workItem, now),
@@ -58,7 +63,7 @@ export async function getDashboardDataUseCase(
 
   const myActionRequired = sortMyActionRequired(
     permUser,
-    visibleWorks.filter(
+    annualVisibleWorks.filter(
       (workItem) =>
         canApproveWorkItem(permUser, workItem) ||
         shouldHandleWorkItem(permUser, workItem),

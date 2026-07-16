@@ -1,5 +1,5 @@
 import type { BaseCurrentUser } from '@/shared/auth/current-user'
-import { Role, WorkItemStatus } from '@prisma/client'
+import { Role, WorkItemStatus, WorkItemType } from '@prisma/client'
 import { canEditWorkItem } from '@/features/works/domain/work.permissions'
 import { toPermissionUser } from '@/features/works/domain/work-permission-user.mapper'
 import {
@@ -12,11 +12,19 @@ import { findUserById as prismaFindUserById } from '@/features/users/infrastruct
 import { isDeptLeader, isDeptManager } from '@/features/users/domain/role.rules'
 import { validateMemberAssignments, type MemberAssignment } from '@/features/members/domain/member.rules'
 import { toWorkDto } from '@/features/works/application/work.mapper'
+import {
+  isPriorityOrMainWorkType,
+  normalizeAssessmentYear,
+  normalizeWorkStructureText,
+  validateStructuredWorkFields,
+} from '@/features/works/domain/work-structure.rules'
+import { hasAdjustmentValueChanged } from '@/features/works/domain/work-adjustment-diff'
 import type { WorkDto } from './work.dto'
 import { type ErrResult, type Result, err, ok } from '@/shared/result'
 
 export interface UpdateWorkBody {
   title?: string | null
+  assessmentYear?: number | null
   departmentId?: number
   workItem?: string | null
   workNode?: string | null
@@ -152,6 +160,32 @@ export async function updateWorkUseCase(input: UpdateWorkInput): Promise<Result<
   }
 
   const updateData: Record<string, unknown> = {}
+  const isStructuredWork = isPriorityOrMainWorkType(work.type)
+  const workItemChanged =
+    body.workItem !== undefined &&
+    hasAdjustmentValueChanged('workItem', work.workItem, body.workItem)
+  const workNodeChanged =
+    body.workNode !== undefined &&
+    hasAdjustmentValueChanged('workNode', work.workNode, body.workNode)
+  const hasStructureChange = workItemChanged || workNodeChanged
+
+  if (isStructuredWork && hasStructureChange) {
+    const structuredFields = validateStructuredWorkFields({
+      workItem: body.workItem !== undefined ? body.workItem : work.workItem,
+      workNode: body.workNode !== undefined ? body.workNode : work.workNode,
+    })
+    if (!structuredFields.ok) return err(400, structuredFields.message)
+
+    updateData.workItem = structuredFields.workItem
+    updateData.workNode = structuredFields.workNode
+    updateData.title = structuredFields.title
+  }
+
+  if (body.assessmentYear !== undefined) {
+    const assessmentYear = normalizeAssessmentYear(body.assessmentYear)
+    if (!assessmentYear) return err(400, '请选择有效年度')
+    updateData.assessmentYear = assessmentYear
+  }
   if (body.departmentId !== undefined) {
     const dept = await findDepartmentById(body.departmentId)
     if (!dept) {
@@ -159,11 +193,19 @@ export async function updateWorkUseCase(input: UpdateWorkInput): Promise<Result<
     }
     updateData.departmentId = body.departmentId
   }
-  if (body.title !== undefined)
+  if (body.title !== undefined && !isStructuredWork)
     updateData.title = body.title
-  if (body.workItem !== undefined)
-    updateData.workItem = body.workItem
-  if (body.workNode !== undefined)
+  if (body.workItem !== undefined && !isStructuredWork) {
+    if (work.type === WorkItemType.TODO) {
+      const workItemName = normalizeWorkStructureText(body.workItem)
+      if (!workItemName) return err(400, '请输入待办事项')
+      updateData.workItem = workItemName
+      updateData.title = workItemName
+    } else {
+      updateData.workItem = body.workItem
+    }
+  }
+  if (body.workNode !== undefined && !isStructuredWork)
     updateData.workNode = body.workNode
   if (body.businessCategory !== undefined)
     updateData.businessCategory = body.businessCategory

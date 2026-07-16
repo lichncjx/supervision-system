@@ -20,8 +20,8 @@ export interface WorkFormNodesProps {
 export function WorkFormNodes({
   nodes,
   onChange,
-  nodeLabel = '工作节点',
-  nodePlaceholderPrefix = '工作节点',
+  nodeLabel = '任务分解节点',
+  nodePlaceholderPrefix = '任务分解节点',
   error,
   onTouched,
   fieldId,

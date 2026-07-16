@@ -9,6 +9,8 @@ import type { WorkStatusFilter } from '@/features/works/client/work-client.types
 interface WorkListToolbarProps {
   keyword: string;
   onKeywordChange: (value: string) => void;
+  assessmentYearFilter?: string;
+  onAssessmentYearFilterChange?: (value: string) => void;
   monthFilter: string;
   onMonthFilterChange: (value: string) => void;
   monthOptions: string[];
@@ -29,6 +31,8 @@ interface WorkListToolbarProps {
 export function WorkListToolbar({
   keyword,
   onKeywordChange,
+  assessmentYearFilter,
+  onAssessmentYearFilterChange,
   monthFilter,
   onMonthFilterChange,
   monthOptions,
@@ -46,6 +50,13 @@ export function WorkListToolbar({
   onRefresh,
 }: WorkListToolbarProps) {
   const selectTriggerClass = 'rounded-full border border-slate-200 h-10 px-4 text-sm text-slate-600 bg-slate-50';
+  const currentYear = new Date().getFullYear();
+  const assessmentYearOptions = Array.from(
+    new Set([
+      ...Array.from({ length: 7 }, (_, index) => String(currentYear - 3 + index)),
+      ...(assessmentYearFilter ? [assessmentYearFilter] : []),
+    ]),
+  ).sort((left, right) => Number(left) - Number(right));
 
   return (
     <div className="rounded-xl border border-slate-200/80 bg-white/70 backdrop-blur-sm p-4 flex flex-wrap items-center gap-2">
@@ -59,11 +70,32 @@ export function WorkListToolbar({
         />
       </div>
 
-      <Select value={monthFilter} onValueChange={onMonthFilterChange}>
+      {assessmentYearFilter !== undefined && onAssessmentYearFilterChange && (
+        <Select
+          value={assessmentYearFilter || 'all'}
+          onValueChange={(value) => onAssessmentYearFilterChange(value === 'all' ? '' : value)}
+        >
+          <SelectTrigger className={selectTriggerClass}>
+            <SelectValue placeholder="选择年度" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">全部年度</SelectItem>
+            {assessmentYearOptions.map((year) => (
+              <SelectItem key={year} value={year}>{year}年度</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
+
+      <Select
+        value={monthFilter || 'all'}
+        onValueChange={(value) => onMonthFilterChange(value === 'all' ? '' : value)}
+      >
         <SelectTrigger className={selectTriggerClass}>
           <SelectValue placeholder="全部月份" />
         </SelectTrigger>
         <SelectContent>
+          <SelectItem value="all">全部月份</SelectItem>
           {monthOptions.map((month) => (
             <SelectItem key={month} value={month}>{getMonthLabel(month)}</SelectItem>
           ))}

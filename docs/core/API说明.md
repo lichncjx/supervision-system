@@ -13,9 +13,11 @@
 ## GET /api/dashboard
 
 ```http
-GET /api/dashboard
-GET /api/dashboard?limit=5
+GET /api/dashboard?year=2026
+GET /api/dashboard?year=2026&limit=5
 ```
+
+`year` 为 Dashboard 考核年度。`summary`、`lists.expiringAndOverdue` 和 `lists.myActionRequired` 必须使用同一年度；未传或无效时当前实现暂回退到自然年，系统默认管理年度将在后续独立配置 PR 中统一。
 
 返回结构：
 
@@ -60,6 +62,8 @@ GET /api/dashboard?limit=5
 
 ### Summary 字段口径
 
+以下字段均只统计请求 `year` 对应年度、且当前用户可见的事项。
+
 | 字段 | 当前口径 |
 | --- | --- |
 | `total` | 当前用户可见事项总数 |
@@ -102,9 +106,11 @@ GET /api/dashboard?limit=5
 
 ### 轻量列表
 
-`lists.expiringAndOverdue` 只返回当前用户可见、非终态、临期或超期事项，按超期优先和计划时间升序排序。
+`lists.expiringAndOverdue` 只返回请求年度内当前用户可见、非终态、临期或超期事项，按超期优先和计划时间升序排序。
 
-`lists.myActionRequired` 只返回 `canApproveWorkItem` 或 `shouldHandleWorkItem` 命中的事项。`SUPERVISOR` 的督办跟踪口径仍未拆分为独立字段，继续作为后续遗留项。
+`lists.myActionRequired` 只返回请求年度内 `canApproveWorkItem` 或 `shouldHandleWorkItem` 命中的事项。`SUPERVISOR` 的督办跟踪口径仍未拆分为独立字段，继续作为后续遗留项。
+
+Dashboard 内嵌轻量列表按年度，不改变独立页面口径：`/alert` 和 `/process` 默认跨年度查询，避免遗漏其他年度仍需关注或处理的事项。
 
 ## WorkDashboardItem
 
@@ -143,6 +149,8 @@ GET /api/dashboard?limit=5
 
 ## GET /api/works 状态筛选
 
+三类事项列表和 Dashboard 状态数量跳转页通过 `assessmentYear` 进行服务端年度筛选，页面默认当前自然年，并提供“全部年度”选项；选择全部年度时不传数值年度。月份筛选只在当前年度查询结果上由前端执行，导出时仍必须把所选月份传给服务端以保持结果一致。
+
 `status` 查询参数支持当前 9 状态和派生筛选：
 
 | 参数 | 口径 |
@@ -168,6 +176,6 @@ GET /api/dashboard?limit=5
 
 ## 普通 Excel 导入导出
 
-`GET /api/excel/export` 的数据范围与 `/api/works` 可见范围一致，并使用统一状态元数据输出状态文案。导出状态筛选同样不接受旧状态值。
+`GET /api/excel/export` 的数据范围与 `/api/works` 可见范围一致，并使用统一状态元数据输出状态文案。导出支持与事项列表一致的 `type`、`assessmentYear`、`workItem`、`departmentId`、`status`、`keyword` 和 `month` 筛选；`workItem` 精确筛选必须同时指定类型和年度，`month` 使用 `YYYY-MM`。导出状态筛选同样不接受旧状态值。
 
 `POST /api/excel/import/[type]` 普通导入默认创建 `DRAFT`，状态列仅允许空、`DRAFT` 或”草稿”；审批中、进行中、终态和旧状态不得通过普通导入写入，必须通过 workflow 流转。

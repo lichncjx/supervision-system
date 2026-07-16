@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, ListTree } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/features/works/ui/badges';
@@ -20,6 +20,7 @@ import { WorkflowRecords } from '@/features/workflow/ui/workflow-records';
 import { WorkflowApprovalPanel } from '@/features/workflow/ui/workflow-approval-panel';
 import { ApproveDialog } from '@/features/workflow/ui/approve-dialog';
 import { WorkDisplayInfo } from '@/features/works/ui/work-display-info';
+import { WorkTitle } from '@/features/works/ui/work-title';
 import { WorkDecomposePanel } from '@/features/works/ui/work-decompose-panel';
 import { WorkActionDialogs } from '@/features/works/ui/work-action-dialogs';
 import { WorkPendingAdjustmentPanel } from '@/features/works/ui/work-pending-adjustment-panel';
@@ -323,7 +324,7 @@ export default function WorkDetailPage() {
 
             <h1 className="flex items-center gap-3 text-2xl font-bold leading-tight text-slate-900">
               <span className={`h-8 w-1 rounded-full ${theme.accent}`} />
-              {work.title}
+              <WorkTitle work={work} />
               <StatusBadge status={work.status} work={work} />
             </h1>
           </div>
@@ -366,48 +367,6 @@ export default function WorkDetailPage() {
             />
           </div>
 
-          {work.nodes && work.nodes.length > 0 && (
-            <div className={PANEL_PADDED}>
-              <h3 className="text-sm font-semibold text-slate-500 tracking-wide mb-4">
-                {isTodo ? '任务分解节点' : '工作节点'}
-              </h3>
-              <div className="relative pl-5">
-                <div className="absolute left-[7px] top-2 bottom-2 w-px bg-slate-200" />
-                {work.nodes.map((node: any, index: number) => {
-                  const isLast = index === work.nodes!.length - 1;
-                  return (
-                    <div key={node.id ?? index} className={`relative ${isLast ? '' : 'pb-5'}`}>
-                      <div className="absolute left-[-13px] top-[5px] h-[9px] w-[9px] rounded-full border-2 border-slate-300 bg-white" />
-                      <div className="flex items-baseline justify-between gap-2">
-                        <div className="text-sm font-medium text-slate-800 break-words">
-                          {node.title}
-                        </div>
-                        {node.completeTime && (
-                          <span className="text-xs text-slate-400 shrink-0">{node.completeTime}</span>
-                        )}
-                      </div>
-                      {node.children && node.children.length > 0 && (
-                        <div className="mt-1.5 space-y-1">
-                          {node.children.map((child: any, childIndex: number) => (
-                            <div key={child.id ?? `${index}-${childIndex}`} className="flex items-baseline justify-between gap-2 pl-3">
-                              <div className="text-xs text-slate-500 break-words">
-                                <span className="inline-block h-1.5 w-1.5 rounded-full mr-1.5 align-middle bg-slate-200" />
-                                {child.title}
-                              </div>
-                              {child.completeTime && (
-                                <span className="text-xs text-slate-400 shrink-0">{child.completeTime}</span>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
           <div className={`${PANEL_PADDED}`}>
             <WorkflowProgress work={work} />
           </div>
@@ -444,6 +403,39 @@ export default function WorkDetailPage() {
 
         {/* Sidebar */}
         <aside className="lg:col-span-2 space-y-4">
+          {work.nodes && work.nodes.length > 0 && (
+            <section className={PANEL_PADDED}>
+              <div className="mb-3 flex items-center gap-2">
+                <ListTree className="h-4 w-4 text-sky-500" />
+                <h3 className="text-sm font-semibold tracking-wide text-slate-500">任务分解节点</h3>
+              </div>
+              <div>
+                {work.nodes.map((node: any, index: number) => (
+                  <div key={node.id ?? index} className="border-b border-slate-100 py-2.5 last:border-b-0">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <div className="text-sm text-slate-700 break-words">{node.title}</div>
+                      {node.completeTime && (
+                        <span className="shrink-0 text-xs text-slate-400">{node.completeTime}</span>
+                      )}
+                    </div>
+                    {node.children && node.children.length > 0 && (
+                      <div className="mt-1.5 space-y-1 pl-3">
+                        {node.children.map((child: any, childIndex: number) => (
+                          <div key={child.id ?? `${index}-${childIndex}`} className="flex items-baseline justify-between gap-2 pl-2">
+                            <div className="text-xs text-slate-500 break-words">{child.title}</div>
+                            {child.completeTime && (
+                              <span className="shrink-0 text-xs text-slate-400">{child.completeTime}</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
           <WorkAttachmentPanel
             attachments={(work.attachments || []).filter(a => a.category !== 'evidence')}
             canUpload={!!canUploadAttachmentPanel}

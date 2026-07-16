@@ -33,7 +33,7 @@ export function WorkPendingAdjustmentPanel({
     <div className={PANEL_PADDED}>
       <h3 className="font-semibold text-slate-800 mb-4">待审批调整内容</h3>
       <div className="space-y-2 text-sm">
-        <div className="text-purple-600 break-words whitespace-pre-wrap">
+        <div className="px-2 text-slate-600 break-words whitespace-pre-wrap">
           调整原因：{work.pendingAdjustmentReason || '-'}
         </div>
         <div>

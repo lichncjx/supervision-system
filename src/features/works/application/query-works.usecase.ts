@@ -18,6 +18,10 @@ import {
   isExpiringWorkItem,
   isOverdueWorkItem,
 } from '@/features/works/domain/work-status.rules'
+import {
+  normalizeAssessmentYear,
+  normalizeWorkStructureText,
+} from '@/features/works/domain/work-structure.rules'
 
 // ── Types ──
 
@@ -26,6 +30,8 @@ export interface QueryWorksParams {
   status: string | null
   departmentId: string | null
   keyword: string | null
+  assessmentYear: string | null
+  workItem: string | null
 }
 
 export type StatusFilter =
@@ -175,9 +181,26 @@ async function buildWorksWhere(
   }
 
   const filters: Prisma.WorkItemWhereInput[] = [await buildWorkVisibilityWhere(currentUser)]
+  const assessmentYear = normalizeAssessmentYear(params.assessmentYear)
+  if (hasFilterValue(params.assessmentYear) && !assessmentYear) {
+    return err(400, '无效的年度筛选条件')
+  }
+
+  const exactWorkItem = normalizeWorkStructureText(params.workItem)
+  if (hasFilterValue(params.workItem) && (!workType || !assessmentYear || !exactWorkItem)) {
+    return err(400, '精确工作事项筛选必须同时指定类型和年度')
+  }
 
   if (workType) {
     filters.push({ type: workType })
+  }
+
+  if (assessmentYear) {
+    filters.push({ assessmentYear })
+  }
+
+  if (exactWorkItem) {
+    filters.push({ workItem: exactWorkItem })
   }
 
   if (statusFilter) {
@@ -193,6 +216,7 @@ async function buildWorksWhere(
       OR: [
         { title: { contains: params.keyword, mode: 'insensitive' } },
         { workItem: { contains: params.keyword, mode: 'insensitive' } },
+        { workNode: { contains: params.keyword, mode: 'insensitive' } },
         { businessCategory: { contains: params.keyword, mode: 'insensitive' } },
         { proposedScene: { contains: params.keyword, mode: 'insensitive' } },
         { progress: { contains: params.keyword, mode: 'insensitive' } },

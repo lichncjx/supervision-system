@@ -74,23 +74,16 @@ function DetailLongText({
 }
 
 function ProcessReasonBlock({
-  tone,
   title,
   meta,
   reason,
 }: {
-  tone: 'danger' | 'muted';
   title: string;
   meta?: string;
   reason: string;
 }) {
-  const classes =
-    tone === 'danger'
-      ? 'border-rose-200 bg-rose-50 text-rose-700'
-      : 'border-slate-200 bg-slate-50 text-slate-700';
-
   return (
-    <div className={`rounded-lg border px-4 py-3 text-sm ${classes}`}>
+    <div className="px-1 py-1 text-sm text-slate-600">
       <div className="text-[11px] font-semibold text-current opacity-70 mb-1">
         {title}
       </div>
@@ -154,8 +147,6 @@ function PriorityMainWorkDisplayInfo({
 
       <DetailSection title="辅助信息" accentColor={theme.light} variant="muted">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 text-xs text-slate-500">
-          <div>业务类别：{work.businessCategory || '-'}</div>
-          <div>工作节点：{work.workNode || '-'}</div>
           <div>完成形式：{work.completeForm || '-'}</div>
           {work.type === '重点' && (
             <div>创新工作：{work.isInnovation ? '是' : '否'}</div>
@@ -165,7 +156,6 @@ function PriorityMainWorkDisplayInfo({
 
       {work.rejectReason && (
         <ProcessReasonBlock
-          tone="danger"
           title="退回原因"
           meta={`退回人：${work.rejectedBy || '-'}`}
           reason={work.rejectReason}
@@ -200,7 +190,6 @@ function PriorityMainWorkDisplayInfo({
 
       {work.cancelReason && (
         <ProcessReasonBlock
-          tone="muted"
           title="取消原因"
           reason={work.cancelReason}
         />
@@ -289,7 +278,6 @@ function TodoWorkDisplayInfo({
           {work.proposedLeader && <div>提出领导：{work.proposedLeader}</div>}
           {work.proposedScene && <div>提出场景：{work.proposedScene}</div>}
           {work.formedTime && <div>形成时间：{work.formedTime}</div>}
-          {work.workNode && <div>工作节点：{work.workNode}</div>}
         </div>
       </DetailSection>
 
@@ -321,7 +309,6 @@ function TodoWorkDisplayInfo({
 
       {work.rejectReason && (
         <ProcessReasonBlock
-          tone="danger"
           title="退回原因"
           meta={`退回人：${work.rejectedBy || '-'}`}
           reason={work.rejectReason}
@@ -330,7 +317,6 @@ function TodoWorkDisplayInfo({
 
       {work.cancelReason && (
         <ProcessReasonBlock
-          tone="muted"
           title="取消原因"
           reason={work.cancelReason}
         />

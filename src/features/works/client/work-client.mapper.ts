@@ -100,6 +100,7 @@ export function transformWorkFromAPI(work: WorkDto): Work {
     needCeo: work.type === '重点',
     isInnovation: work.isInnovation ?? undefined,
     nodes: Array.isArray(work.nodes) ? work.nodes : [],
+    assessmentYear: work.assessmentYear ?? undefined,
     businessCategory: work.businessCategory ?? undefined,
     workItem: work.workItem ?? undefined,
     workNode: work.workNode ?? undefined,
@@ -113,26 +114,30 @@ export function transformWorkFromAPI(work: WorkDto): Work {
     adjustReason: work.adjustReason || undefined,
     cancelReason: work.cancelReason || undefined,
     rejectReason: work.rejectReason || undefined,
+    approvalType: work.approvalType ?? undefined,
     rejectedFrom: normalizeWorkStatus(work.rejectedFrom || work.rejectedFromStatus) || undefined,
     rejectedFromStatus: normalizeWorkStatus(work.rejectedFromStatus) || undefined,
     createdAt: work.createdAt ?? work.updatedAt,
     updatedAt: work.updatedAt,
     attachments: parseAttachments(work.attachments),
-    adjustHistory: (Array.isArray(work.adjustHistory) ? work.adjustHistory : []) as Work['adjustHistory'],
+    adjustHistory: (Array.isArray(work.adjustHistory)
+      ? work.adjustHistory
+      : []) as Work['adjustHistory'],
     pendingAdjustment: optionalRecord<WorkEditablePatch>(work.pendingAdjustment),
     pendingAdjustmentReason: work.pendingAdjustmentReason ?? undefined,
-    pendingAdjustmentBeforeSnapshot: optionalRecord<WorkEditablePatch>(work.pendingAdjustmentBeforeSnapshot),
+    pendingAdjustmentBeforeSnapshot: optionalRecord<WorkEditablePatch>(
+      work.pendingAdjustmentBeforeSnapshot,
+    ),
     pendingAdjustmentFromTime: work.pendingAdjustmentFromTime ?? undefined,
     pendingAdjustmentToTime: work.pendingAdjustmentToTime ?? undefined,
   }
 }
 
-export function buildCreateWorkBody(
-  work: Omit<Work, 'createdAt' | 'updatedAt'>,
-): CreateWorkBody {
+export function buildCreateWorkBody(work: Omit<Work, 'createdAt' | 'updatedAt'>): CreateWorkBody {
   return {
     type: work.type,
     title: work.title,
+    assessmentYear: work.assessmentYear ?? null,
     departmentId: work.departmentId ?? null,
     workItem: work.workItem ?? null,
     workNode: work.workNode ?? null,
@@ -160,6 +165,7 @@ export function buildUpdateWorkBody(patch: WorkEditablePatch): UpdateWorkBody {
   const data: UpdateWorkBody = {}
 
   if ('title' in patch) data.title = patch.title ?? null
+  if ('assessmentYear' in patch) data.assessmentYear = patch.assessmentYear ?? null
   if ('departmentId' in patch && patch.departmentId != null) data.departmentId = patch.departmentId
   if ('workItem' in patch) data.workItem = patch.workItem ?? null
   if ('workNode' in patch) data.workNode = patch.workNode ?? null

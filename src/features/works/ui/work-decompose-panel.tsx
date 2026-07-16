@@ -85,8 +85,8 @@ export function WorkDecomposePanel({
         <WorkFormNodes
           nodes={nodes}
           onChange={(value) => setEditForm((prev: any) => ({ ...prev, nodes: value }))}
-          nodeLabel="任务节点（可选）"
-          nodePlaceholderPrefix="任务节点"
+          nodeLabel="任务分解节点（可选）"
+          nodePlaceholderPrefix="任务分解节点"
         />
 
         <Button onClick={onSubmitDecomposition} className="rounded-full">

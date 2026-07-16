@@ -2,11 +2,11 @@ import type { BaseCurrentUser } from '@/shared/auth/current-user'
 import { isGlobalView } from '@/features/users/domain/role.rules'
 import { err, ok, type Result } from '@/shared/result'
 import type { ExcelExportFile } from '@/features/excel/application/excel-export.types'
+import { normalizeAssessmentYear } from '@/features/works/domain/work-structure.rules'
 
 export interface ExportCompletionRateInput {
   currentUser: BaseCurrentUser
-  startDate: string | null
-  endDate: string | null
+  year: string | null
 }
 
 import { getResponsibleDepartmentIds } from '@/features/works/domain/work.permissions'
@@ -16,26 +16,17 @@ import {
 } from '@/features/excel/infrastructure/completion-rate.repository'
 import { findBusinessDepartments } from '@/features/departments/infrastructure/department.repository'
 import { generateCompletionRateBuffer } from '@/features/excel/infrastructure/completion-rate-exporter'
-import { calculateDepartmentStats, type CompletionRateStat } from '@/features/works/domain/completion-rate.calculator'
+import {
+  calculateDepartmentStats,
+  type CompletionRateStat,
+} from '@/features/works/domain/completion-rate.calculator'
 
 async function getDepartmentStats(
   departmentId: number,
   departmentName: string,
-  startDate?: Date,
-  endDate?: Date,
+  assessmentYear: number,
 ): Promise<CompletionRateStat> {
-  const dateFilter: Record<string, unknown> = {}
-  if (startDate) dateFilter.gte = startDate
-  if (endDate) {
-    const end = new Date(endDate)
-    end.setHours(23, 59, 59, 999)
-    dateFilter.lte = end
-  }
-
-  const works = await findWorksForCompletionRate(
-    departmentId,
-    dateFilter,
-  )
+  const works = await findWorksForCompletionRate(departmentId, assessmentYear)
 
   const responsibleWorks = works.filter((work) =>
     getResponsibleDepartmentIds(work).includes(departmentId),
@@ -49,34 +40,22 @@ async function getDepartmentStats(
 export async function exportCompletionRateUseCase(
   input: ExportCompletionRateInput,
 ): Promise<Result<ExcelExportFile>> {
-  const { currentUser, startDate, endDate } = input
+  const { currentUser, year } = input
 
-  if (
-    !isGlobalView(
-      currentUser.role as import('@prisma/client').Role,
-    )
-  ) {
+  if (!isGlobalView(currentUser.role as import('@prisma/client').Role)) {
     return err(403, '无权导出完成率统计，仅限系统管理员和督办管理员')
   }
 
-  const sDate = startDate ? new Date(startDate) : undefined
-  const eDate = endDate ? new Date(endDate) : undefined
+  const assessmentYear = normalizeAssessmentYear(year) || new Date().getFullYear()
 
   const departments = await findBusinessDepartments()
 
   const stats: CompletionRateStat[] = []
   for (const dept of departments) {
-    stats.push(
-      await getDepartmentStats(
-        dept.id,
-        dept.name,
-        sDate,
-        eDate,
-      ),
-    )
+    stats.push(await getDepartmentStats(dept.id, dept.name, assessmentYear))
   }
 
-  const { buffer, fileName } = generateCompletionRateBuffer(stats)
+  const { buffer, fileName } = generateCompletionRateBuffer(stats, assessmentYear)
 
   createCompletionRateLog({
     userId: currentUser.id,

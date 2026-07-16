@@ -29,7 +29,7 @@ export function WorkDraftActions({
         </p>
       )}
       {!isDraft && rejectReason && (
-        <div className="p-3 bg-rose-50 border border-red-200 rounded text-sm text-red-700 break-words whitespace-pre-wrap mb-3">
+        <div className="mb-3 px-2 text-sm text-slate-600 break-words whitespace-pre-wrap">
           退回原因：{rejectReason}
         </div>
       )}

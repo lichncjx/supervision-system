@@ -1,4 +1,5 @@
 import { WorkItemType, WorkItemStatus } from '@prisma/client'
+import { formatDate } from '@/shared/utils/date'
 import {
   canApproveWorkItem,
   shouldHandleWorkItem,
@@ -21,7 +22,7 @@ export function normalizeLimit(limit?: number): number {
 }
 
 export function serializeDate(date: Date | null): string | null {
-  return date ? date.toISOString() : null
+  return formatDate(date)
 }
 
 export function getTypeLabel(type: WorkItemType): string {

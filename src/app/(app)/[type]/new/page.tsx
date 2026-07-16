@@ -15,6 +15,8 @@ import { WorkFormShell } from '@/features/works/ui/work-form-shell';
 import { WorkFormSectionCard } from '@/features/works/ui/work-form-section-card';
 import { WorkFormNodes } from '@/features/works/ui/work-form-nodes';
 import { WorkFormCooperators } from '@/features/works/ui/work-form-cooperators';
+import { WorkItemCombobox } from '@/features/works/ui/work-item-combobox';
+import type { WorkItemOption } from '@/features/works/client/work-item-api';
 import {
   WorkItemField,
   IsInnovationField,
@@ -64,11 +66,13 @@ export default function NewWorkPage() {
     user?.role === 'SUPERVISOR';
 
   const [isInnovation, setIsInnovation] = useState(false);
+  const [workItemDefaultNotice, setWorkItemDefaultNotice] = useState('');
 
   const [nodes, setNodes] = useState<WorkNode[]>([]);
 
   // 重点工作和主要工作表单
   const [priorityMainForm, setPriorityMainForm] = useState({
+    assessmentYear: String(new Date().getFullYear()),
     businessCategory: '',
     workItem: '',
     workNode: '',
@@ -83,6 +87,7 @@ export default function NewWorkPage() {
 
   // 待办事项表单
   const [todoForm, setTodoForm] = useState({
+    assessmentYear: String(new Date().getFullYear()),
     proposedLeaderId:
       isCompanyLevel(user?.role)
         ? String(user?.id)
@@ -104,6 +109,31 @@ export default function NewWorkPage() {
   const [touched, setTouched] = useState<Set<string>>(new Set());
   const [errors, setErrors] = useState<Partial<Record<CreateWorkFormField, string>>>({});
   const [submitAttempted, setSubmitAttempted] = useState(false);
+
+  const applyExistingWorkItemDefaults = (option: WorkItemOption) => {
+    setPriorityMainForm((current) => ({
+      ...current,
+      workItem: option.workItem,
+      businessCategory: option.businessCategoryConsistent
+        ? option.businessCategoryDefault || ''
+        : current.businessCategory,
+    }));
+    if (routeType === 'priority' && option.isInnovationConsistent && option.isInnovationDefault !== null) {
+      setIsInnovation(option.isInnovationDefault);
+    }
+
+    const inconsistentFields = [
+      !option.businessCategoryConsistent && '业务类别',
+      routeType === 'priority' && !option.isInnovationConsistent && '是否创新工作',
+    ].filter(Boolean);
+    setWorkItemDefaultNotice(
+      inconsistentFields.length > 0
+        ? `该工作事项的当前可见节点${inconsistentFields.join('、')}不一致，未自动带入，请确认后填写。`
+        : routeType === 'priority'
+          ? '已带入该工作事项当前可见节点一致的业务类别和是否创新工作。'
+          : '已带入该工作事项当前可见节点一致的业务类别。',
+    );
+  };
 
   const stateRef = useRef({
     priorityMainForm,
@@ -133,8 +163,11 @@ export default function NewWorkPage() {
       user: s.user,
       isPriorityOrMain: s.isPriorityOrMain,
       isTodo: s.isTodo,
+      priorityMainAssessmentYear: s.priorityMainForm.assessmentYear,
       priorityMainWorkItem: s.priorityMainForm.workItem,
+      priorityMainWorkNode: s.priorityMainForm.workNode,
       priorityMainDepartmentId: s.priorityMainForm.departmentId,
+      todoAssessmentYear: s.todoForm.assessmentYear,
       todoWorkItem: s.todoForm.workItem,
       todoDepartmentId: s.todoForm.departmentId,
       todoProposedLeaderId: s.todoForm.proposedLeaderId,
@@ -171,6 +204,15 @@ export default function NewWorkPage() {
     };
     fetchData();
   }, []);
+
+  useEffect(() => {
+    if (!isPriorityOrMain || !user?.departmentId) return;
+    if (user.role !== 'DEPARTMENT_MANAGER' && user.role !== 'DEPARTMENT_LEADER') return;
+    setPriorityMainForm((current) => ({
+      ...current,
+      departmentId: String(user.departmentId),
+    }));
+  }, [isPriorityOrMain, user?.departmentId, user?.role]);
 
 
   if (type === '待办' && !canCreateTodo) {
@@ -233,8 +275,8 @@ export default function NewWorkPage() {
   };
 
   const titleMap: Record<WorkType, string> = {
-    重点: '新建重点工作',
-    主要: '新建主要工作',
+    重点: '新增重点工作节点',
+    主要: '新增主要工作节点',
     待办: '新建待办事项',
   };
 
@@ -280,8 +322,8 @@ export default function NewWorkPage() {
           <WorkFormNodes
             nodes={nodes}
             onChange={setNodes}
-            nodeLabel={isPriorityOrMain ? '工作节点（可选）' : '任务节点（可选）'}
-            nodePlaceholderPrefix={isPriorityOrMain ? '工作节点' : '任务节点'}
+            nodeLabel="任务分解节点（可选）"
+            nodePlaceholderPrefix="任务分解节点"
             error={fieldError('nodes')}
             onTouched={() => handleBlur('nodes')}
             fieldId="field-nodes"
@@ -316,20 +358,35 @@ export default function NewWorkPage() {
         <>
           <WorkFormSectionCard title="基本信息">
             <WorkItemField
+              label="年度"
+              value={priorityMainForm.assessmentYear}
+              onChange={(v) => setPriorityMainForm({ ...priorityMainForm, assessmentYear: v })}
+              placeholder="例如：2026"
+              error={fieldError('assessmentYear')}
+              onBlur={() => handleBlur('assessmentYear')}
+              fieldId="field-assessmentYear"
+            />
+
+            <WorkItemCombobox
+              value={priorityMainForm.workItem}
+              onChange={(v) => {
+                setPriorityMainForm({ ...priorityMainForm, workItem: v });
+                setWorkItemDefaultNotice('');
+              }}
+              onSelectExisting={applyExistingWorkItemDefaults}
+              type={routeType === 'priority' ? 'priority' : 'main'}
+              assessmentYear={priorityMainForm.assessmentYear}
+              departmentId={priorityMainForm.departmentId}
+              error={fieldError('workItem')}
+              onBlur={() => handleBlur('workItem')}
+              fieldId="field-workItem"
+            />
+
+            <WorkItemField
               label="业务类别"
               value={priorityMainForm.businessCategory}
               onChange={(v) => setPriorityMainForm({ ...priorityMainForm, businessCategory: v })}
               placeholder="请输入业务类别"
-            />
-
-            <WorkItemField
-              label="工作事项"
-              value={priorityMainForm.workItem}
-              onChange={(v) => setPriorityMainForm({ ...priorityMainForm, workItem: v })}
-              placeholder="请输入工作事项"
-              error={fieldError('workItem')}
-              onBlur={() => handleBlur('workItem')}
-              fieldId="field-workItem"
             />
 
             {type === '重点' && (
@@ -338,6 +395,26 @@ export default function NewWorkPage() {
                 onChange={setIsInnovation}
               />
             )}
+
+            {workItemDefaultNotice && (
+              <p className="text-xs text-slate-500">{workItemDefaultNotice}</p>
+            )}
+
+            <div className="flex items-center gap-3 py-1" aria-label="工作节点属性">
+              <div className="h-px flex-1 bg-slate-200" />
+              <span className="text-xs font-semibold tracking-wide text-slate-500">工作节点属性</span>
+              <div className="h-px flex-1 bg-slate-200" />
+            </div>
+
+            <WorkItemField
+              label="工作节点"
+              value={priorityMainForm.workNode}
+              onChange={(v) => setPriorityMainForm({ ...priorityMainForm, workNode: v })}
+              placeholder="请输入工作节点"
+              error={fieldError('workNode')}
+              onBlur={() => handleBlur('workNode')}
+              fieldId="field-workNode"
+            />
 
             <PlanCompleteTimeField
               label="完成时间"
@@ -413,6 +490,16 @@ export default function NewWorkPage() {
             />
 
             <WorkItemField
+              label="年度"
+              value={todoForm.assessmentYear}
+              onChange={(v) => setTodoForm({ ...todoForm, assessmentYear: v })}
+              placeholder="例如：2026"
+              error={fieldError('assessmentYear')}
+              onBlur={() => handleBlur('assessmentYear')}
+              fieldId="field-assessmentYear"
+            />
+
+            <WorkItemField
               label="待办事项"
               value={todoForm.workItem}
               onChange={(v) => setTodoForm({ ...todoForm, workItem: v })}
@@ -474,6 +561,13 @@ export default function NewWorkPage() {
             取消
           </Button>
         </Link>
+        {isPriorityOrMain && (
+          <Link href={`/${routeType}/batch-new`}>
+            <Button variant="outline" type="button" className="rounded-full border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100">
+              批量新增节点
+            </Button>
+          </Link>
+        )}
         <Button type="submit" className="rounded-full bg-slate-950 px-5 text-white shadow-lg shadow-slate-950/15 hover:bg-slate-800">
           保存草稿
         </Button>

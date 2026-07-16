@@ -1,16 +1,15 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Eye } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import {
   getWorkDueDate,
 } from '@/features/works/client/work-date.utils';
 import {
   queryWorks,
-  getVisibleWorks,
 } from '@/features/works/client/work-api';
 import { sortWorksByDueDate } from '@/features/works/client/work-sort.utils';
 import type { WorkStatusFilter, WorkType } from '@/features/works/client/work-client.types';
@@ -19,8 +18,10 @@ import { getDepartments } from '@/features/departments/client/department-api';
 import type { Department } from '@/features/departments/client/department-api';
 import { isCompanyLevel, isGlobalView } from '@/features/users/domain/role.rules';
 import { StatusBadge } from '@/features/works/ui/badges';
+import { WorkTitle } from '@/features/works/ui/work-title';
 import { WorkListToolbar } from '@/features/works/ui/work-list-toolbar';
 import { getWorkTypeAccent, getWorkTypeText } from '@/features/works/ui/status-colors';
+import { normalizeAssessmentYear } from '@/features/works/domain/work-structure.rules';
 
 type StatusPageFilter =
   | 'all'
@@ -34,6 +35,8 @@ type StatusPageFilter =
   | 'cancelled'
   | 'overdue'
   | 'expiring';
+
+const DEFAULT_ASSESSMENT_YEAR = String(new Date().getFullYear());
 
 const allowedFilters: StatusPageFilter[] = [
   'all',
@@ -95,7 +98,14 @@ const getMonthLabel = (month: string) => {
 export default function StatusFilterPage() {
   const router = useRouter();
   const params = useParams<{ filter: string }>();
+  const searchParams = useSearchParams();
   const filter = params?.filter || 'all';
+  const assessmentYearParam = searchParams.get('assessmentYear');
+  const normalizedAssessmentYear = normalizeAssessmentYear(assessmentYearParam);
+  const assessmentYear = assessmentYearParam === 'all'
+    ? undefined
+    : normalizedAssessmentYear || Number(DEFAULT_ASSESSMENT_YEAR);
+  const assessmentYearFilter = assessmentYear ? String(assessmentYear) : '';
   const { user } = useAuth();
   const [typeFilter, setTypeFilter] = useState<WorkType | '全部'>('全部');
   const [departmentFilter, setDepartmentFilter] = useState<number | '全部'>('全部');
@@ -116,6 +126,31 @@ export default function StatusFilterPage() {
       ? (safeFilter as WorkStatusFilter)
       : 'all';
 
+  React.useEffect(() => {
+    if (assessmentYearParam === 'all' || normalizedAssessmentYear) return;
+
+    const nextParams = new URLSearchParams(searchParams.toString());
+    nextParams.set('assessmentYear', DEFAULT_ASSESSMENT_YEAR);
+    router.replace(`/status/${safeFilter}?${nextParams.toString()}`, { scroll: false });
+  }, [assessmentYearParam, normalizedAssessmentYear, router, safeFilter, searchParams]);
+
+  const handleAssessmentYearFilterChange = (nextYear: string) => {
+    setMonthFilter('');
+    const nextParams = new URLSearchParams(searchParams.toString());
+    nextParams.set('assessmentYear', nextYear || 'all');
+    router.replace(`/status/${safeFilter}?${nextParams.toString()}`, { scroll: false });
+  };
+
+  const handleReset = () => {
+    setKeyword('');
+    setMonthFilter('');
+    setTypeFilter('全部');
+    setDepartmentFilter('全部');
+    const nextParams = new URLSearchParams(searchParams.toString());
+    nextParams.set('assessmentYear', DEFAULT_ASSESSMENT_YEAR);
+    router.replace(`/status/${safeFilter}?${nextParams.toString()}`, { scroll: false });
+  };
+
   const getDepartmentName = (id: number) => {
     return departments.find((d) => d.id === id)?.name || '-';
   };
@@ -131,35 +166,27 @@ export default function StatusFilterPage() {
 
   React.useEffect(() => {
     const loadData = async () => {
-      const visibleForMonthOptions = await getVisibleWorks();
-      const newMonthOptions = Array.from(
-        new Set(
-          visibleForMonthOptions
-            .map((work) => getWorkMonth(work))
-            .filter(Boolean)
-        )
-      ).sort();
-      setMonthOptions(newMonthOptions);
-
       const newList = await queryWorks(user, {
         type: typeFilter,
         departmentId: companyLevel ? departmentFilter : (user?.departmentId ?? undefined),
         status: queryStatus,
         keyword,
+        assessmentYear,
       });
 
-      let filteredList = newList;
-      if (monthFilter) {
-        filteredList = filteredList.filter((work) => getWorkMonth(work) === monthFilter);
-      }
-
-      setList(sortWorksByDueDate(filteredList));
+      const newMonthOptions = Array.from(
+        new Set(newList.map((work) => getWorkMonth(work)).filter(Boolean)),
+      ).sort();
+      setMonthOptions(newMonthOptions);
+      setList(sortWorksByDueDate(newList));
     };
 
     loadData();
-  }, [user, typeFilter, departmentFilter, keyword, monthFilter, safeFilter, queryStatus, companyLevel]);
+  }, [user, typeFilter, departmentFilter, keyword, safeFilter, queryStatus, companyLevel, assessmentYear]);
 
-  const finalList = list;
+  const finalList = monthFilter
+    ? list.filter((work) => getWorkMonth(work) === monthFilter)
+    : list;
 
   if (safeFilter === 'all' && user && !isGlobalView(user.role)) {
     return (
@@ -195,6 +222,8 @@ export default function StatusFilterPage() {
         <WorkListToolbar
           keyword={keyword}
           onKeywordChange={setKeyword}
+          assessmentYearFilter={assessmentYearFilter}
+          onAssessmentYearFilterChange={handleAssessmentYearFilterChange}
           monthFilter={monthFilter}
           onMonthFilterChange={setMonthFilter}
           monthOptions={monthOptions}
@@ -208,7 +237,7 @@ export default function StatusFilterPage() {
           typeFilter={typeFilter}
           onTypeFilterChange={(v) => setTypeFilter(v as WorkType | '全部')}
           hideStatusFilter
-          onReset={() => { setKeyword(''); setMonthFilter(''); setTypeFilter('全部'); setDepartmentFilter('全部'); }}
+          onReset={handleReset}
           onRefresh={() => router.refresh()}
         />
         <div className="text-sm text-slate-500 mt-3">
@@ -224,10 +253,14 @@ export default function StatusFilterPage() {
         ) : (
           <div>
             {finalList.map((work) => (
-              <div key={work.id} className={`list-separator flex items-start justify-between gap-4 min-w-0 rounded-lg hover:translate-x-0.5 transition ${getWorkTypeAccent(work.type)}`}>
+              <Link
+                key={work.id}
+                href={`/${getRouteType(work.type)}/${work.id}`}
+                className={`list-separator block min-w-0 rounded-lg transition hover:translate-x-0.5 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-sky-500/20 ${getWorkTypeAccent(work.type)}`}
+              >
                 <div className="p-4 min-w-0">
                   <div className="text-sm font-medium text-slate-700 break-words leading-snug">
-                    {work.title}
+                    <WorkTitle work={work} />
                     {work.isInnovation && (
                       <span className="ml-2 inline-flex items-center rounded-full bg-purple-50 text-purple-700 border border-purple-100 px-2.5 py-0.5 text-xs font-medium">
                         创新工作
@@ -250,14 +283,7 @@ export default function StatusFilterPage() {
                     </div>
                   )}
                 </div>
-
-                <Link href={`/${getRouteType(work.type)}/${work.id}`} className="shrink-0 pr-4 py-4">
-                  <span className="inline-flex items-center gap-1 rounded-full bg-slate-50 border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:-translate-y-0.5 transition-all">
-                    <Eye className="h-3.5 w-3.5" />
-                    查看
-                  </span>
-                </Link>
-              </div>
+              </Link>
             ))}
           </div>
         )}

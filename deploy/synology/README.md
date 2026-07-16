@@ -109,6 +109,21 @@ sh deploy.sh
 
 > **执行 migration 后必须执行 `prisma generate`**，确保 Prisma Client 类型与数据库结构一致。部署脚本（deploy.sh / migrate.sh）中已包含此步骤。
 
+### 年度字段的两阶段迁移
+
+`assessmentYear` 先以可空字段上线，避免在未知历史数据上直接增加非空约束。生产环境需要保留数据时，按以下顺序执行：
+
+```bash
+# 1. 先应用只新增可空字段与索引的 Prisma migration
+sh migrate.sh
+
+# 2. 从具备 DATABASE_URL 的受控运行环境执行；先预检再显式应用
+pnpm db:backfill-assessment-year -- --default-year=2026 --dry-run
+pnpm db:backfill-assessment-year -- --default-year=2026 --apply
+```
+
+该脚本只更新 `assessmentYear IS NULL` 的记录，重复执行安全；不会根据当前开发库或创建时间猜测年度。确认空值为零后，才可以在后续独立发布中增加非空约束迁移并将 Prisma schema 改为必填。
+
 ## 查看日志
 
 ```bash
