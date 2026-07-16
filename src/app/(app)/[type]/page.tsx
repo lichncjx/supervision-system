@@ -2,13 +2,13 @@
 
 import React, { useEffect, useState, useMemo, useRef } from 'react'
 import { useSearchAndPagination } from '@/features/works/client/use-search-pagination'
-import { useParams, useSearchParams } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/components/providers/auth-provider'
 import { isCompanyLevel, isGlobalView } from '@/features/users/domain/role.rules'
 import { getDepartments } from '@/features/departments/client/department-api'
 import type { Department } from '@/features/departments/client/department-api'
-import { getVisibleWorks, queryWorks } from '@/features/works/client/work-api'
+import { queryWorks } from '@/features/works/client/work-api'
 import type { Work } from '@/features/works/client/work-client.types'
 import type { WorkType, WorkStatusFilter } from '@/features/works/client/work-client.types'
 import { workTypeColors, getStatusAccent } from '@/features/works/ui/status-colors'
@@ -44,9 +44,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { normalizeAssessmentYear } from '@/features/works/domain/work-structure.rules'
 
 const pillButton =
   'inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:-translate-y-0.5 transition-all'
+const DEFAULT_ASSESSMENT_YEAR = String(new Date().getFullYear())
 
 interface ImportIssue {
   row: number
@@ -70,15 +72,16 @@ interface ImportPreview {
 
 export default function ItemListPage() {
   const params = useParams<{ type: string }>()
+  const router = useRouter()
   const searchParams = useSearchParams()
   const routeType = params?.type || 'todo'
   const { user } = useAuth()
-  const [items, setItems] = useState<Work[]>([])
+  const [list, setList] = useState<Work[]>([])
   const [keyword, setKeyword] = useState('')
   const [departmentFilter, setDepartmentFilter] = useState<number | '全部'>('全部')
   const [statusFilter, setStatusFilter] = useState<WorkStatusFilter>('all')
   const [monthFilter, setMonthFilter] = useState('')
-  const [assessmentYearFilter, setAssessmentYearFilter] = useState('')
+  const [assessmentYearFilter, setAssessmentYearFilter] = useState(DEFAULT_ASSESSMENT_YEAR)
   const [workItemFilter, setWorkItemFilter] = useState('')
   const [departments, setDepartments] = useState<Department[]>([])
   const [companyLeaders, setCompanyLeaders] = useState<User[]>([])
@@ -93,9 +96,21 @@ export default function ItemListPage() {
   }, [])
 
   useEffect(() => {
-    setAssessmentYearFilter(searchParams.get('assessmentYear') || '')
+    const yearParam = searchParams.get('assessmentYear')
+    const normalizedYear = normalizeAssessmentYear(yearParam)
+
+    if (yearParam === 'all') {
+      setAssessmentYearFilter('')
+    } else if (normalizedYear) {
+      setAssessmentYearFilter(String(normalizedYear))
+    } else {
+      setAssessmentYearFilter(DEFAULT_ASSESSMENT_YEAR)
+      const nextParams = new URLSearchParams(searchParams.toString())
+      nextParams.set('assessmentYear', DEFAULT_ASSESSMENT_YEAR)
+      router.replace(`/${routeType}?${nextParams.toString()}`, { scroll: false })
+    }
     setWorkItemFilter(searchParams.get('workItem') || '')
-  }, [searchParams])
+  }, [routeType, router, searchParams])
 
   useEffect(() => {
     getCompanyLeaders()
@@ -105,16 +120,6 @@ export default function ItemListPage() {
 
   const type = routeType === 'priority' ? '重点' : routeType === 'main' ? '主要' : '待办'
   const isPriorityOrMain = type === '重点' || type === '主要'
-
-  const load = async () => {
-    const data = await getVisibleWorks(type)
-    setItems(data)
-  }
-
-  useEffect(() => {
-    load()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, type])
 
   const titleMap: Record<WorkType, string> = {
     重点: '重点工作',
@@ -169,24 +174,23 @@ export default function ItemListPage() {
   }
 
   const monthOptions = Array.from(
-    new Set(items.map((work) => getWorkMonth(work)).filter(Boolean)),
+    new Set(list.map((work) => getWorkMonth(work)).filter(Boolean)),
   ).sort()
 
-  const [list, setList] = useState<Work[]>([])
+  const fetchList = async () => {
+    const data = await queryWorks(user, {
+      type,
+      departmentId: companyLevel ? departmentFilter : (user?.departmentId ?? undefined),
+      status: statusFilter,
+      keyword,
+      assessmentYear: assessmentYearFilter ? Number(assessmentYearFilter) : undefined,
+      workItem: workItemFilter || undefined,
+    })
+    setList(data)
+  }
 
   useEffect(() => {
-    const fetchList = async () => {
-      const data = await queryWorks(user, {
-        type,
-        departmentId: companyLevel ? departmentFilter : (user?.departmentId ?? undefined),
-        status: statusFilter,
-        keyword,
-        assessmentYear: assessmentYearFilter ? Number(assessmentYearFilter) : undefined,
-        workItem: workItemFilter || undefined,
-      })
-      setList(data)
-    }
-    fetchList()
+    void fetchList()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, type, departmentFilter, statusFilter, keyword, assessmentYearFilter, workItemFilter])
 
@@ -225,6 +229,9 @@ export default function ItemListPage() {
     if (keyword) params.set('keyword', keyword)
     if (departmentFilter !== '全部') params.set('departmentId', String(departmentFilter))
     if (statusFilter !== 'all') params.set('status', statusFilter)
+    if (assessmentYearFilter) params.set('assessmentYear', assessmentYearFilter)
+    if (workItemFilter) params.set('workItem', workItemFilter)
+    if (monthFilter) params.set('month', monthFilter)
 
     try {
       const res = await fetch(`/api/excel/export?${params.toString()}`, { credentials: 'include' })
@@ -247,14 +254,33 @@ export default function ItemListPage() {
     }
   }
 
+  const handleAssessmentYearFilterChange = (nextYear: string) => {
+    const yearChanged = nextYear !== assessmentYearFilter
+    setAssessmentYearFilter(nextYear)
+    setMonthFilter('')
+    if (yearChanged) setWorkItemFilter('')
+
+    const nextParams = new URLSearchParams(searchParams.toString())
+    nextParams.set('assessmentYear', nextYear || 'all')
+    if (yearChanged) nextParams.delete('workItem')
+    router.replace(`/${routeType}?${nextParams.toString()}`, { scroll: false })
+  }
+
+  const handleClearWorkItemFilter = () => {
+    setWorkItemFilter('')
+    const nextParams = new URLSearchParams(searchParams.toString())
+    nextParams.delete('workItem')
+    router.replace(`/${routeType}?${nextParams.toString()}`, { scroll: false })
+  }
+
   const handleReset = () => {
     setKeyword('')
     setMonthFilter('')
     setDepartmentFilter('全部')
     setStatusFilter('all')
-    setAssessmentYearFilter('')
+    setAssessmentYearFilter(DEFAULT_ASSESSMENT_YEAR)
     setWorkItemFilter('')
-    load()
+    router.replace(`/${routeType}?assessmentYear=${DEFAULT_ASSESSMENT_YEAR}`, { scroll: false })
   }
 
   const handlePageSizeChange = (newPageSize: number) => {
@@ -331,7 +357,7 @@ export default function ItemListPage() {
       await previewBatchWorkflow(payload)
       await executeBatchWorkflow(payload)
       setSelectedBatchWorkIds(new Set())
-      await load()
+      await fetchList()
       alert('批量提交成功')
     } catch (error) {
       alert(error instanceof Error ? error.message : '批量提交失败，请刷新后重试')
@@ -435,7 +461,7 @@ export default function ItemListPage() {
       setIsImportDialogOpen(false)
       setImportFile(null)
       setImportPreview(null)
-      await load()
+      await fetchList()
       alert('导入成功')
     } catch {
       setImportPreview({
@@ -668,6 +694,8 @@ export default function ItemListPage() {
       <WorkListToolbar
         keyword={keyword}
         onKeywordChange={setKeyword}
+        assessmentYearFilter={assessmentYearFilter}
+        onAssessmentYearFilterChange={handleAssessmentYearFilterChange}
         monthFilter={monthFilter}
         onMonthFilterChange={setMonthFilter}
         monthOptions={monthOptions}
@@ -679,22 +707,18 @@ export default function ItemListPage() {
         statusFilter={statusFilter}
         onStatusFilterChange={setStatusFilter}
         onReset={handleReset}
-        onRefresh={load}
+        onRefresh={() => void fetchList()}
       />
 
       {workItemFilter && (
         <div className="flex items-center justify-between rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-800">
-          <span>正在查看：{assessmentYearFilter || '-'} 年 · {workItemFilter} 的当前可见工作节点</span>
+          <span>当前工作事项：{workItemFilter}</span>
           <button
             type="button"
             className="font-medium text-sky-700 hover:underline"
-            onClick={() => {
-              setAssessmentYearFilter('')
-              setWorkItemFilter('')
-              window.history.replaceState(null, '', `/${routeType}`)
-            }}
+            onClick={handleClearWorkItemFilter}
           >
-            查看全部
+            清除事项筛选
           </button>
         </div>
       )}

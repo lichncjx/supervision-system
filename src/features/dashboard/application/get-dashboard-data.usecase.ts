@@ -44,15 +44,14 @@ export async function getDashboardDataUseCase(
   const visibleWorks: DashboardWorkLike[] = allRelevantWorks.filter((workItem) =>
     canViewWorkItem(permUser, workItem),
   )
-  const now = new Date()
-  const summary = buildSummary(
-    permUser,
-    visibleWorks.filter((workItem) => workItem.assessmentYear === assessmentYear),
-    now,
+  const annualVisibleWorks = visibleWorks.filter(
+    (workItem) => workItem.assessmentYear === assessmentYear,
   )
+  const now = new Date()
+  const summary = buildSummary(permUser, annualVisibleWorks, now)
 
   const expiringAndOverdue = sortExpiringAndOverdue(
-    visibleWorks.filter(
+    annualVisibleWorks.filter(
       (workItem) =>
         isExpiringWorkItem(workItem, now) ||
         isOverdueWorkItem(workItem, now),
@@ -64,7 +63,7 @@ export async function getDashboardDataUseCase(
 
   const myActionRequired = sortMyActionRequired(
     permUser,
-    visibleWorks.filter(
+    annualVisibleWorks.filter(
       (workItem) =>
         canApproveWorkItem(permUser, workItem) ||
         shouldHandleWorkItem(permUser, workItem),

@@ -261,7 +261,7 @@ export default function DashboardPage() {
                 导出完成率
               </button>
               <Link
-                href="/status/all"
+                href={`/status/all?assessmentYear=${assessmentYear}`}
                 className="inline-flex items-center rounded-full bg-slate-800 px-4 py-1.5 text-sm font-medium text-white hover:bg-slate-900 transition-colors"
               >
                 进入综合查询
@@ -273,11 +273,11 @@ export default function DashboardPage() {
 
       <div className="stagger-3 flex flex-wrap items-center gap-2">
         {([
-          { href: '/status/overdue', label: '超期', count: stats.overdue, key: 'overdue' as const },
-          { href: '/status/expiring', label: '临期', count: stats.expiring, key: 'expiring' as const },
-          { href: '/status/inProgress', label: '进行中', count: stats.inProgress, key: 'inProgress' as const },
-          { href: '/status/handling', label: '待办理', count: stats.handling, key: 'handling' as const },
-          { href: '/status/approving', label: '待审批', count: stats.approving, key: 'approving' as const },
+          { href: `/status/overdue?assessmentYear=${assessmentYear}`, label: '超期', count: stats.overdue, key: 'overdue' as const },
+          { href: `/status/expiring?assessmentYear=${assessmentYear}`, label: '临期', count: stats.expiring, key: 'expiring' as const },
+          { href: `/status/inProgress?assessmentYear=${assessmentYear}`, label: '进行中', count: stats.inProgress, key: 'inProgress' as const },
+          { href: `/status/handling?assessmentYear=${assessmentYear}`, label: '待办理', count: stats.handling, key: 'handling' as const },
+          { href: `/status/approving?assessmentYear=${assessmentYear}`, label: '待审批', count: stats.approving, key: 'approving' as const },
         ]).map(({ href, label, count, key }) => (
           <Link key={key} href={href} className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-medium border hover:-translate-y-0.5 transition ${pillColors[key].pill}`}>
             <span className={`w-2 h-2 rounded-full ${pillColors[key].dot}`} />
@@ -288,9 +288,9 @@ export default function DashboardPage() {
 
       <div className="stagger-4 grid grid-cols-1 md:grid-cols-3 gap-4">
         {([
-          { href: '/priority', label: '重点工作', total: stats.priority, completed: stats.priorityCompleted, key: 'priority' as const },
-          { href: '/main', label: '主要工作', total: stats.main, completed: stats.mainCompleted, key: 'main' as const },
-          { href: '/todo', label: '待办事项', total: stats.todo, completed: stats.todoCompleted, key: 'todo' as const },
+          { href: `/priority?assessmentYear=${assessmentYear}`, label: '重点工作', total: stats.priority, completed: stats.priorityCompleted, key: 'priority' as const },
+          { href: `/main?assessmentYear=${assessmentYear}`, label: '主要工作', total: stats.main, completed: stats.mainCompleted, key: 'main' as const },
+          { href: `/todo?assessmentYear=${assessmentYear}`, label: '待办事项', total: stats.todo, completed: stats.todoCompleted, key: 'todo' as const },
         ]).map(({ href, label, total, completed, key }) => {
           const c = workTypeColors[key]
           const rate = total > 0 ? Math.round((completed / total) * 100) : 0

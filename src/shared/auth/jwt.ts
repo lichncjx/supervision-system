@@ -3,6 +3,8 @@ import jwt from 'jsonwebtoken'
 const JWT_EXPIRES_IN = '24h'
 const EXCEL_IMPORT_PREVIEW_EXPIRES_IN = '15m'
 const DEVELOPMENT_JWT_SECRET = 'supersecretkey'
+const AUTH_TOKEN_PURPOSE = 'auth'
+const EXCEL_IMPORT_PREVIEW_TOKEN_PURPOSE = 'excel-import-preview'
 
 function isPlaceholderSecret(value: string) {
   return value.includes('请填写') || value.includes('请修改') || value.includes('change-me')
@@ -23,15 +25,26 @@ function getJwtSecret() {
 }
 
 export function generateToken(userId: number): string {
-  return jwt.sign({ userId }, getJwtSecret(), { expiresIn: JWT_EXPIRES_IN })
+  return jwt.sign({ userId, purpose: AUTH_TOKEN_PURPOSE }, getJwtSecret(), {
+    expiresIn: JWT_EXPIRES_IN,
+  })
 }
 
 export function verifyToken(token: string): { userId: number } | null {
   const secret = getJwtSecret()
 
   try {
-    const decoded = jwt.verify(token, secret) as { userId: number }
-    return decoded
+    const decoded = jwt.verify(token, secret) as {
+      userId?: unknown
+      purpose?: unknown
+    }
+    if (
+      typeof decoded.userId !== 'number' ||
+      (decoded.purpose !== undefined && decoded.purpose !== AUTH_TOKEN_PURPOSE)
+    ) {
+      return null
+    }
+    return { userId: decoded.userId }
   } catch {
     return null
   }
@@ -45,7 +58,7 @@ export interface ExcelImportPreviewTokenPayload {
 }
 
 export function signExcelImportPreviewToken(payload: ExcelImportPreviewTokenPayload): string {
-  return jwt.sign({ ...payload, purpose: 'excel-import-preview' }, getJwtSecret(), {
+  return jwt.sign({ ...payload, purpose: EXCEL_IMPORT_PREVIEW_TOKEN_PURPOSE }, getJwtSecret(), {
     expiresIn: EXCEL_IMPORT_PREVIEW_EXPIRES_IN,
   })
 }
@@ -58,7 +71,7 @@ export function verifyExcelImportPreviewToken(
       ExcelImportPreviewTokenPayload & { purpose: string }
     >
     if (
-      decoded.purpose !== 'excel-import-preview' ||
+      decoded.purpose !== EXCEL_IMPORT_PREVIEW_TOKEN_PURPOSE ||
       typeof decoded.userId !== 'number' ||
       !['priority', 'main', 'todo'].includes(decoded.type || '') ||
       typeof decoded.assessmentYear !== 'number' ||

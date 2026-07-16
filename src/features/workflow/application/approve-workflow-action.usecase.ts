@@ -1,4 +1,4 @@
-import { ApprovalType, WorkItemStatus } from '@prisma/client'
+import { ApprovalType, WorkItemStatus, WorkItemType } from '@prisma/client'
 import {
   getTargetStatus,
   getNextApprovalAssignment,
@@ -7,13 +7,13 @@ import { isApproving } from '@/features/works/domain/work-status.rules'
 import { toPermissionUser } from '@/features/works/domain/work-permission-user.mapper'
 import type { BaseCurrentUser } from '@/shared/auth/current-user'
 import { canApproveWorkItem } from '@/features/works/domain/work.permissions'
-import { isCompanyLevel, isDeptManager } from '@/features/users/domain/role.rules'
+import { isCompanyLevel } from '@/features/users/domain/role.rules'
 import {
   findWorkForUpdateById,
   updateWorkItem,
 } from '@/features/works/infrastructure/work.repository'
-import { findUserById } from '@/features/users/infrastructure/user.repository'
 import { ensureIsActiveCompanyLeader } from './workflow-next-approver.guard'
+import { validateEffectiveResponsiblePerson } from './effective-responsible-person.guard'
 import {
   buildAdjustHistoryEntry,
   buildAdjustmentWorkUpdateData,
@@ -22,6 +22,7 @@ import {
 import {
   isPriorityOrMainWorkType,
   normalizeAssessmentYear,
+  normalizeWorkStructureText,
   validateStructuredWorkFields,
 } from '@/features/works/domain/work-structure.rules'
 import {
@@ -45,34 +46,6 @@ function parseJsonField<T>(value: unknown, fallback: T): T {
 
 function hasPatchField(patch: Record<string, unknown>, field: string): boolean {
   return Object.prototype.hasOwnProperty.call(patch, field)
-}
-
-async function validateEffectiveResponsiblePerson(params: {
-  responsiblePersonUserId: unknown
-  departmentId: unknown
-}): Promise<Result> {
-  const responsiblePersonUserId = Number(params.responsiblePersonUserId)
-  const departmentId = Number(params.departmentId)
-
-  if (!Number.isInteger(responsiblePersonUserId) || responsiblePersonUserId <= 0) {
-    return err(400, '事项缺少责任人，无法审批通过。请先补充责任人信息。')
-  }
-  if (!Number.isInteger(departmentId) || departmentId <= 0) {
-    return err(400, '事项缺少责任部门，无法审批通过。请先补充责任部门信息。')
-  }
-
-  const responsiblePerson = await findUserById(responsiblePersonUserId)
-  if (!responsiblePerson || !responsiblePerson.isActive) {
-    return err(400, '责任人用户不存在或已禁用，无法审批通过')
-  }
-  if (responsiblePerson.departmentId !== departmentId) {
-    return err(400, '责任人不属于责任部门，无法审批通过')
-  }
-  if (!isDeptManager(responsiblePerson.role)) {
-    return err(400, '责任人必须是部门事项管理岗，无法审批通过')
-  }
-
-  return ok()
 }
 
 export async function approveWorkflowAction(
@@ -213,6 +186,14 @@ export async function approveWorkflowAction(
       // 结构化工作节点的 title 只能由工作事项和工作节点组合生成，
       // 不接受调整请求单独写入展示标题。
       delete adjustmentUpdateData.title
+    } else if (
+      workItem.type === WorkItemType.TODO &&
+      hasPatchField(adjustmentPatch, 'workItem')
+    ) {
+      const workItemName = normalizeWorkStructureText(adjustmentPatch.workItem)
+      if (!workItemName) return err(400, '请输入待办事项')
+      adjustmentUpdateData.workItem = workItemName
+      adjustmentUpdateData.title = workItemName
     }
     approvedAdjustmentRequestId = adjustmentRequest.id
   }

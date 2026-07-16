@@ -19,6 +19,7 @@
     "db:backfill-assessment-year": "tsx scripts/backfill-assessment-year.ts",
     "db:init": "pnpm prisma:generate && pnpm prisma:deploy && pnpm prisma:seed",
     "test:regression": "node tests/regression-baseline.cjs",
+    "test:pr116-review": "tsx tests/pr116-review-regressions.ts",
     "test:regression:prepare": "docker compose up -d db && pnpm prisma:deploy && pnpm prisma:seed && pnpm dev",
     "test:target-contract:seed": "node tests/target-contract/seed-target-data.cjs",
     "test:target-contract:verify": "node tests/target-contract/verify-target-contract.cjs",

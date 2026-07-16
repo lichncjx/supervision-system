@@ -20,6 +20,7 @@ import {
   canUserSubmit,
   type NextApprovalAssignmentResult,
 } from '@/features/workflow/domain/workflow.rules'
+import { validateEffectiveResponsiblePerson } from './effective-responsible-person.guard'
 
 export const MAX_BATCH_WORKFLOW_ITEMS = 200
 
@@ -190,6 +191,20 @@ async function buildBatchWorkflowPlan(
       )
       if (assignment.kind === 'missingCompanyLeader') {
         return err(400, '请先指定公司领导后再审批')
+      }
+      if (assignment.kind === 'complete') {
+        const responsiblePersonResult = await validateEffectiveResponsiblePerson(
+          {
+            responsiblePersonUserId: work.responsiblePersonUserId,
+            departmentId: work.departmentId,
+          },
+          (userId) =>
+            db.user.findUnique({
+              where: { id: userId },
+              select: { isActive: true, departmentId: true, role: true },
+            }),
+        )
+        if (!responsiblePersonResult.ok) return responsiblePersonResult
       }
     }
 

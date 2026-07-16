@@ -12,6 +12,9 @@ export const GET = withApiHandler(async (request: NextRequest) => {
   const status = searchParams.get('status')?.trim() || null
   const departmentId = searchParams.get('departmentId')
   const keyword = searchParams.get('keyword')?.trim() || null
+  const assessmentYear = searchParams.get('assessmentYear')
+  const workItem = searchParams.get('workItem')?.trim() || null
+  const month = searchParams.get('month')?.trim() || null
 
   const result = await exportWorksToExcelUseCase({
     currentUser,
@@ -19,6 +22,9 @@ export const GET = withApiHandler(async (request: NextRequest) => {
     status,
     departmentId,
     keyword,
+    assessmentYear,
+    workItem,
+    month,
   })
 
   if (!result.ok) return fromError(result)

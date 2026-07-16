@@ -1,4 +1,4 @@
-import { ActionType, ApprovalType, Prisma, WorkItemStatus } from '@prisma/client'
+import { ActionType, ApprovalType, Prisma, WorkItemStatus, WorkItemType } from '@prisma/client'
 import type { BaseCurrentUser } from '@/shared/auth/current-user'
 import { canUserOperate, getProcessFirstApprover } from '@/features/workflow/domain/workflow.rules'
 import { toPermissionUser } from '@/features/works/domain/work-permission-user.mapper'
@@ -7,8 +7,17 @@ import { findDepartmentById } from '@/features/departments/infrastructure/depart
 import { findUserById as prismaFindUserById } from '@/features/users/infrastructure/user.repository'
 import { isDeptLeader, isDeptManager } from '@/features/users/domain/role.rules'
 import { validateMemberAssignments, type MemberAssignment } from '@/features/members/domain/member.rules'
-import { buildAdjustmentBeforeSnapshot, sanitizeAdjustmentPatch } from '@/features/workflow/application/adjustment-patch'
+import {
+  buildAdjustmentBeforeSnapshot,
+  sanitizeAdjustmentPatch,
+  type AdjustmentPatch,
+} from '@/features/workflow/application/adjustment-patch'
 import { getChangedAdjustmentFields } from '@/features/works/domain/work-adjustment-diff'
+import {
+  isPriorityOrMainWorkType,
+  normalizeWorkStructureText,
+  validateStructuredWorkFields,
+} from '@/features/works/domain/work-structure.rules'
 import { createAdjustmentTransitional, createWorkflowRecord, createOperationLog } from '@/features/workflow/infrastructure/workflow.repository'
 import { type Result, err, ok } from '@/shared/result'
 
@@ -48,7 +57,36 @@ export async function submitAdjustment(
   if (!patchResult.ok) {
     return err(400, patchResult.message)
   }
-  const patch = patchResult.patch
+  const sanitizedPatch = patchResult.patch
+  const beforeSnapshot = buildAdjustmentBeforeSnapshot(workItem)
+  const changedFields = getChangedAdjustmentFields(
+    beforeSnapshot as Record<string, unknown>,
+    sanitizedPatch as Record<string, unknown>,
+  )
+  if (changedFields.length === 0) {
+    return err(400, '调整内容没有变更，无需提交调整申请')
+  }
+
+  const patch = Object.fromEntries(
+    changedFields.map((field) => [field, sanitizedPatch[field as keyof AdjustmentPatch]]),
+  ) as AdjustmentPatch
+
+  if (
+    isPriorityOrMainWorkType(workItem.type) &&
+    (hasPatchField(patch, 'workItem') || hasPatchField(patch, 'workNode'))
+  ) {
+    const structuredFields = validateStructuredWorkFields({
+      workItem: hasPatchField(patch, 'workItem') ? patch.workItem : workItem.workItem,
+      workNode: hasPatchField(patch, 'workNode') ? patch.workNode : workItem.workNode,
+    })
+    if (!structuredFields.ok) return err(400, structuredFields.message)
+    if (hasPatchField(patch, 'workItem')) patch.workItem = structuredFields.workItem
+    if (hasPatchField(patch, 'workNode')) patch.workNode = structuredFields.workNode
+  } else if (workItem.type === WorkItemType.TODO && hasPatchField(patch, 'workItem')) {
+    const workItemName = normalizeWorkStructureText(patch.workItem)
+    if (!workItemName) return err(400, '请输入待办事项')
+    patch.workItem = workItemName
+  }
 
   const effectiveDeptId = Number(patch.departmentId ?? workItem.departmentId)
   if (!effectiveDeptId) {
@@ -140,15 +178,6 @@ export async function submitAdjustment(
     if (coopErrors.length > 0) {
       return err(400, `配合方: ${coopErrors[0].message}`)
     }
-  }
-
-  const beforeSnapshot = buildAdjustmentBeforeSnapshot(workItem)
-  const changedFields = getChangedAdjustmentFields(
-    beforeSnapshot as Record<string, unknown>,
-    patch as Record<string, unknown>,
-  )
-  if (changedFields.length === 0) {
-    return err(400, '调整内容没有变更，无需提交调整申请')
   }
 
   const adjustmentRequest = await createAdjustmentTransitional({

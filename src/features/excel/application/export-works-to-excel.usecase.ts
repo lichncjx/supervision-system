@@ -9,6 +9,9 @@ export interface ExportWorksToExcelInput {
   status: string | null
   departmentId: string | null
   keyword: string | null
+  assessmentYear: string | null
+  workItem: string | null
+  month: string | null
 }
 
 import {
@@ -29,6 +32,10 @@ import {
   isOverdueWorkItem,
   isExpiringWorkItem,
 } from '@/features/works/domain/work-status.rules'
+import {
+  normalizeAssessmentYear,
+  normalizeWorkStructureText,
+} from '@/features/works/domain/work-structure.rules'
 
 function normalizeTypeFilter(type: string | null): WorkItemType | null {
   if (!type) return null
@@ -86,7 +93,16 @@ function keywordMatches(
 export async function exportWorksToExcelUseCase(
   input: ExportWorksToExcelInput,
 ): Promise<Result<ExcelExportFile>> {
-  const { currentUser, type, status, departmentId, keyword } = input
+  const {
+    currentUser,
+    type,
+    status,
+    departmentId,
+    keyword,
+    assessmentYear,
+    workItem,
+    month,
+  } = input
 
   const typeFilter = normalizeTypeFilter(type)
   if (type && !typeFilter) {
@@ -101,6 +117,20 @@ export async function exportWorksToExcelUseCase(
   const statusFilter = normalizeStatusFilter(rawStatusFilter)
   const departmentIdFilter = departmentId ? Number(departmentId) : null
   const keywordFilter = keyword?.trim() || null
+  const assessmentYearFilter = normalizeAssessmentYear(assessmentYear)
+  if (assessmentYear && !assessmentYearFilter) {
+    return err(400, '无效的年度筛选条件')
+  }
+
+  const workItemFilter = normalizeWorkStructureText(workItem)
+  if (workItem && (!typeFilter || !assessmentYearFilter || !workItemFilter)) {
+    return err(400, '精确工作事项筛选必须同时指定类型和年度')
+  }
+
+  const monthFilter = month?.trim() || null
+  if (monthFilter && !/^\d{4}-(0[1-9]|1[0-2])$/.test(monthFilter)) {
+    return err(400, '无效的月份筛选条件')
+  }
 
   const permUser = toPermissionUser(currentUser)
 
@@ -113,6 +143,11 @@ export async function exportWorksToExcelUseCase(
   const visibleItems = workItems
     .filter((workItem) => canViewWorkItem(permUser, workItem))
     .filter((workItem) => !typeFilter || workItem.type === typeFilter)
+    .filter(
+      (workItem) =>
+        !assessmentYearFilter || workItem.assessmentYear === assessmentYearFilter,
+    )
+    .filter((workItem) => !workItemFilter || workItem.workItem === workItemFilter)
     .filter((workItem) => {
       if (!rawStatusFilter || rawStatusFilter === 'all') return true
       if (rawStatusLower === 'draft') {
@@ -142,6 +177,10 @@ export async function exportWorksToExcelUseCase(
       return !statusFilter || workItem.status === statusFilter
     })
     .filter((workItem) => keywordMatches(workItem, keywordFilter))
+    .filter(
+      (workItem) =>
+        !monthFilter || workItem.planCompleteTime?.toISOString().slice(0, 7) === monthFilter,
+    )
     .filter((workItem) => {
       if (!departmentIdFilter) return true
       return (
