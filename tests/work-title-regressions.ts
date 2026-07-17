@@ -35,6 +35,16 @@ assert.equal(
     workNode: null,
     legacyTitle: '历史兼容标题',
   }),
+  '历史工作事项',
+)
+
+assert.equal(
+  deriveWorkDisplayTitle({
+    type: 'MAIN',
+    workItem: null,
+    workNode: null,
+    legacyTitle: '历史兼容标题',
+  }),
   '历史兼容标题',
 )
 
@@ -86,6 +96,18 @@ assert.equal(
     {
       type: 'MAIN',
       workItem: '历史事项',
+      workNode: null,
+      legacyTitle: '历史兼容标题',
+    },
+    '兼容标题',
+  ),
+  false,
+)
+assert.equal(
+  matchesWorkKeyword(
+    {
+      type: 'MAIN',
+      workItem: null,
       workNode: null,
       legacyTitle: '历史兼容标题',
     },

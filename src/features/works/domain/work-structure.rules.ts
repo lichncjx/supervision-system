@@ -44,7 +44,7 @@ export function deriveWorkDisplayTitle(source: WorkTitleSource): string {
     if (workItem && workNode) {
       return `${workItem}${TITLE_SEPARATOR}${workNode}`
     }
-    return legacyTitle || workItem || '未命名事项'
+    return workItem || legacyTitle || '未命名事项'
   }
 
   return workItem || legacyTitle || '未命名事项'

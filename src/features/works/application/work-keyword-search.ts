@@ -48,24 +48,7 @@ export function buildWorkKeywordWhere(rawKeyword: string | null): Prisma.WorkIte
   }))
 
   const legacyTitleFilter: Prisma.WorkItemWhereInput = {
-    AND: [
-      { title: contains },
-      {
-        OR: [
-          {
-            AND: [
-              { type: { in: STRUCTURED_WORK_TYPES } },
-              {
-                OR: [{ workItem: null }, { workItem: '' }, { workNode: null }, { workNode: '' }],
-              },
-            ],
-          },
-          {
-            AND: [{ type: WorkItemType.TODO }, { OR: [{ workItem: null }, { workItem: '' }] }],
-          },
-        ],
-      },
-    ],
+    AND: [{ title: contains }, { OR: [{ workItem: null }, { workItem: '' }] }],
   }
 
   return {
