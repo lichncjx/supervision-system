@@ -15,15 +15,14 @@ import { toWorkDto } from '@/features/works/application/work.mapper'
 import {
   isPriorityOrMainWorkType,
   normalizeAssessmentYear,
-  normalizeWorkStructureText,
   validateStructuredWorkFields,
+  validateTodoWorkItem,
 } from '@/features/works/domain/work-structure.rules'
 import { hasAdjustmentValueChanged } from '@/features/works/domain/work-adjustment-diff'
 import type { WorkDto } from './work.dto'
 import { type ErrResult, type Result, err, ok } from '@/shared/result'
 
 export interface UpdateWorkBody {
-  title?: string | null
   assessmentYear?: number | null
   departmentId?: number
   workItem?: string | null
@@ -193,14 +192,12 @@ export async function updateWorkUseCase(input: UpdateWorkInput): Promise<Result<
     }
     updateData.departmentId = body.departmentId
   }
-  if (body.title !== undefined && !isStructuredWork)
-    updateData.title = body.title
   if (body.workItem !== undefined && !isStructuredWork) {
     if (work.type === WorkItemType.TODO) {
-      const workItemName = normalizeWorkStructureText(body.workItem)
-      if (!workItemName) return err(400, '请输入待办事项')
-      updateData.workItem = workItemName
-      updateData.title = workItemName
+      const todoFields = validateTodoWorkItem(body.workItem)
+      if (!todoFields.ok) return err(400, todoFields.message)
+      updateData.workItem = todoFields.workItem
+      updateData.title = todoFields.title
     } else {
       updateData.workItem = body.workItem
     }

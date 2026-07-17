@@ -7,7 +7,7 @@ interface WorkTitleProps {
 }
 
 /**
- * 标题仍以持久化 title 为准；业务类别仅作为展示用的弱化补充，不参与标题生成或业务判断。
+ * title 由服务端根据权威结构字段派生；业务类别仅作为弱化补充，不参与标题生成或业务判断。
  */
 export function WorkTitle({ work }: WorkTitleProps) {
   return (

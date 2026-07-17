@@ -12,7 +12,7 @@ export const MAX_BATCH_DRAFT_ROWS = 200
 
 type BatchDraftNodeInput = Omit<
   CreateWorkBody,
-  'type' | 'assessmentYear' | 'workItem' | 'title'
+  'type' | 'assessmentYear' | 'workItem'
 >
 
 export interface CreateWorkDraftsBatchInput {

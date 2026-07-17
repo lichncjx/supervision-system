@@ -64,7 +64,6 @@ export function buildCreateWorkPayload({
   if (isPriorityOrMain) {
     return {
       id: Date.now(),
-      title: priorityMainForm.workItem,
       assessmentYear: Number(priorityMainForm.assessmentYear),
       type: type as WorkType,
       departmentId: Number(priorityMainForm.departmentId),
@@ -94,7 +93,6 @@ export function buildCreateWorkPayload({
 
   return {
     id: Date.now(),
-    title: todoForm.workItem,
     assessmentYear: Number(todoForm.assessmentYear),
     type: '待办' as WorkType,
     departmentId: todoForm.departmentId || 2,

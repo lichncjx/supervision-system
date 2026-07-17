@@ -75,7 +75,6 @@ export default function WorkDetailPage() {
   React.useEffect(() => {
     if (work) {
       setEditForm({
-        title: work.title || '',
         workItem: work.workItem || work.title || '',
         description: work.description || '',
         businessCategory: work.businessCategory || '',
@@ -267,7 +266,7 @@ export default function WorkDetailPage() {
       return;
     }
     try {
-      await submitTodoDecomposition(work, { ...editForm, title: editForm.workItem || work.title });
+      await submitTodoDecomposition(work, editForm);
       onRefresh();
       alert('已提交待办事项分解，等待审批');
     } catch (error) {

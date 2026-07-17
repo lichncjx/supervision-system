@@ -5,6 +5,7 @@ import {
 } from '@/features/works/application/work-display.utils'
 import type { AttachmentDto } from '@/features/attachments/application/attachment.dto'
 import type { WorkDto } from './work.dto'
+import { deriveWorkDisplayTitle } from '@/features/works/domain/work-structure.rules'
 
 const TYPE_LABEL: Record<string, string> = {
   PRIORITY: '重点',
@@ -126,7 +127,12 @@ export function toWorkDto(work: WorkSource): WorkDto {
 
   return {
     id: work.id,
-    title: work.title,
+    title: deriveWorkDisplayTitle({
+      type: work.type,
+      workItem: work.workItem,
+      workNode: work.workNode,
+      legacyTitle: work.title,
+    }),
     type: TYPE_LABEL[work.type] || work.type,
     status: work.status,
     departmentId: work.departmentId,

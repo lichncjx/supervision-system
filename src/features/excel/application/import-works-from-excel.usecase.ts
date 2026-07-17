@@ -3,6 +3,7 @@ import { Prisma, WorkItemStatus, WorkItemType } from '@prisma/client'
 import { err, ok, type Result } from '@/shared/result'
 import { createImportedWorkItems } from '@/features/excel/infrastructure/work-import.repository'
 import { inspectExcelImport } from '@/features/excel/application/inspect-excel-import.usecase'
+import { deriveWorkDisplayTitle } from '@/features/works/domain/work-structure.rules'
 
 export interface ImportWorksFromExcelInput {
   currentUser: BaseCurrentUser
@@ -41,7 +42,11 @@ export async function importWorksFromExcelUseCase(
     if (data.type === 'PRIORITY' || data.type === 'MAIN') {
       return {
         type: data.type === 'PRIORITY' ? WorkItemType.PRIORITY : WorkItemType.MAIN,
-        title: `${data.workItem}｜${data.workNode}`,
+        title: deriveWorkDisplayTitle({
+          type: data.type,
+          workItem: data.workItem,
+          workNode: data.workNode,
+        }),
         status: WorkItemStatus.DRAFT,
         creatorId: currentUser.id,
         assessmentYear,
@@ -67,7 +72,7 @@ export async function importWorksFromExcelUseCase(
 
       return {
         type: WorkItemType.TODO,
-        title: data.workItem,
+        title: deriveWorkDisplayTitle({ type: WorkItemType.TODO, workItem: data.workItem }),
         status: WorkItemStatus.DRAFT,
         creatorId: currentUser.id,
         assessmentYear,

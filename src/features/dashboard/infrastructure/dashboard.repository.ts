@@ -6,6 +6,8 @@ export const dashboardWorkSelect = {
   id: true,
   type: true,
   title: true,
+  workItem: true,
+  workNode: true,
   assessmentYear: true,
   status: true,
   action: true,

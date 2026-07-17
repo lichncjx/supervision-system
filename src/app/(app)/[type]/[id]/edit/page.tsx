@@ -202,18 +202,14 @@ export default function EditWorkPage() {
     }
 
     const patch = buildPatch();
-    const nextPatch = {
-      ...patch,
-      title: patch.title || patch.workItem || work.title,
-    };
 
     setSubmitting(true);
     try {
       if (isReturned) {
-        await resubmitRejectedWork(work, user, nextPatch);
+        await resubmitRejectedWork(work, patch);
         alert('已修改并重新提交审批');
       } else {
-        await updateWork(work.id, nextPatch);
+        await updateWork(work.id, patch);
         alert('草稿已保存');
       }
       router.push(`/${routeType}/${work.id}`);

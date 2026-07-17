@@ -4,7 +4,7 @@
 
 ## 首页调用链
 
-首页通过 `GET /api/dashboard` 获取 `summary`、`lists.expiringAndOverdue`、`lists.myActionRequired`。首页不再通过 `/api/works` 或 `getVisibleWorks(user)` 拉全量事项后前端计算列表。
+首页通过 `GET /api/dashboard` 获取 `summary`、`lists.expiringAndOverdue`、`lists.myActionRequired`。首页不再通过事项列表客户端查询拉取全量事项后前端计算列表。
 
 `GET /api/dashboard/summary` 继续保留兼容，并与 `GET /api/dashboard` 复用同一套 summary 计算 helper。
 

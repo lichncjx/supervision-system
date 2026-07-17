@@ -10,6 +10,7 @@ import {
   isPriorityOrMainWorkType,
   normalizeAssessmentYear,
   validateStructuredWorkFields,
+  validateTodoWorkItem,
 } from '@/features/works/domain/work-structure.rules'
 import type { WorkDto } from './work.dto'
 import { type Result, err, ok } from '@/shared/result'
@@ -18,7 +19,6 @@ export interface CreateWorkBody {
   type: string
   assessmentYear?: number | null
   departmentId: number | null
-  title?: string | null
   workItem?: string | null
   workNode?: string | null
   businessCategory?: string | null
@@ -121,6 +121,12 @@ export async function prepareWorkCreateData(
   if (structuredFields && !structuredFields.ok) {
     return err(400, structuredFields.message)
   }
+  const todoFields = workType === WorkItemType.TODO
+    ? validateTodoWorkItem(body.workItem)
+    : null
+  if (todoFields && !todoFields.ok) {
+    return err(400, todoFields.message)
+  }
 
   const department = await findDepartmentById(departmentId)
 
@@ -184,14 +190,12 @@ export async function prepareWorkCreateData(
 
   const workData = {
     type: workType,
-    title: structuredFields?.ok
-      ? structuredFields.title
-      : body.title || body.workItem || '未命名事项',
+    title: structuredFields?.ok ? structuredFields.title : todoFields!.title,
     assessmentYear,
     departmentId,
     creatorId: currentUser.id,
     status: WorkItemStatus.DRAFT,
-    workItem: structuredFields?.ok ? structuredFields.workItem : body.workItem,
+    workItem: structuredFields?.ok ? structuredFields.workItem : todoFields!.workItem,
     workNode: structuredFields?.ok ? structuredFields.workNode : body.workNode,
     businessCategory: body.businessCategory,
     completeTime: null,

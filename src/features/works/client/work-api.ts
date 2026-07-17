@@ -1,32 +1,12 @@
-import type { User } from '@/features/users/client/user-client.types'
-import type { WorkType, WorkQuery } from '@/features/works/client/work-client.types'
+import type { WorkQuery } from '@/features/works/client/work-client.types'
 import type { Work, WorkEditablePatch } from './work-client.types'
 import type { WorkDto } from '../application/work.dto'
 import type { ErrorData } from '@/shared/http/api-response'
-import { sortWorksByDueDate } from './work-sort.utils'
 import {
   buildCreateWorkBody,
   buildUpdateWorkBody,
   transformWorkFromAPI,
 } from './work-client.mapper'
-
-export async function getWorks(): Promise<Work[]> {
-  try {
-    const response = await fetch('/api/works', { credentials: 'include' })
-    if (!response.ok) return []
-    const data = (await response.json()) as WorkDto[]
-    return data.map(transformWorkFromAPI)
-  } catch {
-    return []
-  }
-}
-
-export async function getVisibleWorks(type?: WorkType): Promise<Work[]> {
-  let list = await getWorks()
-  if (type) list = list.filter((w) => w.type === type)
-
-  return sortWorksByDueDate(list)
-}
 
 export async function getWorkById(id: number): Promise<Work | undefined> {
   try {
@@ -45,7 +25,7 @@ const CLIENT_TYPE_TO_SERVER: Record<string, string> = {
   待办: 'todo',
 }
 
-export async function queryWorks(user: User | null | undefined, query: WorkQuery): Promise<Work[]> {
+export async function queryWorks(query: WorkQuery): Promise<Work[]> {
   const params = new URLSearchParams()
   if (query.type && query.type !== '全部')
     params.set('type', CLIENT_TYPE_TO_SERVER[query.type] || query.type)
@@ -68,7 +48,9 @@ export async function queryWorks(user: User | null | undefined, query: WorkQuery
   }
 }
 
-export async function addWork(work: Omit<Work, 'createdAt' | 'updatedAt'>): Promise<Work> {
+export async function addWork(
+  work: Omit<Work, 'title' | 'createdAt' | 'updatedAt'>,
+): Promise<Work> {
   const data = buildCreateWorkBody(work)
   const response = await fetch('/api/works', {
     method: 'POST',
@@ -109,8 +91,8 @@ export async function deleteWork(id: number): Promise<void> {
   }
 }
 
-export async function resubmitRejectedWork(work: Work, user: User, patch: WorkEditablePatch) {
-  await updateWork(work.id, { ...patch, title: patch.title || patch.workItem || work.title })
+export async function resubmitRejectedWork(work: Work, patch: WorkEditablePatch) {
+  await updateWork(work.id, patch)
   const response = await fetch(`/api/works/${work.id}/workflow`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

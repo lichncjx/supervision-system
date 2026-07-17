@@ -81,7 +81,6 @@ function filterValidNodes(nodes: WorkNode[]) {
 
 function buildAdjustmentBeforeSnapshot(work: Work): Record<string, unknown> {
   return {
-    title: work.title,
     assessmentYear: work.assessmentYear,
     workItem: work.workItem,
     businessCategory: work.businessCategory,

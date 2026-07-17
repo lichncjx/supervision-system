@@ -15,8 +15,8 @@ import {
 import { getChangedAdjustmentFields } from '@/features/works/domain/work-adjustment-diff'
 import {
   isPriorityOrMainWorkType,
-  normalizeWorkStructureText,
   validateStructuredWorkFields,
+  validateTodoWorkItem,
 } from '@/features/works/domain/work-structure.rules'
 import { createAdjustmentTransitional, createWorkflowRecord, createOperationLog } from '@/features/workflow/infrastructure/workflow.repository'
 import { type Result, err, ok } from '@/shared/result'
@@ -83,9 +83,9 @@ export async function submitAdjustment(
     if (hasPatchField(patch, 'workItem')) patch.workItem = structuredFields.workItem
     if (hasPatchField(patch, 'workNode')) patch.workNode = structuredFields.workNode
   } else if (workItem.type === WorkItemType.TODO && hasPatchField(patch, 'workItem')) {
-    const workItemName = normalizeWorkStructureText(patch.workItem)
-    if (!workItemName) return err(400, '请输入待办事项')
-    patch.workItem = workItemName
+    const todoFields = validateTodoWorkItem(patch.workItem)
+    if (!todoFields.ok) return err(400, todoFields.message)
+    patch.workItem = todoFields.workItem
   }
 
   const effectiveDeptId = Number(patch.departmentId ?? workItem.departmentId)

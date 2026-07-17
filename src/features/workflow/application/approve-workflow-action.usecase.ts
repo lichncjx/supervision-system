@@ -22,8 +22,9 @@ import {
 import {
   isPriorityOrMainWorkType,
   normalizeAssessmentYear,
-  normalizeWorkStructureText,
   validateStructuredWorkFields,
+  deriveWorkDisplayTitle,
+  validateTodoWorkItem,
 } from '@/features/works/domain/work-structure.rules'
 import {
   createWorkflowRecord,
@@ -181,7 +182,11 @@ export async function approveWorkflowAction(
       if (!structuredFields.ok) return err(400, structuredFields.message)
       adjustmentUpdateData.workItem = structuredFields.workItem
       adjustmentUpdateData.workNode = structuredFields.workNode
-      adjustmentUpdateData.title = structuredFields.title
+      adjustmentUpdateData.title = deriveWorkDisplayTitle({
+        type: workItem.type,
+        workItem: structuredFields.workItem,
+        workNode: structuredFields.workNode,
+      })
     } else if (isPriorityOrMainWorkType(workItem.type)) {
       // 结构化工作节点的 title 只能由工作事项和工作节点组合生成，
       // 不接受调整请求单独写入展示标题。
@@ -190,10 +195,10 @@ export async function approveWorkflowAction(
       workItem.type === WorkItemType.TODO &&
       hasPatchField(adjustmentPatch, 'workItem')
     ) {
-      const workItemName = normalizeWorkStructureText(adjustmentPatch.workItem)
-      if (!workItemName) return err(400, '请输入待办事项')
-      adjustmentUpdateData.workItem = workItemName
-      adjustmentUpdateData.title = workItemName
+      const todoFields = validateTodoWorkItem(adjustmentPatch.workItem)
+      if (!todoFields.ok) return err(400, todoFields.message)
+      adjustmentUpdateData.workItem = todoFields.workItem
+      adjustmentUpdateData.title = todoFields.title
     }
     approvedAdjustmentRequestId = adjustmentRequest.id
   }

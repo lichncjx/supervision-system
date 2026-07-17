@@ -178,7 +178,7 @@ export default function ItemListPage() {
   ).sort()
 
   const fetchList = async () => {
-    const data = await queryWorks(user, {
+    const data = await queryWorks({
       type,
       departmentId: companyLevel ? departmentFilter : (user?.departmentId ?? undefined),
       status: statusFilter,

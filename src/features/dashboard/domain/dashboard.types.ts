@@ -4,6 +4,8 @@ import type { PermissionWorkItem } from '@/features/works/domain/work.permission
 export interface DashboardWorkLike extends PermissionWorkItem {
   id: number
   title: string
+  workItem: string | null
+  workNode: string | null
   assessmentYear: number | null
   type: WorkItemType
   status: WorkItemStatus
