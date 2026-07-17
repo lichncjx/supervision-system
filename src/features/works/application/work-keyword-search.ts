@@ -16,7 +16,7 @@ interface WorkKeywordSource {
 }
 
 function getStructuredTitleKeywordParts(keyword: string) {
-  const candidates: Array<{ workItem: string; workNode: string }> = []
+  const candidates: Array<{ workItem: string | null; workNode: string | null }> = []
 
   for (
     let index = keyword.indexOf(DISPLAY_TITLE_SEPARATOR);
@@ -25,7 +25,7 @@ function getStructuredTitleKeywordParts(keyword: string) {
   ) {
     const workItem = normalizeWorkStructureText(keyword.slice(0, index))
     const workNode = normalizeWorkStructureText(keyword.slice(index + 1))
-    if (workItem && workNode) candidates.push({ workItem, workNode })
+    candidates.push({ workItem: workItem || null, workNode: workNode || null })
   }
 
   return candidates
@@ -39,13 +39,19 @@ export function buildWorkKeywordWhere(rawKeyword: string | null): Prisma.WorkIte
   const contains = { contains: keyword, mode: 'insensitive' as const }
   const derivedTitleFilters: Prisma.WorkItemWhereInput[] = getStructuredTitleKeywordParts(
     keyword,
-  ).map(({ workItem, workNode }) => ({
-    AND: [
+  ).map(({ workItem, workNode }) => {
+    const conditions: Prisma.WorkItemWhereInput[] = [
       { type: { in: STRUCTURED_WORK_TYPES } },
-      { workItem: { endsWith: workItem, mode: 'insensitive' } },
-      { workNode: { startsWith: workNode, mode: 'insensitive' } },
-    ],
-  }))
+      { NOT: [{ workItem: null }, { workItem: '' }, { workNode: null }, { workNode: '' }] },
+    ]
+    if (workItem) {
+      conditions.push({ workItem: { endsWith: workItem, mode: 'insensitive' } })
+    }
+    if (workNode) {
+      conditions.push({ workNode: { startsWith: workNode, mode: 'insensitive' } })
+    }
+    return { AND: conditions }
+  })
 
   const legacyTitleFilter: Prisma.WorkItemWhereInput = {
     AND: [{ title: contains }, { OR: [{ workItem: null }, { workItem: '' }] }],

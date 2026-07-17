@@ -122,4 +122,15 @@ assert.ok(composedKeywordWhere?.OR)
 assert.equal(serializedKeywordWhere.includes('"workItem":{"endsWith":"重点事项"'), true)
 assert.equal(serializedKeywordWhere.includes('"workNode":{"startsWith":"第一节点"'), true)
 
+const itemEndedKeywordWhere = JSON.stringify(buildWorkKeywordWhere('重点事项｜'))
+assert.equal(itemEndedKeywordWhere.includes('"workItem":{"endsWith":"重点事项"'), true)
+assert.equal(itemEndedKeywordWhere.includes('"workNode":{"startsWith"'), false)
+
+const nodeStartedKeywordWhere = JSON.stringify(buildWorkKeywordWhere('｜第一节点'))
+assert.equal(nodeStartedKeywordWhere.includes('"workItem":{"endsWith"'), false)
+assert.equal(nodeStartedKeywordWhere.includes('"workNode":{"startsWith":"第一节点"'), true)
+
+const separatorOnlyKeywordWhere = JSON.stringify(buildWorkKeywordWhere('｜'))
+assert.equal(separatorOnlyKeywordWhere.includes('"NOT"'), true)
+
 console.log('Work title regression checks passed')
