@@ -36,6 +36,7 @@ import {
   normalizeAssessmentYear,
   normalizeWorkStructureText,
 } from '@/features/works/domain/work-structure.rules'
+import { matchesWorkKeyword } from '@/features/works/application/work-keyword-search'
 
 function normalizeTypeFilter(type: string | null): WorkItemType | null {
   if (!type) return null
@@ -73,21 +74,6 @@ function isValidStatusFilter(status: string | null): boolean {
       'expiring',
     ].includes(lower)
   )
-}
-
-function keywordMatches(
-  workItem: {
-    title: string
-    workItem: string | null
-    workNode: string | null
-    businessCategory: string | null
-  },
-  keyword: string | null,
-): boolean {
-  if (!keyword) return true
-  return [workItem.title, workItem.workItem, workItem.workNode, workItem.businessCategory]
-    .filter(Boolean)
-    .some((value) => String(value).includes(keyword))
 }
 
 export async function exportWorksToExcelUseCase(
@@ -176,7 +162,18 @@ export async function exportWorksToExcelUseCase(
       if (rawStatusLower === 'expiring') return isExpiringWorkItem(workItem, now)
       return !statusFilter || workItem.status === statusFilter
     })
-    .filter((workItem) => keywordMatches(workItem, keywordFilter))
+    .filter((workItem) =>
+      matchesWorkKeyword(
+        {
+          type: workItem.type,
+          workItem: workItem.workItem,
+          workNode: workItem.workNode,
+          legacyTitle: workItem.title,
+          additionalValues: [workItem.businessCategory],
+        },
+        keywordFilter,
+      ),
+    )
     .filter(
       (workItem) =>
         !monthFilter || workItem.planCompleteTime?.toISOString().slice(0, 7) === monthFilter,

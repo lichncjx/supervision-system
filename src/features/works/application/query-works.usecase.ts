@@ -22,6 +22,7 @@ import {
   normalizeAssessmentYear,
   normalizeWorkStructureText,
 } from '@/features/works/domain/work-structure.rules'
+import { buildWorkKeywordWhere } from '@/features/works/application/work-keyword-search'
 
 // ── Types ──
 
@@ -211,19 +212,8 @@ async function buildWorksWhere(
     filters.push({ OR: [{ departmentId: Number(params.departmentId) }] })
   }
 
-  if (params.keyword) {
-    filters.push({
-      OR: [
-        { title: { contains: params.keyword, mode: 'insensitive' } },
-        { workItem: { contains: params.keyword, mode: 'insensitive' } },
-        { workNode: { contains: params.keyword, mode: 'insensitive' } },
-        { businessCategory: { contains: params.keyword, mode: 'insensitive' } },
-        { proposedScene: { contains: params.keyword, mode: 'insensitive' } },
-        { progress: { contains: params.keyword, mode: 'insensitive' } },
-        { workPlan: { contains: params.keyword, mode: 'insensitive' } },
-      ],
-    })
-  }
+  const keywordWhere = buildWorkKeywordWhere(params.keyword)
+  if (keywordWhere) filters.push(keywordWhere)
 
   const where = filters.length > 1 ? { AND: filters } : (filters[0] ?? {})
   return { ok: true, where, statusFilter }

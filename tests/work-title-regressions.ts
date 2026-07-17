@@ -4,6 +4,10 @@ import {
   validateStructuredWorkFields,
   validateTodoWorkItem,
 } from '@/features/works/domain/work-structure.rules'
+import {
+  buildWorkKeywordWhere,
+  matchesWorkKeyword,
+} from '@/features/works/application/work-keyword-search'
 
 assert.equal(
   deriveWorkDisplayTitle({
@@ -52,5 +56,48 @@ assert.equal(
 )
 assert.equal(validateStructuredWorkFields({ workItem: '事'.repeat(199), workNode: '点' }).ok, false)
 assert.equal(validateTodoWorkItem('待'.repeat(201)).ok, false)
+
+assert.equal(
+  matchesWorkKeyword(
+    {
+      type: 'PRIORITY',
+      workItem: '年度重点事项',
+      workNode: '第一节点',
+      legacyTitle: '过时物化标题',
+    },
+    '重点事项｜第一节点',
+  ),
+  true,
+)
+assert.equal(
+  matchesWorkKeyword(
+    {
+      type: 'PRIORITY',
+      workItem: '年度重点事项',
+      workNode: '第一节点',
+      legacyTitle: '过时物化标题',
+    },
+    '过时物化标题',
+  ),
+  false,
+)
+assert.equal(
+  matchesWorkKeyword(
+    {
+      type: 'MAIN',
+      workItem: '历史事项',
+      workNode: null,
+      legacyTitle: '历史兼容标题',
+    },
+    '兼容标题',
+  ),
+  true,
+)
+
+const composedKeywordWhere = buildWorkKeywordWhere('重点事项｜第一节点')
+const serializedKeywordWhere = JSON.stringify(composedKeywordWhere)
+assert.ok(composedKeywordWhere?.OR)
+assert.equal(serializedKeywordWhere.includes('"workItem":{"endsWith":"重点事项"'), true)
+assert.equal(serializedKeywordWhere.includes('"workNode":{"startsWith":"第一节点"'), true)
 
 console.log('Work title regression checks passed')
