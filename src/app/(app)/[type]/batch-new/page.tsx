@@ -18,6 +18,7 @@ import {
   ResponsibleFields,
   WorkItemField,
 } from '@/features/works/ui/work-form-fields'
+import { getSystemSettings } from '@/features/system-settings/client/system-settings-api'
 
 interface BatchNodeForm {
   id: string
@@ -74,6 +75,12 @@ export default function BatchNewWorkNodesPage() {
 
   useEffect(() => {
     getDepartments().then((items) => setDepartments(items.filter((item) => item.isBusiness !== false)))
+  }, [])
+
+  useEffect(() => {
+    getSystemSettings()
+      .then((settings) => setAssessmentYear(String(settings.defaultAssessmentYear)))
+      .catch(() => undefined)
   }, [])
 
   useEffect(() => {

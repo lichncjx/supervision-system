@@ -34,6 +34,7 @@ export async function queryWorks(query: WorkQuery): Promise<Work[]> {
     params.set('departmentId', String(query.departmentId))
   if (query.keyword && query.keyword.trim()) params.set('keyword', query.keyword.trim())
   if (query.assessmentYear) params.set('assessmentYear', String(query.assessmentYear))
+  else if (query.assessmentYear === null) params.set('assessmentYear', 'all')
   if (query.workItem && query.workItem.trim()) params.set('workItem', query.workItem.trim())
 
   const url = `/api/works${params.toString() ? '?' + params.toString() : ''}`

@@ -22,6 +22,8 @@ import { WorkTitle } from '@/features/works/ui/work-title';
 import { WorkListToolbar } from '@/features/works/ui/work-list-toolbar';
 import { getWorkTypeAccent, getWorkTypeText } from '@/features/works/ui/status-colors';
 import { normalizeAssessmentYear } from '@/features/works/domain/work-structure.rules';
+import { getSystemSettings } from '@/features/system-settings/client/system-settings-api';
+import { resolveQueryAssessmentYear, saveQueryYearPreference } from '@/features/system-settings/client/query-year-preference';
 
 type StatusPageFilter =
   | 'all'
@@ -102,11 +104,14 @@ export default function StatusFilterPage() {
   const filter = params?.filter || 'all';
   const assessmentYearParam = searchParams.get('assessmentYear');
   const normalizedAssessmentYear = normalizeAssessmentYear(assessmentYearParam);
+  const { user } = useAuth();
+  const [systemDefaultYear, setSystemDefaultYear] = useState<number | null>(null);
   const assessmentYear = assessmentYearParam === 'all'
     ? undefined
-    : normalizedAssessmentYear || Number(DEFAULT_ASSESSMENT_YEAR);
+    : normalizedAssessmentYear || (user && systemDefaultYear
+      ? resolveQueryAssessmentYear({ userId: user.id, defaultYear: systemDefaultYear })
+      : Number(DEFAULT_ASSESSMENT_YEAR));
   const assessmentYearFilter = assessmentYear ? String(assessmentYear) : '';
-  const { user } = useAuth();
   const [typeFilter, setTypeFilter] = useState<WorkType | '全部'>('全部');
   const [departmentFilter, setDepartmentFilter] = useState<number | '全部'>('全部');
   const [keyword, setKeyword] = useState('');
@@ -121,21 +126,29 @@ export default function StatusFilterPage() {
     : 'all';
   const safeFilterTitle = filterTitle[safeFilter] || '事项列表';
 
+  React.useEffect(() => {
+    if (!user) return;
+    getSystemSettings()
+      .then((settings) => setSystemDefaultYear(settings.defaultAssessmentYear))
+      .catch(() => setSystemDefaultYear(Number(DEFAULT_ASSESSMENT_YEAR)));
+  }, [user]);
+
   const queryStatus =
     ['all', 'draft', 'returnedDraft', 'pendingDecompose', 'inProgress', 'completed', 'cancelled', 'overdue', 'expiring', 'approving', 'handling'].includes(safeFilter)
       ? (safeFilter as WorkStatusFilter)
       : 'all';
 
   React.useEffect(() => {
-    if (assessmentYearParam === 'all' || normalizedAssessmentYear) return;
+    if (!user || !systemDefaultYear || assessmentYearParam === 'all' || normalizedAssessmentYear) return;
 
     const nextParams = new URLSearchParams(searchParams.toString());
-    nextParams.set('assessmentYear', DEFAULT_ASSESSMENT_YEAR);
+    nextParams.set('assessmentYear', String(resolveQueryAssessmentYear({ userId: user.id, defaultYear: systemDefaultYear })));
     router.replace(`/status/${safeFilter}?${nextParams.toString()}`, { scroll: false });
-  }, [assessmentYearParam, normalizedAssessmentYear, router, safeFilter, searchParams]);
+  }, [assessmentYearParam, normalizedAssessmentYear, router, safeFilter, searchParams, systemDefaultYear, user]);
 
   const handleAssessmentYearFilterChange = (nextYear: string) => {
     setMonthFilter('');
+    if (nextYear && user) saveQueryYearPreference(user.id, nextYear);
     const nextParams = new URLSearchParams(searchParams.toString());
     nextParams.set('assessmentYear', nextYear || 'all');
     router.replace(`/status/${safeFilter}?${nextParams.toString()}`, { scroll: false });
@@ -147,7 +160,9 @@ export default function StatusFilterPage() {
     setTypeFilter('全部');
     setDepartmentFilter('全部');
     const nextParams = new URLSearchParams(searchParams.toString());
-    nextParams.set('assessmentYear', DEFAULT_ASSESSMENT_YEAR);
+    nextParams.set('assessmentYear', String(systemDefaultYear && user
+      ? resolveQueryAssessmentYear({ userId: user.id, defaultYear: systemDefaultYear })
+      : DEFAULT_ASSESSMENT_YEAR));
     router.replace(`/status/${safeFilter}?${nextParams.toString()}`, { scroll: false });
   };
 
@@ -171,7 +186,7 @@ export default function StatusFilterPage() {
         departmentId: companyLevel ? departmentFilter : (user?.departmentId ?? undefined),
         status: queryStatus,
         keyword,
-        assessmentYear,
+        assessmentYear: assessmentYear ?? null,
       });
 
       const newMonthOptions = Array.from(

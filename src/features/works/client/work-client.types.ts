@@ -21,7 +21,7 @@ export interface WorkQuery {
   departmentId?: number | '全部'
   status?: WorkStatusFilter
   keyword?: string
-  assessmentYear?: number
+  assessmentYear?: number | null
   workItem?: string
 }
 

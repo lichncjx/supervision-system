@@ -64,8 +64,8 @@ export default function ApprovalPage() {
 
   const load = async () => {
     const [approving, handling] = await Promise.all([
-      queryWorks({ status: 'approving' } as any),
-      queryWorks({ status: 'handling' } as any),
+      queryWorks({ status: 'approving', assessmentYear: null }),
+      queryWorks({ status: 'handling', assessmentYear: null }),
     ])
     setApprovingWorks(approving)
     setHandlingWorks(handling)

@@ -7,6 +7,7 @@ import {
   type CreateWorkBody,
 } from '@/features/works/application/create-work.usecase'
 import { normalizeWorkStructureText } from '@/features/works/domain/work-structure.rules'
+import { getDefaultAssessmentYear } from '@/features/system-settings/application/system-settings.usecase'
 
 export const MAX_BATCH_DRAFT_ROWS = 200
 
@@ -18,7 +19,7 @@ type BatchDraftNodeInput = Omit<
 export interface CreateWorkDraftsBatchInput {
   currentUser: BaseCurrentUser
   type: 'priority' | 'main'
-  assessmentYear: number
+  assessmentYear?: number | null
   workItem: string
   defaults?: Partial<BatchDraftNodeInput>
   nodes: BatchDraftNodeInput[]
@@ -43,6 +44,9 @@ export async function createWorkDraftsBatchUseCase(
     return err(400, `单次批量新建最多 ${MAX_BATCH_DRAFT_ROWS} 个工作节点`)
   }
 
+  const assessmentYear = input.assessmentYear === undefined || input.assessmentYear === null
+    ? await getDefaultAssessmentYear()
+    : input.assessmentYear
   const workItem = normalizeWorkStructureText(input.workItem)
   if (!workItem) return err(400, '请输入工作事项')
 
@@ -56,7 +60,7 @@ export async function createWorkDraftsBatchUseCase(
         ...input.defaults,
         ...node,
         type: input.type,
-        assessmentYear: input.assessmentYear,
+        assessmentYear,
         workItem,
       },
     })

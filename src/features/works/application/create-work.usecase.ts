@@ -14,6 +14,7 @@ import {
 } from '@/features/works/domain/work-structure.rules'
 import type { WorkDto } from './work.dto'
 import { type Result, err, ok } from '@/shared/result'
+import { getDefaultAssessmentYear } from '@/features/system-settings/application/system-settings.usecase'
 
 export interface CreateWorkBody {
   type: string
@@ -107,7 +108,9 @@ export async function prepareWorkCreateData(
     return err(400, '请指定责任部门')
   }
 
-  const assessmentYear = normalizeAssessmentYear(body.assessmentYear)
+  const assessmentYear = body.assessmentYear === undefined || body.assessmentYear === null
+    ? await getDefaultAssessmentYear()
+    : normalizeAssessmentYear(body.assessmentYear)
   if (!assessmentYear) {
     return err(400, '请选择有效年度')
   }

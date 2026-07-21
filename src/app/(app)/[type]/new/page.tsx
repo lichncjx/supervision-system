@@ -31,6 +31,7 @@ import { buildCreateWorkPayload } from '@/features/works/client/build-create-wor
 import type { User } from '@/features/users/client/user-client.types';
 import type { Department } from '@/features/departments/client/department-api';
 import { ERROR_BOX, HINT_BOX, STICKY_ACTION_BAR } from '@/features/works/ui/visual-tokens';
+import { getSystemSettings } from '@/features/system-settings/client/system-settings-api';
 
 export default function NewWorkPage() {
   const params = useParams<{ type: string }>();
@@ -105,6 +106,14 @@ export default function NewWorkPage() {
     planCompleteTime: '',
     progress: '',
   });
+
+  useEffect(() => {
+    getSystemSettings().then((settings) => {
+      const assessmentYear = String(settings.defaultAssessmentYear);
+      setPriorityMainForm((current) => ({ ...current, assessmentYear }));
+      setTodoForm((current) => ({ ...current, assessmentYear }));
+    }).catch(() => undefined);
+  }, []);
 
   const [touched, setTouched] = useState<Set<string>>(new Set());
   const [errors, setErrors] = useState<Partial<Record<CreateWorkFormField, string>>>({});

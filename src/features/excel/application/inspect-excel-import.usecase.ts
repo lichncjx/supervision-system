@@ -14,6 +14,7 @@ import {
   normalizeAssessmentYear,
   validateStructuredWorkFields,
 } from '@/features/works/domain/work-structure.rules'
+import { getDefaultAssessmentYear } from '@/features/system-settings/application/system-settings.usecase'
 
 export const MAX_EXCEL_IMPORT_ROWS = 200
 
@@ -41,7 +42,9 @@ export interface ExcelImportInspection {
 export async function inspectExcelImport(
   input: InspectExcelImportInput,
 ): Promise<ExcelImportInspection> {
-  const assessmentYear = normalizeAssessmentYear(input.assessmentYear)
+  const assessmentYear = input.assessmentYear === undefined || input.assessmentYear === null
+    ? await getDefaultAssessmentYear()
+    : normalizeAssessmentYear(input.assessmentYear)
   if (!assessmentYear) {
     return {
       assessmentYear: null,

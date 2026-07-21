@@ -6,12 +6,15 @@ import { statusColors, expiryColors, workTypeColors } from '@/features/works/ui/
 
 const pillColors = { ...statusColors, ...expiryColors };
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Bell, Search } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { StatusBadge } from '@/features/works/ui/badges';
 import { WorkTitle } from '@/features/works/ui/work-title';
 import { isGlobalView } from '@/features/users/domain/role.rules';
+import { getSystemSettings, updateSystemSettings, type SystemSettings } from '@/features/system-settings/client/system-settings-api';
+import { resolveQueryAssessmentYear, saveQueryYearPreference } from '@/features/system-settings/client/query-year-preference';
 
 type DashboardWorkType = 'PRIORITY' | 'MAIN' | 'TODO';
 
@@ -47,11 +50,13 @@ function getDashboardWorkDate(work: DashboardWorkItem) {
 }
 
 export default function DashboardPage() {
-  const NOTICE_KEY = 'supervision_admin_notice';
   const { user } = useAuth();
   const [adminNotice, setAdminNotice] = useState('');
   const [noticeDraft, setNoticeDraft] = useState('');
   const [noticeEditing, setNoticeEditing] = useState(false);
+  const [systemSettings, setSystemSettings] = useState<SystemSettings | null>(null);
+  const [defaultYearDraft, setDefaultYearDraft] = useState(String(new Date().getFullYear()));
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [stats, setStats] = useState({
     total: 0,
     approving: 0,
@@ -72,14 +77,22 @@ export default function DashboardPage() {
   const [assessmentYear, setAssessmentYear] = useState(String(new Date().getFullYear()));
 
   useEffect(() => {
-    const saved = localStorage.getItem(NOTICE_KEY) || '';
-    setAdminNotice(saved);
-    setNoticeDraft(saved);
-  }, []);
+    if (!user) return;
+    getSystemSettings()
+      .then((settings) => {
+        setSystemSettings(settings);
+        setAdminNotice(settings.dashboardNotice || '');
+        setNoticeDraft(settings.dashboardNotice || '');
+        setDefaultYearDraft(String(settings.defaultAssessmentYear));
+        setAssessmentYear(String(resolveQueryAssessmentYear({ userId: user.id, defaultYear: settings.defaultAssessmentYear })));
+      })
+      .catch(() => undefined)
+      .finally(() => setSettingsLoaded(true));
+  }, [user]);
 
   useEffect(() => {
     const loadData = async () => {
-      if (!user) return;
+      if (!user || !settingsLoaded) return;
       try {
         const response = await fetch(`/api/dashboard?year=${assessmentYear}`, { credentials: 'include' });
         if (response.ok) {
@@ -108,13 +121,24 @@ export default function DashboardPage() {
       }
     };
     loadData();
-  }, [user, assessmentYear]);
+  }, [user, assessmentYear, settingsLoaded]);
 
-  const saveNotice = () => {
-    localStorage.setItem(NOTICE_KEY, noticeDraft);
-    setAdminNotice(noticeDraft);
-    setNoticeEditing(false);
-    alert('督办提示已保存');
+  const saveNotice = async () => {
+    try {
+      const settings = await updateSystemSettings({
+        defaultAssessmentYear: Number(defaultYearDraft),
+        dashboardNotice: noticeDraft,
+        updatedAt: systemSettings?.updatedAt || null,
+      });
+      setSystemSettings(settings);
+      setAdminNotice(settings.dashboardNotice || '');
+      setNoticeDraft(settings.dashboardNotice || '');
+      setDefaultYearDraft(String(settings.defaultAssessmentYear));
+      setNoticeEditing(false);
+      alert('系统设置已保存');
+    } catch (error) {
+      alert(error instanceof Error ? error.message : '系统设置保存失败');
+    }
   };
 
   const handleExportCompletionRate = async () => {
@@ -165,7 +189,7 @@ export default function DashboardPage() {
         </div>
 
         <div className="flex gap-2">
-          <Select value={assessmentYear} onValueChange={setAssessmentYear}>
+          <Select value={assessmentYear} onValueChange={(year) => { setAssessmentYear(year); if (user) saveQueryYearPreference(user.id, year); }}>
             <SelectTrigger className="w-[108px] rounded-full bg-white">
               <SelectValue placeholder="年度" />
             </SelectTrigger>
@@ -216,6 +240,14 @@ export default function DashboardPage() {
 
             {noticeEditing && canEditNotice ? (
               <div className="mt-3 space-y-3">
+                <Input
+                  type="number"
+                  min="2000"
+                  max="2100"
+                  value={defaultYearDraft}
+                  onChange={(e) => setDefaultYearDraft(e.target.value)}
+                  placeholder="默认管理年度"
+                />
                 <Textarea
                   value={noticeDraft}
                   onChange={(e) => setNoticeDraft(e.target.value)}
@@ -223,7 +255,7 @@ export default function DashboardPage() {
                   placeholder="请输入督办提示、工作要求或注意事项"
                 />
                 <div className="flex gap-2">
-                  <button onClick={saveNotice} className="inline-flex items-center rounded-full bg-slate-800 px-4 py-1.5 text-sm font-medium text-white hover:bg-slate-900 transition-colors">
+                  <button onClick={() => void saveNotice()} className="inline-flex items-center rounded-full bg-slate-800 px-4 py-1.5 text-sm font-medium text-white hover:bg-slate-900 transition-colors">
                     保存
                   </button>
                   <button

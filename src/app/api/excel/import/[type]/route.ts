@@ -5,6 +5,8 @@ import { verifyExcelImportPreviewToken } from '@/shared/auth/jwt'
 import { withApiHandler } from '@/shared/http/with-api-handler'
 import { ok, fail } from '@/shared/http/api-response'
 import { importWorksFromExcelUseCase } from '@/features/excel/application/import-works-from-excel.usecase'
+import { getDefaultAssessmentYear } from '@/features/system-settings/application/system-settings.usecase'
+import { normalizeAssessmentYear } from '@/features/works/domain/work-structure.rules'
 
 export const POST = withApiHandler(
   async (request: NextRequest, { params }: { params: Promise<{ type: string }> }) => {
@@ -19,6 +21,7 @@ export const POST = withApiHandler(
     const formData = await request.formData()
     const file = formData.get('file')
     const assessmentYear = formData.get('assessmentYear')
+    const effectiveAssessmentYear = normalizeAssessmentYear(assessmentYear) || await getDefaultAssessmentYear()
     const previewToken = formData.get('previewToken')
     if (!(file instanceof File)) {
       return fail('请选择要导入的文件', 400)
@@ -38,7 +41,7 @@ export const POST = withApiHandler(
       !preview ||
       preview.userId !== currentUser.id ||
       preview.type !== normalizedType ||
-      String(preview.assessmentYear) !== String(assessmentYear) ||
+      preview.assessmentYear !== effectiveAssessmentYear ||
       preview.fileHash !== createHash('sha256').update(fileBuffer).digest('hex')
     ) {
       return fail('导入预览已失效或文件、年度已变更，请重新预览', 400)

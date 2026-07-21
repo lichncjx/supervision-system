@@ -103,8 +103,9 @@ export async function exportWorksToExcelUseCase(
   const statusFilter = normalizeStatusFilter(rawStatusFilter)
   const departmentIdFilter = departmentId ? Number(departmentId) : null
   const keywordFilter = keyword?.trim() || null
+  const isAllYears = assessmentYear?.trim().toLowerCase() === 'all'
   const assessmentYearFilter = normalizeAssessmentYear(assessmentYear)
-  if (assessmentYear && !assessmentYearFilter) {
+  if (assessmentYear && !assessmentYearFilter && !isAllYears) {
     return err(400, '无效的年度筛选条件')
   }
 
