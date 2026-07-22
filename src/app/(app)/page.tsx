@@ -6,12 +6,16 @@ import { statusColors, expiryColors, workTypeColors } from '@/features/works/ui/
 
 const pillColors = { ...statusColors, ...expiryColors };
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Bell, Search } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Plus, Bell, Search, Settings } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { StatusBadge } from '@/features/works/ui/badges';
 import { WorkTitle } from '@/features/works/ui/work-title';
 import { isGlobalView } from '@/features/users/domain/role.rules';
+import { getSystemSettings, updateSystemSettings, type SystemSettings } from '@/features/system-settings/client/system-settings-api';
+import { resolveQueryAssessmentYear, saveQueryYearPreference } from '@/features/system-settings/client/query-year-preference';
 
 type DashboardWorkType = 'PRIORITY' | 'MAIN' | 'TODO';
 
@@ -47,11 +51,13 @@ function getDashboardWorkDate(work: DashboardWorkItem) {
 }
 
 export default function DashboardPage() {
-  const NOTICE_KEY = 'supervision_admin_notice';
   const { user } = useAuth();
   const [adminNotice, setAdminNotice] = useState('');
   const [noticeDraft, setNoticeDraft] = useState('');
-  const [noticeEditing, setNoticeEditing] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [systemSettings, setSystemSettings] = useState<SystemSettings | null>(null);
+  const [defaultYearDraft, setDefaultYearDraft] = useState(String(new Date().getFullYear()));
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [stats, setStats] = useState({
     total: 0,
     approving: 0,
@@ -72,14 +78,22 @@ export default function DashboardPage() {
   const [assessmentYear, setAssessmentYear] = useState(String(new Date().getFullYear()));
 
   useEffect(() => {
-    const saved = localStorage.getItem(NOTICE_KEY) || '';
-    setAdminNotice(saved);
-    setNoticeDraft(saved);
-  }, []);
+    if (!user) return;
+    getSystemSettings()
+      .then((settings) => {
+        setSystemSettings(settings);
+        setAdminNotice(settings.dashboardNotice || '');
+        setNoticeDraft(settings.dashboardNotice || '');
+        setDefaultYearDraft(String(settings.defaultAssessmentYear));
+        setAssessmentYear(String(resolveQueryAssessmentYear({ userId: user.id, defaultYear: settings.defaultAssessmentYear })));
+      })
+      .catch(() => undefined)
+      .finally(() => setSettingsLoaded(true));
+  }, [user]);
 
   useEffect(() => {
     const loadData = async () => {
-      if (!user) return;
+      if (!user || !settingsLoaded) return;
       try {
         const response = await fetch(`/api/dashboard?year=${assessmentYear}`, { credentials: 'include' });
         if (response.ok) {
@@ -108,13 +122,24 @@ export default function DashboardPage() {
       }
     };
     loadData();
-  }, [user, assessmentYear]);
+  }, [user, assessmentYear, settingsLoaded]);
 
-  const saveNotice = () => {
-    localStorage.setItem(NOTICE_KEY, noticeDraft);
-    setAdminNotice(noticeDraft);
-    setNoticeEditing(false);
-    alert('督办提示已保存');
+  const saveNotice = async () => {
+    try {
+      const settings = await updateSystemSettings({
+        defaultAssessmentYear: Number(defaultYearDraft),
+        dashboardNotice: noticeDraft,
+        updatedAt: systemSettings?.updatedAt || null,
+      });
+      setSystemSettings(settings);
+      setAdminNotice(settings.dashboardNotice || '');
+      setNoticeDraft(settings.dashboardNotice || '');
+      setDefaultYearDraft(String(settings.defaultAssessmentYear));
+      setSettingsOpen(false);
+      alert('系统设置已保存');
+    } catch (error) {
+      alert(error instanceof Error ? error.message : '系统设置保存失败');
+    }
   };
 
   const handleExportCompletionRate = async () => {
@@ -165,7 +190,18 @@ export default function DashboardPage() {
         </div>
 
         <div className="flex gap-2">
-          <Select value={assessmentYear} onValueChange={setAssessmentYear}>
+          {canEditNotice && (
+            <button
+              type="button"
+              onClick={() => setSettingsOpen(true)}
+              disabled={!settingsLoaded}
+              className="inline-flex items-center gap-1 rounded-full px-2 text-xs font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Settings className="h-3.5 w-3.5" />
+              系统设置
+            </button>
+          )}
+          <Select value={assessmentYear} onValueChange={(year) => { setAssessmentYear(year); if (user) saveQueryYearPreference(user.id, year); }}>
             <SelectTrigger className="w-[108px] rounded-full bg-white">
               <SelectValue placeholder="年度" />
             </SelectTrigger>
@@ -204,44 +240,37 @@ export default function DashboardPage() {
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between gap-3">
               <div className="font-semibold text-slate-800">督办提示</div>
-              {canEditNotice && !noticeEditing && (
-                <button
-                  onClick={() => setNoticeEditing(true)}
-                  className="shrink-0 inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-all"
-                >
-                  编辑
-                </button>
-              )}
             </div>
 
-            {noticeEditing && canEditNotice ? (
-              <div className="mt-3 space-y-3">
-                <Textarea
-                  value={noticeDraft}
-                  onChange={(e) => setNoticeDraft(e.target.value)}
-                  rows={3}
-                  placeholder="请输入督办提示、工作要求或注意事项"
-                />
-                <div className="flex gap-2">
-                  <button onClick={saveNotice} className="inline-flex items-center rounded-full bg-slate-800 px-4 py-1.5 text-sm font-medium text-white hover:bg-slate-900 transition-colors">
-                    保存
-                  </button>
-                  <button
-                    onClick={() => { setNoticeDraft(adminNotice); setNoticeEditing(false); }}
-                    className="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
-                  >
-                    取消
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="mt-2 text-sm text-slate-600 leading-relaxed whitespace-pre-wrap break-words">
-                {adminNotice || <span className="text-slate-400">暂无督办提示</span>}
-              </div>
-            )}
+            <div className="mt-2 text-sm text-slate-600 leading-relaxed whitespace-pre-wrap break-words">
+              {adminNotice || <span className="text-slate-400">暂无督办提示</span>}
+            </div>
           </div>
         </div>
       </div>
+
+      <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>系统设置</DialogTitle>
+            <DialogDescription>统一设置默认管理年度和全员可见的督办提示。</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <label className="space-y-2 text-sm font-medium text-slate-700">
+              <span>默认管理年度</span>
+              <Input type="number" min="2000" max="2100" value={defaultYearDraft} onChange={(e) => setDefaultYearDraft(e.target.value)} />
+            </label>
+            <label className="space-y-2 text-sm font-medium text-slate-700">
+              <span>督办提示</span>
+              <Textarea value={noticeDraft} onChange={(e) => setNoticeDraft(e.target.value)} rows={5} placeholder="请输入督办提示、工作要求或注意事项" />
+            </label>
+          </div>
+          <DialogFooter>
+            <button type="button" onClick={() => { setNoticeDraft(adminNotice); setDefaultYearDraft(String(systemSettings?.defaultAssessmentYear || new Date().getFullYear())); setSettingsOpen(false); }} className="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600">取消</button>
+            <button type="button" onClick={() => void saveNotice()} className="inline-flex items-center rounded-full bg-slate-800 px-4 py-2 text-sm font-medium text-white">保存</button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {isGlobalView(user?.role) && (
         <div className="stagger-2 overflow-hidden rounded-xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50/50">

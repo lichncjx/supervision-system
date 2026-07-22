@@ -33,8 +33,8 @@ export default function AlertPage() {
 
   const load = async () => {
     const [expiring, overdue] = await Promise.all([
-      queryWorks({ status: 'expiring' } as any),
-      queryWorks({ status: 'overdue' } as any),
+      queryWorks({ status: 'expiring', assessmentYear: null }),
+      queryWorks({ status: 'overdue', assessmentYear: null }),
     ]);
     setExpiringWorks(expiring);
     setOverdueWorks(overdue);

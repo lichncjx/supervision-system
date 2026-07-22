@@ -119,8 +119,21 @@ model User {
   responsibleLeaderWorkItems WorkItem[] @relation("ResponsibleLeaderUserWorkItems")
   responsiblePersonWorkItems WorkItem[] @relation("ResponsiblePersonUserWorkItems")
   member               Member?
+  updatedSystemSettings SystemSetting[] @relation("SystemSettingUpdatedBy")
 
   @@map("users")
+}
+
+model SystemSetting {
+  id                    Int      @id @default(1)
+  defaultAssessmentYear Int
+  dashboardNotice       String?  @db.Text
+  updatedById           Int?
+  updatedAt             DateTime @updatedAt
+
+  updatedBy             User?    @relation("SystemSettingUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@map("system_settings")
 }
 
 model WorkItem {

@@ -37,6 +37,7 @@ import {
   normalizeWorkStructureText,
 } from '@/features/works/domain/work-structure.rules'
 import { matchesWorkKeyword } from '@/features/works/application/work-keyword-search'
+import { getDefaultAssessmentYear } from '@/features/system-settings/application/system-settings.usecase'
 
 function normalizeTypeFilter(type: string | null): WorkItemType | null {
   if (!type) return null
@@ -103,15 +104,20 @@ export async function exportWorksToExcelUseCase(
   const statusFilter = normalizeStatusFilter(rawStatusFilter)
   const departmentIdFilter = departmentId ? Number(departmentId) : null
   const keywordFilter = keyword?.trim() || null
-  const assessmentYearFilter = normalizeAssessmentYear(assessmentYear)
-  if (assessmentYear && !assessmentYearFilter) {
+  const isAllYears = assessmentYear?.trim().toLowerCase() === 'all'
+  const requestedAssessmentYearFilter = normalizeAssessmentYear(assessmentYear)
+  if (assessmentYear && !requestedAssessmentYearFilter && !isAllYears) {
     return err(400, '无效的年度筛选条件')
   }
 
   const workItemFilter = normalizeWorkStructureText(workItem)
-  if (workItem && (!typeFilter || !assessmentYearFilter || !workItemFilter)) {
+  if (workItem && (!typeFilter || !requestedAssessmentYearFilter || !workItemFilter)) {
     return err(400, '精确工作事项筛选必须同时指定类型和年度')
   }
+
+  const assessmentYearFilter = requestedAssessmentYearFilter || (
+    isAllYears ? null : await getDefaultAssessmentYear()
+  )
 
   const monthFilter = month?.trim() || null
   if (monthFilter && !/^\d{4}-(0[1-9]|1[0-2])$/.test(monthFilter)) {

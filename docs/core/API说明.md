@@ -17,7 +17,7 @@ GET /api/dashboard?year=2026
 GET /api/dashboard?year=2026&limit=5
 ```
 
-`year` 为 Dashboard 考核年度。`summary`、`lists.expiringAndOverdue` 和 `lists.myActionRequired` 必须使用同一年度；未传或无效时当前实现暂回退到自然年，系统默认管理年度将在后续独立配置 PR 中统一。
+`year` 为 Dashboard 考核年度。`summary`、`lists.expiringAndOverdue` 和 `lists.myActionRequired` 必须使用同一年度；未传或无效时回退系统默认管理年度，设置不可用时回退自然年。
 
 返回结构：
 
@@ -149,7 +149,11 @@ Dashboard 内嵌轻量列表按年度，不改变独立页面口径：`/alert` �
 
 ## GET /api/works 状态筛选
 
-三类事项列表和 Dashboard 状态数量跳转页通过 `assessmentYear` 进行服务端年度筛选，页面默认当前自然年，并提供“全部年度”选项；选择全部年度时不传数值年度。月份筛选只在当前年度查询结果上由前端执行，导出时仍必须把所选月份传给服务端以保持结果一致。
+三类事项列表和 Dashboard 状态数量跳转页通过 `assessmentYear` 进行服务端年度筛选，页面默认系统默认管理年度，并提供“全部年度”选项；选择全部年度时传 `assessmentYear=all`。月份筛选只在当前年度查询结果上由前端执行，导出时仍必须把所选月份传给服务端以保持结果一致。
+
+## 系统设置
+
+`GET /api/system-settings` 供所有已登录用户读取默认管理年度和 Dashboard 督办提示。`PUT /api/system-settings` 仅允许 `ADMIN`、`SUPERVISOR` 修改；请求携带上次读取的 `updatedAt`，版本不一致时返回 409，防止静默覆盖。
 
 `status` 查询参数支持当前 9 状态和派生筛选：
 

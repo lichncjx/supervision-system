@@ -3,6 +3,7 @@ import { isGlobalView } from '@/features/users/domain/role.rules'
 import { err, ok, type Result } from '@/shared/result'
 import type { ExcelExportFile } from '@/features/excel/application/excel-export.types'
 import { normalizeAssessmentYear } from '@/features/works/domain/work-structure.rules'
+import { getDefaultAssessmentYear } from '@/features/system-settings/application/system-settings.usecase'
 
 export interface ExportCompletionRateInput {
   currentUser: BaseCurrentUser
@@ -46,7 +47,7 @@ export async function exportCompletionRateUseCase(
     return err(403, '无权导出完成率统计，仅限系统管理员和督办管理员')
   }
 
-  const assessmentYear = normalizeAssessmentYear(year) || new Date().getFullYear()
+  const assessmentYear = normalizeAssessmentYear(year) || await getDefaultAssessmentYear()
 
   const departments = await findBusinessDepartments()
 

@@ -45,6 +45,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { normalizeAssessmentYear } from '@/features/works/domain/work-structure.rules'
+import { getSystemSettings } from '@/features/system-settings/client/system-settings-api'
+import { resolveQueryAssessmentYear, saveQueryYearPreference } from '@/features/system-settings/client/query-year-preference'
 
 const pillButton =
   'inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:-translate-y-0.5 transition-all'
@@ -82,10 +84,22 @@ export default function ItemListPage() {
   const [statusFilter, setStatusFilter] = useState<WorkStatusFilter>('all')
   const [monthFilter, setMonthFilter] = useState('')
   const [assessmentYearFilter, setAssessmentYearFilter] = useState(DEFAULT_ASSESSMENT_YEAR)
+  const [systemDefaultYear, setSystemDefaultYear] = useState<number | null>(null)
+  const importYearTouchedRef = useRef(false)
   const [workItemFilter, setWorkItemFilter] = useState('')
   const [departments, setDepartments] = useState<Department[]>([])
   const [companyLeaders, setCompanyLeaders] = useState<User[]>([])
   const companyLevel = isGlobalView(user?.role) || isCompanyLevel(user?.role)
+
+  useEffect(() => {
+    if (!user) return
+    getSystemSettings()
+      .then((settings) => {
+        setSystemDefaultYear(settings.defaultAssessmentYear)
+        if (!importYearTouchedRef.current) setImportYear(String(settings.defaultAssessmentYear))
+      })
+      .catch(() => setSystemDefaultYear(Number(DEFAULT_ASSESSMENT_YEAR)))
+  }, [user])
 
   useEffect(() => {
     const fetchDepartments = async () => {
@@ -96,21 +110,23 @@ export default function ItemListPage() {
   }, [])
 
   useEffect(() => {
+    if (!user || !systemDefaultYear) return
     const yearParam = searchParams.get('assessmentYear')
     const normalizedYear = normalizeAssessmentYear(yearParam)
+    const fallbackYear = String(resolveQueryAssessmentYear({ userId: user.id, defaultYear: systemDefaultYear }))
 
     if (yearParam === 'all') {
       setAssessmentYearFilter('')
     } else if (normalizedYear) {
       setAssessmentYearFilter(String(normalizedYear))
     } else {
-      setAssessmentYearFilter(DEFAULT_ASSESSMENT_YEAR)
+      setAssessmentYearFilter(fallbackYear)
       const nextParams = new URLSearchParams(searchParams.toString())
-      nextParams.set('assessmentYear', DEFAULT_ASSESSMENT_YEAR)
+      nextParams.set('assessmentYear', fallbackYear)
       router.replace(`/${routeType}?${nextParams.toString()}`, { scroll: false })
     }
     setWorkItemFilter(searchParams.get('workItem') || '')
-  }, [routeType, router, searchParams])
+  }, [routeType, router, searchParams, systemDefaultYear, user])
 
   useEffect(() => {
     getCompanyLeaders()
@@ -178,12 +194,13 @@ export default function ItemListPage() {
   ).sort()
 
   const fetchList = async () => {
+    if (!user || !systemDefaultYear) return
     const data = await queryWorks({
       type,
       departmentId: companyLevel ? departmentFilter : (user?.departmentId ?? undefined),
       status: statusFilter,
       keyword,
-      assessmentYear: assessmentYearFilter ? Number(assessmentYearFilter) : undefined,
+      assessmentYear: assessmentYearFilter ? Number(assessmentYearFilter) : null,
       workItem: workItemFilter || undefined,
     })
     setList(data)
@@ -192,7 +209,7 @@ export default function ItemListPage() {
   useEffect(() => {
     void fetchList()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, type, departmentFilter, statusFilter, keyword, assessmentYearFilter, workItemFilter])
+  }, [user, systemDefaultYear, type, departmentFilter, statusFilter, keyword, assessmentYearFilter, workItemFilter])
 
   const filteredList = useMemo(() => {
     if (monthFilter) {
@@ -229,7 +246,7 @@ export default function ItemListPage() {
     if (keyword) params.set('keyword', keyword)
     if (departmentFilter !== '全部') params.set('departmentId', String(departmentFilter))
     if (statusFilter !== 'all') params.set('status', statusFilter)
-    if (assessmentYearFilter) params.set('assessmentYear', assessmentYearFilter)
+    params.set('assessmentYear', assessmentYearFilter || 'all')
     if (workItemFilter) params.set('workItem', workItemFilter)
     if (monthFilter) params.set('month', monthFilter)
 
@@ -259,6 +276,7 @@ export default function ItemListPage() {
     setAssessmentYearFilter(nextYear)
     setMonthFilter('')
     if (yearChanged) setWorkItemFilter('')
+    if (nextYear && user) saveQueryYearPreference(user.id, nextYear)
 
     const nextParams = new URLSearchParams(searchParams.toString())
     nextParams.set('assessmentYear', nextYear || 'all')
@@ -278,9 +296,12 @@ export default function ItemListPage() {
     setMonthFilter('')
     setDepartmentFilter('全部')
     setStatusFilter('all')
-    setAssessmentYearFilter(DEFAULT_ASSESSMENT_YEAR)
+    const fallbackYear = systemDefaultYear && user
+      ? String(resolveQueryAssessmentYear({ userId: user.id, defaultYear: systemDefaultYear }))
+      : DEFAULT_ASSESSMENT_YEAR
+    setAssessmentYearFilter(fallbackYear)
     setWorkItemFilter('')
-    router.replace(`/${routeType}?assessmentYear=${DEFAULT_ASSESSMENT_YEAR}`, { scroll: false })
+    router.replace(`/${routeType}?assessmentYear=${fallbackYear}`, { scroll: false })
   }
 
   const handlePageSizeChange = (newPageSize: number) => {
@@ -381,7 +402,8 @@ export default function ItemListPage() {
     if (!file) return
 
     setImportFile(file)
-    setImportYear(String(new Date().getFullYear()))
+    importYearTouchedRef.current = false
+    setImportYear(String(systemDefaultYear || new Date().getFullYear()))
     setImportPreview(null)
     setIsImportDialogOpen(true)
     e.target.value = ''
@@ -585,6 +607,7 @@ export default function ItemListPage() {
             <Select
               value={importYear}
               onValueChange={(value) => {
+                importYearTouchedRef.current = true
                 setImportYear(value)
                 setImportPreview(null)
               }}
