@@ -24,6 +24,7 @@ import {
 } from '@/features/works/domain/work-status.rules'
 import { findDashboardWorks } from '@/features/dashboard/infrastructure/dashboard.repository'
 import { normalizeAssessmentYear } from '@/features/works/domain/work-structure.rules'
+import { getDefaultAssessmentYear } from '@/features/system-settings/application/system-settings.usecase'
 
 export type GetDashboardDataInput = {
   currentUser: BaseCurrentUser
@@ -35,7 +36,7 @@ export async function getDashboardDataUseCase(
 ): Promise<DashboardData> {
   const { currentUser, options = {} } = input
   const limit = normalizeLimit(options.limit)
-  const assessmentYear = normalizeAssessmentYear(options.assessmentYear) || new Date().getFullYear()
+  const assessmentYear = normalizeAssessmentYear(options.assessmentYear) || await getDefaultAssessmentYear()
 
   const permUser = toPermissionUser(currentUser)
   const whereClause = await buildWorkVisibilityWhere(currentUser)

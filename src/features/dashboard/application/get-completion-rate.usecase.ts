@@ -16,6 +16,7 @@ import {
   type Department,
 } from '@/features/departments/infrastructure/department.repository'
 import { normalizeAssessmentYear } from '@/features/works/domain/work-structure.rules'
+import { getDefaultAssessmentYear } from '@/features/system-settings/application/system-settings.usecase'
 
 export interface GetCompletionRateInput {
   currentUser: BaseCurrentUser
@@ -66,7 +67,7 @@ export async function getCompletionRateUseCase(
 
   const visibilityWhere = await buildWorkVisibilityWhere(currentUser, false)
 
-  const assessmentYear = normalizeAssessmentYear(year) || new Date().getFullYear()
+  const assessmentYear = normalizeAssessmentYear(year) || await getDefaultAssessmentYear()
   const typeFilter = normalizeTypeFilter(type)
   if (type && !typeFilter) {
     return err(400, '无效的事项类型')

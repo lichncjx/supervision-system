@@ -31,6 +31,7 @@ import { buildCreateWorkPayload } from '@/features/works/client/build-create-wor
 import type { User } from '@/features/users/client/user-client.types';
 import type { Department } from '@/features/departments/client/department-api';
 import { ERROR_BOX, HINT_BOX, STICKY_ACTION_BAR } from '@/features/works/ui/visual-tokens';
+import { getSystemSettings } from '@/features/system-settings/client/system-settings-api';
 
 export default function NewWorkPage() {
   const params = useParams<{ type: string }>();
@@ -69,10 +70,11 @@ export default function NewWorkPage() {
   const [workItemDefaultNotice, setWorkItemDefaultNotice] = useState('');
 
   const [nodes, setNodes] = useState<WorkNode[]>([]);
+  const initialAssessmentYearRef = useRef(String(new Date().getFullYear()));
 
   // 重点工作和主要工作表单
   const [priorityMainForm, setPriorityMainForm] = useState({
-    assessmentYear: String(new Date().getFullYear()),
+    assessmentYear: initialAssessmentYearRef.current,
     businessCategory: '',
     workItem: '',
     workNode: '',
@@ -87,7 +89,7 @@ export default function NewWorkPage() {
 
   // 待办事项表单
   const [todoForm, setTodoForm] = useState({
-    assessmentYear: String(new Date().getFullYear()),
+    assessmentYear: initialAssessmentYearRef.current,
     proposedLeaderId:
       isCompanyLevel(user?.role)
         ? String(user?.id)
@@ -105,6 +107,18 @@ export default function NewWorkPage() {
     planCompleteTime: '',
     progress: '',
   });
+
+  useEffect(() => {
+    getSystemSettings().then((settings) => {
+      const assessmentYear = String(settings.defaultAssessmentYear);
+      setPriorityMainForm((current) => current.assessmentYear === initialAssessmentYearRef.current
+        ? { ...current, assessmentYear }
+        : current);
+      setTodoForm((current) => current.assessmentYear === initialAssessmentYearRef.current
+        ? { ...current, assessmentYear }
+        : current);
+    }).catch(() => undefined);
+  }, []);
 
   const [touched, setTouched] = useState<Set<string>>(new Set());
   const [errors, setErrors] = useState<Partial<Record<CreateWorkFormField, string>>>({});

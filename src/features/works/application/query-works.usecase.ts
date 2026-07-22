@@ -23,6 +23,7 @@ import {
   normalizeWorkStructureText,
 } from '@/features/works/domain/work-structure.rules'
 import { buildWorkKeywordWhere } from '@/features/works/application/work-keyword-search'
+import { getDefaultAssessmentYear } from '@/features/system-settings/application/system-settings.usecase'
 
 // ── Types ──
 
@@ -182,8 +183,9 @@ async function buildWorksWhere(
   }
 
   const filters: Prisma.WorkItemWhereInput[] = [await buildWorkVisibilityWhere(currentUser)]
+  const isAllYears = params.assessmentYear?.trim().toLowerCase() === 'all'
   const assessmentYear = normalizeAssessmentYear(params.assessmentYear)
-  if (hasFilterValue(params.assessmentYear) && !assessmentYear) {
+  if (hasFilterValue(params.assessmentYear) && !assessmentYear && !isAllYears) {
     return err(400, '无效的年度筛选条件')
   }
 
@@ -196,8 +198,8 @@ async function buildWorksWhere(
     filters.push({ type: workType })
   }
 
-  if (assessmentYear) {
-    filters.push({ assessmentYear })
+  if (!isAllYears) {
+    filters.push({ assessmentYear: assessmentYear || await getDefaultAssessmentYear() })
   }
 
   if (exactWorkItem) {
