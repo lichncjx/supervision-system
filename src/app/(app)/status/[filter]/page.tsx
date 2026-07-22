@@ -181,6 +181,7 @@ export default function StatusFilterPage() {
 
   React.useEffect(() => {
     const loadData = async () => {
+      if (!user || !systemDefaultYear) return;
       const newList = await queryWorks({
         type: typeFilter,
         departmentId: companyLevel ? departmentFilter : (user?.departmentId ?? undefined),
@@ -197,7 +198,7 @@ export default function StatusFilterPage() {
     };
 
     loadData();
-  }, [user, typeFilter, departmentFilter, keyword, safeFilter, queryStatus, companyLevel, assessmentYear]);
+  }, [user, systemDefaultYear, typeFilter, departmentFilter, keyword, safeFilter, queryStatus, companyLevel, assessmentYear]);
 
   const finalList = monthFilter
     ? list.filter((work) => getWorkMonth(work) === monthFilter)

@@ -85,6 +85,7 @@ export default function ItemListPage() {
   const [monthFilter, setMonthFilter] = useState('')
   const [assessmentYearFilter, setAssessmentYearFilter] = useState(DEFAULT_ASSESSMENT_YEAR)
   const [systemDefaultYear, setSystemDefaultYear] = useState<number | null>(null)
+  const importYearTouchedRef = useRef(false)
   const [workItemFilter, setWorkItemFilter] = useState('')
   const [departments, setDepartments] = useState<Department[]>([])
   const [companyLeaders, setCompanyLeaders] = useState<User[]>([])
@@ -95,7 +96,7 @@ export default function ItemListPage() {
     getSystemSettings()
       .then((settings) => {
         setSystemDefaultYear(settings.defaultAssessmentYear)
-        setImportYear(String(settings.defaultAssessmentYear))
+        if (!importYearTouchedRef.current) setImportYear(String(settings.defaultAssessmentYear))
       })
       .catch(() => setSystemDefaultYear(Number(DEFAULT_ASSESSMENT_YEAR)))
   }, [user])
@@ -401,6 +402,7 @@ export default function ItemListPage() {
     if (!file) return
 
     setImportFile(file)
+    importYearTouchedRef.current = false
     setImportYear(String(systemDefaultYear || new Date().getFullYear()))
     setImportPreview(null)
     setIsImportDialogOpen(true)
@@ -605,6 +607,7 @@ export default function ItemListPage() {
             <Select
               value={importYear}
               onValueChange={(value) => {
+                importYearTouchedRef.current = true
                 setImportYear(value)
                 setImportPreview(null)
               }}

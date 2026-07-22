@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { Copy, Plus, Trash2 } from 'lucide-react'
@@ -52,7 +52,8 @@ export default function BatchNewWorkNodesPage() {
   const { user } = useAuth()
   const router = useRouter()
   const [departments, setDepartments] = useState<Department[]>([])
-  const [assessmentYear, setAssessmentYear] = useState(String(new Date().getFullYear()))
+  const initialAssessmentYearRef = useRef(String(new Date().getFullYear()))
+  const [assessmentYear, setAssessmentYear] = useState(initialAssessmentYearRef.current)
   const [workItem, setWorkItem] = useState('')
   const [businessCategory, setBusinessCategory] = useState('')
   const [isInnovation, setIsInnovation] = useState(false)
@@ -79,7 +80,11 @@ export default function BatchNewWorkNodesPage() {
 
   useEffect(() => {
     getSystemSettings()
-      .then((settings) => setAssessmentYear(String(settings.defaultAssessmentYear)))
+      .then((settings) => setAssessmentYear((current) => (
+        current === initialAssessmentYearRef.current
+          ? String(settings.defaultAssessmentYear)
+          : current
+      )))
       .catch(() => undefined)
   }, [])
 
