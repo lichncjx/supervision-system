@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-TAG="${1:-20260521}"
+TAG="${1:-latest}"
 OUT_DIR="${2:-offline-release/images}"
 OUT_DIR="${OUT_DIR%/}"
 RELEASE_ROOT="$(dirname "$OUT_DIR")"

@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-TAG="${1:-20260521}"
+TAG="${1:-latest}"
 IMAGE_DIR="${2:-/opt/supervision-system/images}"
 
 cd "$IMAGE_DIR"

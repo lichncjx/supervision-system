@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-TAG="${1:-20260521}"
+TAG="${1:-latest}"
 
 docker build --target app -t "supervision-system-app:$TAG" .
 docker build --target migrate -t "supervision-system-migrate:$TAG" .

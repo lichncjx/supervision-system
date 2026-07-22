@@ -37,15 +37,15 @@ docker pull postgres:16
 在项目源码根目录执行。脚本和下面的手工命令都需要当前目录包含 `Dockerfile`、`package.json`、`prisma/`、`src/` 等完整源码。
 
 ```bash
-docker build --target app -t supervision-system-app:20260521 .
-docker build --target migrate -t supervision-system-migrate:20260521 .
-docker build --target seed -t supervision-system-seed:20260521 .
+docker build --target app -t supervision-system-app:latest .
+docker build --target migrate -t supervision-system-migrate:latest .
+docker build --target seed -t supervision-system-seed:latest .
 ```
 
 也可以使用辅助脚本：
 
 ```bash
-sh deploy/offline/scripts/build-images.sh 20260521
+sh deploy/offline/scripts/build-images.sh latest
 ```
 
 如需使用其他版本号，构建和导出必须使用同一个 tag。例如：
@@ -57,21 +57,21 @@ sh deploy/offline/scripts/export-images.sh 20260601 offline-release/images
 
 ## 5. 外网导出镜像
 
-在项目源码根目录执行。推荐使用辅助脚本导出，因为脚本会同时生成与镜像 tag 匹配的 `offline-release/docker-compose.yml`，避免镜像 tag 与 compose 文件不一致。生成后的 `offline-release/` 与内网 `/opt/supervision-system/` 目标目录结构一致，可以直接压缩打包。
+在项目源码根目录执行。推荐使用辅助脚本导出，脚本会生成与镜像 tag 匹配的 `docker-compose.yml`，并复制 `.env.production.template`、`README.md` 和辅助脚本到 `offline-release/`。生成后的 `offline-release/` 与内网 `/opt/supervision-system/` 目标目录结构一致，可以直接压缩打包。
 
 ```bash
 mkdir -p offline-release/images
 
-docker save supervision-system-app:20260521 | gzip > offline-release/images/supervision-system-app_20260521.tar.gz
-docker save supervision-system-migrate:20260521 | gzip > offline-release/images/supervision-system-migrate_20260521.tar.gz
-docker save supervision-system-seed:20260521 | gzip > offline-release/images/supervision-system-seed_20260521.tar.gz
+docker save supervision-system-app:latest | gzip > offline-release/images/supervision-system-app_latest.tar.gz
+docker save supervision-system-migrate:latest | gzip > offline-release/images/supervision-system-migrate_latest.tar.gz
+docker save supervision-system-seed:latest | gzip > offline-release/images/supervision-system-seed_latest.tar.gz
 docker save postgres:16 | gzip > offline-release/images/postgres_16.tar.gz
 ```
 
 也可以使用辅助脚本：
 
 ```bash
-sh deploy/offline/scripts/export-images.sh 20260521 offline-release/images
+sh deploy/offline/scripts/export-images.sh latest offline-release/images
 ```
 
 如果手工执行 `docker save` 且使用了非默认 tag，必须同步修改摆渡包中的 `docker-compose.yml`：
@@ -96,9 +96,9 @@ sha256sum images/*.tar.gz > SHA256SUMS.txt
 ```text
 offline-release/
 ├─ images/
-│  ├─ supervision-system-app_20260521.tar.gz
-│  ├─ supervision-system-migrate_20260521.tar.gz
-│  ├─ supervision-system-seed_20260521.tar.gz
+│  ├─ supervision-system-app_latest.tar.gz
+│  ├─ supervision-system-migrate_latest.tar.gz
+│  ├─ supervision-system-seed_latest.tar.gz
 │  └─ postgres_16.tar.gz
 ├─ scripts/
 │  ├─ build-images.sh
@@ -115,7 +115,7 @@ offline-release/
 例如：
 
 ```bash
-tar -czf supervision-system-offline-20260521.tar.gz offline-release
+tar -czf supervision-system-offline-latest.tar.gz offline-release
 ```
 
 ## 7. 内网服务器目录结构
@@ -148,16 +148,16 @@ cd /opt/supervision-system
 ```bash
 cd /opt/supervision-system/images
 
-gzip -dc supervision-system-app_20260521.tar.gz | docker load
-gzip -dc supervision-system-migrate_20260521.tar.gz | docker load
-gzip -dc supervision-system-seed_20260521.tar.gz | docker load
+gzip -dc supervision-system-app_latest.tar.gz | docker load
+gzip -dc supervision-system-migrate_latest.tar.gz | docker load
+gzip -dc supervision-system-seed_latest.tar.gz | docker load
 gzip -dc postgres_16.tar.gz | docker load
 ```
 
 也可以使用辅助脚本：
 
 ```bash
-sh /opt/supervision-system/scripts/load-images.sh 20260521 /opt/supervision-system/images
+sh /opt/supervision-system/scripts/load-images.sh latest /opt/supervision-system/images
 ```
 
 检查镜像：
