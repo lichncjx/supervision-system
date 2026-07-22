@@ -246,7 +246,7 @@ export default function ItemListPage() {
     if (keyword) params.set('keyword', keyword)
     if (departmentFilter !== '全部') params.set('departmentId', String(departmentFilter))
     if (statusFilter !== 'all') params.set('status', statusFilter)
-    if (assessmentYearFilter) params.set('assessmentYear', assessmentYearFilter)
+    params.set('assessmentYear', assessmentYearFilter || 'all')
     if (workItemFilter) params.set('workItem', workItemFilter)
     if (monthFilter) params.set('month', monthFilter)
 
