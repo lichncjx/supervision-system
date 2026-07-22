@@ -1,10 +1,24 @@
 #!/bin/sh
 set -eu
 
-TAG="${1:-20260521}"
+TAG="${1:-}"
 OUT_DIR="${2:-offline-release/images}"
 OUT_DIR="${OUT_DIR%/}"
 RELEASE_ROOT="$(dirname "$OUT_DIR")"
+VERSION_FILE="$RELEASE_ROOT/VERSION"
+
+if [ -z "$TAG" ]; then
+  if [ ! -f "$VERSION_FILE" ]; then
+    echo "version file not found: $VERSION_FILE; run build-images.sh first or pass a tag explicitly" >&2
+    exit 1
+  fi
+  IFS= read -r TAG < "$VERSION_FILE"
+fi
+
+if ! printf '%s\n' "$TAG" | grep -Eq '^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$'; then
+  echo "invalid Docker image tag: $TAG" >&2
+  exit 1
+fi
 
 mkdir -p "$OUT_DIR"
 mkdir -p "$RELEASE_ROOT/scripts"
@@ -27,6 +41,8 @@ save_image "supervision-system-app:$TAG" "$OUT_DIR/supervision-system-app_$TAG.t
 save_image "supervision-system-migrate:$TAG" "$OUT_DIR/supervision-system-migrate_$TAG.tar.gz"
 save_image "supervision-system-seed:$TAG" "$OUT_DIR/supervision-system-seed_$TAG.tar.gz"
 save_image postgres:16 "$OUT_DIR/postgres_16.tar.gz"
+
+printf '%s\n' "$TAG" > "$VERSION_FILE"
 
 sed \
   -e "s/supervision-system-app:[^[:space:]]*/supervision-system-app:$TAG/g" \

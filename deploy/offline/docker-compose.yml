@@ -16,7 +16,7 @@ services:
       - supervision-net
 
   migrate:
-    image: supervision-system-migrate:20260521
+    image: supervision-system-migrate:__OFFLINE_IMAGE_TAG__
     container_name: supervision-migrate
     env_file:
       - .env.production
@@ -26,7 +26,7 @@ services:
       - supervision-net
 
   seed-admin:
-    image: supervision-system-seed:20260521
+    image: supervision-system-seed:__OFFLINE_IMAGE_TAG__
     container_name: supervision-seed-admin
     profiles:
       - init
@@ -38,7 +38,7 @@ services:
       - supervision-net
 
   app:
-    image: supervision-system-app:20260521
+    image: supervision-system-app:__OFFLINE_IMAGE_TAG__
     container_name: supervision-app
     restart: unless-stopped
     env_file:
