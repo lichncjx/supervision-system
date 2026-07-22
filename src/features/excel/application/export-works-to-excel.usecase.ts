@@ -37,6 +37,7 @@ import {
   normalizeWorkStructureText,
 } from '@/features/works/domain/work-structure.rules'
 import { matchesWorkKeyword } from '@/features/works/application/work-keyword-search'
+import { getDefaultAssessmentYear } from '@/features/system-settings/application/system-settings.usecase'
 
 function normalizeTypeFilter(type: string | null): WorkItemType | null {
   if (!type) return null
@@ -104,9 +105,12 @@ export async function exportWorksToExcelUseCase(
   const departmentIdFilter = departmentId ? Number(departmentId) : null
   const keywordFilter = keyword?.trim() || null
   const isAllYears = assessmentYear?.trim().toLowerCase() === 'all'
-  const assessmentYearFilter = normalizeAssessmentYear(assessmentYear)
+  let assessmentYearFilter = normalizeAssessmentYear(assessmentYear)
   if (assessmentYear && !assessmentYearFilter && !isAllYears) {
     return err(400, '无效的年度筛选条件')
+  }
+  if (!assessmentYearFilter && !isAllYears) {
+    assessmentYearFilter = await getDefaultAssessmentYear()
   }
 
   const workItemFilter = normalizeWorkStructureText(workItem)

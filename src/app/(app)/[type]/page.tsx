@@ -193,6 +193,7 @@ export default function ItemListPage() {
   ).sort()
 
   const fetchList = async () => {
+    if (!user || !systemDefaultYear) return
     const data = await queryWorks({
       type,
       departmentId: companyLevel ? departmentFilter : (user?.departmentId ?? undefined),
@@ -207,7 +208,7 @@ export default function ItemListPage() {
   useEffect(() => {
     void fetchList()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, type, departmentFilter, statusFilter, keyword, assessmentYearFilter, workItemFilter])
+  }, [user, systemDefaultYear, type, departmentFilter, statusFilter, keyword, assessmentYearFilter, workItemFilter])
 
   const filteredList = useMemo(() => {
     if (monthFilter) {

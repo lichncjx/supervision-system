@@ -70,10 +70,11 @@ export default function NewWorkPage() {
   const [workItemDefaultNotice, setWorkItemDefaultNotice] = useState('');
 
   const [nodes, setNodes] = useState<WorkNode[]>([]);
+  const initialAssessmentYearRef = useRef(String(new Date().getFullYear()));
 
   // 重点工作和主要工作表单
   const [priorityMainForm, setPriorityMainForm] = useState({
-    assessmentYear: String(new Date().getFullYear()),
+    assessmentYear: initialAssessmentYearRef.current,
     businessCategory: '',
     workItem: '',
     workNode: '',
@@ -88,7 +89,7 @@ export default function NewWorkPage() {
 
   // 待办事项表单
   const [todoForm, setTodoForm] = useState({
-    assessmentYear: String(new Date().getFullYear()),
+    assessmentYear: initialAssessmentYearRef.current,
     proposedLeaderId:
       isCompanyLevel(user?.role)
         ? String(user?.id)
@@ -110,8 +111,12 @@ export default function NewWorkPage() {
   useEffect(() => {
     getSystemSettings().then((settings) => {
       const assessmentYear = String(settings.defaultAssessmentYear);
-      setPriorityMainForm((current) => ({ ...current, assessmentYear }));
-      setTodoForm((current) => ({ ...current, assessmentYear }));
+      setPriorityMainForm((current) => current.assessmentYear === initialAssessmentYearRef.current
+        ? { ...current, assessmentYear }
+        : current);
+      setTodoForm((current) => current.assessmentYear === initialAssessmentYearRef.current
+        ? { ...current, assessmentYear }
+        : current);
     }).catch(() => undefined);
   }, []);
 
