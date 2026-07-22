@@ -105,18 +105,19 @@ export async function exportWorksToExcelUseCase(
   const departmentIdFilter = departmentId ? Number(departmentId) : null
   const keywordFilter = keyword?.trim() || null
   const isAllYears = assessmentYear?.trim().toLowerCase() === 'all'
-  let assessmentYearFilter = normalizeAssessmentYear(assessmentYear)
-  if (assessmentYear && !assessmentYearFilter && !isAllYears) {
+  const requestedAssessmentYearFilter = normalizeAssessmentYear(assessmentYear)
+  if (assessmentYear && !requestedAssessmentYearFilter && !isAllYears) {
     return err(400, '无效的年度筛选条件')
-  }
-  if (!assessmentYearFilter && !isAllYears) {
-    assessmentYearFilter = await getDefaultAssessmentYear()
   }
 
   const workItemFilter = normalizeWorkStructureText(workItem)
-  if (workItem && (!typeFilter || !assessmentYearFilter || !workItemFilter)) {
+  if (workItem && (!typeFilter || !requestedAssessmentYearFilter || !workItemFilter)) {
     return err(400, '精确工作事项筛选必须同时指定类型和年度')
   }
+
+  const assessmentYearFilter = requestedAssessmentYearFilter || (
+    isAllYears ? null : await getDefaultAssessmentYear()
+  )
 
   const monthFilter = month?.trim() || null
   if (monthFilter && !/^\d{4}-(0[1-9]|1[0-2])$/.test(monthFilter)) {

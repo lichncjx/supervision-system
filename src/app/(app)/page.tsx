@@ -194,7 +194,8 @@ export default function DashboardPage() {
             <button
               type="button"
               onClick={() => setSettingsOpen(true)}
-              className="inline-flex items-center gap-1 rounded-full px-2 text-xs font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+              disabled={!settingsLoaded}
+              className="inline-flex items-center gap-1 rounded-full px-2 text-xs font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Settings className="h-3.5 w-3.5" />
               系统设置
