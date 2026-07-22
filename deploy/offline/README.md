@@ -34,53 +34,40 @@ docker pull postgres:16
 
 ## 4. 外网构建镜像
 
-在项目源码根目录执行。脚本和下面的手工命令都需要当前目录包含 `Dockerfile`、`package.json`、`prisma/`、`src/` 等完整源码。
+在干净的 Git 工作区中，从项目源码根目录执行辅助脚本：
 
 ```bash
-docker build --target app -t supervision-system-app:latest .
-docker build --target migrate -t supervision-system-migrate:latest .
-docker build --target seed -t supervision-system-seed:latest .
+sh deploy/offline/scripts/build-images.sh
+cat offline-release/VERSION
 ```
 
-也可以使用辅助脚本：
+未显式传入 tag 时，脚本使用提交日期和 12 位 Git 短 SHA 生成稳定、可追溯的 tag，例如 `20260722-eb2b7e163ac9`，并写入 `offline-release/VERSION`。工作区存在未提交修改时，自动生成会拒绝构建，避免同一 SHA 对应不同镜像内容。
+
+如需人工指定 tag，可显式传入；脚本仍会将最终值写入 `VERSION`：
 
 ```bash
-sh deploy/offline/scripts/build-images.sh latest
+sh deploy/offline/scripts/build-images.sh 20260722-hotfix
 ```
 
-如需使用其他版本号，构建和导出必须使用同一个 tag。例如：
-
-```bash
-sh deploy/offline/scripts/build-images.sh 20260601
-sh deploy/offline/scripts/export-images.sh 20260601 offline-release/images
-```
+tag 必须符合 Docker 镜像 tag 规则。显式 tag 适用于经审批的补丁构建或源码目录不包含 Git 元数据的场景。
 
 ## 5. 外网导出镜像
 
-在项目源码根目录执行。推荐使用辅助脚本导出，脚本会生成与镜像 tag 匹配的 `docker-compose.yml`，并复制 `.env.production.template`、`README.md` 和辅助脚本到 `offline-release/`。生成后的 `offline-release/` 与内网 `/opt/supervision-system/` 目标目录结构一致，可以直接压缩打包。
+构建完成后直接执行：
 
 ```bash
-mkdir -p offline-release/images
-
-docker save supervision-system-app:latest | gzip > offline-release/images/supervision-system-app_latest.tar.gz
-docker save supervision-system-migrate:latest | gzip > offline-release/images/supervision-system-migrate_latest.tar.gz
-docker save supervision-system-seed:latest | gzip > offline-release/images/supervision-system-seed_latest.tar.gz
-docker save postgres:16 | gzip > offline-release/images/postgres_16.tar.gz
+sh deploy/offline/scripts/export-images.sh
 ```
 
-也可以使用辅助脚本：
+导出脚本默认读取 `offline-release/VERSION`，导出对应 tag 的镜像，生成 tag 匹配的 `docker-compose.yml`，并复制 `.env.production.template`、`README.md` 和辅助脚本到 `offline-release/`。仓库中的 `docker-compose.yml` 使用 `__OFFLINE_IMAGE_TAG__` 占位符，不应绕过导出脚本直接用于部署。
+
+如果需要显式覆盖构建阶段记录的 tag，可以同时传入 tag 和输出目录：
 
 ```bash
-sh deploy/offline/scripts/export-images.sh latest offline-release/images
+sh deploy/offline/scripts/export-images.sh 20260722-hotfix offline-release/images
 ```
 
-如果手工执行 `docker save` 且使用了非默认 tag，必须同步修改摆渡包中的 `docker-compose.yml`：
-
-```yaml
-image: supervision-system-app:你的TAG
-image: supervision-system-migrate:你的TAG
-image: supervision-system-seed:你的TAG
-```
+显式覆盖会同步更新 `offline-release/VERSION` 和生成后的 compose。生成后的 `offline-release/` 与内网 `/opt/supervision-system/` 目标目录结构一致，可以直接压缩打包。
 
 建议生成校验文件：
 
@@ -96,15 +83,16 @@ sha256sum images/*.tar.gz > SHA256SUMS.txt
 ```text
 offline-release/
 ├─ images/
-│  ├─ supervision-system-app_latest.tar.gz
-│  ├─ supervision-system-migrate_latest.tar.gz
-│  ├─ supervision-system-seed_latest.tar.gz
+│  ├─ supervision-system-app_20260722-eb2b7e163ac9.tar.gz
+│  ├─ supervision-system-migrate_20260722-eb2b7e163ac9.tar.gz
+│  ├─ supervision-system-seed_20260722-eb2b7e163ac9.tar.gz
 │  └─ postgres_16.tar.gz
 ├─ scripts/
 │  ├─ build-images.sh
 │  ├─ export-images.sh
 │  └─ load-images.sh
 ├─ docker-compose.yml
+├─ VERSION
 ├─ .env.production.template
 ├─ README.md
 └─ SHA256SUMS.txt
@@ -115,7 +103,8 @@ offline-release/
 例如：
 
 ```bash
-tar -czf supervision-system-offline-latest.tar.gz offline-release
+TAG="$(cat offline-release/VERSION)"
+tar -czf "supervision-system-offline_${TAG}.tar.gz" offline-release
 ```
 
 ## 7. 内网服务器目录结构
@@ -135,6 +124,7 @@ cd /opt/supervision-system
 ├─ scripts/
 │  └─ load-images.sh
 ├─ docker-compose.yml
+├─ VERSION
 ├─ .env.production.template
 ├─ .env.production
 ├─ data/
@@ -146,18 +136,19 @@ cd /opt/supervision-system
 ## 8. 内网导入镜像
 
 ```bash
-cd /opt/supervision-system/images
+cd /opt/supervision-system
+TAG="$(cat VERSION)"
 
-gzip -dc supervision-system-app_latest.tar.gz | docker load
-gzip -dc supervision-system-migrate_latest.tar.gz | docker load
-gzip -dc supervision-system-seed_latest.tar.gz | docker load
-gzip -dc postgres_16.tar.gz | docker load
+gzip -dc "images/supervision-system-app_${TAG}.tar.gz" | docker load
+gzip -dc "images/supervision-system-migrate_${TAG}.tar.gz" | docker load
+gzip -dc "images/supervision-system-seed_${TAG}.tar.gz" | docker load
+gzip -dc images/postgres_16.tar.gz | docker load
 ```
 
 也可以使用辅助脚本：
 
 ```bash
-sh /opt/supervision-system/scripts/load-images.sh latest /opt/supervision-system/images
+sh /opt/supervision-system/scripts/load-images.sh
 ```
 
 检查镜像：
@@ -282,9 +273,9 @@ docker exec supervision-db pg_dump -U supervision supervision > "$BACKUP_FILE"
 ## 14. 回滚方案
 
 1. 升级前必须备份数据库。
-2. 保留上一版 app/migrate/seed 镜像。
+2. 保留上一版 app/migrate/seed 镜像及其 `VERSION`。
 3. 保留上一版 `docker-compose.yml`。
-4. 如果只是 app 代码问题，可以把 image tag 改回上一版并重启 app。
+4. 如果只是 app 代码问题，可以恢复上一版 compose，或把 image tag 改回上一版 `VERSION` 中记录的 tag 后重启 app。
 5. 如果数据库迁移已执行且需要回滚，优先使用升级前数据库备份恢复。
 
 恢复备份前应停止 app，确认备份文件和目标数据库，避免覆盖错误环境。
