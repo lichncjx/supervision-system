@@ -39,6 +39,22 @@ import {
 import { matchesWorkKeyword } from '@/features/works/application/work-keyword-search'
 import { getDefaultAssessmentYear } from '@/features/system-settings/application/system-settings.usecase'
 
+export type ExportWorksToExcelDependencies = {
+  getDefaultAssessmentYear: typeof getDefaultAssessmentYear
+  findWorksForExport: typeof findWorksForExport
+  buildWorkVisibilityWhere: typeof buildWorkVisibilityWhere
+  generateExportBuffer: typeof generateExportBuffer
+  createExportOperationLog: typeof createExportOperationLog
+}
+
+const defaultDependencies: ExportWorksToExcelDependencies = {
+  getDefaultAssessmentYear,
+  findWorksForExport,
+  buildWorkVisibilityWhere,
+  generateExportBuffer,
+  createExportOperationLog,
+}
+
 function normalizeTypeFilter(type: string | null): WorkItemType | null {
   if (!type) return null
   const normalized = type.toUpperCase()
@@ -79,6 +95,7 @@ function isValidStatusFilter(status: string | null): boolean {
 
 export async function exportWorksToExcelUseCase(
   input: ExportWorksToExcelInput,
+  dependencies: ExportWorksToExcelDependencies = defaultDependencies,
 ): Promise<Result<ExcelExportFile>> {
   const {
     currentUser,
@@ -116,7 +133,7 @@ export async function exportWorksToExcelUseCase(
   }
 
   const assessmentYearFilter = requestedAssessmentYearFilter || (
-    isAllYears ? null : await getDefaultAssessmentYear()
+    isAllYears ? null : await dependencies.getDefaultAssessmentYear()
   )
 
   const monthFilter = month?.trim() || null
@@ -126,7 +143,9 @@ export async function exportWorksToExcelUseCase(
 
   const permUser = toPermissionUser(currentUser)
 
-  const workItems = await findWorksForExport(await buildWorkVisibilityWhere(currentUser))
+  const workItems = await dependencies.findWorksForExport(
+    await dependencies.buildWorkVisibilityWhere(currentUser),
+  )
 
   const now = new Date()
   now.setHours(0, 0, 0, 0)
@@ -192,9 +211,9 @@ export async function exportWorksToExcelUseCase(
       )
     })
 
-  const { buffer, fileName } = generateExportBuffer(visibleItems)
+  const { buffer, fileName } = dependencies.generateExportBuffer(visibleItems)
 
-  createExportOperationLog({
+  dependencies.createExportOperationLog({
     userId: currentUser.id,
     userName: currentUser.name,
     userRole: currentUser.role,
