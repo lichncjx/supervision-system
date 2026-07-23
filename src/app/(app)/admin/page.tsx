@@ -155,7 +155,7 @@ export default function AdminPage() {
         departmentId: 2,
       });
 
-      fetchUsers();
+      setUserList((currentUsers) => [...currentUsers, data]);
       alert('用户创建成功');
     } catch (e) {
       alert((e as Error).message || '创建失败');
@@ -201,7 +201,9 @@ export default function AdminPage() {
         return;
       }
 
-      fetchUsers();
+      setUserList((currentUsers) =>
+        currentUsers.filter((currentUser) => currentUser.id !== u.id),
+      );
     } catch (e) {
       alert((e as Error).message || '删除失败');
     }
@@ -279,14 +281,19 @@ export default function AdminPage() {
         credentials: 'include',
       });
 
+      const data = (await response.json()) as UserListItemDto & ErrorData;
+
       if (!response.ok) {
-        const data = (await response.json()) as ErrorData;
         alert(data.message || '修改失败');
         return;
       }
 
       setEditTarget(null);
-      fetchUsers();
+      setUserList((currentUsers) =>
+        currentUsers.map((currentUser) =>
+          currentUser.id === data.id ? data : currentUser,
+        ),
+      );
       alert('用户信息修改成功');
     } catch (e) {
       alert((e as Error).message || '修改失败');
