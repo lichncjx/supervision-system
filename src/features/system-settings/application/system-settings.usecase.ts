@@ -21,7 +21,23 @@ export type SystemSettingsDto = {
   updatedBy: { id: number; name: string } | null
 }
 
-function toDto(setting: Awaited<ReturnType<typeof findSystemSetting>>): SystemSettingsDto {
+type SystemSettingRecord = NonNullable<Awaited<ReturnType<typeof findSystemSetting>>>
+
+export type SystemSettingsDependencies = {
+  findSystemSetting: typeof findSystemSetting
+  createSystemSetting: typeof createSystemSetting
+  updateSystemSettingByVersion: typeof updateSystemSettingByVersion
+  createSystemSettingOperationLog: typeof createSystemSettingOperationLog
+}
+
+const defaultDependencies: SystemSettingsDependencies = {
+  findSystemSetting,
+  createSystemSetting,
+  updateSystemSettingByVersion,
+  createSystemSettingOperationLog,
+}
+
+function toDto(setting: SystemSettingRecord | null): SystemSettingsDto {
   if (!setting) {
     return {
       defaultAssessmentYear: getNaturalAssessmentYear(),
@@ -39,9 +55,11 @@ function toDto(setting: Awaited<ReturnType<typeof findSystemSetting>>): SystemSe
   }
 }
 
-export async function getSystemSettingsUseCase(): Promise<SystemSettingsDto> {
+export async function getSystemSettingsUseCase(
+  dependencies: Pick<SystemSettingsDependencies, 'findSystemSetting'> = defaultDependencies,
+): Promise<SystemSettingsDto> {
   try {
-    return toDto(await findSystemSetting())
+    return toDto(await dependencies.findSystemSetting())
   } catch {
     return toDto(null)
   }
@@ -60,6 +78,7 @@ export type UpdateSystemSettingsInput = {
 export async function updateSystemSettingsUseCase(
   currentUser: { id: number; name: string; role: string },
   input: UpdateSystemSettingsInput,
+  dependencies: SystemSettingsDependencies = defaultDependencies,
 ): Promise<Result<SystemSettingsDto>> {
   if (!isGlobalView(currentUser.role)) return err(403, '权限不足')
 
@@ -71,14 +90,14 @@ export async function updateSystemSettingsUseCase(
     return err(400, `督办提示必须为不超过 ${DASHBOARD_NOTICE_MAX_LENGTH} 个字符的文本`)
   }
 
-  const existing = await findSystemSetting()
+  const existing = await dependencies.findSystemSetting()
   let updated
   if (!existing) {
     if (input.updatedAt !== null && input.updatedAt !== undefined) {
       return err(409, '系统设置已被其他用户初始化，请刷新后重试')
     }
     try {
-      updated = await createSystemSetting({ defaultAssessmentYear, dashboardNotice, updatedById: currentUser.id })
+      updated = await dependencies.createSystemSetting({ defaultAssessmentYear, dashboardNotice, updatedById: currentUser.id })
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
         return err(409, '系统设置已被其他用户更新，请刷新后重试')
@@ -89,7 +108,7 @@ export async function updateSystemSettingsUseCase(
     if (typeof input.updatedAt !== 'string') return err(409, '系统设置已更新，请刷新后重试')
     const version = new Date(input.updatedAt)
     if (Number.isNaN(version.getTime())) return err(400, '无效的系统设置版本')
-    updated = await updateSystemSettingByVersion({
+    updated = await dependencies.updateSystemSettingByVersion({
       defaultAssessmentYear,
       dashboardNotice,
       updatedById: currentUser.id,
@@ -98,7 +117,7 @@ export async function updateSystemSettingsUseCase(
     if (!updated) return err(409, '系统设置已被其他用户更新，请刷新后重试')
   }
 
-  await createSystemSettingOperationLog({
+  await dependencies.createSystemSettingOperationLog({
     userId: currentUser.id,
     userName: currentUser.name,
     userRole: currentUser.role,
