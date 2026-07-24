@@ -23,30 +23,13 @@ jobs:
         run: corepack enable
 
       - name: Install dependencies
-        run: |
-          if [ -f pnpm-lock.yaml ]; then
-            pnpm install --frozen-lockfile
-          elif [ -f package-lock.json ]; then
-            npm ci
-          else
-            npm install
-          fi
+        run: pnpm install --frozen-lockfile
 
       - name: Type check
-        run: |
-          if npm run | grep -q "typecheck"; then
-            npm run typecheck
-          else
-            npx tsc --noEmit
-          fi
+        run: pnpm typecheck
 
       - name: Lint
-        run: |
-          if npm run | grep -q "lint"; then
-            npm run lint
-          else
-            echo "No lint script found, skipping lint."
-          fi
+        run: pnpm lint
 
       - name: Build
-        run: npm run build
+        run: pnpm build
