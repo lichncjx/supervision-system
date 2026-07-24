@@ -29,9 +29,6 @@
     "format:check": "prettier --check .",
     "check": "pnpm typecheck && pnpm lint && pnpm build"
   },
-  "prisma": {
-    "seed": "node_modules/.bin/tsx prisma/seed-demo.ts"
-  },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
     "@next/swc-wasm-nodejs": "^16.1.1",
