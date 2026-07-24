@@ -7,7 +7,7 @@
     "dev": "next dev -p 5000",
     "preinstall": "",
     "lint": "eslint",
-    "start": "next start -p 5000",
+    "start": "node .next/standalone/server.js",
     "typecheck": "tsc --noEmit",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
@@ -28,9 +28,6 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check": "pnpm typecheck && pnpm lint && pnpm build"
-  },
-  "prisma": {
-    "seed": "node_modules/.bin/tsx prisma/seed-demo.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
