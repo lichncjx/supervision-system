@@ -13,7 +13,7 @@
 
 ## 快速开始
 
-前置条件：Node.js 20+。首次使用请启用 Corepack 并激活项目指定的 pnpm 版本：
+前置条件：Node.js 20–24。首次使用请启用 Corepack 并激活项目指定的 pnpm 版本：
 
 ```bash
 corepack enable

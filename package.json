@@ -84,7 +84,8 @@
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^1.1.2",
     "xlsx": "^0.18.5",
-    "zod": "^4.3.5"
+    "zod": "^4.3.5",
+    "only-allow": "^1.2.2"
   },
   "devDependencies": {
     "@eslint/eslintrc": "3.3.3",
@@ -100,7 +101,6 @@
     "eslint": "^9",
     "eslint-config-next": "15.5.15",
     "eslint-config-prettier": "^10.1.8",
-    "only-allow": "^1.2.2",
     "postcss": "^8",
     "prettier": "^3.8.3",
     "prisma": "^6.19.3",
@@ -113,7 +113,7 @@
   },
   "packageManager": "pnpm@10.34.5",
   "engines": {
-    "node": ">=20.x",
+    "node": ">=20 <25",
     "pnpm": ">=10 <11"
   }
 }
