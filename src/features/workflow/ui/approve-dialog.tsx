@@ -35,9 +35,9 @@ export function ApproveDialog({
   useEffect(() => {
     if (open) {
       setComment('');
-      setSelectedLeaderId(needsLeaderSelection && companyLeaders.length > 0 ? String(companyLeaders[0].id) : '');
+      setSelectedLeaderId('');
     }
-  }, [open, needsLeaderSelection, companyLeaders]);
+  }, [open]);
 
   const handleConfirm = () => {
     onConfirm(
