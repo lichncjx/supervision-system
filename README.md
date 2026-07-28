@@ -9,9 +9,16 @@
 - shadcn/ui（new-york style，CSS variables 模式）
 - PostgreSQL + Prisma
 - React Hook Form + Zod
-- pnpm 9+
+- pnpm 10.34.5（通过 Corepack 固定）
 
 ## 快速开始
+
+前置条件：Node.js 20–24。首次使用请启用 Corepack 并激活项目指定的 pnpm 版本：
+
+```bash
+corepack enable
+corepack prepare pnpm@10.34.5 --activate
+```
 
 安装依赖：
 

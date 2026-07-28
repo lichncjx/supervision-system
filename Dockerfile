@@ -2,7 +2,9 @@ FROM node:20-alpine AS base
 
 WORKDIR /app
 
-RUN npm config set registry https://registry.npmmirror.com && npm install -g pnpm
+ENV COREPACK_NPM_REGISTRY=https://registry.npmmirror.com
+
+RUN corepack enable && corepack prepare pnpm@10.34.5 --activate
 
 
 FROM base AS deps
