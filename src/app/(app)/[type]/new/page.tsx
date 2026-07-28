@@ -208,6 +208,16 @@ export default function NewWorkPage() {
   };
 
   useEffect(() => {
+    if (!priorityMainForm.workItem.trim()) return;
+    setErrors((current) => {
+      if (!current.workItem) return current;
+      const next = { ...current };
+      delete next.workItem;
+      return next;
+    });
+  }, [priorityMainForm.workItem]);
+
+  useEffect(() => {
     const fetchData = async () => {
       const [leaders, depts] = await Promise.all([
         getCompanyLeaders(),
