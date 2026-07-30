@@ -20,6 +20,7 @@
     "db:init": "pnpm prisma:generate && pnpm prisma:deploy && pnpm prisma:seed",
     "test:regression": "node tests/regression-baseline.cjs",
     "test:pr116-review": "tsx tests/pr116-review-regressions.ts",
+    "test:company-leader-visibility": "tsx tests/company-leader-visibility-regressions.ts",
     "test:system-settings": "tsx tests/system-settings-regressions.ts",
     "test:work-title": "tsx tests/work-title-regressions.ts",
     "test:regression:prepare": "docker compose up -d db && pnpm prisma:deploy && pnpm prisma:seed && pnpm dev",

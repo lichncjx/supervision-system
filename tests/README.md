@@ -36,6 +36,19 @@ TARGET_CONTRACT_ENV=local TARGET_CONTRACT_RESET=1 node tests/target-contract/run
 
 This suite owns the detailed role, visibility, dashboard, Excel, and workflow assertions.
 
+## Focused Permission Regression
+
+Run the company-leader visibility boundary checks with:
+
+```bash
+pnpm test:company-leader-visibility
+```
+
+This verifies that company leaders can view all non-draft priority, main, and
+todo items, retain their existing related-draft access, cannot see unrelated
+drafts, and do not gain approval, edit, or handling permissions from the
+expanded view scope.
+
 ## Manual Baseline
 
 Prerequisites:
