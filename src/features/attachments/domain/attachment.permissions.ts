@@ -5,7 +5,7 @@ import {
   type PermissionUser,
   type PermissionWorkItem,
 } from '@/features/works/domain/work.permissions'
-import { isGlobalView } from '@/features/users/domain/role.rules'
+import { isDepartmentLevel, isGlobalView } from '@/features/users/domain/role.rules'
 import { isTerminal } from '@/features/works/domain/work-status.rules'
 
 export function canViewAttachment(
@@ -21,7 +21,11 @@ export function canUploadAttachment(
 ): boolean {
   if (isGlobalView(user.role)) return true
   if (isTerminal(workItem.status)) return false
-  return canOperateWorkItem(user, workItem) || isWorkMainResponsibleDepartment(workItem, user.departmentId)
+  return canOperateWorkItem(user, workItem)
+    || (
+      isDepartmentLevel(user.role)
+      && isWorkMainResponsibleDepartment(workItem, user.departmentId)
+    )
 }
 
 export function canDeleteAttachment(

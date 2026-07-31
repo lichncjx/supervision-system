@@ -498,15 +498,9 @@ function canViewWork(user, work) {
   if (user.role === 'DEPARTMENT_MANAGER' || user.role === 'DEPARTMENT_LEADER') {
     return isDeptRelated(work, user.departmentId);
   }
-  if (user.role === 'VICE_PRESIDENT') {
+  if (user.role === 'VICE_PRESIDENT' || user.role === 'PRESIDENT') {
     return (
-      work.proposedLeaderId === user.id ||
-      work.approvalLeaderId === user.id ||
-      work.currentApproverId === user.id
-    );
-  }
-  if (user.role === 'PRESIDENT') {
-    return (
+      work.status !== 'DRAFT' ||
       work.proposedLeaderId === user.id ||
       work.approvalLeaderId === user.id ||
       work.currentApproverId === user.id

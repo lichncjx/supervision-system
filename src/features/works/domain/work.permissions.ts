@@ -89,6 +89,8 @@ export function isWorkMainResponsibleDepartment(
  * Broad view permission for listing and detail viewing. Does not guarantee actionable permissions.
  *
  * - Global view (ADMIN/SUPERVISOR) can see all items.
+ * - Company leaders retain their existing related-item scope and can also see
+ *   every non-draft item company-wide.
  */
 export function canViewWorkItem(
   user: PermissionUser,
@@ -101,6 +103,10 @@ export function canViewWorkItem(
 
   if (isCompanyLevel(user.role)) {
     return (
+      (
+        Boolean(workItem.status) &&
+        normalizeStatus(workItem.status) !== WorkItemStatus.DRAFT
+      ) ||
       workItem.proposedLeaderId === user.id ||
       workItem.approvalLeaderId === user.id ||
       workItem.currentApproverId === user.id

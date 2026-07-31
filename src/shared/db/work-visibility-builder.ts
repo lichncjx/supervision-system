@@ -1,4 +1,4 @@
-import { Prisma, Role } from '@prisma/client'
+import { Prisma, Role, WorkItemStatus } from '@prisma/client'
 import { prisma } from '@/shared/db/prisma'
 
 async function findCooperatorWorkItemIds(departmentId: number): Promise<number[]> {
@@ -35,6 +35,7 @@ export async function buildWorkVisibilityWhere(
   if (roleIs(user.role, Role.VICE_PRESIDENT, Role.PRESIDENT)) {
     return {
       OR: [
+        { status: { not: WorkItemStatus.DRAFT } },
         { proposedLeaderId: user.id },
         { approvalLeaderId: user.id },
         { currentApproverId: user.id },
