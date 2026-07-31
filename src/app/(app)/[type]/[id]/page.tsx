@@ -130,7 +130,9 @@ export default function WorkDetailPage() {
     isAdmin || isSupervisor ||
     ((user.role === 'DEPARTMENT_MANAGER' || user.role === 'DEPARTMENT_LEADER') &&
       isRelatedDept && !isTerminal(work.status) && !isReturnedDraft) ||
-    ((work.type === '重点' || work.type === '主要') && isRelatedDept && !isTerminal(work.status))
+    ((user.role === 'DEPARTMENT_MANAGER' || user.role === 'DEPARTMENT_LEADER') &&
+      (work.type === '重点' || work.type === '主要') &&
+      isRelatedDept && !isTerminal(work.status))
   );
   const canDeleteAttachment = (att: { userId: number }) =>
     isAdmin || isSupervisor || user?.id === att.userId;

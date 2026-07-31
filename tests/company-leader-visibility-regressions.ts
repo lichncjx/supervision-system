@@ -12,6 +12,7 @@ import {
   type PermissionUser,
   type PermissionWorkItem,
 } from '@/features/works/domain/work.permissions'
+import { canUploadAttachment } from '@/features/attachments/domain/attachment.permissions'
 import { buildWorkVisibilityWhere } from '@/shared/db/work-visibility-builder'
 
 const vicePresident: PermissionUser = {
@@ -80,6 +81,28 @@ async function main() {
     })
     assert.equal(canEditWorkItem(leader, unrelatedInProgress), false)
     assert.equal(canOperateWorkItem(leader, unrelatedInProgress), false)
+    assert.equal(
+      canUploadAttachment(
+        leader,
+        work({
+          status: WorkItemStatus.IN_PROGRESS,
+          departmentId: leader.departmentId,
+        }),
+      ),
+      false,
+      `${leader.role} view-only expansion must not grant uploads by department`,
+    )
+    assert.equal(
+      canUploadAttachment(
+        leader,
+        work({
+          creatorId: leader.id,
+          firstSubmitterId: null,
+        }),
+      ),
+      true,
+      `${leader.role} should retain uploads for an operable own draft`,
+    )
 
     const unrelatedApproval = work({
       status: WorkItemStatus.PROPOSING,
@@ -110,6 +133,23 @@ async function main() {
     assert.equal(canViewWorkItem(globalViewer, work()), true)
     assert.deepEqual(await buildWorkVisibilityWhere(globalViewer), {})
   }
+
+  const departmentManager: PermissionUser = {
+    id: 301,
+    role: Role.DEPARTMENT_MANAGER,
+    departmentId: 2,
+  }
+  assert.equal(
+    canUploadAttachment(
+      departmentManager,
+      work({
+        status: WorkItemStatus.IN_PROGRESS,
+        responsiblePersonUserId: otherLeaderId,
+      }),
+    ),
+    true,
+    'department users should retain uploads for their main responsible department',
+  )
 
   console.log('Company leader visibility regression checks passed')
 }

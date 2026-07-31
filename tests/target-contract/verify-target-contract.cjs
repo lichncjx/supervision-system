@@ -1030,20 +1030,27 @@ async function verifyExcelImport(baseUrl, loginByUsername, deptByCode, userByUse
     where: { workItem: mergedPriorityWorkItem },
   });
   const mergedPriorityNodeNames = ['编制导入方案', '组织导入验收'];
+  const mergedPriorityNodeOrder = new Map(
+    mergedPriorityNodeNames.map((workNode, index) => [workNode, index]),
+  );
 
   record({
     role: 'dept_manager_a1',
     endpoint: 'Excel priority import inherits merged work-item attributes only from true merged cells',
     actual: {
       statusCode: mergedPriorityAttempt.confirmation?.statusCode,
-      nodes: mergedPriorityNodeNames.map((workNode) => {
-        const work = mergedPriorityWorks.find((item) => item.workNode === workNode);
-        return {
-          workNode: work?.workNode,
-          businessCategory: work?.businessCategory,
-          isInnovation: work?.isInnovation,
-        };
-      }),
+      nodes: mergedPriorityWorks
+        .map((work) => ({
+          workNode: work.workNode,
+          businessCategory: work.businessCategory,
+          isInnovation: work.isInnovation,
+        }))
+        .sort((left, right) => {
+          const leftOrder = mergedPriorityNodeOrder.get(left.workNode) ?? Number.MAX_SAFE_INTEGER;
+          const rightOrder = mergedPriorityNodeOrder.get(right.workNode) ?? Number.MAX_SAFE_INTEGER;
+          return leftOrder - rightOrder
+            || String(left.workNode || '').localeCompare(String(right.workNode || ''));
+        }),
     },
     expected: {
       statusCode: 200,
