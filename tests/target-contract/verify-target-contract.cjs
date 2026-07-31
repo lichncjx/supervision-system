@@ -1028,19 +1028,22 @@ async function verifyExcelImport(baseUrl, loginByUsername, deptByCode, userByUse
   );
   const mergedPriorityWorks = await prisma.workItem.findMany({
     where: { workItem: mergedPriorityWorkItem },
-    orderBy: { workNode: 'asc' },
   });
+  const mergedPriorityNodeNames = ['编制导入方案', '组织导入验收'];
 
   record({
     role: 'dept_manager_a1',
     endpoint: 'Excel priority import inherits merged work-item attributes only from true merged cells',
     actual: {
       statusCode: mergedPriorityAttempt.confirmation?.statusCode,
-      nodes: mergedPriorityWorks.map((work) => ({
-        workNode: work.workNode,
-        businessCategory: work.businessCategory,
-        isInnovation: work.isInnovation,
-      })),
+      nodes: mergedPriorityNodeNames.map((workNode) => {
+        const work = mergedPriorityWorks.find((item) => item.workNode === workNode);
+        return {
+          workNode: work?.workNode,
+          businessCategory: work?.businessCategory,
+          isInnovation: work?.isInnovation,
+        };
+      }),
     },
     expected: {
       statusCode: 200,
@@ -2624,6 +2627,7 @@ async function verifyStateFilters(baseUrl, loginByUsername, deptByCode, userByUs
       title: 'TC-STATE-returned-draft',
       workItem: 'TC-STATE-returned-draft',
       status: 'DRAFT',
+      assessmentYear: TARGET_ASSESSMENT_YEAR,
       departmentId: deptByCode.TDA.id,
       creatorId: userByUsername.dept_manager_a2.id,
       firstSubmitterId: userByUsername.dept_manager_a1.id,
@@ -2640,6 +2644,7 @@ async function verifyStateFilters(baseUrl, loginByUsername, deptByCode, userByUs
       title: 'TC-STATE-returned-in-progress-responsible-user',
       workItem: 'TC-STATE-returned-in-progress-responsible-user',
       status: 'IN_PROGRESS',
+      assessmentYear: TARGET_ASSESSMENT_YEAR,
       departmentId: deptByCode.TDA.id,
       creatorId: userByUsername.dept_manager_a2.id,
       firstSubmitterId: userByUsername.dept_manager_a2.id,
