@@ -558,7 +558,7 @@ async function verifyWorksVisibility(baseUrl, loginByUsername, userByUsername, w
   for (const userDef of users) {
     const loginInfo = loginByUsername[userDef.username];
     const dbUser = userByUsername[userDef.username];
-    const response = await request(baseUrl, 'GET', '/api/works', null, loginInfo.cookies);
+    const response = await request(baseUrl, 'GET', '/api/works?assessmentYear=all', null, loginInfo.cookies);
     const worksBody = responseArray(response);
     const actualIds = worksBody.map((work) => work.id).sort((a, b) => a - b);
     const expectedIds = works
@@ -568,12 +568,12 @@ async function verifyWorksVisibility(baseUrl, loginByUsername, userByUsername, w
 
     record({
       role: userDef.username,
-      endpoint: 'GET /api/works',
+      endpoint: 'GET /api/works?assessmentYear=all',
       actual: actualIds,
       expected: expectedIds,
       expectedFailure: false,
       note: [
-        'Phase 8C: /api/works visibility uses departmentId and cooperators[].departmentId for organization scope.',
+        'Visibility contract explicitly queries all assessment years and uses departmentId/cooperators[].departmentId for organization scope.',
         responseError(response) ? `Non-array response: ${JSON.stringify(responseError(response))}` : '',
       ].filter(Boolean).join(' '),
     });
@@ -583,7 +583,7 @@ async function verifyWorksVisibility(baseUrl, loginByUsername, userByUsername, w
 async function verifyTargetPermissionFacts(baseUrl, loginByUsername, works) {
   const byTitle = Object.fromEntries(works.map((work) => [work.title, work.id]));
   async function visibleFor(username, workId) {
-    const response = await request(baseUrl, 'GET', '/api/works', null, loginByUsername[username].cookies);
+    const response = await request(baseUrl, 'GET', '/api/works?assessmentYear=all', null, loginByUsername[username].cookies);
     const list = responseArray(response);
     return {
       visible: list.some((work) => work.id === workId),
@@ -599,12 +599,12 @@ async function verifyTargetPermissionFacts(baseUrl, loginByUsername, works) {
   const facts = [
     {
       role: 'vp_a',
-      endpoint: 'target fact: VP_A cannot see VP_B work by default',
+      endpoint: 'target fact: VP_A can see VP_B non-draft work',
       actual: { visible: vpASeesVpB.visible },
-      expected: { visible: false },
+      expected: { visible: true },
       expectedFailure: false,
       note: [
-        'Phase 2 closeout: VICE_PRESIDENT no longer sees another VP work by default.',
+        'PR #132: company leaders can view all non-draft work company-wide.',
         vpASeesVpB.responseError ? `Non-array response: ${JSON.stringify(vpASeesVpB.responseError)}` : '',
       ].filter(Boolean).join(' '),
     },
@@ -690,7 +690,7 @@ async function verifyExcelExport(baseUrl, loginByUsername, userByUsername, works
   for (const userDef of users) {
     const loginInfo = loginByUsername[userDef.username];
     const dbUser = userByUsername[userDef.username];
-    const response = await requestBinary(baseUrl, 'GET', '/api/excel/export', loginInfo.cookies);
+    const response = await requestBinary(baseUrl, 'GET', '/api/excel/export?assessmentYear=all', loginInfo.cookies);
     const rows = response.statusCode === 200 ? parseWorkbookRows(response.body) : [];
     const headers = rows[0] || [];
     const dataRows = rows.slice(1);
@@ -702,13 +702,13 @@ async function verifyExcelExport(baseUrl, loginByUsername, userByUsername, works
 
     record({
       role: userDef.username,
-      endpoint: 'GET /api/excel/export visibility',
+      endpoint: 'GET /api/excel/export?assessmentYear=all visibility',
       actual: response.statusCode === 200
         ? { statusCode: response.statusCode, titles: exportedTitles }
         : { statusCode: response.statusCode },
       expected: { statusCode: 200, titles: expectedTitles },
       expectedFailure: false,
-      note: 'Phase 5: ordinary Excel export follows the same visible scope as GET /api/works.',
+      note: 'Ordinary Excel export explicitly queries all assessment years and follows the same visible scope as GET /api/works.',
     });
 
     const largeFieldHeaders = headers.filter((header) =>
@@ -730,7 +730,7 @@ async function verifyExcelExport(baseUrl, loginByUsername, userByUsername, works
     });
   }
 
-  const adminResponse = await requestBinary(baseUrl, 'GET', '/api/excel/export', loginByUsername.admin.cookies);
+  const adminResponse = await requestBinary(baseUrl, 'GET', '/api/excel/export?assessmentYear=all', loginByUsername.admin.cookies);
   const rows = parseWorkbookRows(adminResponse.body);
   const dataRows = rows.slice(1);
 
