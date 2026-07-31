@@ -87,7 +87,7 @@ GET /api/dashboard?year=2026&limit=5
 
 `status = DRAFT`，且存在 `rejectReason`、`rejectedFromStatus`、`rejectedAt`，或最新 workflow record 为 `reject` / `rejected`。
 
-普通草稿仍显示为”草稿”；符合上述规则的草稿显示为”退回待修改”。退回待修改的办理人优先按 `firstSubmitterId` 判断，兼容历史数据时回退到 `creatorId`。
+普通草稿仍显示为“草稿”；符合上述规则的草稿显示为“退回待修改”。普通草稿和立项审批退回后的 `DRAFT` 均由 `creatorId` 对应创建人办理；`firstSubmitterId` 仅用于流程审计和展示，不参与 `DRAFT` 权限判断。
 
 ### 状态页和列表页筛选
 

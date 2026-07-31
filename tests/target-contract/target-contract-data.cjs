@@ -543,11 +543,13 @@ function canOperate(user, work) {
   const targetStatus = getTargetStatus(work);
   if (targetStatus === 'COMPLETED' || targetStatus === 'CANCELLED') return false;
 
-  // Pre-approval (DRAFT / PENDING_DECOMPOSE): maintain existing owner/dept logic
+  // Pre-approval: DRAFT belongs to creatorId; PENDING_DECOMPOSE retains department/submitter semantics.
   const isPreApproval = targetStatus === 'DRAFT' || targetStatus === 'PENDING_DECOMPOSE';
 
   if (isPreApproval) {
-    const ownerId = work.firstSubmitterId ?? work.creatorId;
+    const ownerId = targetStatus === 'DRAFT'
+      ? work.creatorId
+      : (work.firstSubmitterId ?? work.creatorId);
 
     if (user.role === 'DEPARTMENT_MANAGER' || user.role === 'DEPARTMENT_LEADER') {
       if (isMainResponsibleDept(work, user.departmentId)) {

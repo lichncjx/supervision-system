@@ -87,6 +87,22 @@ export async function findWorkForUpdateById(id: number) {
   return prisma.workItem.findUnique({ where: { id } })
 }
 
+export async function findWorkForDeleteById(id: number) {
+  return prisma.workItem.findUnique({
+    where: { id },
+    include: {
+      creator: { select: { name: true } },
+      attachments: { select: { filePath: true } },
+      _count: {
+        select: {
+          workflowRecords: true,
+          attachments: true,
+        },
+      },
+    },
+  })
+}
+
 export async function updateWorkItem(
   id: number,
   data: Record<string, unknown>,
@@ -98,18 +114,19 @@ export async function updateWorkItem(
   })
 }
 
-export async function deleteWorkItem(id: number) {
-  await prisma.workItem.delete({ where: { id } })
-}
-
-export async function createWorkDeleteOperationLog(params: {
+export async function deleteDraftWorkWithOperationLog(params: {
   userId: number
   userName: string
   userRole: Role
   workId: number
   workType: string
   workTitle: string
-}) {
+  creatorId: number
+  creatorName: string
+  workflowRecordCount: number
+  attachmentCount: number
+  isReturnedDraft: boolean
+}): Promise<boolean> {
   const typeLabel =
     params.workType === 'PRIORITY'
       ? '重点'
@@ -117,17 +134,39 @@ export async function createWorkDeleteOperationLog(params: {
         ? '主要'
         : '待办'
 
-  await prisma.operationLog.create({
-    data: {
-      userId: params.userId,
-      userName: params.userName,
-      userRole: params.userRole,
-      action: 'delete',
-      module: 'works',
-      targetId: params.workId,
-      targetType: 'work_item',
-      description: `删除${typeLabel}工作：${params.workTitle}`,
-    },
+  return prisma.$transaction(async (tx) => {
+    const deleted = await tx.workItem.deleteMany({
+      where: {
+        id: params.workId,
+        status: 'DRAFT',
+        ...(params.userRole === Role.ADMIN
+          ? {}
+          : { creatorId: params.userId }),
+      },
+    })
+
+    if (deleted.count !== 1) return false
+
+    const actorLabel = params.userRole === Role.ADMIN ? '管理员' : '创建人'
+    const draftLabel = params.isReturnedDraft ? '退回草稿' : '草稿'
+    await tx.operationLog.create({
+      data: {
+        userId: params.userId,
+        userName: params.userName,
+        userRole: params.userRole,
+        action: 'delete',
+        module: 'works',
+        targetId: params.workId,
+        targetType: 'work_item',
+        description:
+          `${actorLabel}删除${typeLabel}${draftLabel}：${params.workTitle}` +
+          `（原事项ID：${params.workId}，创建人：${params.creatorName}` +
+          `（ID：${params.creatorId}），流程记录：${params.workflowRecordCount}，` +
+          `附件：${params.attachmentCount}）`,
+      },
+    })
+
+    return true
   })
 }
 
