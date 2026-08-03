@@ -10,6 +10,10 @@ import {
   normalizeAttachmentStoragePath,
   type AttachmentStorageFile,
 } from '@/features/attachments/infrastructure/local-file-storage'
+import type {
+  AttachmentFileReconciliationPlan,
+  AttachmentFileReconciliationResult,
+} from '@/features/attachments/contract/attachment-reconciliation.types'
 
 const DEFAULT_GRACE_PERIOD_HOURS = 24
 export const MIN_GRACE_PERIOD_HOURS = 1
@@ -20,24 +24,8 @@ export interface ReconcileAttachmentFilesInput {
   now?: Date
 }
 
-export interface ReconcileAttachmentFilesAsAdminInput
-  extends ReconcileAttachmentFilesInput {
+export interface ReconcileAttachmentFilesAsAdminInput extends ReconcileAttachmentFilesInput {
   currentUser: BaseCurrentUser
-}
-
-export interface AttachmentFileReconciliationPlan {
-  scannedFileCount: number
-  referencedFileCount: number
-  orphanCandidatePaths: string[]
-  recentOrphanPaths: string[]
-  missingReferencedPaths: string[]
-  invalidReferencedPaths: string[]
-}
-
-export interface AttachmentFileReconciliationResult extends AttachmentFileReconciliationPlan {
-  mode: 'dry-run' | 'apply'
-  deletedPaths: string[]
-  failedDeletePaths: string[]
 }
 
 export function planAttachmentFileReconciliation(params: {

@@ -246,10 +246,10 @@ sh migrate.sh
 
 附件记录与物理文件采用最终一致性设计。数据库事务提交后的即时清理失败，或上传落盘后进程异常退出，可能留下没有数据库引用的孤儿文件。
 
-1. 使用系统管理员账号调用 `GET /api/attachments/reconcile` 进行只读检查；默认只把修改时间超过 24 小时的无引用文件列为清理候选。
-2. 核对返回的 `orphanCandidatePaths` 后，调用 `POST /api/attachments/reconcile`，请求体传入 `{"confirm":"DELETE_ORPHAN_ATTACHMENT_FILES"}` 才会实际删除。
+1. 使用系统管理员账号登录，在“系统管理 → 附件存储维护”中执行只读检查；页面固定使用 24 小时安全时间窗。
+2. 核对候选路径后，通过二次确认执行清理。执行时服务端会重新扫描，只删除数据库无引用且超过安全时间窗的文件。
 3. `missingReferencedPaths` 表示数据库有附件记录但物理文件缺失，只用于排查，系统不会自动删除对应数据库记录。
-4. 源码或测试环境也可以运行 `pnpm attachments:reconcile` 进行 dry-run；确认后追加 `--apply`，可用 `--grace-hours=N` 调整安全时间窗（最小 1 小时）。
+4. 页面不可用时，可按 `docs/core/API说明.md` 直接调用管理员 API。源码或测试环境也可以运行 `pnpm attachments:reconcile` 进行 dry-run；确认后追加 `--apply`，可用 `--grace-hours=N` 调整安全时间窗（最小 1 小时）。
 
 生产环境不配置自动定时清理。建议管理员先 dry-run，并结合 `uploads` 备份核对后再显式执行。
 

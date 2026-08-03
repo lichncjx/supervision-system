@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Building2, Settings, Users, UserCog, Plus, Trash2, Power, KeyRound, Eye, EyeOff, Pencil } from 'lucide-react';
+import { Building2, Settings, Users, UserCog, Plus, Trash2, Power, KeyRound, Eye, EyeOff, Pencil, HardDrive, ArrowRight } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { getRoleName } from '@/features/users/domain/role.rules';
 import type { Role } from '@/features/users/client/user-client.types';
@@ -348,6 +348,22 @@ export default function AdminPage() {
           <Users className="h-8 w-8 text-green-600" />
         </Link>
       </div>
+
+      <Link
+        href="/admin/storage"
+        className="flex items-center justify-between rounded-xl border border-amber-200/80 bg-gradient-to-br from-white to-amber-50/50 p-5 transition-shadow hover:shadow-md"
+      >
+        <div className="flex items-center gap-4">
+          <span className="rounded-xl bg-amber-100 p-3 text-amber-700">
+            <HardDrive className="h-6 w-6" />
+          </span>
+          <div>
+            <p className="font-semibold text-slate-800">附件存储维护</p>
+            <p className="text-sm text-slate-500">检查并清理数据库无引用的孤儿附件文件</p>
+          </div>
+        </div>
+        <ArrowRight className="h-5 w-5 text-slate-400" />
+      </Link>
 
       <div className="rounded-xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50/50 overflow-hidden">
         <h2 className="font-semibold text-slate-800 px-5 pt-5">新增用户账号</h2>
