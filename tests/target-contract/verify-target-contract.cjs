@@ -3138,8 +3138,8 @@ async function verifyDraftDeletion(baseUrl, loginByUsername, deptByCode, userByU
       ),
     },
     expected: {
-      firstSubmitterStatus: 403,
-      supervisorStatus: 403,
+      firstSubmitterStatus: 404,
+      supervisorStatus: 404,
       creatorStatus: 204,
       workCount: 0,
       workflowCount: 0,

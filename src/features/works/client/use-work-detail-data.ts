@@ -10,10 +10,13 @@ import type { WorkflowRecordDto as WorkflowRecord } from "@/features/workflow/ap
 import type { User } from '@/features/users/client/user-client.types';
 import type { Department } from '@/features/departments/client/department-api';
 
+export type WorkflowRecordsStatus = 'idle' | 'loading' | 'loaded' | 'error';
+
 export function useWorkDetailData(id: string) {
   const [refresh, setRefresh] = useState(0);
   const [work, setWork] = useState<Work | undefined>();
   const [workflowRecords, setWorkflowRecords] = useState<WorkflowRecord[]>([]);
+  const [workflowRecordsStatus, setWorkflowRecordsStatus] = useState<WorkflowRecordsStatus>('idle');
   const [companyLeaders, setCompanyLeaders] = useState<User[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [departmentLeaders, setDepartmentLeaders] = useState<User[]>([]);
@@ -38,9 +41,31 @@ export function useWorkDetailData(id: string) {
   }, [id, refresh]);
 
   useEffect(() => {
-    if (work) {
-      getWorkflowRecords(work.id).then(setWorkflowRecords).catch(() => setWorkflowRecords([]));
+    if (!work) {
+      setWorkflowRecords([]);
+      setWorkflowRecordsStatus('idle');
+      return;
     }
+
+    let cancelled = false;
+    setWorkflowRecords([]);
+    setWorkflowRecordsStatus('loading');
+
+    getWorkflowRecords(work.id)
+      .then((records) => {
+        if (cancelled) return;
+        setWorkflowRecords(records);
+        setWorkflowRecordsStatus('loaded');
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setWorkflowRecords([]);
+        setWorkflowRecordsStatus('error');
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [work, refresh]);
 
   useEffect(() => {
@@ -58,6 +83,7 @@ export function useWorkDetailData(id: string) {
   return {
     work,
     workflowRecords,
+    workflowRecordsStatus,
     companyLeaders,
     departments,
     departmentLeaders,

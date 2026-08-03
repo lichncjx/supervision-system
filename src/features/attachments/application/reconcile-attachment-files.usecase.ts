@@ -94,15 +94,23 @@ export async function reconcileAttachmentFilesUseCase(
   })
 
   const deletedPaths: string[] = []
+  const missingCandidatePaths: string[] = []
   const failedDeletePaths: string[] = []
 
   if (input.apply) {
     for (const filePath of plan.orphanCandidatePaths) {
-      const deleted = await deleteAttachmentFileIfExists(filePath)
-      if (deleted) {
-        deletedPaths.push(filePath)
-      } else {
-        failedDeletePaths.push(filePath)
+      const deleteResult = await deleteAttachmentFileIfExists(filePath)
+      switch (deleteResult) {
+        case 'deleted':
+          deletedPaths.push(filePath)
+          break
+        case 'missing':
+          missingCandidatePaths.push(filePath)
+          break
+        case 'failed':
+        case 'invalid':
+          failedDeletePaths.push(filePath)
+          break
       }
     }
   }
@@ -111,6 +119,7 @@ export async function reconcileAttachmentFilesUseCase(
     ...plan,
     mode: input.apply ? 'apply' : 'dry-run',
     deletedPaths,
+    missingCandidatePaths,
     failedDeletePaths,
   }
 }
@@ -133,6 +142,7 @@ export async function reconcileAttachmentFilesAsAdminUseCase(
         scannedFileCount: result.scannedFileCount,
         orphanCandidateCount: result.orphanCandidatePaths.length,
         deletedCount: result.deletedPaths.length,
+        missingCandidateCount: result.missingCandidatePaths.length,
         failedDeleteCount: result.failedDeletePaths.length,
         missingReferencedCount: result.missingReferencedPaths.length,
       })

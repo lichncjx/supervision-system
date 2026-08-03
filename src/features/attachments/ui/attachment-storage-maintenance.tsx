@@ -87,6 +87,15 @@ function ResultPaths({ result }: { result: AttachmentFileReconciliationResult })
           },
         ]
       : []),
+    ...(result.mode === 'apply' && result.missingCandidatePaths.length > 0
+      ? [
+          {
+            title: '执行时已不存在的候选文件',
+            description: '可能已被并发清理，本次没有重复计入实际删除数量',
+            paths: result.missingCandidatePaths,
+          },
+        ]
+      : []),
   ]
 
   return (
@@ -253,7 +262,8 @@ export function AttachmentStorageMaintenance() {
               {result.failedDeletePaths.length > 0 ? <AlertTriangle /> : <CheckCircle2 />}
               <AlertTitle>清理执行完成</AlertTitle>
               <AlertDescription>
-                已删除 {result.deletedPaths.length} 个文件，失败 {result.failedDeletePaths.length}{' '}
+                实际删除 {result.deletedPaths.length} 个文件，执行时已不存在{' '}
+                {result.missingCandidatePaths.length} 个，失败 {result.failedDeletePaths.length}{' '}
                 个。系统会以尽力而为方式写入一条汇总操作日志；建议重新检查以确认当前存储状态。
               </AlertDescription>
             </Alert>

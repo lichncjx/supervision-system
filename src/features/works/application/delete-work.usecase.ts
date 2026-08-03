@@ -20,12 +20,12 @@ export async function deleteWorkUseCase(input: DeleteWorkInput): Promise<Result>
   const work = await findWorkForDeleteById(workId)
 
   if (!work) {
-    return err(404, '事项不存在')
+    return err(404, '事项不存在或无权删除')
   }
 
   const isOwnerOrAdmin = work.creatorId === currentUser.id || currentUser.role === Role.ADMIN
   if (!isOwnerOrAdmin) {
-    return err(403, '只有事项创建人或系统管理员可以删除该草稿')
+    return err(404, '事项不存在或无权删除')
   }
 
   if (work.status !== WorkItemStatus.DRAFT) {
@@ -33,7 +33,7 @@ export async function deleteWorkUseCase(input: DeleteWorkInput): Promise<Result>
   }
 
   if (!canDeleteWorkItem(toPermissionUser(currentUser), work)) {
-    return err(403, '只有事项创建人或系统管理员可以删除该草稿')
+    return err(404, '事项不存在或无权删除')
   }
 
   const result = await deleteDraftWorkWithOperationLog({

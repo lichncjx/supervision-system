@@ -1,5 +1,11 @@
 import assert from 'node:assert/strict'
 import { planAttachmentFileReconciliation } from '@/features/attachments/application/reconcile-attachment-files.usecase'
+import {
+  attachmentFilePathExists,
+  deleteAttachmentFileIfExists,
+  normalizeAttachmentStoragePath,
+  readAttachmentFile,
+} from '@/features/attachments/infrastructure/local-file-storage'
 
 const cutoff = new Date('2026-08-03T00:00:00.000Z')
 
@@ -33,4 +39,22 @@ assert.deepEqual(plan.recentOrphanPaths, ['uploads/attachments/2026/08/recent-or
 assert.deepEqual(plan.missingReferencedPaths, ['uploads/attachments/2026/08/missing.txt'])
 assert.deepEqual(plan.invalidReferencedPaths, ['outside-attachment-root.txt'])
 
-console.log('attachment file reconciliation regressions passed')
+async function verifyStorageBoundaries() {
+  assert.equal(normalizeAttachmentStoragePath('../../outside-attachment-root.txt'), null)
+  assert.equal(await deleteAttachmentFileIfExists('../../outside-attachment-root.txt'), 'invalid')
+  assert.equal(await readAttachmentFile('../../outside-attachment-root.txt'), null)
+  assert.equal(attachmentFilePathExists('../../outside-attachment-root.txt'), false)
+  assert.equal(
+    await deleteAttachmentFileIfExists(
+      'uploads/attachments/reconciliation-regression/missing-file.txt',
+    ),
+    'missing',
+  )
+}
+
+verifyStorageBoundaries()
+  .then(() => console.log('attachment file reconciliation regressions passed'))
+  .catch((error) => {
+    console.error(error)
+    process.exitCode = 1
+  })

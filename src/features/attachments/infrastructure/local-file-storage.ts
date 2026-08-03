@@ -13,6 +13,8 @@ export interface AttachmentStorageFile {
   modifiedAt: Date
 }
 
+export type AttachmentFileDeleteResult = 'deleted' | 'missing' | 'failed' | 'invalid'
+
 export function normalizeAttachmentStoragePath(relativePath: string): string | null {
   const root = path.resolve(uploadRootDir())
   const portablePath = relativePath.replace(/[\\/]+/g, path.sep)
@@ -98,7 +100,10 @@ export async function saveUploadedFile(
 export async function readAttachmentFile(
   relativePath: string,
 ): Promise<Buffer | null> {
-  const fullPath = path.join(process.cwd(), relativePath)
+  const normalizedPath = normalizeAttachmentStoragePath(relativePath)
+  if (!normalizedPath) return null
+
+  const fullPath = path.join(process.cwd(), normalizedPath)
 
   if (!existsSync(fullPath)) {
     return null
@@ -109,25 +114,25 @@ export async function readAttachmentFile(
 
 export async function deleteAttachmentFileIfExists(
   relativePath: string,
-): Promise<boolean> {
-  const fullPath = path.join(process.cwd(), relativePath)
+): Promise<AttachmentFileDeleteResult> {
+  const normalizedPath = normalizeAttachmentStoragePath(relativePath)
+  if (!normalizedPath) return 'invalid'
 
-  if (!existsSync(fullPath)) {
-    return true
-  }
+  const fullPath = path.join(process.cwd(), normalizedPath)
 
   try {
     await unlink(fullPath)
-    return true
+    return 'deleted'
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      return true
+      return 'missing'
     }
     console.warn('Failed to delete physical file:', fullPath)
-    return false
+    return 'failed'
   }
 }
 
 export function attachmentFilePathExists(relativePath: string): boolean {
-  return existsSync(path.join(process.cwd(), relativePath))
+  const normalizedPath = normalizeAttachmentStoragePath(relativePath)
+  return normalizedPath ? existsSync(path.join(process.cwd(), normalizedPath)) : false
 }

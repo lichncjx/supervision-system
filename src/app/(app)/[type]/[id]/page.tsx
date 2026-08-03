@@ -67,6 +67,7 @@ export default function WorkDetailPage() {
   const {
     work,
     workflowRecords,
+    workflowRecordsStatus,
     companyLeaders,
     departments,
     refresh,
@@ -126,7 +127,15 @@ export default function WorkDetailPage() {
   const canEditDraft = canEditRegularDraftWork(user, work);
   const canSubmitDraft = canSubmitDraftWork(user, work);
   const canHandleReturnedCreate = canHandleReturnedDraftWork(user, work);
-  const canDeleteDraft = canDeleteDraftWork(user, work);
+  const canDeleteDraftByPermission = canDeleteDraftWork(user, work);
+  const canDeleteDraft = canDeleteDraftByPermission && workflowRecordsStatus === 'loaded';
+  const deleteDisabledReason = canDeleteDraftByPermission
+    ? workflowRecordsStatus === 'error'
+      ? '审批记录加载失败，暂不能删除。请刷新页面后重试。'
+      : workflowRecordsStatus !== 'loaded'
+        ? '正在核对审批记录，暂不能删除。'
+        : undefined
+    : undefined;
   const canDecomposeTodo = canDecomposeTodoWork(user, work);
   const canApprove = canApproveWork(user, work);
   const canOperateInProgress = canOperateInProgressWork(user, work);
@@ -464,13 +473,14 @@ export default function WorkDetailPage() {
             />
           )}
 
-          {(!!canHandleReturnedCreate || !!canEditDraft || canDeleteDraft) && (
+          {(!!canHandleReturnedCreate || !!canEditDraft || canDeleteDraftByPermission) && (
             <WorkDraftActions
               isDraft={!isReturnedDraft}
               rejectReason={work.rejectReason || undefined}
               editHref={`/${type}/${work.id}/edit`}
               canEdit={!!canHandleReturnedCreate || !!canEditDraft}
               canDelete={canDeleteDraft}
+              deleteDisabledReason={deleteDisabledReason}
               onDelete={handleDelete}
             />
           )}

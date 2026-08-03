@@ -115,6 +115,7 @@ export async function createAttachmentReconciliationLog(params: {
   scannedFileCount: number
   orphanCandidateCount: number
   deletedCount: number
+  missingCandidateCount: number
   failedDeleteCount: number
   missingReferencedCount: number
 }) {
@@ -129,7 +130,8 @@ export async function createAttachmentReconciliationLog(params: {
       description:
         `执行附件存储对账：扫描 ${params.scannedFileCount} 个文件，` +
         `发现 ${params.orphanCandidateCount} 个过期孤儿文件，` +
-        `删除 ${params.deletedCount} 个，失败 ${params.failedDeleteCount} 个，` +
+        `实际删除 ${params.deletedCount} 个，执行时已不存在 ${params.missingCandidateCount} 个，` +
+        `失败 ${params.failedDeleteCount} 个，` +
         `数据库引用缺失文件 ${params.missingReferencedCount} 个`,
     },
   })

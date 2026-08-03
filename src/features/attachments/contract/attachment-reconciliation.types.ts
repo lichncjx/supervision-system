@@ -10,5 +10,6 @@ export interface AttachmentFileReconciliationPlan {
 export interface AttachmentFileReconciliationResult extends AttachmentFileReconciliationPlan {
   mode: 'dry-run' | 'apply'
   deletedPaths: string[]
+  missingCandidatePaths: string[]
   failedDeletePaths: string[]
 }

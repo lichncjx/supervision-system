@@ -11,6 +11,7 @@ interface WorkDraftActionsProps {
   editHref: string;
   canEdit: boolean;
   canDelete: boolean;
+  deleteDisabledReason?: string;
   onDelete: () => void;
 }
 
@@ -20,6 +21,7 @@ export function WorkDraftActions({
   editHref,
   canEdit,
   canDelete,
+  deleteDisabledReason,
   onDelete,
 }: WorkDraftActionsProps) {
   return (
@@ -46,13 +48,21 @@ export function WorkDraftActions({
             </Button>
           </Link>
         )}
-        {canDelete && (
-          <Button variant="destructive" onClick={onDelete} className="rounded-full flex-1">
+        {(canDelete || deleteDisabledReason) && (
+          <Button
+            variant="destructive"
+            onClick={onDelete}
+            disabled={!canDelete}
+            className="rounded-full flex-1"
+          >
             <Trash2 className="h-4 w-4" />
             {isDraft ? '删除草稿' : '删除退回事项'}
           </Button>
         )}
       </div>
+      {deleteDisabledReason && (
+        <p className="mt-2 text-xs text-amber-700">{deleteDisabledReason}</p>
+      )}
     </div>
   );
 }
