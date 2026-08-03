@@ -2729,23 +2729,31 @@ async function verifyStateFilters(baseUrl, loginByUsername, deptByCode, userByUs
     note: 'PR 6.3: returned draft is derived from DRAFT plus reject traces, not a database status.',
   });
 
-  const handlingOtherUserResponse = await request(baseUrl, 'GET', '/api/works?status=handling', null, loginByUsername.dept_manager_a2.cookies);
-  const handlingOtherUserIds = Array.isArray(handlingOtherUserResponse.body)
-    ? handlingOtherUserResponse.body.map((item) => item.id)
+  const handlingCreatorResponse = await request(baseUrl, 'GET', '/api/works?status=handling', null, loginByUsername.dept_manager_a2.cookies);
+  const handlingCreatorIds = Array.isArray(handlingCreatorResponse.body)
+    ? handlingCreatorResponse.body.map((item) => item.id)
+    : [];
+  const handlingFirstSubmitterResponse = await request(baseUrl, 'GET', '/api/works?status=handling', null, loginByUsername.dept_manager_a1.cookies);
+  const handlingFirstSubmitterIds = Array.isArray(handlingFirstSubmitterResponse.body)
+    ? handlingFirstSubmitterResponse.body.map((item) => item.id)
     : [];
   record({
-    role: 'dept_manager_a2',
-    endpoint: 'GET /api/works status=handling excludes others returned draft',
+    role: 'dept_manager_a1/dept_manager_a2',
+    endpoint: 'GET /api/works status=handling returned DRAFT uses creatorId',
     actual: {
-      statusCode: handlingOtherUserResponse.statusCode,
-      containsReturnedDraft: handlingOtherUserIds.includes(returnedDraft.id),
+      creatorStatusCode: handlingCreatorResponse.statusCode,
+      firstSubmitterStatusCode: handlingFirstSubmitterResponse.statusCode,
+      creatorContainsReturnedDraft: handlingCreatorIds.includes(returnedDraft.id),
+      firstSubmitterContainsReturnedDraft: handlingFirstSubmitterIds.includes(returnedDraft.id),
     },
     expected: {
-      statusCode: 200,
-      containsReturnedDraft: false,
+      creatorStatusCode: 200,
+      firstSubmitterStatusCode: 200,
+      creatorContainsReturnedDraft: true,
+      firstSubmitterContainsReturnedDraft: false,
     },
     expectedFailure: false,
-    note: 'PR 6.3: returned draft handling belongs to firstSubmitterId, not every same-department user.',
+    note: 'DRAFT handling belongs to creatorId; firstSubmitterId does not grant handling permission.',
   });
 
   const responsibleHandlingResponse = await request(baseUrl, 'GET', '/api/works?status=handling', null, loginByUsername.dept_manager_a1.cookies);
