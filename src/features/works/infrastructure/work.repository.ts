@@ -156,21 +156,6 @@ export async function deleteDraftWorkWithOperationLog(params: {
 
     if (deleted.count !== 1) return { deleted: false, attachments: [] }
 
-    if (work.attachments.length > 0) {
-      await tx.operationLog.createMany({
-        data: work.attachments.map((attachment) => ({
-          userId: params.userId,
-          userName: params.userName,
-          userRole: params.userRole,
-          action: 'cleanup_pending',
-          module: 'attachment',
-          targetType: 'work_delete',
-          targetId: attachment.id,
-          description: `附件物理文件待清理：${attachment.filePath}`,
-        })),
-      })
-    }
-
     const typeLabel =
       work.type === 'PRIORITY'
         ? '重点'

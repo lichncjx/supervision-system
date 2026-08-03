@@ -21,6 +21,13 @@ export async function findWorkItemForUpload(id: number) {
   })
 }
 
+export async function findAllAttachmentFilePaths(): Promise<string[]> {
+  const attachments = await prisma.attachment.findMany({
+    select: { filePath: true },
+  })
+  return attachments.map((attachment) => attachment.filePath)
+}
+
 export async function withLockedWorkItemForUpload<T>(
   id: number,
   operation: (
@@ -101,63 +108,89 @@ export async function createAttachmentLog(params: {
   })
 }
 
-export type AttachmentCleanupSource =
-  | 'upload_rollback'
-  | 'attachment_delete'
-  | 'work_delete'
-
-export async function createAttachmentCleanupLog(params: {
+export async function createAttachmentReconciliationLog(params: {
   userId: number
   userName: string
   userRole: string
-  sourceTargetId: number
-  filePath: string
-  source: AttachmentCleanupSource
-  action: 'cleanup_pending' | 'cleanup_completed'
-}, tx?: Prisma.TransactionClient) {
-  await (tx ?? prisma).operationLog.create({
+  scannedFileCount: number
+  orphanCandidateCount: number
+  deletedCount: number
+  failedDeleteCount: number
+  missingReferencedCount: number
+}) {
+  await prisma.operationLog.create({
     data: {
       userId: params.userId,
       userName: params.userName,
       userRole: params.userRole as import('@prisma/client').Role,
-      action: params.action,
+      action: 'reconcile',
       module: 'attachment',
-      targetType: params.source,
-      targetId: params.sourceTargetId,
+      targetType: 'attachment_storage',
       description:
-        params.action === 'cleanup_pending'
-          ? `附件物理文件待清理：${params.filePath}`
-          : `附件物理文件清理完成：${params.filePath}`,
+        `执行附件存储对账：扫描 ${params.scannedFileCount} 个文件，` +
+        `发现 ${params.orphanCandidateCount} 个过期孤儿文件，` +
+        `删除 ${params.deletedCount} 个，失败 ${params.failedDeleteCount} 个，` +
+        `数据库引用缺失文件 ${params.missingReferencedCount} 个`,
     },
   })
 }
 
-export async function deleteAttachmentRecordWithLogs(params: {
-  attachmentId: number
-  fileName: string
-  filePath: string
-  userId: number
-  userName: string
-  userRole: string
-}) {
-  await prisma.$transaction(async (tx) => {
-    await tx.attachment.delete({ where: { id: params.attachmentId } })
-    await createAttachmentLog({
+export async function withLockedAttachmentForDelete<T>(
+  id: number,
+  operation: (
+    tx: Prisma.TransactionClient,
+    attachment: Awaited<ReturnType<typeof findAttachmentWithWorkItem>>,
+  ) => Promise<T>,
+): Promise<T> {
+  return prisma.$transaction(async (tx) => {
+    const locator = await tx.attachment.findUnique({
+      where: { id },
+      select: { workItemId: true },
+    })
+
+    if (!locator) {
+      return operation(tx, null)
+    }
+
+    if (locator.workItemId !== null) {
+      await tx.$queryRaw<Array<{ id: number }>>`
+        SELECT id FROM "work_items" WHERE id = ${locator.workItemId} FOR UPDATE
+      `
+    } else {
+      await tx.$queryRaw<Array<{ id: number }>>`
+        SELECT id FROM "attachments" WHERE id = ${id} FOR UPDATE
+      `
+    }
+
+    const attachment = await tx.attachment.findUnique({
+      where: { id },
+      include: ATTACHMENT_WITH_WORK_ITEM_INCLUDE,
+    })
+
+    return operation(tx, attachment)
+  })
+}
+
+export async function deleteAttachmentRecordWithLog(
+  params: {
+    attachmentId: number
+    fileName: string
+    userId: number
+    userName: string
+    userRole: string
+  },
+  tx: Prisma.TransactionClient,
+) {
+  await tx.attachment.delete({ where: { id: params.attachmentId } })
+  await createAttachmentLog(
+    {
       userId: params.userId,
       userName: params.userName,
       userRole: params.userRole,
       action: 'delete',
       attachmentId: params.attachmentId,
       fileName: params.fileName,
-    }, tx)
-    await createAttachmentCleanupLog({
-      userId: params.userId,
-      userName: params.userName,
-      userRole: params.userRole,
-      sourceTargetId: params.attachmentId,
-      filePath: params.filePath,
-      source: 'attachment_delete',
-      action: 'cleanup_pending',
-    }, tx)
-  })
+    },
+    tx,
+  )
 }

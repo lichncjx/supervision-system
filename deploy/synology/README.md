@@ -242,6 +242,17 @@ sh migrate.sh
 3. 检查 `.env` 配置是否正确
 4. 确认数据库迁移已成功执行
 
+### 附件存储对账
+
+附件记录与物理文件采用最终一致性设计。数据库事务提交后的即时清理失败，或上传落盘后进程异常退出，可能留下没有数据库引用的孤儿文件。
+
+1. 使用系统管理员账号调用 `GET /api/attachments/reconcile` 进行只读检查；默认只把修改时间超过 24 小时的无引用文件列为清理候选。
+2. 核对返回的 `orphanCandidatePaths` 后，调用 `POST /api/attachments/reconcile`，请求体传入 `{"confirm":"DELETE_ORPHAN_ATTACHMENT_FILES"}` 才会实际删除。
+3. `missingReferencedPaths` 表示数据库有附件记录但物理文件缺失，只用于排查，系统不会自动删除对应数据库记录。
+4. 源码或测试环境也可以运行 `pnpm attachments:reconcile` 进行 dry-run；确认后追加 `--apply`，可用 `--grace-hours=N` 调整安全时间窗（最小 1 小时）。
+
+生产环境不配置自动定时清理。建议管理员先 dry-run，并结合 `uploads` 备份核对后再显式执行。
+
 ### 页面无法访问
 
 **问题**：浏览器无法打开系统

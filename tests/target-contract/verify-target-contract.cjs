@@ -3102,45 +3102,17 @@ async function verifyDraftDeletion(baseUrl, loginByUsername, deptByCode, userByU
     },
     orderBy: { id: 'desc' },
   });
-  const cleanupPendingLog = await prisma.operationLog.findFirst({
+  const cleanupLifecycleLogCount = await prisma.operationLog.count({
     where: {
-      action: 'cleanup_pending',
+      action: {
+        in: ['cleanup_pending', 'cleanup_completed', 'cleanup_cancelled'],
+      },
       module: 'attachment',
-      targetType: 'work_delete',
-      targetId: cleanupPendingAttachment.id,
+      targetId: {
+        in: [cleanupPendingAttachment.id, successfullyCleanedAttachment.id],
+      },
       userId: creator.id,
     },
-    orderBy: { id: 'desc' },
-  });
-  const cleanupPendingCompletedLog = await prisma.operationLog.findFirst({
-    where: {
-      action: 'cleanup_completed',
-      module: 'attachment',
-      targetType: 'work_delete',
-      targetId: cleanupPendingAttachment.id,
-      userId: creator.id,
-    },
-    orderBy: { id: 'desc' },
-  });
-  const successfulCleanupIntentLog = await prisma.operationLog.findFirst({
-    where: {
-      action: 'cleanup_pending',
-      module: 'attachment',
-      targetType: 'work_delete',
-      targetId: successfullyCleanedAttachment.id,
-      userId: creator.id,
-    },
-    orderBy: { id: 'desc' },
-  });
-  const successfulCleanupCompletedLog = await prisma.operationLog.findFirst({
-    where: {
-      action: 'cleanup_completed',
-      module: 'attachment',
-      targetType: 'work_delete',
-      targetId: successfullyCleanedAttachment.id,
-      userId: creator.id,
-    },
-    orderBy: { id: 'desc' },
   });
 
   record({
@@ -3154,17 +3126,8 @@ async function verifyDraftDeletion(baseUrl, loginByUsername, deptByCode, userByU
       workflowCount: await prisma.workflowRecord.count({ where: { workItemId: returnedDraft.id } }),
       attachmentCount: await prisma.attachment.count({ where: { workItemId: returnedDraft.id } }),
       physicalFileExists: fs.existsSync(attachmentPath),
-      cleanupPendingPathExists: fs.existsSync(cleanupPendingPath),
-      cleanupPendingLogged: Boolean(
-        cleanupPendingLog?.description.includes(relativeCleanupPendingPath),
-      ),
-      failedCleanupHasNoCompletedLog: !cleanupPendingCompletedLog,
-      successfulCleanupIntentLogged: Boolean(
-        successfulCleanupIntentLog?.description.includes(relativeAttachmentPath),
-      ),
-      successfulCleanupCompleted: Boolean(
-        successfulCleanupCompletedLog?.description.includes(relativeAttachmentPath),
-      ),
+      failedPhysicalCleanupPreservesBusinessSuccess: fs.existsSync(cleanupPendingPath),
+      cleanupLifecycleLogCount,
       logRetained: Boolean(creatorDeleteLog),
       logHasSnapshot: Boolean(
         creatorDeleteLog?.description.includes(`原事项ID：${returnedDraft.id}`)
@@ -3182,19 +3145,128 @@ async function verifyDraftDeletion(baseUrl, loginByUsername, deptByCode, userByU
       workflowCount: 0,
       attachmentCount: 0,
       physicalFileExists: false,
-      cleanupPendingPathExists: true,
-      cleanupPendingLogged: true,
-      failedCleanupHasNoCompletedLog: true,
-      successfulCleanupIntentLogged: true,
-      successfulCleanupCompleted: true,
+      failedPhysicalCleanupPreservesBusinessSuccess: true,
+      cleanupLifecycleLogCount: 0,
       logRetained: true,
       logHasSnapshot: true,
     },
     expectedFailure: false,
-    note: 'DRAFT ownership uses creatorId; cleanup_pending intents commit with deletion, successful unlinks append cleanup_completed, failed unlinks remain pending, and the independent deletion log is retained.',
+    note: 'DRAFT ownership uses creatorId; database deletion and its audit log commit atomically, post-commit file cleanup is best-effort, and technical cleanup lifecycle events do not pollute OperationLog.',
   });
 
   fs.rmSync(attachmentDir, { recursive: true, force: true });
+
+  const supervisorReconciliation = await request(
+    baseUrl,
+    'GET',
+    '/api/attachments/reconcile',
+    null,
+    loginByUsername.supervisor.cookies,
+  );
+  const adminReconciliation = await request(
+    baseUrl,
+    'GET',
+    '/api/attachments/reconcile',
+    null,
+    loginByUsername.admin.cookies,
+  );
+  const unconfirmedApply = await request(
+    baseUrl,
+    'POST',
+    '/api/attachments/reconcile',
+    {},
+    loginByUsername.admin.cookies,
+  );
+
+  record({
+    role: 'attachment-storage-reconciliation',
+    endpoint: 'GET/POST /api/attachments/reconcile',
+    actual: {
+      supervisorStatus: supervisorReconciliation.statusCode,
+      adminDryRunStatus: adminReconciliation.statusCode,
+      adminDryRunMode: adminReconciliation.body?.mode,
+      unconfirmedApplyStatus: unconfirmedApply.statusCode,
+    },
+    expected: {
+      supervisorStatus: 403,
+      adminDryRunStatus: 200,
+      adminDryRunMode: 'dry-run',
+      unconfirmedApplyStatus: 400,
+    },
+    expectedFailure: false,
+    note: 'Only ADMIN can inspect attachment storage, and destructive reconciliation requires an explicit confirmation token.',
+  });
+
+  const concurrentWorkId = await createWorkflowWork({
+    title: `${WORKFLOW_TEST_PREFIX}DELETE-CONCURRENT-ATTACHMENT`,
+    type: 'MAIN',
+    status: 'DRAFT',
+    creator,
+    dept,
+    vp,
+  });
+  const concurrentDir = path.join(
+    process.cwd(),
+    'uploads',
+    'attachments',
+    'target-contract',
+    `concurrent-${concurrentWorkId}`,
+  );
+  const concurrentFilePath = path.join(concurrentDir, 'concurrent-delete.txt');
+  fs.mkdirSync(concurrentDir, { recursive: true });
+  fs.writeFileSync(concurrentFilePath, 'target-contract concurrent delete');
+  const concurrentAttachment = await prisma.attachment.create({
+    data: {
+      workItemId: concurrentWorkId,
+      userId: creator.id,
+      fileName: 'concurrent-delete.txt',
+      filePath: path.relative(process.cwd(), concurrentFilePath),
+      fileSize: 33,
+      fileType: 'text/plain',
+    },
+  });
+
+  const [concurrentAttachmentDelete, concurrentWorkDelete] = await Promise.all([
+    request(
+      baseUrl,
+      'DELETE',
+      `/api/attachments/${concurrentAttachment.id}`,
+      null,
+      loginByUsername.dept_manager_a1.cookies,
+    ),
+    request(
+      baseUrl,
+      'DELETE',
+      `/api/works/${concurrentWorkId}`,
+      null,
+      loginByUsername.dept_manager_a1.cookies,
+    ),
+  ]);
+
+  record({
+    role: 'draft-delete-concurrency',
+    endpoint: 'DELETE attachment concurrently with DELETE DRAFT work',
+    actual: {
+      workStatus: concurrentWorkDelete.statusCode,
+      attachmentStatusAccepted: [204, 404].includes(concurrentAttachmentDelete.statusCode),
+      noServerError: concurrentAttachmentDelete.statusCode !== 500,
+      workCount: await prisma.workItem.count({ where: { id: concurrentWorkId } }),
+      attachmentCount: await prisma.attachment.count({ where: { id: concurrentAttachment.id } }),
+      physicalFileExists: fs.existsSync(concurrentFilePath),
+    },
+    expected: {
+      workStatus: 204,
+      attachmentStatusAccepted: true,
+      noServerError: true,
+      workCount: 0,
+      attachmentCount: 0,
+      physicalFileExists: false,
+    },
+    expectedFailure: false,
+    note: 'Attachment deletion and aggregate deletion share the work-item lock; either delete may win without producing a 500 or leaving data behind.',
+  });
+
+  fs.rmSync(concurrentDir, { recursive: true, force: true });
 
   const adminDraftId = await createWorkflowWork({
     title: `${WORKFLOW_TEST_PREFIX}DELETE-ADMIN-DRAFT`,

@@ -2,10 +2,10 @@ import type { BaseCurrentUser } from '@/shared/auth/current-user'
 import { type Result, ok, err } from '@/shared/result'
 import { canDeleteAttachment } from '@/features/attachments/domain/attachment.permissions'
 import {
-  findAttachmentWithWorkItem,
-  deleteAttachmentRecordWithLogs,
+  deleteAttachmentRecordWithLog,
+  withLockedAttachmentForDelete,
 } from '@/features/attachments/infrastructure/attachment.repository'
-import { cleanupAttachmentFileWithTracking } from './cleanup-attachment-file'
+import { cleanupAttachmentFileBestEffort } from './cleanup-attachment-file'
 import { toPermissionUser } from '@/features/works/domain/work-permission-user.mapper'
 
 export interface DeleteAttachmentInput {
@@ -18,43 +18,36 @@ export async function deleteAttachmentUseCase(
 ): Promise<Result> {
   const { currentUser, attachmentId } = input
 
-  const attachment = await findAttachmentWithWorkItem(attachmentId)
+  const result = await withLockedAttachmentForDelete(attachmentId, async (tx, attachment) => {
+    if (!attachment) {
+      return err(404, '附件不存在')
+    }
 
-  if (!attachment) {
-    return err(404, '附件不存在')
-  }
+    const canDelete = attachment.workItem
+      ? canDeleteAttachment(toPermissionUser(currentUser), attachment.userId)
+      : currentUser.role === 'ADMIN'
 
-  let canDelete = false
+    if (!canDelete) {
+      return err(403, '无权删除该附件')
+    }
 
-  if (attachment.workItem) {
-    // Work-linked attachment deletion is limited to global roles or the uploader.
-    const permUser = toPermissionUser(currentUser)
-    canDelete = canDeleteAttachment(permUser, attachment.userId)
-  } else {
-    // Orphan attachment records are legacy/unexpected data; keep deletion admin-only.
-    canDelete = currentUser.role === 'ADMIN'
-  }
+    await deleteAttachmentRecordWithLog(
+      {
+        attachmentId,
+        fileName: attachment.fileName,
+        userId: currentUser.id,
+        userName: currentUser.name,
+        userRole: currentUser.role,
+      },
+      tx,
+    )
 
-  if (!canDelete) {
-    return err(403, '无权删除该附件')
-  }
-
-  await deleteAttachmentRecordWithLogs({
-    attachmentId,
-    fileName: attachment.fileName,
-    filePath: attachment.filePath,
-    userId: currentUser.id,
-    userName: currentUser.name,
-    userRole: currentUser.role,
+    return ok({ filePath: attachment.filePath })
   })
 
-  await cleanupAttachmentFileWithTracking({
-    currentUser,
-    sourceTargetId: attachmentId,
-    filePath: attachment.filePath,
-    source: 'attachment_delete',
-    intentAlreadyPersisted: true,
-  })
+  if (!result.ok) return result
+
+  await cleanupAttachmentFileBestEffort(result.data.filePath)
 
   return ok()
 }

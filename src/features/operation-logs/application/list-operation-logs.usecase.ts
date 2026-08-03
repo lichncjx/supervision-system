@@ -22,6 +22,7 @@ const ACTION_MAP: Record<string, string> = {
   adjust: '申请调整',
   cancel: '申请取消',
   decompose: '分解待办',
+  reconcile: '存储对账',
 }
 
 export interface OperationLogDto {
