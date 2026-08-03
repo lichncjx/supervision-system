@@ -23,6 +23,11 @@ export async function deleteWorkUseCase(input: DeleteWorkInput): Promise<Result>
     return err(404, '事项不存在')
   }
 
+  const isOwnerOrAdmin = work.creatorId === currentUser.id || currentUser.role === Role.ADMIN
+  if (!isOwnerOrAdmin) {
+    return err(403, '只有事项创建人或系统管理员可以删除该草稿')
+  }
+
   if (work.status !== WorkItemStatus.DRAFT) {
     return err(409, '只有草稿事项可以删除')
   }
@@ -31,26 +36,19 @@ export async function deleteWorkUseCase(input: DeleteWorkInput): Promise<Result>
     return err(403, '只有事项创建人或系统管理员可以删除该草稿')
   }
 
-  const deleted = await deleteDraftWorkWithOperationLog({
+  const result = await deleteDraftWorkWithOperationLog({
     userId: currentUser.id,
     userName: currentUser.name,
     userRole: currentUser.role as Role,
     workId: work.id,
-    workType: work.type,
-    workTitle: work.title,
-    creatorId: work.creatorId,
-    creatorName: work.creator.name,
-    workflowRecordCount: work._count.workflowRecords,
-    attachmentCount: work._count.attachments,
-    isReturnedDraft: Boolean(work.rejectReason || work.rejectedFromStatus),
   })
 
-  if (!deleted) {
+  if (!result.deleted) {
     return err(409, '事项状态或权限已变化，请刷新后重试')
   }
 
   await Promise.all(
-    work.attachments.map(({ filePath }) =>
+    result.attachmentPaths.map((filePath) =>
       deleteAttachmentFileIfExists(filePath),
     ),
   )

@@ -3103,7 +3103,7 @@ async function verifyDraftDeletion(baseUrl, loginByUsername, deptByCode, userByU
     expected: {
       firstSubmitterStatus: 403,
       supervisorStatus: 403,
-      creatorStatus: 200,
+      creatorStatus: 204,
       workCount: 0,
       workflowCount: 0,
       attachmentCount: 0,
@@ -3168,7 +3168,7 @@ async function verifyDraftDeletion(baseUrl, loginByUsername, deptByCode, userByU
       inProgressCount: await prisma.workItem.count({ where: { id: inProgressId } }),
     },
     expected: {
-      draftStatus: 200,
+      draftStatus: 204,
       draftCount: 0,
       logRetained: true,
       inProgressStatus: 409,

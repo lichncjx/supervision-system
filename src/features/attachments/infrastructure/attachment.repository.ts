@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client'
 import { prisma } from '@/shared/db/prisma'
 
 const WORK_ITEM_FOR_UPLOAD_SELECT = {
@@ -17,6 +18,25 @@ export async function findWorkItemForUpload(id: number) {
   return prisma.workItem.findUnique({
     where: { id },
     select: WORK_ITEM_FOR_UPLOAD_SELECT,
+  })
+}
+
+export async function withLockedWorkItemForUpload<T>(
+  id: number,
+  operation: (
+    tx: Prisma.TransactionClient,
+    workItem: Awaited<ReturnType<typeof findWorkItemForUpload>>,
+  ) => Promise<T>,
+): Promise<T> {
+  return prisma.$transaction(async (tx) => {
+    await tx.$queryRaw<Array<{ id: number }>>`
+      SELECT id FROM "work_items" WHERE id = ${id} FOR UPDATE
+    `
+    const workItem = await tx.workItem.findUnique({
+      where: { id },
+      select: WORK_ITEM_FOR_UPLOAD_SELECT,
+    })
+    return operation(tx, workItem)
   })
 }
 
@@ -52,8 +72,8 @@ export async function createAttachmentRecord(data: {
   fileType: string
   category: string
   uploadedAt: Date
-}) {
-  return prisma.attachment.create({ data })
+}, tx?: Prisma.TransactionClient) {
+  return (tx ?? prisma).attachment.create({ data })
 }
 
 export async function deleteAttachmentRecord(id: number) {
@@ -67,8 +87,8 @@ export async function createAttachmentLog(params: {
   action: 'upload' | 'delete'
   attachmentId: number
   fileName: string
-}) {
-  await prisma.operationLog.create({
+}, tx?: Prisma.TransactionClient) {
+  await (tx ?? prisma).operationLog.create({
     data: {
       userId: params.userId,
       userName: params.userName,

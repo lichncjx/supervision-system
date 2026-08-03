@@ -90,15 +90,10 @@ export async function findWorkForUpdateById(id: number) {
 export async function findWorkForDeleteById(id: number) {
   return prisma.workItem.findUnique({
     where: { id },
-    include: {
-      creator: { select: { name: true } },
-      attachments: { select: { filePath: true } },
-      _count: {
-        select: {
-          workflowRecords: true,
-          attachments: true,
-        },
-      },
+    select: {
+      id: true,
+      status: true,
+      creatorId: true,
     },
   })
 }
@@ -119,22 +114,27 @@ export async function deleteDraftWorkWithOperationLog(params: {
   userName: string
   userRole: Role
   workId: number
-  workType: string
-  workTitle: string
-  creatorId: number
-  creatorName: string
-  workflowRecordCount: number
-  attachmentCount: number
-  isReturnedDraft: boolean
-}): Promise<boolean> {
-  const typeLabel =
-    params.workType === 'PRIORITY'
-      ? '重点'
-      : params.workType === 'MAIN'
-        ? '主要'
-        : '待办'
-
+}): Promise<{ deleted: boolean; attachmentPaths: string[] }> {
   return prisma.$transaction(async (tx) => {
+    await tx.$queryRaw<Array<{ id: number }>>`
+      SELECT id FROM "work_items" WHERE id = ${params.workId} FOR UPDATE
+    `
+    const work = await tx.workItem.findUnique({
+      where: { id: params.workId },
+      include: {
+        creator: { select: { name: true } },
+        attachments: { select: { filePath: true } },
+        _count: {
+          select: {
+            workflowRecords: true,
+            attachments: true,
+          },
+        },
+      },
+    })
+
+    if (!work) return { deleted: false, attachmentPaths: [] }
+
     const deleted = await tx.workItem.deleteMany({
       where: {
         id: params.workId,
@@ -145,10 +145,16 @@ export async function deleteDraftWorkWithOperationLog(params: {
       },
     })
 
-    if (deleted.count !== 1) return false
+    if (deleted.count !== 1) return { deleted: false, attachmentPaths: [] }
 
+    const typeLabel =
+      work.type === 'PRIORITY'
+        ? '重点'
+        : work.type === 'MAIN'
+          ? '主要'
+          : '待办'
     const actorLabel = params.userRole === Role.ADMIN ? '管理员' : '创建人'
-    const draftLabel = params.isReturnedDraft ? '退回草稿' : '草稿'
+    const draftLabel = work.rejectReason || work.rejectedFromStatus ? '退回草稿' : '草稿'
     await tx.operationLog.create({
       data: {
         userId: params.userId,
@@ -159,14 +165,17 @@ export async function deleteDraftWorkWithOperationLog(params: {
         targetId: params.workId,
         targetType: 'work_item',
         description:
-          `${actorLabel}删除${typeLabel}${draftLabel}：${params.workTitle}` +
-          `（原事项ID：${params.workId}，创建人：${params.creatorName}` +
-          `（ID：${params.creatorId}），流程记录：${params.workflowRecordCount}，` +
-          `附件：${params.attachmentCount}）`,
+          `${actorLabel}删除${typeLabel}${draftLabel}：${work.title}` +
+          `（原事项ID：${work.id}，创建人：${work.creator.name}` +
+          `（ID：${work.creatorId}），流程记录：${work._count.workflowRecords}，` +
+          `附件：${work._count.attachments}）`,
       },
     })
 
-    return true
+    return {
+      deleted: true,
+      attachmentPaths: work.attachments.map(({ filePath }) => filePath),
+    }
   })
 }
 

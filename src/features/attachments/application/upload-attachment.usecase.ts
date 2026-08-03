@@ -6,11 +6,14 @@ import {
   canUploadAttachment,
 } from '@/features/attachments/domain/attachment.permissions'
 import {
-  findWorkItemForUpload,
+  withLockedWorkItemForUpload,
   createAttachmentRecord,
   createAttachmentLog,
 } from '@/features/attachments/infrastructure/attachment.repository'
-import { saveUploadedFile } from '@/features/attachments/infrastructure/local-file-storage'
+import {
+  deleteAttachmentFileIfExists,
+  saveUploadedFile,
+} from '@/features/attachments/infrastructure/local-file-storage'
 import { toPermissionUser } from '@/features/works/domain/work-permission-user.mapper'
 
 export interface UploadAttachmentInput {
@@ -28,56 +31,62 @@ export async function uploadAttachmentUseCase(
 ): Promise<Result<AttachmentDto>> {
   const { currentUser, workItemId, fileName, fileBuffer, fileSize, ext, category } = input
 
-  const workItem = await findWorkItemForUpload(workItemId)
-
-  if (!workItem) {
-    return err(404, '事项不存在')
-  }
-
-  // The repository selects exactly the work fields required by permission rules.
   const permUser = toPermissionUser(currentUser)
+  let savedFilePath: string | null = null
 
-  if (!canViewAttachment(permUser, workItem)) {
-    return err(403, '无权查看该事项')
+  try {
+    return await withLockedWorkItemForUpload(workItemId, async (tx, workItem) => {
+      if (!workItem) {
+        return err(404, '事项不存在')
+      }
+
+      if (!canViewAttachment(permUser, workItem)) {
+        return err(403, '无权查看该事项')
+      }
+
+      if (!canUploadAttachment(permUser, workItem)) {
+        return err(403, '无权上传该事项的附件')
+      }
+
+      const { relativePath } = await saveUploadedFile(fileBuffer, fileName)
+      savedFilePath = relativePath
+      const now = new Date()
+
+      const attachment = await createAttachmentRecord({
+        workItemId,
+        userId: currentUser.id,
+        fileName,
+        filePath: relativePath,
+        fileSize,
+        fileType: ext,
+        category,
+        uploadedAt: now,
+      }, tx)
+
+      await createAttachmentLog({
+        userId: currentUser.id,
+        userName: currentUser.name,
+        userRole: currentUser.role,
+        action: 'upload',
+        attachmentId: attachment.id,
+        fileName,
+      }, tx)
+
+      return ok({
+        id: attachment.id,
+        fileName: attachment.fileName,
+        fileSize: attachment.fileSize,
+        fileType: attachment.fileType,
+        category: attachment.category,
+        uploadedAt: attachment.uploadedAt.toISOString(),
+        userId: currentUser.id,
+        userName: currentUser.name,
+      })
+    })
+  } catch (error) {
+    if (savedFilePath) {
+      await deleteAttachmentFileIfExists(savedFilePath)
+    }
+    throw error
   }
-
-  if (!canUploadAttachment(permUser, workItem)) {
-    return err(403, '无权上传该事项的附件')
-  }
-
-  // Permission checks must complete before writing the file to disk.
-  const { relativePath } = await saveUploadedFile(fileBuffer, fileName)
-
-  const now = new Date()
-
-  const attachment = await createAttachmentRecord({
-    workItemId,
-    userId: currentUser.id,
-    fileName,
-    filePath: relativePath,
-    fileSize,
-    fileType: ext,
-    category,
-    uploadedAt: now,
-  })
-
-  await createAttachmentLog({
-    userId: currentUser.id,
-    userName: currentUser.name,
-    userRole: currentUser.role,
-    action: 'upload',
-    attachmentId: attachment.id,
-    fileName,
-  })
-
-  return ok({
-    id: attachment.id,
-    fileName: attachment.fileName,
-    fileSize: attachment.fileSize,
-    fileType: attachment.fileType,
-    category: attachment.category,
-    uploadedAt: attachment.uploadedAt.toISOString(),
-    userId: currentUser.id,
-    userName: currentUser.name,
-  })
 }
