@@ -118,7 +118,11 @@ export default function WorkDetailPage() {
 
   const isAdmin = user?.role === 'ADMIN';
   const isSupervisor = user?.role === 'SUPERVISOR';
-  const isReturnedDraft = isReturnedDraftWork(work);
+  const isReturnedDraft = isReturnedDraftWork({
+    ...work,
+    // Workflow records are returned oldest-first; the status helper expects latest-first.
+    workflowRecords: [...workflowRecords].reverse(),
+  });
   const canEditDraft = canEditRegularDraftWork(user, work);
   const canSubmitDraft = canSubmitDraftWork(user, work);
   const canHandleReturnedCreate = canHandleReturnedDraftWork(user, work);

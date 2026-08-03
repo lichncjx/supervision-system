@@ -7,6 +7,7 @@ import {
 import { canDeleteWorkItem } from '@/features/works/domain/work.permissions'
 import { toPermissionUser } from '@/features/works/domain/work-permission-user.mapper'
 import { deleteAttachmentFileIfExists } from '@/features/attachments/infrastructure/local-file-storage'
+import { createAttachmentCleanupPendingLog } from '@/features/attachments/infrastructure/attachment.repository'
 import { type Result, err, ok } from '@/shared/result'
 
 export interface DeleteWorkInput {
@@ -47,10 +48,26 @@ export async function deleteWorkUseCase(input: DeleteWorkInput): Promise<Result>
     return err(409, '事项状态或权限已变化，请刷新后重试')
   }
 
+  const cleanupResults = await Promise.all(
+    result.attachments.map(async (attachment) => ({
+      attachment,
+      cleaned: await deleteAttachmentFileIfExists(attachment.filePath),
+    })),
+  )
+
   await Promise.all(
-    result.attachmentPaths.map((filePath) =>
-      deleteAttachmentFileIfExists(filePath),
-    ),
+    cleanupResults
+      .filter(({ cleaned }) => !cleaned)
+      .map(({ attachment }) =>
+        createAttachmentCleanupPendingLog({
+          userId: currentUser.id,
+          userName: currentUser.name,
+          userRole: currentUser.role,
+          sourceTargetId: attachment.id,
+          filePath: attachment.filePath,
+          source: 'work_delete',
+        }),
+      ),
   )
 
   return ok()

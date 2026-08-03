@@ -1,5 +1,6 @@
 import { Prisma, Role, WorkAdjustmentRequestStatus } from '@prisma/client'
 import { prisma } from '@/shared/db/prisma'
+import { isReturnedDraftWork } from '@/features/works/domain/work-status.rules'
 
 const WORK_LIST_INCLUDE = {
   department: true,
@@ -114,7 +115,10 @@ export async function deleteDraftWorkWithOperationLog(params: {
   userName: string
   userRole: Role
   workId: number
-}): Promise<{ deleted: boolean; attachmentPaths: string[] }> {
+}): Promise<{
+  deleted: boolean
+  attachments: Array<{ id: number; filePath: string }>
+}> {
   return prisma.$transaction(async (tx) => {
     await tx.$queryRaw<Array<{ id: number }>>`
       SELECT id FROM "work_items" WHERE id = ${params.workId} FOR UPDATE
@@ -123,7 +127,12 @@ export async function deleteDraftWorkWithOperationLog(params: {
       where: { id: params.workId },
       include: {
         creator: { select: { name: true } },
-        attachments: { select: { filePath: true } },
+        attachments: { select: { id: true, filePath: true } },
+        workflowRecords: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          select: { actionType: true },
+        },
         _count: {
           select: {
             workflowRecords: true,
@@ -133,7 +142,7 @@ export async function deleteDraftWorkWithOperationLog(params: {
       },
     })
 
-    if (!work) return { deleted: false, attachmentPaths: [] }
+    if (!work) return { deleted: false, attachments: [] }
 
     const deleted = await tx.workItem.deleteMany({
       where: {
@@ -145,7 +154,7 @@ export async function deleteDraftWorkWithOperationLog(params: {
       },
     })
 
-    if (deleted.count !== 1) return { deleted: false, attachmentPaths: [] }
+    if (deleted.count !== 1) return { deleted: false, attachments: [] }
 
     const typeLabel =
       work.type === 'PRIORITY'
@@ -154,7 +163,7 @@ export async function deleteDraftWorkWithOperationLog(params: {
           ? '主要'
           : '待办'
     const actorLabel = params.userRole === Role.ADMIN ? '管理员' : '创建人'
-    const draftLabel = work.rejectReason || work.rejectedFromStatus ? '退回草稿' : '草稿'
+    const draftLabel = isReturnedDraftWork(work) ? '退回草稿' : '草稿'
     await tx.operationLog.create({
       data: {
         userId: params.userId,
@@ -174,7 +183,7 @@ export async function deleteDraftWorkWithOperationLog(params: {
 
     return {
       deleted: true,
-      attachmentPaths: work.attachments.map(({ filePath }) => filePath),
+      attachments: work.attachments,
     }
   })
 }

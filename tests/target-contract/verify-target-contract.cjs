@@ -3016,8 +3016,9 @@ async function verifyDraftDeletion(baseUrl, loginByUsername, deptByCode, userByU
         vp,
       }),
       firstSubmitterId: otherManager.id,
-      rejectReason: 'target-contract delete returned draft',
-      rejectedFromStatus: 'PROPOSING',
+      // Historical fallback: reject metadata may be absent while workflow history remains.
+      rejectReason: null,
+      rejectedFromStatus: null,
     },
   });
 
@@ -3045,6 +3046,9 @@ async function verifyDraftDeletion(baseUrl, loginByUsername, deptByCode, userByU
   fs.mkdirSync(attachmentDir, { recursive: true });
   fs.writeFileSync(attachmentPath, 'target-contract');
   const relativeAttachmentPath = path.relative(process.cwd(), attachmentPath);
+  const cleanupPendingPath = path.join(attachmentDir, 'cleanup-pending-directory');
+  fs.mkdirSync(cleanupPendingPath);
+  const relativeCleanupPendingPath = path.relative(process.cwd(), cleanupPendingPath);
 
   await prisma.attachment.create({
     data: {
@@ -3054,6 +3058,16 @@ async function verifyDraftDeletion(baseUrl, loginByUsername, deptByCode, userByU
       filePath: relativeAttachmentPath,
       fileSize: 15,
       fileType: 'text/plain',
+    },
+  });
+  const cleanupPendingAttachment = await prisma.attachment.create({
+    data: {
+      workItemId: returnedDraft.id,
+      userId: creator.id,
+      fileName: 'cleanup-pending-directory',
+      filePath: relativeCleanupPendingPath,
+      fileSize: 0,
+      fileType: 'test/directory',
     },
   });
 
@@ -3088,6 +3102,16 @@ async function verifyDraftDeletion(baseUrl, loginByUsername, deptByCode, userByU
     },
     orderBy: { id: 'desc' },
   });
+  const cleanupPendingLog = await prisma.operationLog.findFirst({
+    where: {
+      action: 'cleanup_pending',
+      module: 'attachment',
+      targetType: 'work_delete',
+      targetId: cleanupPendingAttachment.id,
+      userId: creator.id,
+    },
+    orderBy: { id: 'desc' },
+  });
 
   record({
     role: 'draft-delete-creator',
@@ -3100,12 +3124,17 @@ async function verifyDraftDeletion(baseUrl, loginByUsername, deptByCode, userByU
       workflowCount: await prisma.workflowRecord.count({ where: { workItemId: returnedDraft.id } }),
       attachmentCount: await prisma.attachment.count({ where: { workItemId: returnedDraft.id } }),
       physicalFileExists: fs.existsSync(attachmentPath),
+      cleanupPendingPathExists: fs.existsSync(cleanupPendingPath),
+      cleanupPendingLogged: Boolean(
+        cleanupPendingLog?.description.includes(relativeCleanupPendingPath),
+      ),
       logRetained: Boolean(creatorDeleteLog),
       logHasSnapshot: Boolean(
         creatorDeleteLog?.description.includes(`原事项ID：${returnedDraft.id}`)
         && creatorDeleteLog.description.includes(`创建人：${creator.name}`)
+        && creatorDeleteLog.description.includes('退回草稿')
         && creatorDeleteLog.description.includes('流程记录：1')
-        && creatorDeleteLog.description.includes('附件：1'),
+        && creatorDeleteLog.description.includes('附件：2'),
       ),
     },
     expected: {
@@ -3116,11 +3145,13 @@ async function verifyDraftDeletion(baseUrl, loginByUsername, deptByCode, userByU
       workflowCount: 0,
       attachmentCount: 0,
       physicalFileExists: false,
+      cleanupPendingPathExists: true,
+      cleanupPendingLogged: true,
       logRetained: true,
       logHasSnapshot: true,
     },
     expectedFailure: false,
-    note: 'DRAFT ownership uses creatorId; deleting the aggregate cascades records, removes the file, and retains an independent operation log.',
+    note: 'DRAFT ownership uses creatorId; deleting the aggregate cascades records, removes files when possible, records cleanup_pending paths on unlink failure, and retains an independent operation log.',
   });
 
   fs.rmSync(attachmentDir, { recursive: true, force: true });

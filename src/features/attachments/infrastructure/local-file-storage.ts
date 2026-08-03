@@ -53,15 +53,22 @@ export async function readAttachmentFile(
 
 export async function deleteAttachmentFileIfExists(
   relativePath: string,
-): Promise<void> {
+): Promise<boolean> {
   const fullPath = path.join(process.cwd(), relativePath)
 
-  if (existsSync(fullPath)) {
-    try {
-      await unlink(fullPath)
-    } catch {
-      console.warn('Failed to delete physical file:', fullPath)
+  if (!existsSync(fullPath)) {
+    return true
+  }
+
+  try {
+    await unlink(fullPath)
+    return true
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return true
     }
+    console.warn('Failed to delete physical file:', fullPath)
+    return false
   }
 }
 

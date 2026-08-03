@@ -104,3 +104,25 @@ export async function createAttachmentLog(params: {
     },
   })
 }
+
+export async function createAttachmentCleanupPendingLog(params: {
+  userId: number
+  userName: string
+  userRole: string
+  sourceTargetId: number
+  filePath: string
+  source: 'upload_rollback' | 'attachment_delete' | 'work_delete'
+}) {
+  await prisma.operationLog.create({
+    data: {
+      userId: params.userId,
+      userName: params.userName,
+      userRole: params.userRole as import('@prisma/client').Role,
+      action: 'cleanup_pending',
+      module: 'attachment',
+      targetType: params.source,
+      targetId: params.sourceTargetId,
+      description: `附件物理文件待清理：${params.filePath}`,
+    },
+  })
+}

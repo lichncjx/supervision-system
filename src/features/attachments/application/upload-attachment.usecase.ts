@@ -7,8 +7,10 @@ import {
 } from '@/features/attachments/domain/attachment.permissions'
 import {
   withLockedWorkItemForUpload,
+  findWorkItemForUpload,
   createAttachmentRecord,
   createAttachmentLog,
+  createAttachmentCleanupPendingLog,
 } from '@/features/attachments/infrastructure/attachment.repository'
 import {
   deleteAttachmentFileIfExists,
@@ -32,10 +34,38 @@ export async function uploadAttachmentUseCase(
   const { currentUser, workItemId, fileName, fileBuffer, fileSize, ext, category } = input
 
   const permUser = toPermissionUser(currentUser)
-  let savedFilePath: string | null = null
+  const initialWorkItem = await findWorkItemForUpload(workItemId)
+
+  if (!initialWorkItem) {
+    return err(404, '事项不存在')
+  }
+
+  if (!canViewAttachment(permUser, initialWorkItem)) {
+    return err(403, '无权查看该事项')
+  }
+
+  if (!canUploadAttachment(permUser, initialWorkItem)) {
+    return err(403, '无权上传该事项的附件')
+  }
+
+  const { relativePath } = await saveUploadedFile(fileBuffer, fileName)
+
+  const cleanupStagedFile = async () => {
+    const cleaned = await deleteAttachmentFileIfExists(relativePath)
+    if (!cleaned) {
+      await createAttachmentCleanupPendingLog({
+        userId: currentUser.id,
+        userName: currentUser.name,
+        userRole: currentUser.role,
+        sourceTargetId: workItemId,
+        filePath: relativePath,
+        source: 'upload_rollback',
+      })
+    }
+  }
 
   try {
-    return await withLockedWorkItemForUpload(workItemId, async (tx, workItem) => {
+    const result = await withLockedWorkItemForUpload(workItemId, async (tx, workItem) => {
       if (!workItem) {
         return err(404, '事项不存在')
       }
@@ -48,8 +78,6 @@ export async function uploadAttachmentUseCase(
         return err(403, '无权上传该事项的附件')
       }
 
-      const { relativePath } = await saveUploadedFile(fileBuffer, fileName)
-      savedFilePath = relativePath
       const now = new Date()
 
       const attachment = await createAttachmentRecord({
@@ -83,10 +111,14 @@ export async function uploadAttachmentUseCase(
         userName: currentUser.name,
       })
     })
-  } catch (error) {
-    if (savedFilePath) {
-      await deleteAttachmentFileIfExists(savedFilePath)
+
+    if (!result.ok) {
+      await cleanupStagedFile()
     }
+
+    return result
+  } catch (error) {
+    await cleanupStagedFile()
     throw error
   }
 }
