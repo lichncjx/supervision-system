@@ -3050,7 +3050,7 @@ async function verifyDraftDeletion(baseUrl, loginByUsername, deptByCode, userByU
   fs.mkdirSync(cleanupPendingPath);
   const relativeCleanupPendingPath = path.relative(process.cwd(), cleanupPendingPath);
 
-  await prisma.attachment.create({
+  const successfullyCleanedAttachment = await prisma.attachment.create({
     data: {
       workItemId: returnedDraft.id,
       userId: creator.id,
@@ -3112,6 +3112,36 @@ async function verifyDraftDeletion(baseUrl, loginByUsername, deptByCode, userByU
     },
     orderBy: { id: 'desc' },
   });
+  const cleanupPendingCompletedLog = await prisma.operationLog.findFirst({
+    where: {
+      action: 'cleanup_completed',
+      module: 'attachment',
+      targetType: 'work_delete',
+      targetId: cleanupPendingAttachment.id,
+      userId: creator.id,
+    },
+    orderBy: { id: 'desc' },
+  });
+  const successfulCleanupIntentLog = await prisma.operationLog.findFirst({
+    where: {
+      action: 'cleanup_pending',
+      module: 'attachment',
+      targetType: 'work_delete',
+      targetId: successfullyCleanedAttachment.id,
+      userId: creator.id,
+    },
+    orderBy: { id: 'desc' },
+  });
+  const successfulCleanupCompletedLog = await prisma.operationLog.findFirst({
+    where: {
+      action: 'cleanup_completed',
+      module: 'attachment',
+      targetType: 'work_delete',
+      targetId: successfullyCleanedAttachment.id,
+      userId: creator.id,
+    },
+    orderBy: { id: 'desc' },
+  });
 
   record({
     role: 'draft-delete-creator',
@@ -3127,6 +3157,13 @@ async function verifyDraftDeletion(baseUrl, loginByUsername, deptByCode, userByU
       cleanupPendingPathExists: fs.existsSync(cleanupPendingPath),
       cleanupPendingLogged: Boolean(
         cleanupPendingLog?.description.includes(relativeCleanupPendingPath),
+      ),
+      failedCleanupHasNoCompletedLog: !cleanupPendingCompletedLog,
+      successfulCleanupIntentLogged: Boolean(
+        successfulCleanupIntentLog?.description.includes(relativeAttachmentPath),
+      ),
+      successfulCleanupCompleted: Boolean(
+        successfulCleanupCompletedLog?.description.includes(relativeAttachmentPath),
       ),
       logRetained: Boolean(creatorDeleteLog),
       logHasSnapshot: Boolean(
@@ -3147,11 +3184,14 @@ async function verifyDraftDeletion(baseUrl, loginByUsername, deptByCode, userByU
       physicalFileExists: false,
       cleanupPendingPathExists: true,
       cleanupPendingLogged: true,
+      failedCleanupHasNoCompletedLog: true,
+      successfulCleanupIntentLogged: true,
+      successfulCleanupCompleted: true,
       logRetained: true,
       logHasSnapshot: true,
     },
     expectedFailure: false,
-    note: 'DRAFT ownership uses creatorId; deleting the aggregate cascades records, removes files when possible, records cleanup_pending paths on unlink failure, and retains an independent operation log.',
+    note: 'DRAFT ownership uses creatorId; cleanup_pending intents commit with deletion, successful unlinks append cleanup_completed, failed unlinks remain pending, and the independent deletion log is retained.',
   });
 
   fs.rmSync(attachmentDir, { recursive: true, force: true });

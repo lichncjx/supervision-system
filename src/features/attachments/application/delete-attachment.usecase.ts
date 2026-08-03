@@ -3,11 +3,9 @@ import { type Result, ok, err } from '@/shared/result'
 import { canDeleteAttachment } from '@/features/attachments/domain/attachment.permissions'
 import {
   findAttachmentWithWorkItem,
-  deleteAttachmentRecord,
-  createAttachmentLog,
-  createAttachmentCleanupPendingLog,
+  deleteAttachmentRecordWithLogs,
 } from '@/features/attachments/infrastructure/attachment.repository'
-import { deleteAttachmentFileIfExists } from '@/features/attachments/infrastructure/local-file-storage'
+import { cleanupAttachmentFileWithTracking } from './cleanup-attachment-file'
 import { toPermissionUser } from '@/features/works/domain/work-permission-user.mapper'
 
 export interface DeleteAttachmentInput {
@@ -41,28 +39,21 @@ export async function deleteAttachmentUseCase(
     return err(403, '无权删除该附件')
   }
 
-  await deleteAttachmentRecord(attachmentId)
-
-  const cleaned = await deleteAttachmentFileIfExists(attachment.filePath)
-
-  if (!cleaned) {
-    await createAttachmentCleanupPendingLog({
-      userId: currentUser.id,
-      userName: currentUser.name,
-      userRole: currentUser.role,
-      sourceTargetId: attachmentId,
-      filePath: attachment.filePath,
-      source: 'attachment_delete',
-    })
-  }
-
-  await createAttachmentLog({
+  await deleteAttachmentRecordWithLogs({
+    attachmentId,
+    fileName: attachment.fileName,
+    filePath: attachment.filePath,
     userId: currentUser.id,
     userName: currentUser.name,
     userRole: currentUser.role,
-    action: 'delete',
-    attachmentId,
-    fileName: attachment.fileName,
+  })
+
+  await cleanupAttachmentFileWithTracking({
+    currentUser,
+    sourceTargetId: attachmentId,
+    filePath: attachment.filePath,
+    source: 'attachment_delete',
+    intentAlreadyPersisted: true,
   })
 
   return ok()

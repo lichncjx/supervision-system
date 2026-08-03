@@ -76,10 +76,6 @@ export async function createAttachmentRecord(data: {
   return (tx ?? prisma).attachment.create({ data })
 }
 
-export async function deleteAttachmentRecord(id: number) {
-  return prisma.attachment.delete({ where: { id } })
-}
-
 export async function createAttachmentLog(params: {
   userId: number
   userName: string
@@ -105,24 +101,63 @@ export async function createAttachmentLog(params: {
   })
 }
 
-export async function createAttachmentCleanupPendingLog(params: {
+export type AttachmentCleanupSource =
+  | 'upload_rollback'
+  | 'attachment_delete'
+  | 'work_delete'
+
+export async function createAttachmentCleanupLog(params: {
   userId: number
   userName: string
   userRole: string
   sourceTargetId: number
   filePath: string
-  source: 'upload_rollback' | 'attachment_delete' | 'work_delete'
-}) {
-  await prisma.operationLog.create({
+  source: AttachmentCleanupSource
+  action: 'cleanup_pending' | 'cleanup_completed'
+}, tx?: Prisma.TransactionClient) {
+  await (tx ?? prisma).operationLog.create({
     data: {
       userId: params.userId,
       userName: params.userName,
       userRole: params.userRole as import('@prisma/client').Role,
-      action: 'cleanup_pending',
+      action: params.action,
       module: 'attachment',
       targetType: params.source,
       targetId: params.sourceTargetId,
-      description: `附件物理文件待清理：${params.filePath}`,
+      description:
+        params.action === 'cleanup_pending'
+          ? `附件物理文件待清理：${params.filePath}`
+          : `附件物理文件清理完成：${params.filePath}`,
     },
+  })
+}
+
+export async function deleteAttachmentRecordWithLogs(params: {
+  attachmentId: number
+  fileName: string
+  filePath: string
+  userId: number
+  userName: string
+  userRole: string
+}) {
+  await prisma.$transaction(async (tx) => {
+    await tx.attachment.delete({ where: { id: params.attachmentId } })
+    await createAttachmentLog({
+      userId: params.userId,
+      userName: params.userName,
+      userRole: params.userRole,
+      action: 'delete',
+      attachmentId: params.attachmentId,
+      fileName: params.fileName,
+    }, tx)
+    await createAttachmentCleanupLog({
+      userId: params.userId,
+      userName: params.userName,
+      userRole: params.userRole,
+      sourceTargetId: params.attachmentId,
+      filePath: params.filePath,
+      source: 'attachment_delete',
+      action: 'cleanup_pending',
+    }, tx)
   })
 }

@@ -10,12 +10,9 @@ import {
   findWorkItemForUpload,
   createAttachmentRecord,
   createAttachmentLog,
-  createAttachmentCleanupPendingLog,
 } from '@/features/attachments/infrastructure/attachment.repository'
-import {
-  deleteAttachmentFileIfExists,
-  saveUploadedFile,
-} from '@/features/attachments/infrastructure/local-file-storage'
+import { saveUploadedFile } from '@/features/attachments/infrastructure/local-file-storage'
+import { cleanupAttachmentFileWithTracking } from './cleanup-attachment-file'
 import { toPermissionUser } from '@/features/works/domain/work-permission-user.mapper'
 
 export interface UploadAttachmentInput {
@@ -50,19 +47,12 @@ export async function uploadAttachmentUseCase(
 
   const { relativePath } = await saveUploadedFile(fileBuffer, fileName)
 
-  const cleanupStagedFile = async () => {
-    const cleaned = await deleteAttachmentFileIfExists(relativePath)
-    if (!cleaned) {
-      await createAttachmentCleanupPendingLog({
-        userId: currentUser.id,
-        userName: currentUser.name,
-        userRole: currentUser.role,
-        sourceTargetId: workItemId,
-        filePath: relativePath,
-        source: 'upload_rollback',
-      })
-    }
-  }
+  const cleanupStagedFile = () => cleanupAttachmentFileWithTracking({
+    currentUser,
+    sourceTargetId: workItemId,
+    filePath: relativePath,
+    source: 'upload_rollback',
+  })
 
   try {
     const result = await withLockedWorkItemForUpload(workItemId, async (tx, workItem) => {
