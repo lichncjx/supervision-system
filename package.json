@@ -17,7 +17,6 @@
     "seed:demo": "tsx prisma/seed-demo.ts",
     "db:deploy": "pnpm prisma:generate && pnpm prisma:deploy",
     "db:backfill-assessment-year": "tsx scripts/backfill-assessment-year.ts",
-    "attachments:reconcile": "tsx scripts/reconcile-attachment-files.ts",
     "db:init": "pnpm prisma:generate && pnpm prisma:deploy && pnpm prisma:seed",
     "test:regression": "node tests/regression-baseline.cjs",
     "test:pr116-review": "tsx tests/pr116-review-regressions.ts",

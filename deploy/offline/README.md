@@ -355,7 +355,7 @@ ss -lntp | grep ':5000'
 
 离线部署完成后，使用系统管理员账号登录，在“系统管理 → 附件存储维护”中先执行只读检查，再核对并清理孤儿附件文件。
 
-离线发布包中的应用容器不包含项目源码、`pnpm` 或 `tsx`，因此不能在生产容器内运行 `pnpm attachments:reconcile`。页面不可用时，可通过已编译进应用的管理员 API 处理；接口参数和安全限制见 [`docs/core/API说明.md`](../../docs/core/API说明.md#附件存储对账)，完整运维原则见 [`deploy/synology/README.md`](../synology/README.md#附件存储对账)。
+附件存储对账不提供命令行清理入口，避免绕过管理员身份校验和操作日志。页面不可用时，可通过已编译进应用的管理员 API 处理；接口参数和安全限制见 [`docs/core/API说明.md`](../../docs/core/API说明.md#附件存储对账)，完整运维原则见 [`deploy/synology/README.md`](../synology/README.md#附件存储对账)。
 
 ## 17. 验收清单
 
