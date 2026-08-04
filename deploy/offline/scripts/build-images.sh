@@ -2,22 +2,21 @@
 set -eu
 
 TAG="${1:-}"
-RELEASE_ROOT="${2:-offline-release}"
 
-if [ -z "$TAG" ]; then
-  if ! command -v git >/dev/null 2>&1; then
-    echo "git is required to generate the default image tag; pass a tag explicitly" >&2
-    exit 1
-  fi
-
+if command -v git >/dev/null 2>&1 && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   if [ -n "$(git status --porcelain --untracked-files=normal)" ]; then
-    echo "working tree must be clean when generating a tag from Git; commit changes or pass a tag explicitly" >&2
+    echo "working tree must be clean before building release images" >&2
     exit 1
   fi
 
-  COMMIT_DATE="$(git show -s --format=%cs HEAD | tr -d '-')"
-  COMMIT_SHA="$(git rev-parse --short=12 HEAD)"
-  TAG="$COMMIT_DATE-$COMMIT_SHA"
+  if [ -z "$TAG" ]; then
+    COMMIT_DATE="$(git show -s --format=%cs HEAD | tr -d '-')"
+    COMMIT_SHA="$(git rev-parse --short=12 HEAD)"
+    TAG="$COMMIT_DATE-$COMMIT_SHA"
+  fi
+elif [ -z "$TAG" ]; then
+  echo "git metadata is unavailable; pass an explicit image tag" >&2
+  exit 1
 fi
 
 if ! printf '%s\n' "$TAG" | grep -Eq '^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$'; then
@@ -26,9 +25,6 @@ if ! printf '%s\n' "$TAG" | grep -Eq '^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$'; then
 fi
 
 docker build --target app -t "supervision-system-app:$TAG" .
-docker build --target migrate -t "supervision-system-migrate:$TAG" .
-docker build --target seed -t "supervision-system-seed:$TAG" .
+docker build --target ops -t "supervision-system-ops:$TAG" .
 
-mkdir -p "$RELEASE_ROOT"
-printf '%s\n' "$TAG" > "$RELEASE_ROOT/VERSION"
-echo "Built offline images with tag: $TAG"
+echo "Built app and ops images with tag: $TAG"

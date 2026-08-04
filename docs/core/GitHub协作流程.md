@@ -113,24 +113,16 @@ PR 到 `main` 时会运行 CI：
 3. Lint。
 4. Build。
 
-合并到 `main` 后会触发 Docker 镜像构建和推送。
+合并到 `main` 后会触发同一提交版本的 app/ops 镜像构建和推送。
 
 ## 镜像构建
 
 GitHub Actions 会构建应用镜像：
 
-- `ghcr.io/lichncjx/supervision-system:latest`
-- `ghcr.io/lichncjx/supervision-system:<commit-sha>`
+- `ghcr.io/lichncjx/supervision-system:latest` / `<commit-sha>`
+- `ghcr.io/lichncjx/supervision-system-ops:latest` / `<commit-sha>`
 
-当以下文件变化时，还会构建迁移镜像：
-
-- `prisma/**`
-- `package.json`
-- `pnpm-lock.yaml`
-- `Dockerfile`
-- `.github/workflows/docker-publish.yml`
-
-也可以在 GitHub Actions 手动触发构建，并设置 `force_migrate: true` 强制构建迁移镜像。
+app 与 ops 始终从同一提交构建。推送 `v*` Git Tag 时，两者还会发布相同 Release Tag，供正式部署固定版本使用。
 
 ## 发布流程
 

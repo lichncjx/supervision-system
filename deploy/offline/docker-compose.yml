@@ -14,26 +14,21 @@ services:
       - ./data/postgres:/var/lib/postgresql/data
     networks:
       - supervision-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U supervision -d supervision"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
 
-  migrate:
-    image: supervision-system-migrate:__OFFLINE_IMAGE_TAG__
-    container_name: supervision-migrate
+  ops:
+    image: supervision-system-ops:__OFFLINE_IMAGE_TAG__
+    container_name: supervision-ops
+    restart: "no"
     env_file:
       - .env.production
     depends_on:
-      - db
-    networks:
-      - supervision-net
-
-  seed-admin:
-    image: supervision-system-seed:__OFFLINE_IMAGE_TAG__
-    container_name: supervision-seed-admin
-    profiles:
-      - init
-    env_file:
-      - .env.production
-    depends_on:
-      - db
+      db:
+        condition: service_healthy
     networks:
       - supervision-net
 
@@ -44,14 +39,24 @@ services:
     env_file:
       - .env.production
     depends_on:
-      migrate:
-        condition: service_completed_successfully
+      db:
+        condition: service_healthy
     ports:
       - "5000:5000"
     volumes:
       - ./uploads:/app/uploads
     networks:
       - supervision-net
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"fetch('http://localhost:5000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
 networks:
   supervision-net:

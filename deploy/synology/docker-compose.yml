@@ -17,11 +17,11 @@ services:
       test: ["CMD-SHELL", "pg_isready -U supervision -d supervision"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 12
 
-  migrate:
-    image: ghcr.io/lichncjx/supervision-system-migrate:latest
-    container_name: supervision-migrate
+  ops:
+    image: ghcr.io/lichncjx/supervision-system-ops:${IMAGE_TAG:-latest}
+    container_name: supervision-ops
     restart: "no"
     environment:
       DATABASE_URL: postgresql://supervision:${POSTGRES_PASSWORD}@db:5432/supervision?schema=public
@@ -33,7 +33,7 @@ services:
       - supervision-net
 
   app:
-    image: ghcr.io/lichncjx/supervision-system:latest
+    image: ghcr.io/lichncjx/supervision-system:${IMAGE_TAG:-latest}
     container_name: supervision-app
     restart: unless-stopped
     environment:
@@ -48,8 +48,8 @@ services:
     ports:
       - "18080:5000"
     depends_on:
-      migrate:
-        condition: service_completed_successfully
+      db:
+        condition: service_healthy
     networks:
       - supervision-net
     healthcheck:
