@@ -52,19 +52,21 @@ vi .env.production
 ## 执行首次安装
 
 ```bash
-sh scripts/install.sh /opt/supervision-system
+sudo sh scripts/install.sh /opt/supervision-system
 ```
+
+脚本需要具备修改 `uploads/` 所有权和操作 Docker 的权限；已经使用 root 会话时可省略 `sudo`。
 
 安装脚本依次执行：
 
-1. 校验并导入 PostgreSQL、app、ops 镜像；
-2. 创建持久化目录并启动 PostgreSQL；
+1. 创建持久化目录，并将 `uploads/` 所有权设置为 app 容器使用的 UID/GID `1001:1001`；
+2. 校验并导入 PostgreSQL、app、ops 镜像并启动 PostgreSQL；
 3. 执行全部待应用 Prisma migrations；
 4. 从终端隐藏读取一次性管理员初始密码；
-5. 创建唯一的 `admin` 账号；
+5. create-only 创建基础部门和唯一的 `admin` 账号；
 6. 启动应用并显示容器状态。
 
-管理员 bootstrap 是 create-only：检测到现有管理员或 `admin` 用户名时会拒绝执行，绝不会重置已有密码、角色或部门。首次登录后应立即修改初始密码，再由管理员创建其他系统用户。
+管理员 bootstrap 是 create-only：只补齐缺失的基础部门，不修改既有部门；检测到现有管理员或 `admin` 用户名时会拒绝执行，绝不会重置已有密码、角色或部门。首次登录后应立即修改初始密码，再由管理员创建其他系统用户。
 
 ## 验收
 

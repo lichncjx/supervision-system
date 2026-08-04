@@ -21,17 +21,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set image names and tags
+      - name: Set image names and source commit
         run: |
           IMAGE_NAME="${IMAGE_NAME,,}"
+          SOURCE_SHA="$(git rev-parse HEAD)"
           echo "IMAGE_NAME=$IMAGE_NAME" >> "$GITHUB_ENV"
-          echo "APP_TAGS=-t $IMAGE_NAME:${{ github.sha }}" >> "$GITHUB_ENV"
-          echo "OPS_TAGS=-t ${IMAGE_NAME}-ops:${{ github.sha }}" >> "$GITHUB_ENV"
-          if [ "${GITHUB_REF_TYPE}" = "branch" ] && [ "${GITHUB_REF_NAME}" = "main" ]; then
-            echo "PUSH_LATEST=true" >> "$GITHUB_ENV"
-          else
-            echo "PUSH_LATEST=false" >> "$GITHUB_ENV"
-          fi
+          echo "SOURCE_SHA=$SOURCE_SHA" >> "$GITHUB_ENV"
           if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
             echo "RELEASE_TAG=${GITHUB_REF_NAME}" >> "$GITHUB_ENV"
           fi
@@ -40,35 +35,37 @@ jobs:
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
       - name: Build app and ops images
+        if: github.ref_type == 'branch'
         run: |
-          docker build --target app $APP_TAGS -t "$IMAGE_NAME:build" .
-          docker build --target ops $OPS_TAGS -t "${IMAGE_NAME}-ops:build" .
+          docker build --target app -t "$IMAGE_NAME:$SOURCE_SHA" -t "$IMAGE_NAME:latest" .
+          docker build --target ops -t "${IMAGE_NAME}-ops:$SOURCE_SHA" -t "${IMAGE_NAME}-ops:latest" .
+
+      - name: Pull immutable commit images for release
+        if: github.ref_type == 'tag'
+        run: |
+          docker pull "$IMAGE_NAME:$SOURCE_SHA"
+          docker pull "${IMAGE_NAME}-ops:$SOURCE_SHA"
 
       - name: Add release aliases
-        if: env.RELEASE_TAG != ''
+        if: github.ref_type == 'tag'
         run: |
-          docker tag "$IMAGE_NAME:build" "$IMAGE_NAME:$RELEASE_TAG"
-          docker tag "${IMAGE_NAME}-ops:build" "${IMAGE_NAME}-ops:$RELEASE_TAG"
-
-      - name: Add latest aliases
-        if: env.PUSH_LATEST == 'true'
-        run: |
-          docker tag "$IMAGE_NAME:build" "$IMAGE_NAME:latest"
-          docker tag "${IMAGE_NAME}-ops:build" "${IMAGE_NAME}-ops:latest"
+          docker tag "$IMAGE_NAME:$SOURCE_SHA" "$IMAGE_NAME:$RELEASE_TAG"
+          docker tag "${IMAGE_NAME}-ops:$SOURCE_SHA" "${IMAGE_NAME}-ops:$RELEASE_TAG"
 
       - name: Push immutable commit images
+        if: github.ref_type == 'branch'
         run: |
-          docker push "$IMAGE_NAME:${{ github.sha }}"
-          docker push "${IMAGE_NAME}-ops:${{ github.sha }}"
+          docker push "$IMAGE_NAME:$SOURCE_SHA"
+          docker push "${IMAGE_NAME}-ops:$SOURCE_SHA"
 
       - name: Push release aliases
-        if: env.RELEASE_TAG != ''
+        if: github.ref_type == 'tag'
         run: |
           docker push "$IMAGE_NAME:$RELEASE_TAG"
           docker push "${IMAGE_NAME}-ops:$RELEASE_TAG"
 
       - name: Push latest aliases
-        if: env.PUSH_LATEST == 'true'
+        if: github.ref_type == 'branch'
         run: |
           docker push "$IMAGE_NAME:latest"
           docker push "${IMAGE_NAME}-ops:latest"
@@ -76,6 +73,6 @@ jobs:
       - name: Summary
         run: |
           echo "## Build Summary" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Commit tag: ${{ github.sha }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Source commit: $SOURCE_SHA" >> "$GITHUB_STEP_SUMMARY"
           echo "- Release tag: ${RELEASE_TAG:-none}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- App and ops images were built from the same commit." >> "$GITHUB_STEP_SUMMARY"
+          echo "- Release tags reuse the immutable app/ops commit images." >> "$GITHUB_STEP_SUMMARY"

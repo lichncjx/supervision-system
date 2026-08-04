@@ -17,7 +17,7 @@
 
 ## 镜像版本
 
-主分支构建会为 app/ops 同时发布完整 Git SHA 和 `latest`；`v*` Git Tag 会为两者发布相同 Release Tag。
+主分支构建会为 app/ops 同时发布完整 Git SHA 和 `latest`；`v*` Git Tag 会复用对应的不可变 SHA 镜像，为两者添加相同 Release Tag。
 
 `.env` 中的 `IMAGE_TAG` 控制两个镜像使用同一版本：
 
@@ -30,32 +30,39 @@ IMAGE_TAG=latest
 ## 首次部署
 
 1. 将 `deploy/synology/` 中的 Compose、脚本和 `.env.example` 复制到部署目录。
-2. 将 `.env.example` 重命名为 `.env`，填写真实配置并设置 `chmod 600 .env`。
-3. 登录 GHCR：
+2. 创建持久化目录，并确保 app 容器用户可以写入附件目录：
+
+   ```bash
+   mkdir -p postgres_data uploads
+   sudo chown 1001:1001 uploads
+   ```
+
+3. 将 `.env.example` 重命名为 `.env`，填写真实配置并设置 `chmod 600 .env`。
+4. 登录 GHCR：
 
    ```bash
    docker login ghcr.io
    ```
 
-4. 执行数据库迁移：
+5. 执行数据库迁移：
 
    ```bash
    sh migrate.sh
    ```
 
-5. 交互式创建唯一管理员：
+6. 交互式 create-only 创建基础部门和唯一管理员：
 
    ```bash
    sh bootstrap-admin.sh
    ```
 
-6. 启动应用：
+7. 启动应用：
 
    ```bash
    sh deploy.sh
    ```
 
-管理员初始密码只临时传给一次性 ops 容器，不写入 `.env`。检测到现有管理员时 bootstrap 会拒绝执行，不会覆盖密码或角色。首次登录后立即修改密码，再创建其他用户。
+管理员初始密码只临时传给一次性 ops 容器，不写入 `.env`。bootstrap 只补齐缺失的基础部门，不修改既有部门；检测到现有管理员时会拒绝执行，不会覆盖密码或角色。首次登录后立即修改密码，再创建其他用户。
 
 ## 日常发布
 

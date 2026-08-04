@@ -67,6 +67,10 @@ read_admin_password() {
 }
 
 mkdir -p "$RELEASE_ROOT/data/postgres" "$RELEASE_ROOT/uploads" "$RELEASE_ROOT/backup"
+if ! chown 1001:1001 "$RELEASE_ROOT/uploads"; then
+  echo "uploads must be writable by the app user (UID/GID 1001); rerun install.sh with permission to change ownership" >&2
+  exit 1
+fi
 sh "$RELEASE_ROOT/scripts/load-images.sh" "$RELEASE_ROOT"
 
 cd "$RELEASE_ROOT"

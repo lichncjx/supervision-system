@@ -1,6 +1,17 @@
 #!/bin/sh
 set -eu
 
+grep -Fq 'docker pull "$IMAGE_NAME:$SOURCE_SHA"' .github/workflows/docker-publish.yml
+grep -Fq "if: github.ref_type == 'tag'" .github/workflows/docker-publish.yml
+grep -Fq 'chown 1001:1001 "$RELEASE_ROOT/uploads"' deploy/offline/scripts/install.sh
+
+for department_code in LD ZH JH GY XD ZL RL CW SB XB BM 51 53 55 56 57 58; do
+  if ! grep -Fq "'$department_code'" prisma/bootstrap-admin.ts; then
+    echo "missing create-only base department: $department_code" >&2
+    exit 1
+  fi
+done
+
 TEST_ROOT="$(mktemp -d /tmp/supervision-offline-release-test.XXXXXX)"
 trap 'rm -rf "$TEST_ROOT"' EXIT HUP INT TERM
 

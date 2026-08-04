@@ -38,3 +38,4 @@ sh deploy/offline/scripts/package-release.sh release v1.0.0
 4. `.env.production`、`data/postgres/` 和 `uploads/` 不包含在升级包中。
 5. `seed-demo` 只用于开发测试，生产环境禁止执行。
 6. 初始管理员密码不写入长期环境文件，只在首次安装时临时传给一次性 ops 容器。
+7. 首次安装仅 create-only 创建基础部门和 `admin`；不创建演示事项或其他预置账号，也不覆盖任何既有记录。

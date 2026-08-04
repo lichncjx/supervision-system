@@ -122,7 +122,7 @@ GitHub Actions 会构建应用镜像：
 - `ghcr.io/lichncjx/supervision-system:latest` / `<commit-sha>`
 - `ghcr.io/lichncjx/supervision-system-ops:latest` / `<commit-sha>`
 
-app 与 ops 始终从同一提交构建。推送 `v*` Git Tag 时，两者还会发布相同 Release Tag，供正式部署固定版本使用。
+app 与 ops 始终从同一提交构建。推送 `v*` Git Tag 时，工作流复用已发布的不可变 commit SHA 镜像并添加相同 Release Tag，不重新构建或覆盖 commit SHA，供正式部署固定版本使用。Release Tag 应指向已经由 `main` 构建并发布镜像的提交。
 
 ## 发布流程
 
