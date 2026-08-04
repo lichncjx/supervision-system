@@ -155,7 +155,7 @@ export function canOperateWorkItem(
 ): boolean {
   switch (normalizeStatus(workItem.status)) {
     case WorkItemStatus.DRAFT:
-      return (workItem.firstSubmitterId ?? workItem.creatorId) === user.id
+      return workItem.creatorId === user.id
     case WorkItemStatus.PENDING_DECOMPOSE:
       return isDepartmentLevel(user.role)
         && isWorkMainResponsibleDepartment(workItem, user.departmentId)
@@ -187,5 +187,14 @@ export function canEditWorkItem(
 ): boolean {
   if (normalizeStatus(workItem.status) !== WorkItemStatus.DRAFT) return false
 
-  return (workItem.firstSubmitterId ?? workItem.creatorId) === user.id
+  return workItem.creatorId === user.id
+}
+
+export function canDeleteWorkItem(
+  user: PermissionUser,
+  workItem: PermissionWorkItem,
+): boolean {
+  if (normalizeStatus(workItem.status) !== WorkItemStatus.DRAFT) return false
+
+  return workItem.creatorId === user.id || user.role === Role.ADMIN
 }

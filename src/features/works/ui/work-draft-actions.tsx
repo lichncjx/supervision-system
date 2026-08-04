@@ -9,6 +9,9 @@ interface WorkDraftActionsProps {
   isDraft: boolean;
   rejectReason?: string;
   editHref: string;
+  canEdit: boolean;
+  canDelete: boolean;
+  deleteDisabledReason?: string;
   onDelete: () => void;
 }
 
@@ -16,6 +19,9 @@ export function WorkDraftActions({
   isDraft,
   rejectReason,
   editHref,
+  canEdit,
+  canDelete,
+  deleteDisabledReason,
   onDelete,
 }: WorkDraftActionsProps) {
   return (
@@ -34,17 +40,29 @@ export function WorkDraftActions({
         </div>
       )}
       <div className="flex gap-2">
-        <Link href={editHref} className="flex-1">
-          <Button className="rounded-full w-full">
-            <Pencil className="h-4 w-4" />
-            {isDraft ? '编辑草稿' : '修改后重新提交'}
+        {canEdit && (
+          <Link href={editHref} className="flex-1">
+            <Button className="rounded-full w-full">
+              <Pencil className="h-4 w-4" />
+              {isDraft ? '编辑草稿' : '修改后重新提交'}
+            </Button>
+          </Link>
+        )}
+        {(canDelete || deleteDisabledReason) && (
+          <Button
+            variant="destructive"
+            onClick={onDelete}
+            disabled={!canDelete}
+            className="rounded-full flex-1"
+          >
+            <Trash2 className="h-4 w-4" />
+            {isDraft ? '删除草稿' : '删除退回事项'}
           </Button>
-        </Link>
-        <Button variant="destructive" onClick={onDelete} className="rounded-full flex-1">
-          <Trash2 className="h-4 w-4" />
-          {isDraft ? '删除草稿' : '删除退回事项'}
-        </Button>
+        )}
       </div>
+      {deleteDisabledReason && (
+        <p className="mt-2 text-xs text-amber-700">{deleteDisabledReason}</p>
+      )}
     </div>
   );
 }

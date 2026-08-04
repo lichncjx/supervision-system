@@ -1,10 +1,12 @@
 import type { BaseCurrentUser } from '@/shared/auth/current-user'
-import { Role } from '@prisma/client'
+import { Role, WorkItemStatus } from '@prisma/client'
 import {
-  findWorkForUpdateById,
-  deleteWorkItem,
-  createWorkDeleteOperationLog,
+  findWorkForDeleteById,
+  deleteDraftWorkWithOperationLog,
 } from '@/features/works/infrastructure/work.repository'
+import { canDeleteWorkItem } from '@/features/works/domain/work.permissions'
+import { toPermissionUser } from '@/features/works/domain/work-permission-user.mapper'
+import { cleanupAttachmentFileBestEffort } from '@/features/attachments/application/cleanup-attachment-file'
 import { type Result, err, ok } from '@/shared/result'
 
 export interface DeleteWorkInput {
@@ -15,26 +17,39 @@ export interface DeleteWorkInput {
 export async function deleteWorkUseCase(input: DeleteWorkInput): Promise<Result> {
   const { currentUser, workId } = input
 
-  if (currentUser.role !== Role.ADMIN) {
-    return err(403, '权限不足')
-  }
-
-  const work = await findWorkForUpdateById(workId)
+  const work = await findWorkForDeleteById(workId)
 
   if (!work) {
-    return err(404, '事项不存在')
+    return err(404, '事项不存在或无权删除')
   }
 
-  await createWorkDeleteOperationLog({
+  const isOwnerOrAdmin = work.creatorId === currentUser.id || currentUser.role === Role.ADMIN
+  if (!isOwnerOrAdmin) {
+    return err(404, '事项不存在或无权删除')
+  }
+
+  if (work.status !== WorkItemStatus.DRAFT) {
+    return err(409, '只有草稿事项可以删除')
+  }
+
+  if (!canDeleteWorkItem(toPermissionUser(currentUser), work)) {
+    return err(404, '事项不存在或无权删除')
+  }
+
+  const result = await deleteDraftWorkWithOperationLog({
     userId: currentUser.id,
     userName: currentUser.name,
     userRole: currentUser.role as Role,
     workId: work.id,
-    workType: work.type,
-    workTitle: work.title,
   })
 
-  await deleteWorkItem(workId)
+  if (!result.deleted) {
+    return err(409, '事项状态或权限已变化，请刷新后重试')
+  }
+
+  await Promise.allSettled(
+    result.attachments.map((attachment) => cleanupAttachmentFileBestEffort(attachment.filePath)),
+  )
 
   return ok()
 }

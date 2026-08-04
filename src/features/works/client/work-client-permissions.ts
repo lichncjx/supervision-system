@@ -13,7 +13,7 @@ function isDraftOwnerUser(
   work: Work,
 ): boolean {
   if (!user) return false
-  return (work.firstSubmitterId ?? work.creatorId) === user.id
+  return work.creatorId === user.id
 }
 
 /** IN_PROGRESS 后操作权归属：responsiblePersonUserId */
@@ -51,6 +51,14 @@ export function canHandleReturnedDraftWork(
   if (!user) return false
   if (!isReturnedDraftWork(work)) return false
   return isDraftOwnerUser(user, work)
+}
+
+export function canDeleteDraftWork(
+  user: User | null | undefined,
+  work: Work,
+): boolean {
+  if (!user || work.status !== 'draft') return false
+  return user.role === 'ADMIN' || isDraftOwnerUser(user, work)
 }
 
 export function canHandleReturnedInProgressWork(

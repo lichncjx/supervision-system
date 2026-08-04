@@ -23,6 +23,7 @@
     "test:company-leader-visibility": "tsx tests/company-leader-visibility-regressions.ts",
     "test:system-settings": "tsx tests/system-settings-regressions.ts",
     "test:work-title": "tsx tests/work-title-regressions.ts",
+    "test:attachment-reconciliation": "tsx tests/attachment-file-reconciliation-regressions.ts",
     "test:regression:prepare": "docker compose up -d db && pnpm prisma:deploy && pnpm prisma:seed && pnpm dev",
     "test:target-contract:seed": "node tests/target-contract/seed-target-data.cjs",
     "test:target-contract:verify": "node tests/target-contract/verify-target-contract.cjs",

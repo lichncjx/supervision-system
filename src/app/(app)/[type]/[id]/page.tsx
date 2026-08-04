@@ -38,6 +38,7 @@ import {
   canDecomposeTodoWork,
   canApproveWork,
   canOperateInProgressWork,
+  canDeleteDraftWork,
   isWorkRelatedToDepartment,
 } from '@/features/works/client/work-client-permissions';
 import { isTerminal, isReturnedDraftWork, isInProgress } from '@/features/works/domain/work-status.rules';
@@ -66,6 +67,7 @@ export default function WorkDetailPage() {
   const {
     work,
     workflowRecords,
+    workflowRecordsStatus,
     companyLeaders,
     departments,
     refresh,
@@ -117,10 +119,23 @@ export default function WorkDetailPage() {
 
   const isAdmin = user?.role === 'ADMIN';
   const isSupervisor = user?.role === 'SUPERVISOR';
-  const isReturnedDraft = isReturnedDraftWork(work);
+  const isReturnedDraft = isReturnedDraftWork({
+    ...work,
+    // Workflow records are returned oldest-first; the status helper expects latest-first.
+    workflowRecords: [...workflowRecords].reverse(),
+  });
   const canEditDraft = canEditRegularDraftWork(user, work);
   const canSubmitDraft = canSubmitDraftWork(user, work);
   const canHandleReturnedCreate = canHandleReturnedDraftWork(user, work);
+  const canDeleteDraftByPermission = canDeleteDraftWork(user, work);
+  const canDeleteDraft = canDeleteDraftByPermission && workflowRecordsStatus === 'loaded';
+  const deleteDisabledReason = canDeleteDraftByPermission
+    ? workflowRecordsStatus === 'error'
+      ? '审批记录加载失败，暂不能删除。请刷新页面后重试。'
+      : workflowRecordsStatus !== 'loaded'
+        ? '正在核对审批记录，暂不能删除。'
+        : undefined
+    : undefined;
   const canDecomposeTodo = canDecomposeTodoWork(user, work);
   const canApprove = canApproveWork(user, work);
   const canOperateInProgress = canOperateInProgressWork(user, work);
@@ -180,13 +195,19 @@ export default function WorkDetailPage() {
   };
 
   const handleDelete = async () => {
-    if (!confirm('确认删除该退回事项？')) return;
+    const isDeletingAnotherUsersDraft = user?.role === 'ADMIN' && user.id !== work.creatorId;
+    const message = isReturnedDraft
+      ? '该事项已有审批记录。确认永久删除该事项、审批记录及附件？删除后无法恢复。'
+      : isDeletingAnotherUsersDraft
+        ? '确认以管理员身份永久删除该用户的草稿及附件？删除后无法恢复。'
+        : '确认永久删除该草稿及附件？删除后无法恢复。';
+    if (!confirm(message)) return;
     try {
       await deleteWork(work.id);
       router.push(`/${type}`);
     } catch (error) {
       console.error(error);
-      alert('删除失败，请查看控制台错误');
+      alert(error instanceof Error ? error.message : '删除失败');
     }
   };
 
@@ -452,11 +473,14 @@ export default function WorkDetailPage() {
             />
           )}
 
-          {(!!canHandleReturnedCreate || !!canEditDraft) && (
+          {(!!canHandleReturnedCreate || !!canEditDraft || canDeleteDraftByPermission) && (
             <WorkDraftActions
-              isDraft={!!canEditDraft}
+              isDraft={!isReturnedDraft}
               rejectReason={work.rejectReason || undefined}
               editHref={`/${type}/${work.id}/edit`}
+              canEdit={!!canHandleReturnedCreate || !!canEditDraft}
+              canDelete={canDeleteDraft}
+              deleteDisabledReason={deleteDisabledReason}
               onDelete={handleDelete}
             />
           )}

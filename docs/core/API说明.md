@@ -87,7 +87,7 @@ GET /api/dashboard?year=2026&limit=5
 
 `status = DRAFT`，且存在 `rejectReason`、`rejectedFromStatus`、`rejectedAt`，或最新 workflow record 为 `reject` / `rejected`。
 
-普通草稿仍显示为”草稿”；符合上述规则的草稿显示为”退回待修改”。退回待修改的办理人优先按 `firstSubmitterId` 判断，兼容历史数据时回退到 `creatorId`。
+普通草稿仍显示为“草稿”；符合上述规则的草稿显示为“退回待修改”。普通草稿和立项审批退回后的 `DRAFT` 均由 `creatorId` 对应创建人办理；`firstSubmitterId` 仅用于流程审计和展示，不参与 `DRAFT` 权限判断。
 
 ### 状态页和列表页筛选
 
@@ -183,3 +183,12 @@ Dashboard 内嵌轻量列表按年度，不改变独立页面口径：`/alert` �
 `GET /api/excel/export` 的数据范围与 `/api/works` 可见范围一致，并使用统一状态元数据输出状态文案。导出支持与事项列表一致的 `type`、`assessmentYear`、`workItem`、`departmentId`、`status`、`keyword` 和 `month` 筛选；`workItem` 精确筛选必须同时指定类型和年度，`month` 使用 `YYYY-MM`。导出状态筛选同样不接受旧状态值。
 
 `POST /api/excel/import/[type]` 普通导入默认创建 `DRAFT`，状态列仅允许空、`DRAFT` 或”草稿”；审批中、进行中、终态和旧状态不得通过普通导入写入，必须通过 workflow 流转。
+
+## 附件存储对账
+
+附件存储对账仅允许 `ADMIN` 调用，数据库中的 `attachments.filePath` 是附件存在性的权威记录。
+
+- `GET /api/attachments/reconcile`：只检查，不删除文件。可传 `gracePeriodHours`，默认 `24`、最小 `1`。
+- `POST /api/attachments/reconcile`：删除超过安全时间窗且没有数据库引用的文件。请求体必须包含 `confirm: "DELETE_ORPHAN_ATTACHMENT_FILES"`，可选 `gracePeriodHours`。
+
+返回结果同时列出孤儿候选、仍在安全时间窗内的孤儿文件、数据库引用但物理文件缺失的路径，以及无效的数据库路径。执行删除只影响孤儿候选，不会修改附件数据库记录。

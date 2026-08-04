@@ -1,6 +1,8 @@
 require('dotenv').config();
 
 const http = require('http');
+const fs = require('fs');
+const path = require('path');
 const XLSX = require('xlsx');
 const { PrismaClient } = require('@prisma/client');
 const {
@@ -2727,23 +2729,31 @@ async function verifyStateFilters(baseUrl, loginByUsername, deptByCode, userByUs
     note: 'PR 6.3: returned draft is derived from DRAFT plus reject traces, not a database status.',
   });
 
-  const handlingOtherUserResponse = await request(baseUrl, 'GET', '/api/works?status=handling', null, loginByUsername.dept_manager_a2.cookies);
-  const handlingOtherUserIds = Array.isArray(handlingOtherUserResponse.body)
-    ? handlingOtherUserResponse.body.map((item) => item.id)
+  const handlingCreatorResponse = await request(baseUrl, 'GET', '/api/works?status=handling', null, loginByUsername.dept_manager_a2.cookies);
+  const handlingCreatorIds = Array.isArray(handlingCreatorResponse.body)
+    ? handlingCreatorResponse.body.map((item) => item.id)
+    : [];
+  const handlingFirstSubmitterResponse = await request(baseUrl, 'GET', '/api/works?status=handling', null, loginByUsername.dept_manager_a1.cookies);
+  const handlingFirstSubmitterIds = Array.isArray(handlingFirstSubmitterResponse.body)
+    ? handlingFirstSubmitterResponse.body.map((item) => item.id)
     : [];
   record({
-    role: 'dept_manager_a2',
-    endpoint: 'GET /api/works status=handling excludes others returned draft',
+    role: 'dept_manager_a1/dept_manager_a2',
+    endpoint: 'GET /api/works status=handling returned DRAFT uses creatorId',
     actual: {
-      statusCode: handlingOtherUserResponse.statusCode,
-      containsReturnedDraft: handlingOtherUserIds.includes(returnedDraft.id),
+      creatorStatusCode: handlingCreatorResponse.statusCode,
+      firstSubmitterStatusCode: handlingFirstSubmitterResponse.statusCode,
+      creatorContainsReturnedDraft: handlingCreatorIds.includes(returnedDraft.id),
+      firstSubmitterContainsReturnedDraft: handlingFirstSubmitterIds.includes(returnedDraft.id),
     },
     expected: {
-      statusCode: 200,
-      containsReturnedDraft: false,
+      creatorStatusCode: 200,
+      firstSubmitterStatusCode: 200,
+      creatorContainsReturnedDraft: true,
+      firstSubmitterContainsReturnedDraft: false,
     },
     expectedFailure: false,
-    note: 'PR 6.3: returned draft handling belongs to firstSubmitterId, not every same-department user.',
+    note: 'DRAFT handling belongs to creatorId; firstSubmitterId does not grant handling permission.',
   });
 
   const responsibleHandlingResponse = await request(baseUrl, 'GET', '/api/works?status=handling', null, loginByUsername.dept_manager_a1.cookies);
@@ -2989,6 +2999,337 @@ async function verifyMemberEndpoints(baseUrl, loginByUsername, deptByCode, _work
   });
 }
 
+async function verifyDraftDeletion(baseUrl, loginByUsername, deptByCode, userByUsername) {
+  const creator = userByUsername.dept_manager_a1;
+  const otherManager = userByUsername.dept_manager_a2;
+  const vp = userByUsername.vp_a;
+  const dept = deptByCode.TDA;
+
+  const returnedDraft = await prisma.workItem.create({
+    data: {
+      ...workflowBaseData({
+        title: `${WORKFLOW_TEST_PREFIX}DELETE-RETURNED`,
+        type: 'PRIORITY',
+        status: 'DRAFT',
+        creator,
+        dept,
+        vp,
+      }),
+      firstSubmitterId: otherManager.id,
+      // Historical fallback: reject metadata may be absent while workflow history remains.
+      rejectReason: null,
+      rejectedFromStatus: null,
+    },
+  });
+
+  await prisma.workflowRecord.create({
+    data: {
+      workItemId: returnedDraft.id,
+      actionType: 'reject',
+      initiatorId: creator.id,
+      approverId: userByUsername.dept_leader_a.id,
+      approvalRole: 'DEPARTMENT_LEADER',
+      statusBefore: 'PROPOSING',
+      statusAfter: 'DRAFT',
+      comment: 'target-contract returned draft',
+    },
+  });
+
+  const attachmentDir = path.join(
+    process.cwd(),
+    'uploads',
+    'attachments',
+    'target-contract',
+    String(returnedDraft.id),
+  );
+  const attachmentPath = path.join(attachmentDir, 'draft-delete.txt');
+  fs.mkdirSync(attachmentDir, { recursive: true });
+  fs.writeFileSync(attachmentPath, 'target-contract');
+  const relativeAttachmentPath = path.relative(process.cwd(), attachmentPath);
+  const cleanupPendingPath = path.join(attachmentDir, 'cleanup-pending-directory');
+  fs.mkdirSync(cleanupPendingPath);
+  const relativeCleanupPendingPath = path.relative(process.cwd(), cleanupPendingPath);
+
+  const successfullyCleanedAttachment = await prisma.attachment.create({
+    data: {
+      workItemId: returnedDraft.id,
+      userId: creator.id,
+      fileName: 'draft-delete.txt',
+      filePath: relativeAttachmentPath,
+      fileSize: 15,
+      fileType: 'text/plain',
+    },
+  });
+  const cleanupPendingAttachment = await prisma.attachment.create({
+    data: {
+      workItemId: returnedDraft.id,
+      userId: creator.id,
+      fileName: 'cleanup-pending-directory',
+      filePath: relativeCleanupPendingPath,
+      fileSize: 0,
+      fileType: 'test/directory',
+    },
+  });
+
+  const firstSubmitterDelete = await request(
+    baseUrl,
+    'DELETE',
+    `/api/works/${returnedDraft.id}`,
+    null,
+    loginByUsername.dept_manager_a2.cookies,
+  );
+  const supervisorDelete = await request(
+    baseUrl,
+    'DELETE',
+    `/api/works/${returnedDraft.id}`,
+    null,
+    loginByUsername.supervisor.cookies,
+  );
+  const creatorDelete = await request(
+    baseUrl,
+    'DELETE',
+    `/api/works/${returnedDraft.id}`,
+    null,
+    loginByUsername.dept_manager_a1.cookies,
+  );
+
+  const creatorDeleteLog = await prisma.operationLog.findFirst({
+    where: {
+      action: 'delete',
+      module: 'works',
+      targetId: returnedDraft.id,
+      userId: creator.id,
+    },
+    orderBy: { id: 'desc' },
+  });
+  const cleanupLifecycleLogCount = await prisma.operationLog.count({
+    where: {
+      action: {
+        in: ['cleanup_pending', 'cleanup_completed', 'cleanup_cancelled'],
+      },
+      module: 'attachment',
+      targetId: {
+        in: [cleanupPendingAttachment.id, successfullyCleanedAttachment.id],
+      },
+      userId: creator.id,
+    },
+  });
+
+  record({
+    role: 'draft-delete-creator',
+    endpoint: 'DELETE /api/works/[id] creator-owned returned DRAFT',
+    actual: {
+      firstSubmitterStatus: firstSubmitterDelete.statusCode,
+      supervisorStatus: supervisorDelete.statusCode,
+      creatorStatus: creatorDelete.statusCode,
+      workCount: await prisma.workItem.count({ where: { id: returnedDraft.id } }),
+      workflowCount: await prisma.workflowRecord.count({ where: { workItemId: returnedDraft.id } }),
+      attachmentCount: await prisma.attachment.count({ where: { workItemId: returnedDraft.id } }),
+      physicalFileExists: fs.existsSync(attachmentPath),
+      failedPhysicalCleanupPreservesBusinessSuccess: fs.existsSync(cleanupPendingPath),
+      cleanupLifecycleLogCount,
+      logRetained: Boolean(creatorDeleteLog),
+      logHasSnapshot: Boolean(
+        creatorDeleteLog?.description.includes(`原事项ID：${returnedDraft.id}`)
+        && creatorDeleteLog.description.includes(`创建人：${creator.name}`)
+        && creatorDeleteLog.description.includes('退回草稿')
+        && creatorDeleteLog.description.includes('流程记录：1')
+        && creatorDeleteLog.description.includes('附件：2'),
+      ),
+    },
+    expected: {
+      firstSubmitterStatus: 404,
+      supervisorStatus: 404,
+      creatorStatus: 204,
+      workCount: 0,
+      workflowCount: 0,
+      attachmentCount: 0,
+      physicalFileExists: false,
+      failedPhysicalCleanupPreservesBusinessSuccess: true,
+      cleanupLifecycleLogCount: 0,
+      logRetained: true,
+      logHasSnapshot: true,
+    },
+    expectedFailure: false,
+    note: 'DRAFT ownership uses creatorId; database deletion and its audit log commit atomically, post-commit file cleanup is best-effort, and technical cleanup lifecycle events do not pollute OperationLog.',
+  });
+
+  fs.rmSync(attachmentDir, { recursive: true, force: true });
+
+  const supervisorReconciliation = await request(
+    baseUrl,
+    'GET',
+    '/api/attachments/reconcile',
+    null,
+    loginByUsername.supervisor.cookies,
+  );
+  const adminReconciliation = await request(
+    baseUrl,
+    'GET',
+    '/api/attachments/reconcile',
+    null,
+    loginByUsername.admin.cookies,
+  );
+  const unconfirmedApply = await request(
+    baseUrl,
+    'POST',
+    '/api/attachments/reconcile',
+    {},
+    loginByUsername.admin.cookies,
+  );
+
+  record({
+    role: 'attachment-storage-reconciliation',
+    endpoint: 'GET/POST /api/attachments/reconcile',
+    actual: {
+      supervisorStatus: supervisorReconciliation.statusCode,
+      adminDryRunStatus: adminReconciliation.statusCode,
+      adminDryRunMode: adminReconciliation.body?.mode,
+      unconfirmedApplyStatus: unconfirmedApply.statusCode,
+    },
+    expected: {
+      supervisorStatus: 403,
+      adminDryRunStatus: 200,
+      adminDryRunMode: 'dry-run',
+      unconfirmedApplyStatus: 400,
+    },
+    expectedFailure: false,
+    note: 'Only ADMIN can inspect attachment storage, and destructive reconciliation requires an explicit confirmation token.',
+  });
+
+  const concurrentWorkId = await createWorkflowWork({
+    title: `${WORKFLOW_TEST_PREFIX}DELETE-CONCURRENT-ATTACHMENT`,
+    type: 'MAIN',
+    status: 'DRAFT',
+    creator,
+    dept,
+    vp,
+  });
+  const concurrentDir = path.join(
+    process.cwd(),
+    'uploads',
+    'attachments',
+    'target-contract',
+    `concurrent-${concurrentWorkId}`,
+  );
+  const concurrentFilePath = path.join(concurrentDir, 'concurrent-delete.txt');
+  fs.mkdirSync(concurrentDir, { recursive: true });
+  fs.writeFileSync(concurrentFilePath, 'target-contract concurrent delete');
+  const concurrentAttachment = await prisma.attachment.create({
+    data: {
+      workItemId: concurrentWorkId,
+      userId: creator.id,
+      fileName: 'concurrent-delete.txt',
+      filePath: path.relative(process.cwd(), concurrentFilePath),
+      fileSize: 33,
+      fileType: 'text/plain',
+    },
+  });
+
+  const [concurrentAttachmentDelete, concurrentWorkDelete] = await Promise.all([
+    request(
+      baseUrl,
+      'DELETE',
+      `/api/attachments/${concurrentAttachment.id}`,
+      null,
+      loginByUsername.dept_manager_a1.cookies,
+    ),
+    request(
+      baseUrl,
+      'DELETE',
+      `/api/works/${concurrentWorkId}`,
+      null,
+      loginByUsername.dept_manager_a1.cookies,
+    ),
+  ]);
+
+  record({
+    role: 'draft-delete-concurrency',
+    endpoint: 'DELETE attachment concurrently with DELETE DRAFT work',
+    actual: {
+      workStatus: concurrentWorkDelete.statusCode,
+      attachmentStatusAccepted: [204, 404].includes(concurrentAttachmentDelete.statusCode),
+      noServerError: concurrentAttachmentDelete.statusCode !== 500,
+      workCount: await prisma.workItem.count({ where: { id: concurrentWorkId } }),
+      attachmentCount: await prisma.attachment.count({ where: { id: concurrentAttachment.id } }),
+      physicalFileExists: fs.existsSync(concurrentFilePath),
+    },
+    expected: {
+      workStatus: 204,
+      attachmentStatusAccepted: true,
+      noServerError: true,
+      workCount: 0,
+      attachmentCount: 0,
+      physicalFileExists: false,
+    },
+    expectedFailure: false,
+    note: 'Attachment deletion and aggregate deletion share the work-item lock; either delete may win without producing a 500 or leaving data behind.',
+  });
+
+  fs.rmSync(concurrentDir, { recursive: true, force: true });
+
+  const adminDraftId = await createWorkflowWork({
+    title: `${WORKFLOW_TEST_PREFIX}DELETE-ADMIN-DRAFT`,
+    type: 'MAIN',
+    status: 'DRAFT',
+    creator,
+    dept,
+    vp,
+  });
+  const adminDraftDelete = await request(
+    baseUrl,
+    'DELETE',
+    `/api/works/${adminDraftId}`,
+    null,
+    loginByUsername.admin.cookies,
+  );
+  const adminDeleteLog = await prisma.operationLog.findFirst({
+    where: {
+      action: 'delete',
+      module: 'works',
+      targetId: adminDraftId,
+      userId: userByUsername.admin.id,
+    },
+  });
+
+  const inProgressId = await createWorkflowWork({
+    title: `${WORKFLOW_TEST_PREFIX}DELETE-ADMIN-IN-PROGRESS`,
+    type: 'MAIN',
+    status: 'IN_PROGRESS',
+    creator,
+    dept,
+    vp,
+  });
+  const adminInProgressDelete = await request(
+    baseUrl,
+    'DELETE',
+    `/api/works/${inProgressId}`,
+    null,
+    loginByUsername.admin.cookies,
+  );
+
+  record({
+    role: 'draft-delete-admin',
+    endpoint: 'DELETE /api/works/[id] ADMIN DRAFT-only override',
+    actual: {
+      draftStatus: adminDraftDelete.statusCode,
+      draftCount: await prisma.workItem.count({ where: { id: adminDraftId } }),
+      logRetained: Boolean(adminDeleteLog),
+      inProgressStatus: adminInProgressDelete.statusCode,
+      inProgressCount: await prisma.workItem.count({ where: { id: inProgressId } }),
+    },
+    expected: {
+      draftStatus: 204,
+      draftCount: 0,
+      logRetained: true,
+      inProgressStatus: 409,
+      inProgressCount: 1,
+    },
+    expectedFailure: false,
+    note: 'ADMIN may delete another user’s DRAFT but may not delete any non-DRAFT item.',
+  });
+}
+
 async function main() {
   const { baseUrl } = parseArgs();
   printEnvironmentSummary('[target-contract-verify]');
@@ -3019,6 +3360,7 @@ async function main() {
   await verifyWorkItemOptionsAndBatchDrafts(baseUrl, loginByUsername, deptByCode, userByUsername);
   await verifyWorkflowTransitions(baseUrl, loginByUsername, deptByCode, userByUsername);
   await verifyStateFilters(baseUrl, loginByUsername, deptByCode, userByUsername);
+  await verifyDraftDeletion(baseUrl, loginByUsername, deptByCode, userByUsername);
 
   const totals = results.reduce(
     (acc, item) => {
