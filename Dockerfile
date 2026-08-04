@@ -50,23 +50,7 @@ EXPOSE 5000
 CMD ["node", "server.js"]
 
 
-FROM node:20-alpine AS migrate
-
-WORKDIR /app
-
-ENV NODE_ENV=production
-
-COPY --from=deps /app/node_modules ./node_modules
-COPY package.json pnpm-lock.yaml ./
-COPY prisma ./prisma
-COPY scripts/wait-for-db.mjs ./scripts/wait-for-db.mjs
-
-RUN ./node_modules/.bin/prisma generate --schema=./prisma/schema.prisma
-
-CMD ["sh", "-c", "node ./scripts/wait-for-db.mjs && ./node_modules/.bin/prisma migrate deploy --schema=./prisma/schema.prisma"]
-
-
-FROM base AS seed
+FROM node:20-alpine AS ops
 
 WORKDIR /app
 
@@ -75,10 +59,11 @@ ENV NODE_ENV=production
 COPY --from=deps /app/node_modules ./node_modules
 COPY package.json pnpm-lock.yaml ./
 COPY prisma/schema.prisma ./prisma/schema.prisma
-COPY prisma/seed-admin.ts ./prisma/seed-admin.ts
-COPY prisma/seed-demo.ts ./prisma/seed-demo.ts
+COPY prisma/migrations ./prisma/migrations
+COPY prisma/bootstrap-admin.ts ./prisma/bootstrap-admin.ts
 COPY scripts/wait-for-db.mjs ./scripts/wait-for-db.mjs
+COPY scripts/deployment-migrations ./scripts/deployment-migrations
 
-RUN pnpm prisma generate
+RUN ./node_modules/.bin/prisma generate --schema=./prisma/schema.prisma
 
-CMD ["sh", "-c", "node ./scripts/wait-for-db.mjs && pnpm seed:admin"]
+CMD ["sh", "-c", "node ./scripts/wait-for-db.mjs && ./node_modules/.bin/prisma migrate deploy --schema=./prisma/schema.prisma"]

@@ -1,18 +1,21 @@
 #!/bin/sh
 set -eu
 
-TAG="${1:-}"
-OUT_DIR="${2:-offline-release/images}"
-OUT_DIR="${OUT_DIR%/}"
-RELEASE_ROOT="$(dirname "$OUT_DIR")"
-VERSION_FILE="$RELEASE_ROOT/VERSION"
+KIND="${1:-}"
+TAG="${2:-}"
+PACKAGE_ROOT="${3:-}"
 
-if [ -z "$TAG" ]; then
-  if [ ! -f "$VERSION_FILE" ]; then
-    echo "version file not found: $VERSION_FILE; run build-images.sh first or pass a tag explicitly" >&2
+case "$KIND" in
+  upgrade|install) ;;
+  *)
+    echo "usage: sh deploy/offline/scripts/export-images.sh upgrade|install <tag> <package-root>" >&2
     exit 1
-  fi
-  IFS= read -r TAG < "$VERSION_FILE"
+    ;;
+esac
+
+if [ -z "$TAG" ] || [ -z "$PACKAGE_ROOT" ]; then
+  echo "tag and package-root are required" >&2
+  exit 1
 fi
 
 if ! printf '%s\n' "$TAG" | grep -Eq '^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$'; then
@@ -20,38 +23,70 @@ if ! printf '%s\n' "$TAG" | grep -Eq '^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$'; then
   exit 1
 fi
 
-mkdir -p "$OUT_DIR"
-mkdir -p "$RELEASE_ROOT/scripts"
+if [ -e "$PACKAGE_ROOT" ]; then
+  echo "refusing to overwrite existing package directory: $PACKAGE_ROOT" >&2
+  exit 1
+fi
+
+mkdir -p "$PACKAGE_ROOT/images" "$PACKAGE_ROOT/scripts"
 
 save_image() {
   image="$1"
   output="$2"
-  tmp="$output.tmp"
+  temporary="$output.tmp"
 
   docker image inspect "$image" >/dev/null
-  rm -f "$tmp"
-  trap 'rm -f "$tmp"' EXIT
-  docker save -o "$tmp" "$image"
-  gzip -c "$tmp" > "$output"
-  rm -f "$tmp"
+  trap 'rm -f "$temporary"' EXIT
+  docker save -o "$temporary" "$image"
+  gzip -c "$temporary" > "$output"
+  rm -f "$temporary"
   trap - EXIT
 }
 
-save_image "supervision-system-app:$TAG" "$OUT_DIR/supervision-system-app_$TAG.tar.gz"
-save_image "supervision-system-migrate:$TAG" "$OUT_DIR/supervision-system-migrate_$TAG.tar.gz"
-save_image "supervision-system-seed:$TAG" "$OUT_DIR/supervision-system-seed_$TAG.tar.gz"
-save_image postgres:16 "$OUT_DIR/postgres_16.tar.gz"
+save_image "supervision-system-app:$TAG" \
+  "$PACKAGE_ROOT/images/supervision-system-app_$TAG.tar.gz"
+save_image "supervision-system-ops:$TAG" \
+  "$PACKAGE_ROOT/images/supervision-system-ops_$TAG.tar.gz"
 
-printf '%s\n' "$TAG" > "$VERSION_FILE"
+if [ "$KIND" = "install" ]; then
+  if ! docker image inspect postgres:16 >/dev/null 2>&1; then
+    docker pull postgres:16
+  fi
+  save_image postgres:16 "$PACKAGE_ROOT/images/postgres_16.tar.gz"
+fi
 
 sed \
-  -e "s/supervision-system-app:[^[:space:]]*/supervision-system-app:$TAG/g" \
-  -e "s/supervision-system-migrate:[^[:space:]]*/supervision-system-migrate:$TAG/g" \
-  -e "s/supervision-system-seed:[^[:space:]]*/supervision-system-seed:$TAG/g" \
-  deploy/offline/docker-compose.yml > "$RELEASE_ROOT/docker-compose.yml"
+  -e "s/__OFFLINE_IMAGE_TAG__/$TAG/g" \
+  deploy/offline/docker-compose.yml > "$PACKAGE_ROOT/docker-compose.yml"
 
-cp deploy/offline/.env.production.template "$RELEASE_ROOT/.env.production.template"
-cp deploy/offline/README.md "$RELEASE_ROOT/README.md"
-cp deploy/offline/scripts/build-images.sh "$RELEASE_ROOT/scripts/build-images.sh"
-cp deploy/offline/scripts/export-images.sh "$RELEASE_ROOT/scripts/export-images.sh"
-cp deploy/offline/scripts/load-images.sh "$RELEASE_ROOT/scripts/load-images.sh"
+printf '%s\n' "$TAG" > "$PACKAGE_ROOT/VERSION"
+printf '%s\n' "$KIND" > "$PACKAGE_ROOT/RELEASE_KIND"
+git rev-parse HEAD > "$PACKAGE_ROOT/SOURCE_COMMIT"
+
+cp deploy/offline/scripts/load-images.sh "$PACKAGE_ROOT/scripts/load-images.sh"
+cp deploy/offline/scripts/upgrade.sh "$PACKAGE_ROOT/scripts/upgrade.sh"
+cp deploy/offline/scripts/backfill-assessment-year.sh \
+  "$PACKAGE_ROOT/scripts/backfill-assessment-year.sh"
+cp deploy/offline/UPGRADE.md "$PACKAGE_ROOT/UPGRADE.md"
+
+if [ "$KIND" = "install" ]; then
+  cp deploy/offline/scripts/install.sh "$PACKAGE_ROOT/scripts/install.sh"
+  cp deploy/offline/.env.production.template "$PACKAGE_ROOT/.env.production.template"
+  cp deploy/offline/INSTALL.md "$PACKAGE_ROOT/README.md"
+  cp deploy/offline/RECOVERY.md "$PACKAGE_ROOT/RECOVERY.md"
+else
+  cp deploy/offline/UPGRADE.md "$PACKAGE_ROOT/README.md"
+fi
+
+(
+  cd "$PACKAGE_ROOT"
+  sha256sum images/*.tar.gz > SHA256SUMS.txt
+)
+
+docker image inspect --format '{{.RepoTags}} {{.Id}}' \
+  "supervision-system-app:$TAG" "supervision-system-ops:$TAG" \
+  > "$PACKAGE_ROOT/IMAGE_MANIFEST.txt"
+if [ "$KIND" = "install" ]; then
+  docker image inspect --format '{{.RepoTags}} {{.Id}}' postgres:16 \
+    >> "$PACKAGE_ROOT/IMAGE_MANIFEST.txt"
+fi

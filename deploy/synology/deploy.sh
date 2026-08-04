@@ -1,32 +1,19 @@
 #!/bin/sh
-set -e
-
-echo "======================================"
-echo "Deploying supervision system..."
-echo "======================================"
+set -eu
 
 if [ ! -f ".env" ]; then
-  echo "ERROR: .env not found"
-  echo "Please create .env based on .env.example"
+  echo "ERROR: .env not found; create it from .env.example" >&2
   exit 1
 fi
 
-echo "Pulling latest app image..."
+echo "Pulling app image..."
 docker-compose pull app
 
-echo "Starting database..."
+echo "Starting database and application..."
 docker-compose up -d db
-
-echo "Starting application..."
-docker-compose up -d app
+docker-compose up -d --no-deps app
 
 echo "Cleaning dangling images..."
 docker image prune -f
 
-echo "Container status:"
 docker-compose ps
-
-echo "======================================"
-echo "Deploy completed."
-echo "Visit: ${NEXT_PUBLIC_APP_URL:-please check your .env NEXT_PUBLIC_APP_URL}"
-echo "======================================"

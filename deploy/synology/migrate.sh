@@ -1,29 +1,18 @@
 #!/bin/sh
-set -e
-
-echo "======================================"
-echo "Running database migration..."
-echo "======================================"
+set -eu
 
 if [ ! -f ".env" ]; then
-  echo "ERROR: .env not found"
-  echo "Please create .env based on .env.example"
+  echo "ERROR: .env not found; create it from .env.example" >&2
   exit 1
 fi
 
-echo "Pulling latest migrate image..."
-docker-compose pull migrate
+echo "Pulling ops image..."
+docker-compose pull ops
 
 echo "Starting database..."
 docker-compose up -d db
 
-echo "Running database migration..."
-docker-compose run --rm migrate
+echo "Applying pending database migrations..."
+docker-compose run --rm ops
 
-echo "Migration completed."
-
-echo "======================================"
-echo "After migration:"
-echo "  - Run deploy.sh to restart the app:"
-echo "      sh deploy.sh"
-echo "======================================"
+echo "Migration completed. Run sh deploy.sh to publish the app."

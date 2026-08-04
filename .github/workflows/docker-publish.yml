@@ -3,12 +3,8 @@ name: Build and Publish Docker Images
 on:
   push:
     branches: [main]
+    tags: ['v*']
   workflow_dispatch:
-    inputs:
-      force_migrate:
-        description: Force migrate image build
-        required: false
-        default: "false"
 
 permissions:
   contents: read
@@ -24,76 +20,59 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
 
-      - name: Check if migrate needs rebuild
-        id: migrate-check
+      - name: Set image names and source commit
         run: |
-          FORCE_MIGRATE="${{ github.event.inputs.force_migrate }}"
-          echo "Force migrate input: '$FORCE_MIGRATE'"
-
-          if [ "$FORCE_MIGRATE" == "true" ]; then
-            result=true
-            reason="manual trigger"
-          elif ! git rev-parse HEAD~1 > /dev/null 2>&1; then
-            result=true
-            reason="first commit"
-          elif git diff --name-only HEAD~1 HEAD | grep -qE "^(prisma/.*|package\.json|pnpm-lock\.yaml|Dockerfile|\.github/workflows/docker-publish\.yml)$"; then
-            result=true
-            reason="infrastructure file changed"
-          else
-            result=false
-            reason="no infrastructure change"
+          IMAGE_NAME="${IMAGE_NAME,,}"
+          SOURCE_SHA="$(git rev-parse HEAD)"
+          echo "IMAGE_NAME=$IMAGE_NAME" >> "$GITHUB_ENV"
+          echo "SOURCE_SHA=$SOURCE_SHA" >> "$GITHUB_ENV"
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            echo "RELEASE_TAG=${GITHUB_REF_NAME}" >> "$GITHUB_ENV"
           fi
-          echo "migrate_needed=$result" >> $GITHUB_ENV
-          echo "migrate_reason=$reason" >> $GITHUB_ENV
-          echo "Changed files between HEAD~1 and HEAD:"
-          git diff --name-only HEAD~1 HEAD || echo "No previous commit"
-
-      - name: Set lowercase image name
-        run: echo "IMAGE_NAME=${IMAGE_NAME,,}" >> $GITHUB_ENV
 
       - name: Login to GitHub Container Registry
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
-      - name: Build app image
+      - name: Build app and ops images
+        if: github.ref_type == 'branch'
         run: |
-          docker build \
-            --target app \
-            -t $IMAGE_NAME:latest \
-            -t $IMAGE_NAME:${{ github.sha }} \
-            .
+          docker build --target app -t "$IMAGE_NAME:$SOURCE_SHA" -t "$IMAGE_NAME:latest" .
+          docker build --target ops -t "${IMAGE_NAME}-ops:$SOURCE_SHA" -t "${IMAGE_NAME}-ops:latest" .
 
-      - name: Push app image
+      - name: Pull immutable commit images for release
+        if: github.ref_type == 'tag'
         run: |
-          docker push $IMAGE_NAME:latest
-          docker push $IMAGE_NAME:${{ github.sha }}
+          docker pull "$IMAGE_NAME:$SOURCE_SHA"
+          docker pull "${IMAGE_NAME}-ops:$SOURCE_SHA"
 
-      - name: Build migrate image
-        if: env.migrate_needed == 'true'
+      - name: Add release aliases
+        if: github.ref_type == 'tag'
         run: |
-          echo "Building migrate image because: ${{ env.migrate_reason }}"
-          docker build \
-            --target migrate \
-            -t ${IMAGE_NAME}-migrate:latest \
-            -t ${IMAGE_NAME}-migrate:${{ github.sha }} \
-            .
+          docker tag "$IMAGE_NAME:$SOURCE_SHA" "$IMAGE_NAME:$RELEASE_TAG"
+          docker tag "${IMAGE_NAME}-ops:$SOURCE_SHA" "${IMAGE_NAME}-ops:$RELEASE_TAG"
 
-      - name: Push migrate image
-        if: env.migrate_needed == 'true'
+      - name: Push immutable commit images
+        if: github.ref_type == 'branch'
         run: |
-          docker push ${IMAGE_NAME}-migrate:latest
-          docker push ${IMAGE_NAME}-migrate:${{ github.sha }}
+          docker push "$IMAGE_NAME:$SOURCE_SHA"
+          docker push "${IMAGE_NAME}-ops:$SOURCE_SHA"
 
-      - name: Show image sizes
-        run: docker images | grep supervision-system
+      - name: Push release aliases
+        if: github.ref_type == 'tag'
+        run: |
+          docker push "$IMAGE_NAME:$RELEASE_TAG"
+          docker push "${IMAGE_NAME}-ops:$RELEASE_TAG"
+
+      - name: Push latest aliases
+        if: github.ref_type == 'branch'
+        run: |
+          docker push "$IMAGE_NAME:latest"
+          docker push "${IMAGE_NAME}-ops:latest"
 
       - name: Summary
         run: |
-          echo "## Build Summary" >> $GITHUB_STEP_SUMMARY
-          echo "- App image: Always built and pushed" >> $GITHUB_STEP_SUMMARY
-          echo "- Migrate image needed: ${{ env.migrate_needed }}" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ env.migrate_needed }}" == "true" ]; then
-            echo "- Reason: ${{ env.migrate_reason }}" >> $GITHUB_STEP_SUMMARY
-          fi
+          echo "## Build Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Source commit: $SOURCE_SHA" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Release tag: ${RELEASE_TAG:-none}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Release tags reuse the immutable app/ops commit images." >> "$GITHUB_STEP_SUMMARY"

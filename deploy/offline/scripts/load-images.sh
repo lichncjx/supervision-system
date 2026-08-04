@@ -1,17 +1,16 @@
 #!/bin/sh
 set -eu
 
-TAG="${1:-}"
-IMAGE_DIR="${2:-/opt/supervision-system/images}"
-RELEASE_ROOT="$(dirname "${IMAGE_DIR%/}")"
-VERSION_FILE="$RELEASE_ROOT/VERSION"
+SCRIPT_DIR="$(CDPATH= cd -- "$(dirname "$0")" && pwd)"
+RELEASE_ROOT="${1:-$(dirname "$SCRIPT_DIR")}"
+TAG="${2:-}"
 
 if [ -z "$TAG" ]; then
-  if [ ! -f "$VERSION_FILE" ]; then
-    echo "version file not found: $VERSION_FILE; pass a tag explicitly" >&2
+  if [ ! -f "$RELEASE_ROOT/VERSION" ]; then
+    echo "VERSION not found in: $RELEASE_ROOT" >&2
     exit 1
   fi
-  IFS= read -r TAG < "$VERSION_FILE"
+  IFS= read -r TAG < "$RELEASE_ROOT/VERSION"
 fi
 
 if ! printf '%s\n' "$TAG" | grep -Eq '^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$'; then
@@ -19,9 +18,21 @@ if ! printf '%s\n' "$TAG" | grep -Eq '^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$'; then
   exit 1
 fi
 
-cd "$IMAGE_DIR"
+if [ ! -d "$RELEASE_ROOT/images" ]; then
+  echo "images directory not found in: $RELEASE_ROOT" >&2
+  exit 1
+fi
 
-gzip -dc "supervision-system-app_$TAG.tar.gz" | docker load
-gzip -dc "supervision-system-migrate_$TAG.tar.gz" | docker load
-gzip -dc "supervision-system-seed_$TAG.tar.gz" | docker load
-gzip -dc postgres_16.tar.gz | docker load
+if [ -f "$RELEASE_ROOT/SHA256SUMS.txt" ]; then
+  (
+    cd "$RELEASE_ROOT"
+    sha256sum -c SHA256SUMS.txt
+  )
+fi
+
+gzip -dc "$RELEASE_ROOT/images/supervision-system-app_$TAG.tar.gz" | docker load
+gzip -dc "$RELEASE_ROOT/images/supervision-system-ops_$TAG.tar.gz" | docker load
+
+if [ -f "$RELEASE_ROOT/images/postgres_16.tar.gz" ]; then
+  gzip -dc "$RELEASE_ROOT/images/postgres_16.tar.gz" | docker load
+fi
